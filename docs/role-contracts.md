@@ -103,29 +103,38 @@ orchestrator's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*
 
 ## Advisor (first judgment at a decision point)
 
-ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor, and
-the operator's judgment from the forward path to the retry stage. This section is the procedure's
-single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the unit documents cite it.
+ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
+This section is the procedure's single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to
+it and the unit documents cite it.
 
 ### Decision points and harness-level blocks
 
-- **A decision point** is any point that pauses for a decision the working AI is not the one to make:
-  an acceptance-criterion change (`[ac-decision]`), a security-checklist change
-  (`[checklist-decision]`), a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the analysis records,
-  a reviewer finding that repeats the previous attempt's complaint, a GATE:HYPOTHESIS PASS the
-  orchestrator judges unreachable, an un-agreed design point, a `remedy_class: operator`, and a
-  recommendation or finding the orchestrator cannot route with confidence (a pause criterion, a
-  rebuttal the re-score or the reviewer keeps while the two sides still disagree). Outside a cycle,
+- **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
+  confident of ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). An acceptance-criterion
+  change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
+  analysis records, a reviewer finding that repeats the previous attempt's complaint, and a
+  GATE:HYPOTHESIS PASS the orchestrator judges unreachable are where such a decision arises, not
+  decision points by their kind: the orchestrator judges each first, and where the grounds the
+  raising report, finding or evaluation carries settle it, it decides and records the decision with
+  those grounds in an `O` ledger entry under `orchestrator decision` — for an acceptance-criterion
+  change, its `[ac-decision]` entries ([`decision-ledger.md`](decision-ledger.md) >
+  *Acceptance-criterion decisions*); for a repeated complaint, the attempt's `[review-autofix]`
+  entry. An un-agreed design point, a `remedy_class: operator`, and a recommendation or finding the
+  orchestrator cannot route with confidence (a pause criterion, a rebuttal the re-score or the
+  reviewer keeps while the two sides still disagree) are already decisions the working AI could not
+  settle. A security-checklist change (`[checklist-decision]`) is the one decision point by its
+  kind: `scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
+  ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*). Outside a cycle,
   a point the criterion review cannot settle is one as well, put by the review session, which takes
   the orchestrator's part in the procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
-  ([`criterion-review.md`](criterion-review.md) > *Authority*). Each is answered by the advisor
-  first.
+  ([`criterion-review.md`](criterion-review.md) > *Authority*). Each decision point is answered by
+  the advisor first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial), or a tool, credential, installation or material the environment does not provide — for a
   tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
   `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
-  presentation). An advisor answer can end the cycle instead — a non-code lever or cause, a
+  presentation). A decision at one of those points can end the cycle instead — a non-code lever or cause, a
   prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
   confirm closing the issue, the cycle not closing it itself ([U2 Analysis](units/analysis.md) >
   *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
@@ -134,9 +143,11 @@ single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to it and the uni
 ### Procedure
 
 1. **Request.** The orchestrator writes `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-request-<k>.md` situation-first:
-   the situation in domain terms, the decision asked with each option and what it changes, and the
-   anchors (the artifact paths, the report or finding the decision surfaced in). It is the body the
-   operator would have been shown; the orchestrator does not weigh the options itself.
+   the situation in domain terms, the decision asked with each option and what it changes, the
+   orchestrator's own reading — the option it leans to, its grounds, and the point where those
+   grounds stop settling it — and the anchors (the artifact paths, the report or finding the
+   decision surfaced in). The advisor starts from that reading rather than gathering the material
+   anew.
 2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
    `bash scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
    `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
@@ -188,23 +199,14 @@ same model as `docs/issue-proposal.md`). Outside the hook's surface: a shell wri
 (redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
 line, a malformed heading, a variant spelling of an authority).
 
-### Operator review at the retry stage
+### Operator override
 
-The operator's judgment joins at the retry stage — a unit loop or gate FAIL, a re-entry opening, a
-cap reached:
-
-- **At a FAIL or a re-entry** the orchestrator's report of that event lists the `advisor decision`
-  entries recorded since its previous such report — identifier, the one-line answer, the record path.
-  The cycle continues; the operator's prompts reach the orchestrator between turns, and an override
-  given there is applied at once.
-- **At a cap reached** the cycle stops for the operator as before ([`CLAUDE.md`](../CLAUDE.md) >
-  Flow Control > *Human escalation*), and the escalation report carries the same list.
-- **An override** is recorded by the orchestrator as an `O` entry under the authority
-  `operator decision`, with the marker of the entry it overrides and a line naming that `A`
-  identifier. It supersedes the advisor's entry without a new verified fact — the override is the
-  authority ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and operator
-  overrides*) — and the cycle re-enters where the overridden answer's route reaches, consuming no
-  re-entry budget.
+An operator override of an advisor decision is recorded by the orchestrator as an `O` entry under
+the authority `operator decision`, with the marker of the entry it overrides and a line naming that
+`A` identifier. It supersedes the advisor's entry without a new verified fact — the override is the
+authority ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and operator
+overrides*) — and the cycle re-enters where the overridden answer's route reaches, consuming no
+re-entry budget.
 
 ### Claude Code's advisor tool (`advisorModel`)
 

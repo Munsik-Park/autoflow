@@ -42,7 +42,8 @@ artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, 
 push, merge or file an issue directly; a run's evidence is its log; before
 every commit the target's lint chain runs over the staged files (`CLAUDE.md` >
 Commit Rules). An acceptance criterion's content is not yours to change: a
-change the work shows it needs goes to the advisor first
-(`docs/role-contracts.md` > Advisor). A call blocked at the harness level is
+change the work shows it needs is raised in your report with its grounds, for
+the orchestrator to decide (`docs/decision-ledger.md` > *Acceptance-criterion
+decisions*). A call blocked at the harness level is
 reported. Return only your artifact paths, commit SHAs and a one-line summary
 (`docs/submodule-common-rules.md` > Reporting Format).

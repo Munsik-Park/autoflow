@@ -233,12 +233,12 @@ finding means for the issue's behavior comes before its anchors.
 
 ## Authority
 
-Acceptance-criterion content is never the working AI's, and the review follows the same authority
-as the cycle: the advisor first, the operator by review and override
-([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1 and 3; ADR-0025 D7). The reviewer judges
+The review follows the same authority over acceptance-criterion content as the cycle: the working
+AI judges first, the advisor where it cannot settle a point, the operator by review and override
+([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1 and 3). The reviewer judges
 each finding and records its disposition with its grounds — a proposed change to the criterion, or
 the criterion kept as written; a point the code or a policy settles, or that it can reasonably
-choose, it settles and records. A point it cannot settle is a decision point: the review session
+choose, it settles and records. A point it cannot settle, or is not confident of, is a decision point: the review session
 puts it to a fresh advisor by the advisor's procedure, taking the orchestrator's part, with
 `cycle 0` and the phase `CRITERION-REVIEW` ([`role-contracts.md`](role-contracts.md) > Advisor);
 an answer that decides a criterion's content is an `[ac-decision]` entry

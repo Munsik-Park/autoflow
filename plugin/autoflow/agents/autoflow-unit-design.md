@@ -32,8 +32,8 @@ artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, 
 push, merge or file an issue directly, and a run's evidence is its log. An
 acceptance criterion's content is not yours to change: a change you find the
 design needs, and a design point that is not yours to settle, go in the feature
-design's `## Decision requests` section, which the orchestrator takes to the
-advisor (`docs/role-contracts.md` > Advisor; `docs/decision-ledger.md` >
-*Acceptance-criterion decisions*). A call blocked at
+design's `## Decision requests` section with your grounds, which the orchestrator
+decides or takes to the advisor (`docs/role-contracts.md` > Advisor;
+`docs/decision-ledger.md` > *Acceptance-criterion decisions*). A call blocked at
 the harness level is reported. Return only your artifact paths and a one-line
 summary (`docs/submodule-common-rules.md` > Reporting Format).

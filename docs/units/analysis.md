@@ -23,8 +23,8 @@ artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2).
   analysis met its goal. The unit never scores its own artifact. U2 ends at a `gate_hypothesis`
   PASS (*Verification — GATE:HYPOTHESIS* below).
 - **Loop cap**: none counted (issue #421). After a FAIL, what follows is the orchestrator's
-  judgment, and the cycle leaves GATE:HYPOTHESIS only on a PASS; a PASS judged unreachable goes to
-  the advisor and, on its judgment, to the operator (*Verification — GATE:HYPOTHESIS* below).
+  judgment, and the cycle leaves GATE:HYPOTHESIS only on a PASS; a PASS judged unreachable goes, on
+  that recorded judgment, to the operator (*Verification — GATE:HYPOTHESIS* below).
 - **Result owed**: the report's path and a one-line summary that names any decision point it
   recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
   orchestrator does not receive the report's body.
@@ -94,8 +94,8 @@ The rules below are the ones other documents cite; everything else about the wor
   downstream ([U3 Design](design.md) > *Report routing*;
   [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
   a review-response cycle carries the previous cycle's table forward unchanged — a review comment
-  never edits the list; only an `[ac-decision]` ledger entry does, the advisor's or the operator's
-  override (`CLAUDE.md` > Decision Ledger).
+  never edits the list; only an `[ac-decision]` ledger entry does
+  ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `CLAUDE.md` > Decision Ledger).
 - **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
   code and policy outside the cycle and confirmed by the operator before PREFLIGHT admitted the
   cycle ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
@@ -164,14 +164,17 @@ Anything else the unit records is its own, written where it judges useful.
 
 ## Report routing
 
-- **A prerequisite** (`mode = new-issue`) → the advisor ([`role-contracts.md`](../role-contracts.md) >
-  Advisor), the report as the request's anchor, written situation-first
-  ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*).
-  **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the advisor's entry where the analysis
+- **A prerequisite** (`mode = new-issue`) → the orchestrator decides it on the report's grounds,
+  recorded in an `O` ledger entry; where those grounds do not settle it, or it is not confident, the
+  advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), the report as the request's
+  anchor, written situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles >
+  *Human-decision presentation*).
+  **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the decision's entry where the analysis
   stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
-  false`, `phase: "awaiting-user"`, the report and the advisor's record as its report. No counter.
-- **A repeated complaint** (a reviewer finding) → the advisor, which decides the re-entry —
-  its depth, or none ([U6 Delivery](delivery.md) > *A repeated complaint*). A redefined criterion comes
+  false`, `phase: "awaiting-user"`, the report and the decision's record as its report. No counter.
+- **A repeated complaint** (a reviewer finding) → the orchestrator decides the re-entry — its
+  depth, or none — the advisor where the grounds do not settle it ([U6 Delivery](delivery.md) > *A
+  repeated complaint*). A redefined criterion comes
   back as `[ac-decision]` entries and a unit re-run on them. No counter.
 - **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the report. The dispositions — a
   request needing no change, a non-code lever, a FAIL, a PASS judged unreachable — are
@@ -203,8 +206,8 @@ avg ≥ 7.5.
   Scope, principles 2–3). Before it closes an issue, the orchestrator confirms the recorded
   `phases.gate_hypothesis` scores meet the PASS line and the report's conclusion is `no change
   needed`; the close comment records those scores and a summary of the existing mechanism.
-- **`non-code lever`** → the advisor decides ([`role-contracts.md`](../role-contracts.md) >
-  Advisor). **A code change is still owed** → ARCHITECT; **the lever is non-code** → report the
+- **`non-code lever`** → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident
+  ([`role-contracts.md`](../role-contracts.md) > Advisor). **A code change is still owed** → ARCHITECT; **the lever is non-code** → report the
   finding situation-first ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision
   presentation) — where a PR is open, as the PR reply — and end the cycle with
   `active: false`, `phase: "awaiting-user"`.
@@ -216,11 +219,11 @@ below) is the usual route. No count caps it: the cycle leaves GATE:HYPOTHESIS on
 
 **A PASS judged unreachable** → when the orchestrator judges that no re-run will bring the report
 to a PASS — the re-runs do not converge, or the request cannot be brought to a supported conclusion
-— it asks the advisor. **Reachable** → the advisor's answer is applied, a re-run on it. **Not
-reachable** → the issue is not closed by the cycle: the operator is asked to confirm closing it,
-situation-first, with the advisor's judgment as the direction (`active: false`,
-`phase: "awaiting-user"`). This differs from `no change needed`, whose answer the orchestrator
-judges without asking.
+— it records that judgment with its grounds in the ledger, and asks the advisor where it is not
+confident of it. **Reachable** → a re-run on the answer. **Not reachable** → the issue is not
+closed by the cycle: the operator is asked to confirm closing it, situation-first, with the recorded
+judgment as the direction (`active: false`, `phase: "awaiting-user"`). This differs from `no
+change needed`, whose close the orchestrator makes without the operator's confirmation.
 
 ## Re-entry
 

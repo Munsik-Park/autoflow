@@ -137,8 +137,8 @@ found — is its own, written where it judges useful.
 - **A `green-blocker` record** → an ARCHITECT unit re-run naming it ([U3 Design](design.md) >
   *Re-entry*), then GATE:PLAN's re-entry re-score and a U4 re-run; consumes the ARCHITECT re-entry
   counter.
-- **An acceptance-criterion change** → the advisor ([`role-contracts.md`](../role-contracts.md) >
-  Advisor); where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
+- **An acceptance-criterion change** → the orchestrator's decision, the advisor's where the
+  report's grounds do not settle it; where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
   ([U3 Design](design.md) > *Report routing*). No counter.
 - **A tool, or what using one lacks, reported missing** → the tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control).
 - **A lint chain reported `not-run (unexecuted)`** because it is not executable in this checkout and
