@@ -89,7 +89,11 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# The tree this script ships in — the fallback for its own sibling
+# tests/lib/base-ref.sh. The root it examines is a separate fact: --root, or
+# the git toplevel of the working directory (the target), never this tree.
+TOOL_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+DEFAULT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || DEFAULT_ROOT=""
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
@@ -111,6 +115,10 @@ while [ $# -gt 0 ]; do
   shift
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
+if [ -z "$ROOT" ]; then
+  echo "select-suites: no --root given and the working directory is not inside a git repository — pass --root <dir>" >&2
+  exit 2
+fi
 
 # `glob_matches` — the Actions `paths:` dialect — is NOT defined here. It lives
 # in scripts/test/suite-manifest.sh, sourced above: the dialect is how a
@@ -130,8 +138,8 @@ resolve_delta() {
   # shellcheck source=tests/lib/base-ref.sh
   if [ -f "$root/tests/lib/base-ref.sh" ]; then
     . "$root/tests/lib/base-ref.sh"
-  elif [ -f "$DEFAULT_ROOT/tests/lib/base-ref.sh" ]; then
-    . "$DEFAULT_ROOT/tests/lib/base-ref.sh"
+  elif [ -f "$TOOL_ROOT/tests/lib/base-ref.sh" ]; then
+    . "$TOOL_ROOT/tests/lib/base-ref.sh"
   else
     return 1
   fi

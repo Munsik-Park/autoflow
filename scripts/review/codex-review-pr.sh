@@ -4,10 +4,11 @@
 # Run the codex external review of a pull request and keep it as a review record.
 #
 # The review protocol (Korean output, severity ranking, output format) lives in
-# AGENTS.md and .codex/review.md and is loaded automatically because Codex runs
-# in the repository working directory. This wrapper supplies the target PR
-# number, the optional sub-repo selector, the record file, and the fixed
-# sandbox / approval flags. The review is written to the record file only: it
+# .codex/review.md of the AutoFlow tree this wrapper ships in, which the prompt
+# names by its absolute path; the reviewed repository's own AGENTS.md is loaded
+# automatically because Codex runs in that repository's working directory. This
+# wrapper supplies the target PR number, the optional sub-repo selector, the
+# record file, and the fixed sandbox / approval flags. The review is written to the record file only: it
 # posts no PR comment and changes no label — the aggregation of every review of
 # the PR posts the one comment (docs/units/delivery.md > Review aggregation).
 #
@@ -29,6 +30,9 @@ set -euo pipefail
 
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_CRP_DIR/lib/review-config.sh"
+# The review convention of the AutoFlow tree this wrapper ships in, by absolute
+# path: the reviewed repository need not carry a copy of its own.
+REVIEW_GUIDE="$(cd "$_CRP_DIR/../.." && pwd)/.codex/review.md"
 
 USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>]"
 PR=""
@@ -67,6 +71,11 @@ done
 
 if [[ -z "$PR" || -z "$OUT" ]]; then
   echo "$USAGE" >&2
+  exit 2
+fi
+
+if [[ ! -f "$REVIEW_GUIDE" ]]; then
+  echo "[codex-review] the review convention is missing: $REVIEW_GUIDE" >&2
   exit 2
 fi
 
@@ -119,11 +128,11 @@ fi
 
 # Build the review prompt as one value, ending with a fixed sentinel line. The
 # sentinel names the one permitted action — writing the record file — so the
-# AGENTS.md / .codex/review.md defaults cannot add a comment or a label change.
+# AGENTS.md / review-convention defaults cannot add a comment or a label change.
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow AGENTS.md and .codex/review.md.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the .codex/review.md Output Format, to the file ${OUT} (relative to the repository root). ${SENTINEL}"
+PROMPT="Review pull request #${PR}. Follow AGENTS.md and the review convention at ${REVIEW_GUIDE}.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format of ${REVIEW_GUIDE}, to the file ${OUT} (relative to the repository root). ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.
