@@ -121,15 +121,6 @@ The BUILD unit checks the cycle's diff against this rule (`<autoflow-root>/docs/
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
 - **[MUST]** Do not remove pre-existing unused symbols unless an AC or a recorded scope judgment requires it.
 
-### Derived artifacts
-- **[MUST]** `setup/manifest.json` is a **derived member of the change surface**
-  whenever the surface includes a manifest-registered source. If
-  `git diff --name-only <base>...HEAD` intersects
-  `jq -r '.artifacts[].source' setup/manifest.json` on any path other than
-  `setup/manifest.json` itself, the manifest must be regenerated
-  (`setup/gen-manifest-hashes.sh`) and staged in the **same commit**. CI
-  (`tests/plugin/verify-install-into-target.sh`) fails the PR otherwise.
-
 ### Lint chain on the staged surface
 This section is the rule's only home. Its search terms:
 

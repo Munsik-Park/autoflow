@@ -96,15 +96,13 @@ af_path() {
   _p="$(af_resolve "$1")"
   printf '%s' "${_p:-$1}"
 }
-# af_helper <rel> — a helper script to run: the AutoFlow tree's own copy, then
-# the copy a stamped target carries in its own tree (ranked last, so the
-# plugin's helper wins wherever the plugin carries one). Nothing when neither
-# exists.
+# af_helper <rel> — a helper script to run: the AutoFlow tree's own copy, or
+# nothing. A copy in the project dir is never run: the project is the target,
+# and the hook treats the target's files as data (ADR-0027 D3).
 af_helper() {
   local _p
   _p="$(af_resolve "$1")"
-  if [ -n "$_p" ] && [ -f "$_p" ]; then printf '%s' "$_p"; return 0; fi
-  if [ -f "${CLAUDE_PROJECT_DIR:-.}/$1" ]; then printf '%s' "${CLAUDE_PROJECT_DIR:-.}/$1"; fi
+  if [ -n "$_p" ] && [ -f "$_p" ]; then printf '%s' "$_p"; fi
   return 0
 }
 
@@ -851,7 +849,7 @@ is_score_gated_surface() {
 ledger_advisory_check() {
   local _helper _cache _ledger _hash _prev _out
   # The helper is resolved by af_helper (top of this file): the AutoFlow tree's
-  # own copy first, the stamped target's copy last.
+  # own copy, never the target's.
   _helper="$(af_helper scripts/ledger/ledger-entry-id.sh)"
   [ -n "$_helper" ] || return 0
   command -v shasum >/dev/null 2>&1 || return 0

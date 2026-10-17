@@ -3,9 +3,10 @@
 Use this page as the first stop before assigning or implementing an issue.
 It routes two document classes that live in separate trees: the **usage
 documents** an agent reads and follows while a cycle runs — the source of the
-rules, stamped to every target — and the **design and decision records** under
+rules — and the **design and decision records** under
 `<autoflow-root>/docs/records/`, read for a decision's history and grounds, the source of no
-rule, and never stamped.
+rule. Both ship in the plugin; a role reads a usage document by its path under
+`<autoflow-root>`.
 
 ## Usage documents
 
@@ -28,11 +29,10 @@ These documents are the operating source of truth.
 | [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
-| [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |
+| [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through command bodies and agent definitions, target-identity separation, the packaging and PREFLIGHT checks, and the target's own spawn policy. |
 | [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Criterion Review](criterion-review.md) | The review of a new issue's acceptance criteria against the target's code and policy outside the cycle, the operator's `[criterion-ready]` confirmation, and the readiness fact PREFLIGHT reads. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
-| [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
 ### Quick Routing
 
@@ -43,13 +43,13 @@ These documents are the operating source of truth.
 | Issue decomposition or readiness | `<autoflow-root>/docs/development-guideline.md` |
 | Filing a new issue | `<autoflow-root>/docs/issue-proposal.md` |
 | Making a filed issue ready for its first cycle | `<autoflow-root>/docs/criterion-review.md` |
-| Tool distribution, install/upgrade, or version pinning | `<autoflow-root>/docs/tool-delivery-contract.md`, `<autoflow-root>/docs/thin-root-layer.md` |
+| Tool distribution, install/upgrade, or version pinning | `<autoflow-root>/docs/tool-delivery-contract.md` |
 | Reviewers (built-in + external), review aggregation | `<autoflow-root>/docs/reviewer-backend.md`, `<autoflow-root>/docs/external-review-sequencing.md` |
 
 ## Design and decision records
 
-Not the source of any rule, and not stamped to targets — a citation from a
-usage document to a record resolves in this repository only.
+Not the source of any rule — a usage document cites a record for its grounds,
+and no role follows a record.
 
 | Record tree | Use When |
 | --- | --- |

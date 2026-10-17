@@ -14,9 +14,6 @@
 #          resolve; bin/autoflow-root is executable
 #   AC1a/AC1b  the command skills cycle and criterion-review: SKILL.md present
 #          with its frontmatter name
-#   AC1a/AC1b/AC1d  the install skill (retired with the stamp, PR-4): SKILL.md,
-#          every shipped scripts/*.sh, and its resolver lib byte-identical to
-#          scripts/lib/
 #   AC1f   every packaged SKILL.md frontmatter parses (POSIX defect-class
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
@@ -30,8 +27,6 @@
 #   AC1    plugin.json parses; `name` (the only spec-required field) is
 #          'autoflow'; `version` is explicit and non-'latest' (R1 pin)
 #   AC2    marketplace.json registers the plugin (name/source/version)
-#   AC6e   the shipped PLUGIN_NAME / MARKETPLACE_NAME defaults (drift-check,
-#          scripts/lib/plugin-root.sh) agree with marketplace.json
 # =============================================================================
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -42,11 +37,6 @@ PLUGIN_MANIFEST="$PLUGIN_DIR/.claude-plugin/plugin.json"
 MARKETPLACE="$REPO_ROOT/.claude-plugin/marketplace.json"
 HOOKS_JSON="$PLUGIN_DIR/hooks/hooks.json"
 GATE_SH="$PLUGIN_DIR/hooks/check-autoflow-gate.sh"
-
-# Install skill (plugin-only, no .claude/skills/install host twin)
-INSTALL_SKILL_DIR="$PLUGIN_DIR/skills/install"
-INSTALL_SKILL_MD="$INSTALL_SKILL_DIR/SKILL.md"
-INSTALL_SKILL_SCRIPTS="$INSTALL_SKILL_DIR/scripts"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -141,62 +131,6 @@ for _cmd in cycle criterion-review; do
   fi
 done
 
-# ── AC1a/AC1b: install skill presence + component resolution ────────────
-# The install skill is plugin-only -- it has no `.claude/skills/install` host
-# twin and no parity check. AC1a presence +
-# AC1b component-resolution are therefore this skill's sole packaging guard: both SKILL.md and every
-# shipped scripts/*.sh must resolve inside the PACKAGED plugin tree.
-echo "== AC1a (#943): install skill SKILL.md presence + frontmatter =="
-if [ -f "$INSTALL_SKILL_MD" ]; then
-  pass "AC1a: skills/install/SKILL.md exists"
-  INSTALL_NAME=$(awk '/^---$/{n++; next} n==1 && /^name:/{print; exit}' "$INSTALL_SKILL_MD" | sed -E 's/^name:[[:space:]]*//')
-  if [ "$INSTALL_NAME" = "install" ]; then
-    pass "AC1a: install SKILL.md frontmatter name == 'install'"
-  else
-    failc "AC1a" "install SKILL.md frontmatter name='$INSTALL_NAME' (expected 'install')"
-  fi
-else
-  failc "AC1a" "install skill SKILL.md missing at $INSTALL_SKILL_MD"
-fi
-
-echo "== AC1b (#943): every shipped scripts/*.sh resolves in the PACKAGED tree =="
-if [ -d "$INSTALL_SKILL_SCRIPTS" ]; then
-  SCRIPT_COUNT=0
-  for _s in "$INSTALL_SKILL_SCRIPTS"/*.sh; do
-    [ -e "$_s" ] || continue
-    SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-    pass "AC1b: $(basename "$_s") resolves under packaged $INSTALL_SKILL_SCRIPTS"
-  done
-  if [ "$SCRIPT_COUNT" -eq 0 ]; then
-    failc "AC1b" "install skill scripts/ directory has no *.sh files at $INSTALL_SKILL_SCRIPTS (non-vacuity: sole packaging guard for a plugin-only skill)"
-  fi
-  if [ -f "$INSTALL_SKILL_SCRIPTS/detect.sh" ]; then
-    pass "AC1b: detect.sh resolves in the packaged tree"
-  else
-    failc "AC1b" "detect.sh missing at $INSTALL_SKILL_SCRIPTS/detect.sh"
-  fi
-else
-  failc "AC1b" "install skill scripts/ directory missing at $INSTALL_SKILL_SCRIPTS"
-fi
-
-echo "== AC1d (#174): resolve-cache-root.sh + lib/plugin-root.sh resolve in the packaged tree; the lib is byte-identical to scripts/lib/plugin-root.sh =="
-# The install skill resolves the marketplace clone through the same resolver
-# drift-check D4/D5 and spawn-policy check use (scripts/lib/plugin-root.sh),
-# but a plugin cache carries no scripts/lib/ and an uninstalled target none
-# either -- so the skill ships its own copy under scripts/lib/ of the skill.
-# Two copies of one resolver are one resolver only while they are
-# byte-identical; this pin is what makes an edit to either side visible.
-if [ -f "$INSTALL_SKILL_SCRIPTS/resolve-cache-root.sh" ]; then
-  pass "AC1d: resolve-cache-root.sh resolves in the packaged tree"
-else
-  failc "AC1d" "resolve-cache-root.sh missing at $INSTALL_SKILL_SCRIPTS/resolve-cache-root.sh"
-fi
-if [ -f "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" ] && cmp -s "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" "$REPO_ROOT/scripts/lib/plugin-root.sh"; then
-  pass "AC1d: skills/install/scripts/lib/plugin-root.sh is byte-identical to scripts/lib/plugin-root.sh"
-else
-  failc "AC1d" "skills/install/scripts/lib/plugin-root.sh missing or differs from scripts/lib/plugin-root.sh -- re-copy: cp scripts/lib/plugin-root.sh skills/install/scripts/lib/plugin-root.sh"
-fi
-
 # ── AC1f: gating POSIX frontmatter oracle ─────────────────────────────────
 # A skill whose frontmatter does not parse does not load from the package.
 # This is a defect-class validator, not a full YAML implementation -- honest
@@ -253,9 +187,10 @@ done
 echo "== AC1f: oracle fixture specimens (in-test heredocs; non-vacuity of the oracle) =="
 FM_TMP=$(mktemp -d)
 
-# spec-embedded-colon: the literal pre-fix install/SKILL.md frontmatter (the
-# Triggers: embedded colon-space plain-scalar defect). It persists as a
-# regression witness independently of the live file.
+# spec-embedded-colon: the literal pre-fix frontmatter of the install skill
+# (retired with the stamp, ADR-0027 D5), with its Triggers: embedded
+# colon-space plain-scalar defect. It persists as a regression witness of the
+# oracle, independently of any live file.
 cat > "$FM_TMP/spec-embedded-colon.md" <<'SPEC_EOF'
 ---
 name: install
@@ -441,38 +376,6 @@ for d in "$REPO_ROOT/.claude-plugin"; do
     failc "AC5 structure" "$d does not exist"
   fi
 done
-
-# ── AC6e: shipped name defaults vs marketplace.json ─────────────────────
-# drift-check's fallback branch (the one every conforming target lands on)
-# and the shipped resolver's parameter defaults carry the plugin and
-# marketplace names as literals. A rename that desyncs them from
-# marketplace.json degrades every stamped target's D2/D4/D5 resolution to
-# SKIP at exit 0.
-echo "== AC6e (#245): shipped PLUGIN_NAME / MARKETPLACE_NAME defaults agree with marketplace.json =="
-DRIFT_CHECK_SRC="$REPO_ROOT/setup/thin-root-layer/drift-check.sh"
-PLUGIN_ROOT_LIB_SRC="$REPO_ROOT/scripts/lib/plugin-root.sh"
-if [ -n "$MP_NAME" ] && [ -n "$P0_NAME" ] \
-   && [ -f "$DRIFT_CHECK_SRC" ] && [ -f "$PLUGIN_ROOT_LIB_SRC" ]; then
-  DC_FALLBACK=$(grep -E '^[[:space:]]*\*\)[[:space:]]+PLUGIN_NAME=' "$DRIFT_CHECK_SRC" | head -1)
-  DC_PLG=$(printf '%s\n' "$DC_FALLBACK" | sed -n 's/.*PLUGIN_NAME="\([^"]*\)".*/\1/p')
-  DC_MKT=$(printf '%s\n' "$DC_FALLBACK" | sed -n 's/.*MARKETPLACE_NAME="\([^"]*\)".*/\1/p')
-  LIB_PLG=$(grep -E '_apr_plg="\$\{3:-[^}]*\}"' "$PLUGIN_ROOT_LIB_SRC" \
-            | sed -n 's/.*_apr_plg="\${3:-\([^}]*\)}".*/\1/p' | head -1)
-  LIB_MKT=$(grep -E '_amr_mkt="\$\{1:-[^}]*\}"' "$PLUGIN_ROOT_LIB_SRC" \
-            | sed -n 's/.*_amr_mkt="\${1:-\([^}]*\)}".*/\1/p' | head -1)
-  if [ -n "$DC_PLG" ] && [ "$DC_PLG" = "$P0_NAME" ] && [ -n "$DC_MKT" ] && [ "$DC_MKT" = "$MP_NAME" ]; then
-    pass "AC6e: drift-check's name fallback ('$DC_PLG' / '$DC_MKT') agrees with marketplace.json (.plugins[0].name / .name)"
-  else
-    failc "AC6e" "drift-check's name fallback plugin='$DC_PLG' marketplace='$DC_MKT' != marketplace.json '$P0_NAME' / '$MP_NAME' -- every conforming target's D2/D4/D5 resolution degrades to SKIP at exit 0"
-  fi
-  if [ -n "$LIB_PLG" ] && [ "$LIB_PLG" = "$P0_NAME" ] && [ -n "$LIB_MKT" ] && [ "$LIB_MKT" = "$MP_NAME" ]; then
-    pass "AC6e: scripts/lib/plugin-root.sh's resolver defaults ('$LIB_PLG' / '$LIB_MKT') agree with marketplace.json (.plugins[0].name / .name)"
-  else
-    failc "AC6e" "resolver defaults plugin='$LIB_PLG' marketplace='$LIB_MKT' != marketplace.json '$P0_NAME' / '$MP_NAME' -- the shipped defaults have desynced from the declared names"
-  fi
-else
-  failc "AC6e" "cannot cross-check the shipped name defaults (MP_NAME='$MP_NAME' P0_NAME='$P0_NAME', drift-check.sh / scripts/lib/plugin-root.sh present?)"
-fi
 
 # ── AC-R1a: claude plugin validate, GATING when the CLI is present ──────
 # When `claude` is present a non-zero exit feeds failc. When it is absent

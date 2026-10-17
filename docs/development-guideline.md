@@ -84,9 +84,9 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 - This repository commits only deployment-level checks (`packaging`, `manifest`).
   Any other change is verified by a one-shot run under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, recorded in the
   PR body: a change to AutoFlow's own rules (a rule document, a rule and its device) is
-  settled there, by the external reviewer and by the gates; a change to what a stamp delivers (a
-  hook, a shipped script, a workflow) is checked there too, and its behavior across targets shows
-  where it is stamped — a failure on a real target comes back as an issue, not to CI.
+  settled there, by the external reviewer and by the gates; a change to what the plugin delivers
+  (a hook, a shipped script, a workflow) is checked there too, and its behavior across targets
+  shows where the plugin runs — a failure on a real target comes back as an issue, not to CI.
 - ADR-0024 D1's closed category list is this repository's convention for its own verification
   designs, and its layer device runs only here.
 - This repository does not opt into AutoFlow's suite plane (`tests.suite_plane`).
@@ -115,7 +115,7 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 - **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
   documents under `docs/` other than `docs/records/`, the agent and skill
   definitions, the review guides under `.codex/`, the PR and issue templates,
-  the guides under `setup/`, and the descriptive fields of
+  and the descriptive fields of
   `.claude/autoflow/spawn-policy.json` — states what to do, when, and under
   which constraint. It carries no account of how a rule came to be (a case; an
   issue, PR, ADR or Decision number; a change relative to an earlier version; a

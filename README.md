@@ -85,69 +85,58 @@ flowchart LR
 
 ## Quick Start
 
-AutoFlow installs as a **versioned tool your own dev project consumes** — your
-project is the repo root (host) and AutoFlow is a bundle it pulls in. The
-authoritative, step-by-step source is
-[`setup/SETUP-GUIDE.md`](setup/SETUP-GUIDE.md) > "Install as a consumed tool".
+AutoFlow is a **versioned tool your own dev project consumes**, delivered by a
+Claude Code plugin alone: your project is the repository Claude Code runs in, and
+AutoFlow writes no file into it beyond its own working state under `.autoflow/`.
 
-Onboarding is **3 commands**, run from a Claude Code session rooted in your
-project:
+Install the plugin once per machine, at user scope:
 
 ```
-1. /plugin marketplace add Munsik-Park/autoflow
-2. /plugin install autoflow@autoflow
-3. /autoflow:install        # detects → confirms → stamps → drift-checks
+/plugin marketplace add Munsik-Park/autoflow
+/plugin install autoflow@autoflow
 ```
 
-Steps 1–2 and step 3 do different jobs. **Steps 1–2 enable the plugin once, at
-user scope** (`/plugin install` writes the enablement into
-`~/.claude/settings.json`, which turns AutoFlow on in every project you open) —
-once per machine, not once per repository. **Step 3 stamps one repository**: it
-delivers the thin root layer, declares the marketplace in that repo's
-`.claude/settings.json`, and writes the target's version record
-(`.claude/autoflow/manifest.json` `.version`). A stamp does **not** enable the
-plugin, and it writes no `enabledPlugins` key (see `setup/SETUP-GUIDE.md` > *A
-stamped repository declares no enablement*, which also documents the per-repo
-`false` opt-out).
+`/plugin install` writes the enablement into `~/.claude/settings.json`, which
+turns AutoFlow on in every project you open. To keep it **off** in one
+repository, write `"enabledPlugins": {"autoflow@autoflow": false}` into that
+repository's `.claude/settings.json`.
 
-Step 3 runs the `/autoflow:install` skill: it detects root-layer absence or
-drift and reports it (read-only), asks for a
-**single** confirmation, then stamps the thin-root bundle from the marketplace
-cache (via `init.sh` under the hood) and runs the drift detector automatically.
-No file is written to your project before you confirm, and it never commits for
-you — you own your version record. Maintenance is both, in order: update the
-plugin at user scope (`/plugin marketplace update` →
-`/plugin update autoflow@autoflow`), then re-stamp each target
-(`/autoflow:install`). A re-stamp also
-removes the `copy` artifacts the previous version delivered and the new one no
-longer ships, when their content is still what AutoFlow shipped; anything you
-modified, and every target-owned scaffold, is kept and named (see
-`setup/SETUP-GUIDE.md` > *Manual / CI-scripted install*).
+Then, in your project:
 
-A non-zero drift-check result is a **PREFLIGHT stop condition** — resolve the
-reported drift before starting a new AutoFlow cycle. The detector checks the
-installed files against the installed manifest, and the installed bundle and
-plugin against the marketplace clone (per-artifact hashes) — see `setup/SETUP-GUIDE.md` >
-*Self-verify with the drift detector*.
+- **Start a cycle** with `/autoflow:cycle <issue>`; review a new issue's
+  acceptance criteria before its first cycle with
+  `/autoflow:criterion-review <issue>` ([`docs/criterion-review.md`](docs/criterion-review.md)).
+- **Ignore the working state**: `.gitignore` excludes `.autoflow/`
+  (`.autoflow/*`), which holds the per-issue directories
+  `.autoflow/{repo-key}-issue-{N}/`.
+- **Declare what your project needs** in `.claude/autoflow.local.json` — the
+  file is yours, and absent means none of the following
+  ([`.claude/autoflow.local.json.example`](.claude/autoflow.local.json.example)):
+  - `review.reviewers` — external reviewers run beside the built-in Claude
+    review at HANDOFF (`["codex"]`; [`docs/reviewer-backend.md`](docs/reviewer-backend.md));
+  - `preflight.local_checks[]` — your own per-clone readiness steps, run at
+    PREFLIGHT ([`docs/units/preparation.md`](docs/units/preparation.md) > *Stop conditions*);
+  - `audit.security_checklist` — the repository-relative path of your security
+    checklist, which AUDIT scores a change against ([`docs/units/build.md`](docs/units/build.md) > *Security checklist*);
+  - `tests.suite_plane` — `true` only to adopt AutoFlow's suite plane.
+- **Optionally own the spawn policy**: a `.claude/autoflow/spawn-policy.json` in
+  your project overrides the plugin's default model per phase
+  ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > *Spawn policy*).
+  The `advisor` row ships on `fable`; an account without Fable access changes
+  that row's `model` there.
 
-### Advanced / manual install
+**Updating** is the plugin update alone: `/plugin marketplace update` →
+`/plugin update autoflow@autoflow`. Every cycle records in its ledger which
+AutoFlow ran it — the plugin version, the loaded root and, for a checkout, its
+`HEAD` — and PREFLIGHT stops on a failed **target check**: your own spawn policy
+against the loaded agent definitions, and, on an opted-in target, the suite
+headers (`<autoflow-root>/scripts/preflight/target-check.sh`).
 
-The `/autoflow:install` skill wraps the manifest-driven installer; you can also
-run it by hand (e.g. in CI, or before the plugin is enabled):
+**Developing AutoFlow**: `claude --plugin-dir <clone>` runs a clone's working
+tree in place of the installed plugin for that session.
 
-```bash
-# From a checkout of claude-autoflow, install the bundle into your project root:
-setup/init.sh --target /path/to/your-project
-
-# Re-run any time to upgrade / re-stamp (idempotent):
-setup/init.sh --target /path/to/your-project --force
-
-# Target-local, network-free self-check (reads .claude/autoflow/manifest.json):
-sh .claude/autoflow/drift-check.sh
-```
-
-The install is **manifest-driven**: `setup/manifest.json` is the exhaustive list
-of every artifact the installer writes; nothing is hardcoded in `init.sh`.
+**Prerequisites**: Claude Code v2.1.277+, `jq` and the GitHub CLI `gh`; a GitHub
+repository (one per sub-repo, for a project with sub-repos).
 
 ---
 
@@ -162,13 +151,13 @@ claude-autoflow/
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, hooks.json
-├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md), install
+├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md)
 ├── bin/                               # autoflow-root — prints the plugin root
 │
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
 │
-├── docs/                              # Usage documents — stamped to targets
+├── docs/                              # Usage documents — read by path under the plugin root
 │   ├── INDEX.md                       # Router: usage documents vs records
 │   ├── core.md                        # The core: cross-unit invariants and authority rules
 │   ├── autoflow-guide.md              # Lifecycle overview + index of the unit documents
@@ -177,32 +166,28 @@ claude-autoflow/
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
 │   ├── submodule-common-rules.md      # Sub-repo shared rules
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
-│   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json; not stamped to targets)
+│   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json)
 │   ├── units/                         # Functional-unit documents, U1–U6 (docs/units/)
-│   └── records/                       # Design & decision records — not stamped to targets
+│   └── records/                       # Design & decision records — the source of no rule
 │       ├── design-rationale.md        # Why every rule exists — read for a decision's grounds, routed per role
 │       ├── adr/                       # Architecture Decision Records
 │       └── design-reviews/            # Design reviews behind the ADRs
 │
 ├── scripts/                           # Helper / handoff scripts (scripts/)
-├── tests/                             # Guard & regression suites (tests/)
-│
-└── setup/
-    ├── init.sh                        # Consumed-tool installer (`init.sh --target`)
-    ├── SETUP-GUIDE.md                 # Consumed-tool install guide
-    ├── manifest.json                  # Manifest of installed artifacts (setup/manifest.json)
-    └── thin-root-layer/              # Thin-root residue templates (setup/thin-root-layer/)
+└── tests/                             # Guard & regression suites (tests/)
 ```
 
 ---
 
 ## How It Works
 
-### 1. CLAUDE.md Drives AI Behavior
+### 1. The Core Drives AI Behavior
 
-`CLAUDE.md` is the operating manual for Claude Code. It defines the AutoFlow
-lifecycle and rules, agent roles and permissions, evaluation criteria, and the
-Git workflow.
+[`docs/core.md`](docs/core.md) is the operating manual: the AutoFlow lifecycle
+and rules, agent roles and permissions, evaluation criteria, and the Git
+workflow. It reaches a session through the body of `/autoflow:cycle` (and
+`/autoflow:criterion-review`), and a subagent through its agent definition; each
+unit's document is read on entering the unit.
 
 ### 2. Multi-Agent Separation
 
@@ -259,20 +244,7 @@ merges (`docs/units/delivery.md` > *Multi-repo delivery*).
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |
-| [Setup Guide](setup/SETUP-GUIDE.md) | Manual setup instructions |
-
----
-
-## Post-Setup Checklist
-
-After running `setup/init.sh --target <path>`:
-
-- [ ] Your project `CLAUDE.md` carries the managed `AUTOFLOW-IMPORT` shim block.
-- [ ] `sh .claude/autoflow/drift-check.sh` exits zero (installed artifacts match the manifest; the bundle and the plugin match the marketplace clone; the `spawn-policy.json` scaffold agrees with the loaded agent definitions and carries every row the current version requires).
-- [ ] `.claude/settings.json` declares the AutoFlow marketplace
-      (`extraKnownMarketplaces`) — and **no** `enabledPlugins` key: the plugin is
-      enabled once at user scope by `/plugin install autoflow@autoflow`.
-- [ ] `.gitignore` excludes `.autoflow/` (`.autoflow/*`), which holds the per-issue directories `.autoflow/{repo-key}-issue-{N}/`.
+| [Tool Delivery Contract](docs/tool-delivery-contract.md) | The plugin as the single version, the target-owned files, the spawn policy, the runtime environment |
 
 ---
 

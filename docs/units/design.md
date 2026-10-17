@@ -153,11 +153,6 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 
 - For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person / mock). When an item is not automatable, consider first whether a feature-design change makes it testable.
 - Design-change request: parts of the feature design that should be revised so they become testable.
-- Committed-surface allow-list: a manifest-registered source in the change surface pulls
-  `setup/manifest.json` in as a derived member of the allow-list (Change Surface Rules > Derived
-  artifacts). Under the layer split above this is **derived at BUILD**, from the actual staged
-  surface, not predicted here — but it is still derived *before* the commit, never left to a
-  test/CI failure to admit.
 
 ### Test necessity
 

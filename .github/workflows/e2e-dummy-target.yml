@@ -2,15 +2,17 @@
 # SPDX-License-Identifier: Elastic-2.0
 # .github/workflows/e2e-dummy-target.yml — throwaway dummy-target E2E suite (issue #797 [#785-S10])
 #
-# Runs tests/plugin/verify-e2e-dummy-target.sh, which stamps the thin-root bundle
-# into a structurally-real, zero-submodule dummy library target through
-# setup/init.sh and checks that the install lands intact and resolves from the
-# installed location — deployment-level checks only (ADR-0024 D1; issue #293).
-# It runs on every pull request and every push to main, with no `paths:` filter.
+# Runs tests/plugin/verify-e2e-dummy-target.sh: the plugin package laid out as
+# an install lays it out, against a structurally-real, zero-submodule dummy
+# library target that carries no AutoFlow file (ADR-0027). The PREFLIGHT scripts
+# and the gate hook resolve the plugin root, the state lands in the target's
+# .autoflow, the target's spawn policy wins over the plugin default, the hook's
+# advisories find their helpers and the target check runs fail-closed —
+# deployment-level checks only (ADR-0024 D1; issue #293). It runs on every pull
+# request and every push to main, with no `paths:` filter.
 #
-# Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff/grep/awk/git with
-# no node/npm, no bats, and no submodule checkout; ubuntu-latest ships bash 5.x +
-# git + jq.
+# Why GitHub Actions: the suite is pure bash + jq/git/tar/grep with no node/npm,
+# no bats, and no submodule checkout; ubuntu-latest ships bash 5.x + git + jq.
 #
 # One file per subject: a dedicated sibling workflow, not a job added to
 # plugin-package.yml.

@@ -52,8 +52,9 @@ treats a run that leaves no record as failed (exit `5`).
 
 ## Config location
 
-The external reviewers are recorded in the target-owned scaffold
-`.claude/autoflow.local.json`:
+The external reviewers are recorded in the target-owned file
+`.claude/autoflow.local.json`, which the target writes itself (the sample
+`<autoflow-root>/.claude/autoflow.local.json.example` names `codex`):
 
 ```json
 { "review": { "reviewers": ["codex"] } }
@@ -63,13 +64,10 @@ Read type-aware by `<autoflow-root>/scripts/review/lib/review-config.sh` (the ke
 first, then its value). `.review.reviewers` lists the external reviewers run
 beside the built-in review; `[]` names none. When it is absent, the earlier
 single-reviewer key is read: `.review.backend: "codex"` reads as `["codex"]`.
-**Both absent ⇒ no external reviewer** — the built-in review runs alone. The
-scaffold, shipped with `codex`, is delivered by `init.sh` and **never
-overwritten** on re-install.
+**Both absent ⇒ no external reviewer** — the built-in review runs alone.
 
 A present file that cannot be read as configured **fails closed** (exit `2`) in
-the consumers (`codex-review-pr.sh`, `check-review-backend.sh`), and the
-install-time reporter (`detect.sh`) reports `REVIEW_REVIEWERS=invalid`: invalid
+the consumers (`codex-review-pr.sh`, `check-review-backend.sh`): invalid
 JSON, a file present while `jq` is not on PATH, a non-object `.review`, a
 `reviewers` value that is not an array of supported names, or a `backend` value
 other than `codex`. `.review.backend: "claude"` is among them — the `claude`
@@ -78,7 +76,7 @@ backend was removed, since the built-in review is Claude's.
 ## Model and effort
 
 Each external reviewer's model and reasoning effort can be pinned in the same
-scaffold. Every key is optional:
+file. Every key is optional:
 
 ```json
 {
@@ -112,8 +110,7 @@ its own.
 **Inherit means no flag.** When the effort key is absent (or JSON `null`) the
 wrapper passes none, and the CLI applies its own configuration
 (`~/.codex/config.toml`, `model_reasoning_effort`). The model default lives in
-the resolver so that a target whose never-overwritten scaffold pins nothing
-still reviews on it; the scaffold delivered by `init.sh` pins nothing.
+the resolver so that a target whose file pins nothing still reviews on it.
 
 **Supported effort values** (the vocabulary lives in `review-config.sh` and is
 edited there when a CLI's set evolves — model identifiers are not validated):
@@ -174,11 +171,10 @@ configured external reviewer — for `codex`, the same model-API connection a
 `codex exec` opens. With no external reviewer configured it reports so and exits
 `0`.
 
-**Triggers — on-demand only:** `/autoflow:install` auto-runs the probe
-(advisory) after the stamp, and the operator runs it after changing the
-reviewer configuration. It is **not** run per-cycle, is **not** wired into
+**Triggers — on-demand only:** the operator runs it after writing or changing
+the reviewer configuration. It is **not** run per-cycle, is **not** wired into
 PREFLIGHT, and **no hook consumes it** — a probe failure is narrated, never used
-to abort an install or gate a cycle.
+to gate a cycle.
 
 **Exit-code contract** (extends the presence `0/1/2`):
 

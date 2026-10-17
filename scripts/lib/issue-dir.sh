@@ -14,8 +14,8 @@
 # so two repositories' issues of the same number never share a name in one
 # .autoflow/, and a new session picks an issue's whole checkpoint up from one
 # directory. The archive (scripts/cleanup/cleanup-issue.sh) keys its store by
-# the same <repo-key>. The scripts that ship into a consuming target source this
-# file, so it ships with them (setup/manifest.json copy row, dest scripts/lib/).
+# the same <repo-key>. The scripts beside it source this file from their own
+# tree (ADR-0027 D3).
 #
 #   derive_repo_key <url> <root>
 #       `<owner>__<name>` from an origin URL or an `owner/name` pair; with an

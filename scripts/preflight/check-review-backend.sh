@@ -26,8 +26,8 @@
 #
 # `--probe` is a SEPARATE, on-demand mode: it makes one real authenticated
 # round-trip against each configured external reviewer, over the same channel
-# the HANDOFF review uses. It runs on-demand only — at install time (SKILL.md)
-# and when the reviewer configuration changes — and is NEVER wired into
+# the HANDOFF review uses. It runs on-demand only — when the operator writes
+# or changes the reviewer configuration — and is NEVER wired into
 # PREFLIGHT and no hook consumes it. Its exit-code contract extends the
 # presence 0/1/2: 0=authenticated (or none configured), 1=CLI absent
 # (short-circuit, reuses the presence exit), 2=usage/config error,
@@ -83,7 +83,7 @@ echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 # watchdog. Reads PROBE_TIMEOUT_SECS via its caller. Sets PROBE_RC (the
 # command's exit code) and PROBE_TIMED_OUT (1 iff the bound fired). This bound
 # is net-new (codex-review-pr.sh carries no timeout) — a hanging no-TTY
-# interactive-login prompt must not stall the operator's install.
+# interactive-login prompt must not stall the operator's shell.
 probe_run_bounded() {
   local bound="$1"; shift
   PROBE_TIMED_OUT=0

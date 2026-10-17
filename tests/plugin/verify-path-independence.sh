@@ -6,9 +6,9 @@
 # =============================================================================
 # The shipped gate hook and scripts resolve AutoFlow's own files from the
 # AutoFlow tree they run from, and the target's files from the target, so they
-# work from a plugin root apart from the target as well as from a stamped
-# target. Each leg builds the two trees in a mktemp scratch dir and runs the
-# shipped files from there. Plain bash + jq/git only (no bats, no node/npm).
+# work from a plugin root apart from the target. Each leg builds the two trees
+# in a mktemp scratch dir and runs the shipped files from there. Plain bash +
+# jq/git only (no bats, no node/npm).
 #
 # Legs (category: packaging):
 #
@@ -17,11 +17,10 @@
 #         the target's copy, and the advisory reaches the model
 #     H2  no CLAUDE_PLUGIN_ROOT, the hook at <root>/hooks/: the helper is found
 #         beside it
-#     H3  stamped layout (the plugin root carries no scripts/): the target's
-#         stamped helper still runs
+#     H3  a plugin root that carries no helper runs none: the target's copy of
+#         it is never executed (ADR-0027 D3)
 #     H4  a deny message names the plugin root's script and document by
 #         absolute path
-#     H5  stamped layout: the deny message keeps its bare paths
 #
 #   P   spawn-policy lookup order
 #     P1  CLAUDE_PROJECT_DIR's policy wins over the AutoFlow default
@@ -29,8 +28,6 @@
 #         toplevel wins (run from a subdirectory)
 #     P3  a target without a policy falls back to the AutoFlow default
 #     P4  AUTOFLOW_SPAWN_POLICY wins over both
-#     P5  stamped layout: the readout the target carries reads the target's
-#         policy
 #     P6  `check` reads the agent definitions at <root>/agents
 #     P7  the hook advisory compares a spawn against the target's policy
 #
@@ -43,7 +40,6 @@
 #   W   codex review wrapper prompt
 #     W1  the prompt names the plugin root's .codex/review.md by absolute path
 #     W2  a plugin root without .codex/review.md: exit 2, codex not started
-#     W3  stamped layout: the prompt names the target's own copy
 # =============================================================================
 
 set -uo pipefail
@@ -142,21 +138,18 @@ else
   failc "H2" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h2.err")"
 fi
 
-# Stamped layout: the plugin root is a cache that carries hooks/ only, and the
-# target carries the stamped helper in its own scripts/.
-CACHE="$WORK/cache/autoflow/autoflow/0.0.0"
-mkdir -p "$CACHE/hooks"
-cp "$HOOK_SRC" "$CACHE/hooks/check-autoflow-gate.sh"
-TS="$WORK/target-stamped"
-make_target "$TS"
-mkdir -p "$TS/scripts/ledger"
-cp "$REPO_ROOT/scripts/ledger/ledger-entry-id.sh" "$TS/scripts/ledger/ledger-entry-id.sh"
-bash_payload ls | run_clean CLAUDE_PLUGIN_ROOT="$CACHE" CLAUDE_PROJECT_DIR="$TS" \
-  bash "$CACHE/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h3.err"; rc=$?
-if [ "$rc" -eq 0 ] && grep -q 'decision-ledger identifier defect' "$WORK/h3.err"; then
-  pass "H3: stamped layout — the target's stamped helper still runs"
+# A plugin root that carries hooks/ only: the target's decoy helper (make_target
+# above, under $T) is the only copy of the helper anywhere the hook could look.
+BARE="$WORK/bare-root"
+mkdir -p "$BARE/hooks"
+cp "$HOOK_SRC" "$BARE/hooks/check-autoflow-gate.sh"
+rm -f "$DECOY_MARK" "$T/.autoflow/.ledger-check-cache"
+bash_payload ls | run_clean CLAUDE_PLUGIN_ROOT="$BARE" CLAUDE_PROJECT_DIR="$T" \
+  bash "$BARE/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h3.err"; rc=$?
+if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && ! grep -q 'decision-ledger identifier defect' "$WORK/h3.err"; then
+  pass "H3: a plugin root without the helper runs none — the target's copy is never executed"
 else
-  failc "H3" "hook" "rc=$rc stderr=$(head -c 300 "$WORK/h3.err")"
+  failc "H3" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h3.err")"
 fi
 
 bash_payload 'gh issue create --title x' | run_clean CLAUDE_PLUGIN_ROOT="$PLUGIN" CLAUDE_PROJECT_DIR="$T" \
@@ -166,14 +159,6 @@ if [ "$rc" -eq 2 ] && grep -qF "then run: $PLUGIN/scripts/issue/create-issue.sh 
   pass "H4: the deny names the plugin root's script and document by absolute path (the target path stays relative)"
 else
   failc "H4" "hook" "rc=$rc stderr=$(head -c 400 "$WORK/h4.err")"
-fi
-
-bash_payload 'gh issue create --title x' | run_clean CLAUDE_PLUGIN_ROOT="$CACHE" CLAUDE_PROJECT_DIR="$TS" \
-  bash "$CACHE/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h5.err"; rc=$?
-if [ "$rc" -eq 2 ] && grep -qF "per docs/issue-proposal.md, then run: scripts/issue/create-issue.sh --draft" "$WORK/h5.err"; then
-  pass "H5: stamped layout — the deny keeps its bare paths"
-else
-  failc "H5" "hook" "rc=$rc stderr=$(head -c 400 "$WORK/h5.err")"
 fi
 
 # ── P: spawn-policy lookup order ─────────────────────────────────────────────
@@ -205,15 +190,6 @@ jq '.phases["gate-plan"].model = "override-model"' "$PLUGIN/.claude/autoflow/spa
 got=$(cd "$TP" && run_clean CLAUDE_PROJECT_DIR="$TP" AUTOFLOW_SPAWN_POLICY="$OVR" bash "$SP" model gate-plan 2>&1)
 [ "$got" = "override-model" ] && pass "P4: AUTOFLOW_SPAWN_POLICY wins over the target's policy and the default" \
   || failc "P4" "readout" "got '$got', want 'override-model'"
-
-TSP="$WORK/target-stamped-p"
-git_init "$(mkdir -p "$TSP" && echo "$TSP")"
-target_policy "$TSP"
-mkdir -p "$TSP/scripts"
-cp -R "$REPO_ROOT/scripts/spawn-policy" "$REPO_ROOT/scripts/lib" "$TSP/scripts/"
-got=$(cd "$TSP" && run_clean CLAUDE_PROJECT_DIR="$TSP" bash "$TSP/scripts/spawn-policy/spawn-policy.sh" model gate-plan 2>&1)
-[ "$got" = "haiku" ] && pass "P5: stamped layout — the target's own readout reads the target's policy" \
-  || failc "P5" "readout" "got '$got', want 'haiku'"
 
 if (cd "$TP" && run_clean CLAUDE_PROJECT_DIR="$TP" bash "$SP" check >"$WORK/p6.out" 2>&1); then
   pass "P6: check validates the target's policy against the agent definitions at <root>/agents"
@@ -309,18 +285,6 @@ if [ "$rc" -eq 2 ] && [ ! -e "$WORK/w2.prompt" ] && grep -q 'review convention i
   pass "W2: a tree without .codex/review.md exits 2 and never starts codex"
 else
   failc "W2" "wrapper" "rc=$rc started=$([ -e "$WORK/w2.prompt" ] && echo yes || echo no)"
-fi
-
-TWS="$WORK/target-w-stamped"
-git_init "$(mkdir -p "$TWS" && echo "$TWS")"
-mkdir -p "$TWS/scripts" "$TWS/.codex"
-cp -R "$REPO_ROOT/scripts/review" "$TWS/scripts/review"
-cp "$REPO_ROOT/.codex/review.md" "$TWS/.codex/review.md"
-run_wrapper "$TWS/scripts/review/codex-review-pr.sh" "$TWS" "$WORK/w3.prompt"; rc=$?
-if [ "$rc" -eq 0 ] && grep -qF "the review convention at $TWS/.codex/review.md." "$WORK/w3.prompt"; then
-  pass "W3: stamped layout — the prompt names the target's own .codex/review.md"
-else
-  failc "W3" "wrapper" "rc=$rc prompt=$(head -c 400 "$WORK/w3.prompt" 2>/dev/null) err=$(head -c 200 "$WORK/w3.prompt.err")"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT + SKIP_COUNT))

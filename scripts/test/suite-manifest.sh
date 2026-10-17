@@ -338,11 +338,11 @@ suite_local_allowance_secs() {
 # is consulted, distinct from success and from every failure code the consulting
 # device already defines — the precedent is scripts/handoff/confirm-ci-green.sh,
 # which keeps 11 ("nothing ran") distinct from 12 ("it failed") so that nothing
-# ran cannot read as passed. And ABSENT is not UNREADABLE: a scaffold stamped
-# before the declaration site shipped carries no `tests` object at all (the
-# current `.claude/autoflow.local.json.example` ships the object with
-# `suite_plane: false` — issue #229 — but a re-stamp never overwrites a target's
-# copy), so absent is a normal non-opted-in state, while a declaration file that
+# ran cannot read as passed. And ABSENT is not UNREADABLE: a target's
+# declaration file need not carry a `tests` object at all (the sample
+# `.claude/autoflow.local.json.example` ships the object with
+# `suite_plane: false` — issue #229 — but the target writes its own file), so
+# absent is a normal non-opted-in state, while a declaration file that
 # is present and cannot be parsed is a refusal — the fail-closed contract
 # scripts/review/lib/review-config.sh already sets in this tree.
 #
@@ -376,24 +376,4 @@ suite_plane_opted_in() {
 # ---------------------------------------------------------------------------
 suite_plane_decl_path() {
   printf '%s/%s\n' "${1:-.}" "$SUITE_PLANE_DECL_REL"
-}
-
-# ---------------------------------------------------------------------------
-# suite_plane_declared <root> — does the target carry the DECLARATION SITE at
-# all (issue #229, ADR-0024 S4)? 0 when the declaration file exists and holds a
-# `tests` object, 1 otherwise. This answers a different question from
-# `suite_plane_opted_in`: a scaffold stamped before the `tests` object shipped
-# (0.2.2 and earlier) is not opted in AND has nowhere to say so, and a re-stamp
-# never overwrites it — so drift-check D7 names that absence as a HINT beside
-# its not-opted-in PASS, which is how an existing target learns the site exists
-# (`.claude/autoflow.local.json.example` carries the sample). It is a presence
-# predicate over the `tests` object, not a read of the opt-in key: the key is
-# read by `suite_plane_opted_in` and nowhere else.
-# ---------------------------------------------------------------------------
-suite_plane_declared() {
-  local root="${1:-.}" decl
-  decl="$root/$SUITE_PLANE_DECL_REL"
-  [ -f "$decl" ] || return 1
-  command -v jq >/dev/null 2>&1 || return 1
-  jq -e 'has("tests") and (.tests | type == "object")' "$decl" >/dev/null 2>&1
 }
