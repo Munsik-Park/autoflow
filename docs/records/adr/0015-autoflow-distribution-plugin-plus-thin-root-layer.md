@@ -20,6 +20,12 @@ and the placement rule for a stamped target's tree (`.claude/autoflow/`,
 `.autoflow/`, `docs/autoflow/`, the rest of `docs/`) is fixed. See *D1 >
 Superseding note (2026-09-16)*.
 
+Superseded in part 2026-10-17 by ADR-0027 (operator decision, Munsik-Park/autoflow#454): D1's
+thin-root tier, with its #53, #245 and #253 notes, and D2 are superseded — AutoFlow is delivered by
+the plugin alone and nothing is stamped into a target; the plugin tier of D1 is widened to the core,
+the usage documents and the scripts. D3 stands. See *D1 > Superseding note (2026-10-17)* and *D2 >
+Superseding note (2026-10-17)*.
+
 Issue numbers `#600`–`#999` cited in this ADR belong to the predecessor
 tracker `connev-llm/claude-autoflow` (archived, private) and are retained as
 historical provenance only; they do not resolve in `Munsik-Park/autoflow`. See
@@ -177,6 +183,18 @@ host/service decoupling plan §6/§10 (with that plan's
   | `docs/autoflow/` | target — committed, target-authored; AutoFlow reads it | files AutoFlow uses that the target writes and maintains (its test conventions, the runbooks behind `preflight.local_checks[]`, and the like). AutoFlow never stamps or overwrites a file here. No shipped script reads a fixed file at this path today; the row fixes where such a file goes when one is introduced, so it lands neither in `.claude/autoflow/` (overwritten by a re-stamp) nor loose in the target's own `docs/`. |
   | `docs/` (the rest) | target | the target's own documentation, its own ADRs included; outside AutoFlow's surface. |
 
+**Superseding note (2026-10-17, ADR-0027, Munsik-Park/autoflow#454).** The thin-root tier above,
+and the three superseding notes that amend it, no longer hold. The repository root is the plugin
+root, and the plugin carries the agents, the hooks, the skills, `bin/`, the core
+(`docs/core.md`), the usage documents and the scripts; a role reads a document and runs a script by
+its path under the plugin root. Nothing is stamped into a target: the installer, the manifest, its
+generator, the thin-root files, the drift detector and the install skill are removed, and the one
+stamped target migrates by a one-time change in its own repository. State stays in
+`${CLAUDE_PROJECT_DIR}/.autoflow`, the target, unchanged. The ground that "methodology prose cannot
+be injected by a plugin" is replaced by the measured command-body and agent-body channels
+(ADR-0027 > Context). The target-placement table above is replaced by
+`docs/tool-delivery-contract.md` > *Target-owned files*.
+
 - **Host-only** (never shipped): the tool repo's own CI workflows, gate/test
   suites, epic scratch, and the installer's development surface. Files the
   decoupling plan classifies MOVE/DELETE (service-coupled runbooks, service
@@ -201,6 +219,12 @@ terms.
 Both candidate mechanisms create the same one-way, opt-in target→tool
 dependency — that direction is the epic's goal, not a defect. The differences
 are ergonomic, and they favor the plugin (see Alternatives).
+
+**Superseding note (2026-10-17, ADR-0027, Munsik-Park/autoflow#454).** The plugin is the only
+attachment mechanism (ADR-0027 D1), and the installed plugin's version is the version record
+(ADR-0027 D4): the target commits none, and each cycle records the plugin version, the loaded root
+and, for a git work tree, its `HEAD` in its PREFLIGHT ledger entry. The reverse-submodule rejection
+stands.
 
 ### D3 — Retire the `subrepo-merged` status-check machinery
 

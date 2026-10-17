@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316)); D2's declared prefix moved into the issue's directory by issue #423 (see Amendment note (issue #423))
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316)); D2's declared prefix moved into the issue's directory by issue #423 (see Amendment note (issue #423)); the devices it ships to targets run from the plugin root and drift-check D7 becomes the PREFLIGHT target check's D7 leg by issue #454 (see Amendment note (issue #454))
 
 ## Context
 
@@ -1194,3 +1194,26 @@ a record of another repository's issue of the same number shared a name in one `
 and its reserved path; only the prefix's location changes. A store at the former flat prefix is not
 read: the layout is adopted with no cycle active ([`CLAUDE.md`](../../../CLAUDE.md) > AutoFlow State
 Tracking > *File naming*).
+
+## Amendment note (issue #454)
+
+ADR-0027 retires the thin root layer: nothing is stamped into a target, and the plugin carries the
+scripts. Three places in this record change with it.
+
+- **D2's tracked-file predicate** (`scripts/test/check-cycle-layer-index.sh`) is no longer shipped
+  into a target by S4; it runs from the plugin root against the working directory's git toplevel
+  (issue #454 PR-1 set that default root).
+- **D3's drift-check D7** is now the D7 leg of the PREFLIGHT target check,
+  `scripts/preflight/target-check.sh`, run from the plugin root and fail-closed. The opt-in arm, the
+  three resolver answers and the `--check-headers` stage are unchanged. The `HINT` for a declaration
+  file with no `tests` object is dropped: a target writes its own `.claude/autoflow.local.json`, and an
+  absent object is the not-opted-in state.
+- **The stamp suites in the issue #293 table** (`verify-install-into-target.sh`,
+  `verify-install-skill-scripts.sh`,
+  `verify-thin-root-layer.sh`, `test-issue-236-restamp-removal.sh`,
+  `test-issue-979-bundle-delivery.sh`, `test-cycle-layer-devices-shipped.sh`) and
+  `check-manifest-regen-clean.sh` are deleted with the machinery they checked; the subjects that
+  outlive the stamp — the codex wrapper's review convention and the cycle-layer predicate run
+  against a target — are `tests/plugin/verify-path-independence.sh`'s W and S legs, and the
+  dummy-target E2E is rewritten for an unstamped target. D1's two categories and the rest of the
+  table stand.

@@ -2,9 +2,11 @@
 
 ## Status
 
-Proposed (issue #454). Supersedes ADR-0015 D1's thin-root tier and D2's attachment mechanism.
+Accepted (operator decision 2026-10-17, issue #454: the operator approved the #454 design and
+ordered its implementation). Supersedes ADR-0015 D1's thin-root tier and D2's attachment mechanism.
 ADR-0015 D3 is unaffected. Amends `docs/tool-delivery-contract.md` R1, R2 and R4, and the wording
-of ADR-0025 D8 that names `drift-check.sh`.
+of ADR-0025 D8 that names `drift-check.sh`. D1–D3 implemented by issue #454 PR-3; D4 and D5
+implemented by issue #454 PR-4, released together as plugin version 0.3.0.
 
 ## Context
 
@@ -365,6 +367,8 @@ install scope and a per-repository `enabledPlugins` disable.
 - #452, #453 — decision-point judgment; U4 helper spawn rows (`general-purpose`), kept unchanged
 - #457 / PR #458 — marker-file detection, rejected
 - ADR-0015 — superseded in D1 (thin-root tier) and D2
+- ADR-0024 — the suite-plane devices it ships run from the plugin root; drift-check D7 becomes the
+  target check's D7 leg (ADR-0024 > Amendment note (issue #454))
 - ADR-0025 D8 — wording amended
 
 ## Notes
