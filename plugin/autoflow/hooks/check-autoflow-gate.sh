@@ -71,6 +71,25 @@ set -e
 AUTOFLOW_DIR="${CLAUDE_PROJECT_DIR:-.}/.autoflow"
 INPUT=$(cat)
 
+# ── Repository scope ──
+# A user-scope plugin install runs this hook in every repository the user
+# opens. Every gate below — the unconditional denies included — applies only in
+# a repository that uses AutoFlow: one carrying the target-owned
+# .claude/autoflow.local.json, or an AutoFlow state file under .autoflow/ (a
+# cycle whose scaffold was removed still gates). The session directory is read
+# first and its git toplevel second, so a session started in a subdirectory of
+# such a repository is governed too. Any other repository passes through.
+autoflow_repo_at() {
+  [ -n "$1" ] || return 1
+  [ -f "$1/.claude/autoflow.local.json" ] && return 0
+  set -- "$1"/.autoflow/*-issue-*/issue-*.json
+  [ -e "$1" ]
+}
+if ! autoflow_repo_at "${CLAUDE_PROJECT_DIR:-.}" \
+   && ! autoflow_repo_at "$(git -C "${CLAUDE_PROJECT_DIR:-.}" rev-parse --show-toplevel 2>/dev/null)"; then
+  exit 0
+fi
+
 # ── Hook target detection ──
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)

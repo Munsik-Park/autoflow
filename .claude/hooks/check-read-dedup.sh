@@ -33,6 +33,20 @@ INPUT=$(cat)
 TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 [ "$TOOL_NAME" = "Read" ] || exit 0
 
+# Repository scope: a user-scope plugin install runs this hook everywhere; it
+# acts only in a repository that uses AutoFlow (check-autoflow-gate.sh >
+# Repository scope reads the same two markers).
+autoflow_repo_at() {
+  [ -n "$1" ] || return 1
+  [ -f "$1/.claude/autoflow.local.json" ] && return 0
+  set -- "$1"/.autoflow/*-issue-*/issue-*.json
+  [ -e "$1" ]
+}
+if ! autoflow_repo_at "${CLAUDE_PROJECT_DIR:-.}" \
+   && ! autoflow_repo_at "$(git -C "${CLAUDE_PROJECT_DIR:-.}" rev-parse --show-toplevel 2>/dev/null)"; then
+  exit 0
+fi
+
 # Read result may be a string or a structured value; normalise to text.
 RESP=$(printf '%s' "$INPUT" | jq -r '
   (.tool_response // .tool_result // empty)

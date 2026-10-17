@@ -71,7 +71,7 @@ bash scripts/spawn-policy/spawn-policy.sh effort <phase-key>   # the effort, or 
 bash scripts/spawn-policy/spawn-policy.sh check                # validate the config
 ```
 
-**[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy).
+**[MUST]** Every `Agent` spawn declares the `model` parameter explicitly (`model: "sonnet"` or `model: "opus"`). Enforced by the hook (`.claude/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied, independent of Auto-Flow state, in a repository that uses AutoFlow (Hook gates > *Repository scope*) — research and evaluation spawns included. The orchestrator's own model follows the user's session settings (outside this policy).
 
 **[MUST]** The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior cycle: `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
 
@@ -317,6 +317,8 @@ This object is the value of `phases.<gate>.scores` in `.autoflow/{repo-key}-issu
 
 **Hook gates** (script computes from `scores`):
 
+*Repository scope*: the hook acts only in a repository that uses AutoFlow — one carrying the target-owned `.claude/autoflow.local.json`, or an AutoFlow state file under `.autoflow/` — read at the session directory and at its git toplevel; in any other repository it passes every call. A user-scope plugin install runs the hook in every repository the user opens, so this scope is what keeps an unrelated repository's merges, pushes and issue filing unblocked. "State-independent" below means independent of the cycle state within such a repository.
+
 - `Agent` (any spawn) → explicit `model` parameter required (state-independent — see [Spawn Model](#spawn-model--phase-by-phase)).
 - `Agent` (any spawn, active cycle) → **declared role** required (`autoflow-*` subagent_type or a research type); an undeclared spawn is denied. The gate class comes from the declaration, never from prompt keywords — see [Spawn Model](#spawn-model--phase-by-phase) > Spawn role declaration.
 - `Agent` (a spawn whose caller `agent_type` is a functional-unit agent) → no declaration required; judged by the unit's gate class, and a declared role's own gate also applies (see [Spawn Model](#spawn-model--phase-by-phase) > A unit agent's spawns inherit its gate class).
@@ -327,7 +329,7 @@ This object is the value of `phases.<gate>.scores` in `.autoflow/{repo-key}-issu
 - `git push` → AUDIT + GATE:QUALITY pass required, and neither's latest record carries `remedy_class` (an open re-entry — a recommendation attempt not yet re-scored clean).
 - `gh pr create` → the same two conditions.
 - `git commit` while the latest `phases.gate_quality` record carries `remedy_class: "doc"` → the sweep record `.autoflow/{repo-key}-issue-{N}/issue-{N}-remedy-sweep.md` must exist with non-empty `## Command` and `## Output` sections (the class-level remedy anchor; the hook checks the file, never the wording of an instruction). Other classes and commits outside a `doc` re-entry are ungated.
-- `gh pr merge`, and any push to the default branch (`main`) → **denied while a state file has `active:true`**. AutoFlow never merges; merging is external.
+- `gh pr merge`, and any push to the default branch (`main`) → **denied state-independently**. AutoFlow never merges; merging is external.
 - `gh issue create` (bare command form, and the same-segment REST `POST …/issues` form) → **denied state-independently**; issue filing goes through `scripts/issue/create-issue.sh`, which requires a reviewed draft and re-runs the duplicate check itself — see [`docs/issue-proposal.md`](docs/issue-proposal.md).
 - A **backgrounded** run of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` on the invocation — → **denied state-independently**, for every actor including the orchestrator; suite runs execute in the foreground (matching rule: `docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 

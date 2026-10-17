@@ -196,7 +196,11 @@ If the clone itself is behind upstream, refresh it first
 - Plugin enablement is **user scope**, and the per-repository opt-out is yours:
   `/plugin install autoflow@autoflow` (steps 1–2 above) enables AutoFlow in every
   project you open, and a stamp adds no enablement key to any repository (see
-  *A stamped repository declares no enablement*). To keep AutoFlow **off** in one
+  *A stamped repository declares no enablement*). The hooks act only in a
+  repository that uses AutoFlow — one carrying `.claude/autoflow.local.json` or
+  an AutoFlow state file under `.autoflow/` — so another repository's merges,
+  pushes and issue filing are not blocked; its sessions still list the AutoFlow
+  agents and skill. To keep AutoFlow **off** in one
   repository, write `"enabledPlugins": {"autoflow@autoflow": false}` into that
   repository's `.claude/settings.json` by hand: a re-stamp preserves any value
   other than the literal `true`, and names on stdout what it

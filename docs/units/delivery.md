@@ -455,4 +455,5 @@ the host pull request is then promoted and merged.
 
 **[MUST]** AutoFlow merges nothing, promotes no draft and removes no `blocked-by-subrepo`; of this
 sequence it performs only the reconcile, on the operator's request. The hook denies `gh pr merge`
-and a push to the default branch while a state file has `active:true`.
+and a push to the default branch in a repository that uses AutoFlow, whatever the cycle state
+(`CLAUDE.md` > Hook gates > *Repository scope*).

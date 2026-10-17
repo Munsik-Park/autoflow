@@ -254,6 +254,13 @@ tool can never run `gh pr merge` or a default-branch push in a governed
 repo, even outside an active flow. Merging is performed by humans /
 external review through GitHub, not through the agent.
 
+Both classes run only in a governed repo — one carrying the target-owned
+`.claude/autoflow.local.json`, or an AutoFlow state file under `.autoflow/`,
+read at the session directory and at its git toplevel. The repository-scope
+check precedes the unconditional block: a user-scope plugin install runs the
+hook in every repository the user opens, and a repository that does not use
+AutoFlow passes every call.
+
 ## Rule P3 — Declared-Role Spawn Classification
 
 Hook gates MUST NOT classify an `Agent` spawn by prompt-keyword inference.

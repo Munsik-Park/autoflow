@@ -149,11 +149,12 @@ RELOC_PARENT=$(mktemp -d)  # E3c: relocated-target independence check
 E2A_CURRENT=$(mktemp)      # E2a: current installed-bundle offender set (sorted)
 E2A_BASELINE_SORTED=$(mktemp)  # E2a: committed ratchet baseline, normalized+sorted
 SETTINGS_NV=$(mktemp)      # E4w-nv: scratch settings copy with the asserted pin key dropped
+UNGOVERNED=$(mktemp -d)    # E4d: a git repository that does not use AutoFlow
 
 cleanup() {
   rm -rf "$DUMMY" "$SNAP_DIR" "$PRE_LIST_FILE" "$POST_LIST_FILE" \
          "$CLAUDE_SNAP1" "$RELOC_PARENT" \
-         "$E2A_CURRENT" "$E2A_BASELINE_SORTED" "$SETTINGS_NV"
+         "$E2A_CURRENT" "$E2A_BASELINE_SORTED" "$SETTINGS_NV" "$UNGOVERNED"
 }
 # Hermetic plugin discovery (issue #167): drift-check.sh D2/D4/D5 resolve the
 # installed plugin and the marketplace clone through scripts/lib/plugin-root.sh
@@ -450,6 +451,36 @@ if [ -f "$HOOK" ]; then
   fi
 else
   failc "E4b" "HANDOFF" "gate hook missing at $HOOK"
+fi
+
+# Repository scope: a user-scope install runs the hook in every repository. The
+# stamped target carries the scaffold .claude/autoflow.local.json and is
+# governed; a repository without it passes every call.
+echo "== E4c: packaged gate hook denies 'gh pr merge' in the stamped target =="
+if [ -f "$HOOK" ] && [ -f "$DUMMY/.claude/autoflow.local.json" ]; then
+  E4C_OUT=$(printf '%s' "$(gate_bash_json 'gh pr merge 1')" | CLAUDE_PROJECT_DIR="$DUMMY" bash "$HOOK" 2>&1)
+  E4C_CODE=$?
+  if [ "$E4C_CODE" -eq 2 ]; then
+    pass "E4c: installed gate hook denies 'gh pr merge' in a repository carrying .claude/autoflow.local.json (exit 2)"
+  else
+    failc "E4c" "HANDOFF" "installed gate hook did not deny 'gh pr merge' in the stamped target (exit $E4C_CODE): $E4C_OUT"
+  fi
+else
+  failc "E4c" "HANDOFF" "gate hook or the stamped target's .claude/autoflow.local.json missing"
+fi
+
+echo "== E4d: packaged gate hook passes 'gh pr merge' in a repository that does not use AutoFlow =="
+if [ -f "$HOOK" ]; then
+  git -C "$UNGOVERNED" init -q
+  E4D_OUT=$(printf '%s' "$(gate_bash_json 'gh pr merge 1')" | CLAUDE_PROJECT_DIR="$UNGOVERNED" bash "$HOOK" 2>&1)
+  E4D_CODE=$?
+  if [ "$E4D_CODE" -eq 0 ]; then
+    pass "E4d: installed gate hook passes 'gh pr merge' in a repository without the AutoFlow scaffold (exit 0)"
+  else
+    failc "E4d" "HANDOFF" "installed gate hook blocked 'gh pr merge' in a repository that does not use AutoFlow (exit $E4D_CODE): $E4D_OUT"
+  fi
+else
+  failc "E4d" "HANDOFF" "gate hook missing at $HOOK"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
