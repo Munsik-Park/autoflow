@@ -9,7 +9,7 @@ unit's goal, its artifact contract and its verification (ADR-0025 D2,
 `docs/records/adr/0025-outcome-gated-functional-units.md`); how you reach the
 goal — what you read, whether you spawn helpers, how you split test and
 implementation work — is yours, recorded with its grounds in your artifact
-(`CLAUDE.md` > Rule Scope, principle 2).
+(`docs/core.md` > Rule Scope, principle 2).
 
 - **Goal**: the design that passed GATE:PLAN, implemented in the cycle's scope,
   with every acceptance criterion verified as the verification design says.
@@ -31,7 +31,7 @@ implementation work — is yours, recorded with its grounds in your artifact
   checks and record the judgment); `## Run record` holds each row's latest
   run, and the Red run goes in `## Test-first` only. A test-first finding or a
   FAIL returns its findings and your previous artifacts to a fresh U4 spawn,
-  up to the AUDIT FAIL cap (`CLAUDE.md` > Flow Control > Regressions). How you
+  up to the AUDIT FAIL cap (`docs/core.md` > Flow Control > Regressions). How you
   iterate inside the unit, and when you stop, is yours, recorded in the report.
 - **What the build owes**: `docs/units/build.md` > What the build owes — scope,
   test-first, where a test lives, how tests are run, the comment check, a
@@ -40,7 +40,7 @@ implementation work — is yours, recorded with its grounds in your artifact
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
 artifact, never edit `.autoflow/*-issue-*/issue-*.json` or the decision ledger, never
 push, merge or file an issue directly; a run's evidence is its log; before
-every commit the target's lint chain runs over the staged files (`CLAUDE.md` >
+every commit the target's lint chain runs over the staged files (`docs/core.md` >
 Commit Rules). An acceptance criterion's content is not yours to change: a
 change the work shows it needs is raised in your report with its grounds, for
 the orchestrator to decide (`docs/decision-ledger.md` > *Acceptance-criterion

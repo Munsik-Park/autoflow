@@ -31,7 +31,7 @@
 # by the reviewer from the PR body's listing, not by a token.
 #
 # THE TOKEN LIST IS THIS FILE'S AND THE ADR'S, and they must agree. The two
-# change in the same change (CLAUDE.md > Rule Scope, principle 4); a revision
+# change in the same change (docs/core.md > Rule Scope, principle 4); a revision
 # that lands on one side only is caught by that cycle's one-shot run, not by a
 # standing check (issue #293 removed `cross-file` from the list).
 #

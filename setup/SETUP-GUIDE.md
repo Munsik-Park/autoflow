@@ -276,4 +276,4 @@ If the clone itself is behind upstream, refresh it first
 ### Evaluation not working
 - Confirm `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` exists and `active` is `true`.
 - Confirm the evaluation JSON follows the schema in `docs/evaluation-system.md`.
-- Confirm the PASS thresholds in `CLAUDE.md` and `check-autoflow-gate.sh` agree.
+- Confirm the PASS thresholds in `docs/core.md` and `check-autoflow-gate.sh` agree.

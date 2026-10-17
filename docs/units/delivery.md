@@ -1,6 +1,6 @@
 # U6 Delivery — DELIVER, INTEGRATE and HANDOFF
 
-> Unit document for U6. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> Unit document for U6. [`core.md`](../core.md) > Unit Document Loading Contract routes to
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
@@ -30,11 +30,27 @@ is.
 - **Verification**: the integration checks, CI green and the aggregated review clean — all outside
   the orchestrator's own claim.
 - **Loop cap**: auto-resolution of reviewer findings, 7 attempts; HANDOFF internal retry, 2
-  ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control > Regressions). An INTEGRATE or CI failure is fixed
+  ([`core.md`](../core.md) > Flow Control > Regressions). An INTEGRATE or CI failure is fixed
   by the unit its class routes to, and the cycle runs forward again (*Integration*, *Failure and
   retry*).
 - **Result owed**: the report line of *End*, with each PR's URL and head commit, the CI result and
   the review verdict behind it.
+
+## Transitions
+
+The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
+
+| Transition | Condition |
+|------|------|
+| DELIVER → INTEGRATE | the cycle's branches pushed, a changed sub-repo's included |
+| INTEGRATE → HANDOFF | integration tests pass |
+| INTEGRATE → BUILD | integration / bundle failure — fixed `impl` class → a BUILD unit re-run with the failing check → AUDIT → … → INTEGRATE again |
+| HANDOFF (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`docs/units/delivery.md` > *Review triage*; the case is `scripts/handoff/review-gate.sh` exit `10`) |
+| HANDOFF (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`docs/units/delivery.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
+| HANDOFF → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` → AutoFlow ends; external review reviews and merges out of band (`docs/units/delivery.md` > *End*) |
+| HANDOFF → HANDOFF (retry) | environment / transient error or push rejection → internal retry (max 2) |
+| HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`docs/units/delivery.md` > *CI-failure re-entry*) |
+| HANDOFF → user | HANDOFF internal retry exhausted (2×) |
 
 ## Push and pull request
 
@@ -51,7 +67,7 @@ orchestrator's, and nothing checks for an item left out.
 - **Pushing and opening a pull request are the orchestrator's own commands.** `git push …` and
   `gh pr create …` are issued as those commands, so the gate hook sees them: it admits them only on
   a recorded AUDIT and GATE:QUALITY PASS with no re-entry open
-  ([`CLAUDE.md`](../../CLAUDE.md) > Hook gates). They are not issued through a script or a wrapper
+  ([`state-tracking.md`](../state-tracking.md) > Hook gates). They are not issued through a script or a wrapper
   that would carry them past the hook.
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch (`main`); the hook
   denies both. Merging — including, for multi-repo changes, the sub-repo → pointer → host
@@ -182,7 +198,7 @@ is confirmed is the orchestrator's judgment. A cycle that added no test file has
 ### CI-failure re-entry
 
 A CI failure (exit `12`) re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`
-([`CLAUDE.md`](../../CLAUDE.md) > Flow Control). The orchestrator
+([Transitions](#transitions)). The orchestrator
 does not read the failure log itself (Cost Control): an anonymous direct subagent —
 `subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
 check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
@@ -193,7 +209,7 @@ decision the design settled — and returns the class plus a one-line summary.
 `scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `BUILD` /
 `ARCHITECT` / `PAUSE`); the re-entered phase runs forward to HANDOFF again and *CI* re-confirms.
 Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
-([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
+([`core.md`](../core.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
 report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
 records the route as an `O` ledger entry naming the check and the class.
 
@@ -240,7 +256,7 @@ completion marker:
 
 | Exit | Meaning | What follows |
 |---|---|---|
-| `0` | started, or already completed with exit 0 | the orchestrator ends its turn and waits for the run's completion notification ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Wait discipline*) |
+| `0` | started, or already completed with exit 0 | the orchestrator ends its turn and waits for the run's completion notification ([`core.md`](../core.md) > Execution Principles > *Wait discipline*) |
 | `1` | no signal within the window (30 s) | launch the review again once; a second miss makes that reviewer unavailable for the round |
 | `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | one internal retry; a second failure makes that reviewer unavailable for the round |
 
@@ -257,7 +273,7 @@ Cautions:
   (`gh pr view <N> --json headRefOid`).
 - Several reviews may run at once (the host PR plus each sub-repo PR, each with its reviewers);
   each external run is confirmed with its own `--pr` and, for a sub-repo PR, `--repo`, and the
-  in-flight spawn limit holds ([`CLAUDE.md`](../../CLAUDE.md) > Cost Control).
+  in-flight spawn limit holds ([`core.md`](../core.md) > Cost Control).
 
 ## Review triage
 
@@ -314,7 +330,7 @@ case:
 
 Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR and runs *Reviewer review* on that PR again — a new round, also when the round only rebuts and changes no code — and that round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed and its `rejected` row needs no `remedy_class` — nothing reads one there — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor; [`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR and runs *Reviewer review* on that PR again — a new round, also when the round only rebuts and changes no code — and that round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed and its `rejected` row needs no `remedy_class` — nothing reads one there — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -338,7 +354,7 @@ where those grounds do not settle it, or it is not confident, it puts it to the 
 and the advisor's `A` entry decides it. A
 redefined criterion is recorded as `[ac-decision]` entries and the cycle restarts from DIAGNOSE on
 it. A complaint already decided is not decided again without a new verified fact
-([`CLAUDE.md`](../../CLAUDE.md) > Decision Ledger). The same finding with the same witness — a fix
+([`core.md`](../core.md) > Decision Ledger). The same finding with the same witness — a fix
 that did not take — is not this case; it is routed like any finding.
 
 ### Routing
@@ -352,11 +368,11 @@ A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-r
 | `DOC_COMMIT` (from `doc`) | orchestrator doc commit → the local run the doc diff requires | *Reviewer review*, per-PR |
 | `PAUSE` (from `operator`) | the advisor fixes the class ([`role-contracts.md`](../role-contracts.md) > Advisor), and the cycle takes that class's route | that route's |
 
-The `ARCHITECT` route is the one whose depth is judged. It re-enters within the cycle, as the cycle's other `design` re-entries do ([U3 Design](design.md) > *Re-entry*). **Where it starts, and what it re-derives and re-scores, is the orchestrator's judgment** ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. While the attempt is open, `design` is recorded as `phases.gate_quality.remedy_class` ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > *Remedy class recording*), so the change is not pushed before GATE:QUALITY re-scores it. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the next review round — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route** — the next review round judges the fix, CI still gates, and the attempt cap below applies unchanged.
+The `ARCHITECT` route is the one whose depth is judged. It re-enters within the cycle, as the cycle's other `design` re-entries do ([U3 Design](design.md) > *Re-entry*). **Where it starts, and what it re-derives and re-scores, is the orchestrator's judgment** ([`core.md`](../core.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. While the attempt is open, `design` is recorded as `phases.gate_quality.remedy_class` ([`core.md`](../core.md) > AutoFlow State Tracking > *Remedy class recording*), so the change is not pushed before GATE:QUALITY re-scores it. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the next review round — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route** — the next review round judges the fix, CI still gates, and the attempt cap below applies unchanged.
 
 Every route is recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged start with its grounds. The advisor criteria below take precedence over any route.
 
-- **Put to the advisor** (a request written situation-first per [`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract or acceptance-criterion change — a finding that shows a criterion defective included — that the orchestrator cannot settle on the finding's grounds ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding repeats the previous attempt's complaint and its grounds do not settle the re-entry (*A repeated complaint* above). The advisor's `A` entry selects re-entry. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
+- **Put to the advisor** (a request written situation-first per [`core.md`](../core.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract or acceptance-criterion change — a finding that shows a criterion defective included — that the orchestrator cannot settle on the finding's grounds ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding repeats the previous attempt's complaint and its grounds do not settle the re-entry (*A repeated complaint* above). The advisor's `A` entry selects re-entry. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
 - **Attempt cap = 7.** The count is the number of auto-resolution attempts not yet checked with the user: the `[review-autofix]` entries in the ledger after the last entry whose heading ends in `[reentry-decision]`, or all of them when there is none. `review-gate.sh` prints it (`attempts: <k> of 7`) and exits `11` when a `Medium`+ verdict meets 7 on record: the orchestrator stops auto-resolving and pauses for the user (`active:false`, `phase:"awaiting-user"`). A gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*), and a `[rebuttal]` round is not an attempt, so neither is counted here. The user approving continuation at that pause is the **re-entry decision**: the orchestrator records it as an `O` entry under `operator decision` whose heading ends in `[reentry-decision]` and sets the cycle active again; the entry resets the window — the next auto-entry starts a fresh budget of 7. Nothing else resets it.
 - **Durable record (host PR).** Post a one-line comment on the **host PR** via `gh pr comment <hostPR> --body "[autoflow:review-autofix] …"` for two events: (i) when the cap fired — the 7th consecutive attempt paused for the user — and (ii) when a user **re-entry decision** approved continuation (the window-reset event).
 
@@ -404,7 +420,7 @@ tracked by the host as a submodule pointer (gitlink) — and the cycle changes o
 change is delivered on its own pull request and the host follows it by its pointer. AutoFlow does
 not classify the project; what the sub-repos are, where each one's pull request goes (a fork, the
 upstream) and where issues are filed are read from the project's own information
-([`CLAUDE.md`](../../CLAUDE.md) > Project Information).
+([`core.md`](../core.md) > Project Information).
 
 **The rule.** After a sub-repo pull request merges, the host keeps a clean state by a reconcile
 merge: the host branch that depends on it points at that pull request's merge commit, and stays

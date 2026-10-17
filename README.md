@@ -234,7 +234,7 @@ never trusts an AI-supplied `pass` field.
 AutoFlow does not classify a project's repository structure. The AI reads the
 project's own information and rule files where they exist — a `README.md`, a
 `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
-(see `CLAUDE.md` > Project Information), and asks the operator for a fact no
+(see `docs/core.md` > Project Information), and asks the operator for a fact no
 file states. A project with sub-repos delivers each changed sub-repo on its own
 PR and keeps the host's pointer clean by a reconcile merge after the sub-repo PR
 merges (`docs/units/delivery.md` > *Multi-repo delivery*).
@@ -242,7 +242,7 @@ merges (`docs/units/delivery.md` > *Multi-repo delivery*).
 ### Evaluation Tuning
 
 - Adjust category **weights** to match your priorities.
-- Adjust the **PASS threshold** in both `CLAUDE.md` and `check-autoflow-gate.sh`.
+- Adjust the **PASS threshold** in both `docs/core.md` and `check-autoflow-gate.sh`.
 - Add **custom categories** as needed.
 
 ---
@@ -251,7 +251,7 @@ merges (`docs/units/delivery.md` > *Multi-repo delivery*).
 
 | Document | Description |
 |----------|-------------|
-| [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`CLAUDE.md` > Context Injection — Role-Scoped Document Routing) |
+| [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`docs/core.md` > Context Injection — Role-Scoped Document Routing) |
 | [AutoFlow Guide](docs/autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents (`docs/units/`) |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, PASS criteria, output format |
 | [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |

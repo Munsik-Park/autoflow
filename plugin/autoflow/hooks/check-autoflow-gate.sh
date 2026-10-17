@@ -13,7 +13,7 @@
 #         blocked-by-subrepo label removal) run in Section 1, BEFORE the
 #         activity check, so an inactive/absent state file cannot nullify them.
 #
-# PASS criteria (defined in CLAUDE.md):
+# PASS criteria (defined in docs/core.md):
 #   - average ≥ 7.5
 #   - each item ≥ 7
 #   - security ≤ 3 → automatic block
@@ -33,7 +33,7 @@
 #                                     (merge-order clearance is the operator's job;
 #                                     blocked-by-review is not gated here)
 #   - Agent (any spawn)             → explicit `model` parameter required
-#                                     (state-independent — CLAUDE.md > Spawn Model)
+#                                     (state-independent — docs/core.md > Spawn Model)
 #   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
 #                                     keywords (docs/gate-matching-standard.md P3):
 #                                     planning → GATE:HYPOTHESIS pass (bug issue;
@@ -428,7 +428,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
 /g')
 
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
-    echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied (CLAUDE.md > HANDOFF)." >&2
+    echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied (docs/core.md > HANDOFF)." >&2
     echo "Merging, issue close, and deployment are owned by an external review process." >&2
     exit 2
   fi
@@ -600,14 +600,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   while IFS= read -r _bp_seg; do
     if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
        && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
-      echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR (CLAUDE.md > HANDOFF)." >&2
+      echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR (docs/core.md > HANDOFF)." >&2
       exit 2
     fi
   done <<< "$_SEGMENTS"
 fi
 
 # ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
-# CLAUDE.md > Spawn Model [MUST]: every Agent spawn (any subagent_type)
+# docs/core.md > Spawn Model [MUST]: every Agent spawn (any subagent_type)
 # declares the `model` parameter explicitly. An omitted model silently
 # inherits the HOST SESSION model, bypassing the per-phase model policy — and
 # bills at whatever tier the host runs (2x the policy model when the host is on
@@ -621,7 +621,7 @@ fi
 if [ "$TOOL_NAME" = "Agent" ]; then
   AGENT_MODEL=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
   if [ -z "$AGENT_MODEL" ]; then
-    echo "BLOCKED: Agent spawn without an explicit 'model' parameter (CLAUDE.md > Spawn Model)." >&2
+    echo "BLOCKED: Agent spawn without an explicit 'model' parameter (docs/core.md > Spawn Model)." >&2
     echo "Declare the phase-policy model on every spawn (e.g. model: \"sonnet\" / \"opus\") — omitting it inherits the host session model and bypasses the per-phase policy." >&2
     exit 2
   fi
@@ -833,14 +833,14 @@ is_score_gated_surface() {
 }
 
 # ── Section 1c: standing decision-ledger identifier advisory (NON-GATING) ──
-# CLAUDE.md > Decision Ledger requires each settled-decision entry to carry a
+# docs/core.md > Decision Ledger requires each settled-decision entry to carry a
 # uniquely allocated identifier. This step surfaces a violation early; it does
 # NOT enforce one. It never exits and never denies: a ledger defect is a
 # methodology defect, not a reason to block a tool call, and the ledger is not
 # a gate input. The only observable effect is a warning: on stderr, and — on a
 # call the hook admits — to the model as `additionalContext` (below).
 #
-# Placement is load-bearing (CLAUDE.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
+# Placement is load-bearing (docs/core.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
 # Section 2's activity check, so it still runs on every path the script exits 0
 # early — no state file, `active != true`, and a research/analysis/evaluation
 # spawn. Placed after any one of those, it would silently never run for that
@@ -886,7 +886,7 @@ ledger_advisory_check() {
       # Bounded: the helper already sanitises and truncates each heading it
       # echoes; this caps how many defect lines one warning can emit.
       printf '%s\n' "$_out" | head -20 >&2
-      echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next (CLAUDE.md > Decision Ledger)." >&2
+      echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next (docs/core.md > Decision Ledger)." >&2
       LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
 $(printf '%s\n' "$_out" | head -20)
 A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
@@ -924,7 +924,7 @@ ledger_advisory_check || true
 [ -z "$LEDGER_ADVISORY" ] || trap '_ledger_advisory_emit $?' EXIT
 
 # ── Section 1d: spawn-policy model advisory (NON-GATING, issue #150) ──────────
-# CLAUDE.md > Spawn Model routes every per-phase model value through
+# docs/core.md > Spawn Model routes every per-phase model value through
 # .claude/autoflow/spawn-policy.json. The hook sees `subagent_type` and `model`
 # on the payload but not which phase is active, so a phase↔model comparison is
 # not available to it. What IS derivable is the set of models the config admits
@@ -973,7 +973,7 @@ spawn_policy_advisory_check() {
   [ -n "$_admitted" ] || return 0
   if ! printf '%s\n' "$_admitted" | grep -qxF "$_model"; then
     echo "WARNING: spawn model '$_model' is outside the spawn policy's admitted set for subagent_type '$_subtype' (advisory — this call is NOT blocked)." >&2
-    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with $(af_path scripts/spawn-policy/spawn-policy.sh) model <phase-key> (CLAUDE.md > Spawn Model)." >&2
+    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with $(af_path scripts/spawn-policy/spawn-policy.sh) model <phase-key> (docs/core.md > Spawn Model)." >&2
   fi
   return 0
 }
@@ -1016,7 +1016,7 @@ if [ -d "$AUTOFLOW_DIR" ]; then
   for _sf in "$AUTOFLOW_DIR"/*-issue-*/issue-*.json; do
     [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
     # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
-    # (CLAUDE.md > AutoFlow State Tracking). Any other JSON in an issue directory
+    # (docs/state-tracking.md > AutoFlow State Tracking). Any other JSON in an issue directory
     # — e.g. a VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a
     # state-file candidate: skip it BEFORE the cat+jq validator so a non-state JSON
     # can never take the MALFORMED path and fail-closed block push-class commands
@@ -1089,7 +1089,7 @@ if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
 fi
 
 # Fail closed on multiple active state files: one issue runs at a time
-# (CLAUDE.md > PR Wait Rule). When two or more state files are simultaneously
+# (docs/core.md > PR Wait Rule). When two or more state files are simultaneously
 # active, the first-active-wins discovery above would decide every score gate by
 # whichever file sorts first in the glob — regardless of which issue the pushed
 # branch / spawn actually targets (issue #843). Shares `is_score_gated_surface`
@@ -1101,7 +1101,7 @@ fi
 # gate.
 if [ "$ACTIVE_COUNT" -ge 2 ]; then
   if is_score_gated_surface; then
-    echo "BLOCKED: multiple active AutoFlow state files — one issue runs at a time (CLAUDE.md > PR Wait Rule)." >&2
+    echo "BLOCKED: multiple active AutoFlow state files — one issue runs at a time (docs/core.md > PR Wait Rule)." >&2
     echo "Active: $ACTIVE_FILES" >&2
     echo "Deactivate all but the in-flight cycle's state file before score-gated work." >&2
     exit 2

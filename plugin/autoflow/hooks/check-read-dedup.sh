@@ -41,7 +41,7 @@ RESP=$(printf '%s' "$INPUT" | jq -r '
 # Dedup / unchanged-file stub markers (wording varies across CC versions).
 if printf '%s' "$RESP" | grep -qiE "unchanged since( your)? last [Rr]ead|Wasted call|refer to that earlier tool_result|content from the earlier Read tool_result"; then
   FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // "the file"' 2>/dev/null)
-  REMINDER="Read-dedup stub detected for ${FILE}. This 1-line result is NOT the file content — it is a deduplication stub (CLAUDE.md > Execution Principles > Incomplete output is never ground truth) pointing at an earlier Read result that may have been compacted out of context. Do NOT conclude the file is absent, empty, a stub, or smaller than expected. If the earlier full read is not visible above, re-read via shell to bypass the dedup ledger: 'sed -n \"N,Mp\" ${FILE}', 'grep -n PATTERN ${FILE}', or 'wc -l ${FILE}'. Reproduce any blocker / absence finding with a fresh shell read before acting on it or escalating to the user."
+  REMINDER="Read-dedup stub detected for ${FILE}. This 1-line result is NOT the file content — it is a deduplication stub (docs/core.md > Execution Principles > Incomplete output is never ground truth) pointing at an earlier Read result that may have been compacted out of context. Do NOT conclude the file is absent, empty, a stub, or smaller than expected. If the earlier full read is not visible above, re-read via shell to bypass the dedup ledger: 'sed -n \"N,Mp\" ${FILE}', 'grep -n PATTERN ${FILE}', or 'wc -l ${FILE}'. Reproduce any blocker / absence finding with a fresh shell read before acting on it or escalating to the user."
   jq -cn --arg ctx "$REMINDER" \
     '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
 fi

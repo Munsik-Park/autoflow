@@ -1,6 +1,6 @@
 # U4 Build and verify — BUILD and AUDIT
 
-> Unit document for U4. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> Unit document for U4. [`core.md`](../core.md) > Unit Document Loading Contract routes to
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
@@ -10,7 +10,7 @@ four things only — its goal, its artifact contract, its verification and its l
 this file states them, with the cautions the build is asked to heed and the result it owes. How the
 unit reaches the goal — what it reads, whether it spawns helpers, how it divides test and
 implementation work, how it runs its checks and when it stops iterating — is the unit agent's,
-recorded with its grounds in its artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope,
+recorded with its grounds in its artifact ([`core.md`](../core.md) > Rule Scope,
 principle 2).
 
 - **Goal**: the design that passed GATE:PLAN, implemented within the cycle's scope, with every
@@ -23,10 +23,23 @@ principle 2).
   (*Verification — AUDIT* below).
 - **Loop cap**: a test-first finding or an AUDIT FAIL re-runs the unit with its findings and the
   previous artifacts (*Re-entry* below), max 2× together — the AUDIT FAIL cap
-  (`CLAUDE.md` > Flow Control > Regressions).
+  (`docs/core.md` > Flow Control > Regressions).
 - **Result owed**: the build report's path, the commit SHAs and a one-line summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The orchestrator
   does not receive the report's body.
+
+## Transitions
+
+The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
+
+| Transition | Condition |
+|------|------|
+| BUILD → AUDIT | the unit returned (`docs/units/build.md` > *Report routing*) |
+| AUDIT (test-first) → BUILD | the AUDIT evaluator does not confirm that a `driving` / `regression` test's Red run precedes its implementation commit with its failure shown in its log → it scores nothing, and a unit re-run takes its `## Test-first` section; consumes the AUDIT FAIL counter (Regressions below) (`docs/evaluation-system.md` > AUDIT > *Test-first*; `docs/units/build.md` > *Verification — AUDIT*) |
+| BUILD → ARCHITECT | design contradiction — implementation and tests each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}-green-blocker.md` → ARCHITECT unit re-run → GATE:PLAN re-evaluation → BUILD re-entry (cap: Regressions below) |
+| BUILD → user | a harness-level block — a lint chain covering a staged file stays `not-run (unexecuted)` because it is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
+| AUDIT entry (security-checklist change) → advisor | `scripts/gate/security-checklist.sh status` exits `3` (the cycle changed the target's declared security checklist and no `[checklist-decision]` entry covers the committed version) → AUDIT is **not** spawned until the advisor's `[checklist-decision]` entry is recorded and the status re-run; `rejected` → the change is reverted first; consumes no re-entry budget (`docs/units/build.md` > *Security checklist*) |
+| AUDIT → GATE:QUALITY | security audit PASS + its recommendations triaged (no attempt open) |
 
 ## Unit spawn
 
@@ -102,7 +115,7 @@ These are the rules other documents cite; everything else about the work is the 
   and the fact that shows the need — never worked around by keeping the criterion's letter
   ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
   cycle*).
-- **Commits.** Every commit follows `CLAUDE.md` > Commit Rules, the lint chain over its staged files
+- **Commits.** Every commit follows `docs/core.md` > Commit Rules, the lint chain over its staged files
   included, and a manifest-registered source regenerates `setup/manifest.json` in the same commit
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > Derived
   artifacts). The unit does not push.
@@ -201,11 +214,11 @@ found — is its own, written where it judges useful.
 - **An acceptance-criterion change** → the orchestrator's decision, the advisor's where the
   report's grounds do not settle it; where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
   ([U3 Design](design.md) > *Report routing*). No counter.
-- **A tool, or what using one lacks, reported missing** → the tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control).
+- **A tool, or what using one lacks, reported missing** → the tool request pause ([`core.md`](../core.md) > Flow Control).
 - **A lint chain reported `not-run (unexecuted)`** because it is not executable in this checkout and
   no pull-request CI job covering it can be named → a harness-level block: the cycle pauses for the
   operator (`active:false`, `phase:"awaiting-user"`), presented situation-first
-  ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*).
+  ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
 
 ## Verification — AUDIT
 

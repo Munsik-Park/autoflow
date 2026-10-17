@@ -22,7 +22,7 @@ Beyond the happy path, the diagram encodes the design decisions of
 - D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
 - D7  every FAIL loop ends at its cap or, at GATE:HYPOTHESIS, at a judged
       stop -> human escalation (dashed red return edges with their caps from
-      CLAUDE.md > Regressions)
+      docs/core.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
 - D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
 """
@@ -57,7 +57,7 @@ STAGES = [
     ]),
 ]
 
-# Per-phase FAIL caps rendered inside the node, bottom-right (CLAUDE.md >
+# Per-phase FAIL caps rendered inside the node, bottom-right (docs/core.md >
 # Regressions). ↩ = bounded return edge drawn dashed; ↻ = in-place fix cycle.
 FAIL_CAPS = {
     "GATE:HYPOTHESIS": "↩ judged",
@@ -239,7 +239,7 @@ def render(theme):
             f'stroke="{t["conn"]}" stroke-width="1.5" marker-end="url(#arr)"/>'
         )
 
-    # ---- bounded FAIL return edges (D7; caps from CLAUDE.md > Regressions)
+    # ---- bounded FAIL return edges (D7; caps from docs/core.md > Regressions)
     def fail_loop(src, dst, span):
         """Right-side dashed return loop from src node up to dst node.
 

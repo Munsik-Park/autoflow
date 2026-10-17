@@ -1,6 +1,6 @@
 # U5 Completion evaluation — GATE:QUALITY
 
-> Unit document for U5. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> Unit document for U5. [`core.md`](../core.md) > Unit Document Loading Contract routes to
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
@@ -36,6 +36,16 @@ the triage of a PASS report's recommendations. The rubric the evaluator scores o
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
 items, its known blind-spot checks and its re-entry re-score. Its documents line names that document
 alone.
+
+## Transitions
+
+The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
+
+| Transition | Condition |
+|------|------|
+| GATE:QUALITY → DELIVER | completion evaluation PASS + its recommendations triaged (no attempt open) |
+| GATE:QUALITY (FAIL) → doc commit / BUILD / ARCHITECT | FAIL routed by each failed item's `remedy_class` (mixed → farthest: `design` > `impl` > `test` > `doc` — `scripts/gate/remedy-route.sh route`): `doc` → orchestrator doc commit → GATE:QUALITY re-score; `test` / `impl` → a BUILD unit re-run with the failed items → AUDIT; `design` → ARCHITECT (consumes the ARCHITECT re-entry counter). The doc route's sweep record and the re-score scope: `docs/units/completion-evaluation.md` > *FAIL routing* / *Re-entry re-score* |
+| GATE:QUALITY (FAIL) → advisor | any failed item carries `remedy_class: operator` (the evaluator could not classify it with confidence) → the advisor's answer fixes the class and the cycle re-enters on that class's route. A FAIL report missing `remedy_class` on a failed item is rejected and the evaluator re-spawned (same disposition as a missing `fail_hypothesis`) |
 
 ## Verification result
 
@@ -128,7 +138,7 @@ No separate disposition system exists for gate recommendations.
   The marker sits at the end of the heading like `[review-autofix]`, and the two are distinct:
   neither cap's count reads the other's marker. While an attempt is open the orchestrator records
   the routed class as `phases.<gate>.remedy_class` in the state file, as it does for a FAIL
-  ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > *Remedy class recording*), and removes it
+  ([`core.md`](../core.md) > AutoFlow State Tracking > *Remedy class recording*), and removes it
   once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
   new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
   `gate_quality`.
@@ -178,7 +188,7 @@ re-classify.
 - **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
   stops routing and goes to the advisor. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
   orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
-  ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking > Remedy class recording).
+  ([`core.md`](../core.md) > AutoFlow State Tracking > Remedy class recording).
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
   it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
   ([`evaluation-system.md`](../evaluation-system.md) > *Remedy class*).
@@ -188,7 +198,7 @@ re-classify.
 The `doc` route's remedy must be **class-level, not site-level**. The fix anchors on a **repo-wide sweep
 for the pattern the evaluator named**, not on the list of sites it happened to find. The sweep
 enumerates; **which hits the remedy fixes is the orchestrator's judgment**, recorded with its grounds
-in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
+in the sweep record (`docs/core.md` > Rule Scope, principle 2).
 
 1. Write `.autoflow/{repo-key}-issue-{N}/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
@@ -198,7 +208,7 @@ in the sweep record (`CLAUDE.md` > Rule Scope, principle 2).
    named it as misleading, and is otherwise recorded as exempt with the ground (the record is
    followed by no one). The judgment and its grounds are
    prose in the same file; the hook reads only the two sections.
-2. Commit the doc remedy (orchestrator authority: [`CLAUDE.md`](../../CLAUDE.md) > Team Structure /
+2. Commit the doc remedy (orchestrator authority: [`core.md`](../core.md) > Team Structure /
    Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
    table ([U4 Build and verify](build.md) > Build report).
    **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
@@ -237,10 +247,10 @@ carry, never routes the cycle.
 - **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
   `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
   review triage) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
-  ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
+  ([`core.md`](../core.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
   sweep record, no re-entry, no re-score, and no review round. The commit still runs the lint chain over its staged files
-  ([`CLAUDE.md`](../../CLAUDE.md) > Commit Rules); one made after HANDOFF's push is pushed, and the CI
+  ([`core.md`](../core.md) > Commit Rules); one made after HANDOFF's push is pushed, and the CI
   confirmation runs on the new head. A comment whose correct wording is uncertain is deleted, not
   rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
   comment, or that removes a defect of its own ground (above), is not this route.
@@ -251,5 +261,5 @@ carry, never routes the cycle.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged, the
   `doc` class, and the `doc` re-entry's sweep record.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
-  ([`CLAUDE.md`](../../CLAUDE.md) > Cross-Project Boundary Rules); the build unit of that scope makes
+  ([`core.md`](../core.md) > Cross-Project Boundary Rules); the build unit of that scope makes
   the same single commit on the same terms.

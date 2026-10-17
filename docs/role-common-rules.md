@@ -36,7 +36,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch for the **same issue** while that issue's own PR is still open — a review-response cycle continues on that issue's existing dev branch. Whether a *different* issue may start is **not** gated on the prior PR's merge state; it is governed by [`CLAUDE.md`](../CLAUDE.md) > PR Wait Rule (the `active` flag).
+- No new branch for the **same issue** while that issue's own PR is still open — a review-response cycle continues on that issue's existing dev branch. Whether a *different* issue may start is **not** gated on the prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 
@@ -108,7 +108,7 @@ git status                  # any uncommitted work?
   done
   ```
 - **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-- **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`CLAUDE.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`CLAUDE.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
+- **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
 
@@ -155,10 +155,10 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 
 Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
 
-- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
+- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
 - **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
 
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Orchestrator context discipline*, row 2).
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](core.md) > Cost Control > *Orchestrator context discipline*, row 2).
 
 | Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|

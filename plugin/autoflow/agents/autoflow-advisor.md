@@ -17,7 +17,7 @@ Hard rules:
   tool or credential the environment does not provide, or what using a tool it
   has lacks), which you report as such, naming what is missing.
 - **[MUST]** Write your answer to `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md`
-  situation-first (`CLAUDE.md` > Execution Principles > Human-decision
+  situation-first (`docs/core.md` > Execution Principles > Human-decision
   presentation): the situation in domain terms, the decision and the options
   weighed with what each changes, your answer, then the grounds as anchors — so
   the operator can review it and override it.

@@ -1,6 +1,6 @@
 # U3 Design — ARCHITECT and GATE:PLAN
 
-> Unit document for U3. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> Unit document for U3. [`core.md`](../core.md) > Unit Document Loading Contract routes to
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
@@ -10,7 +10,7 @@ by four things only — its goal, its artifact contract, its verification and it
 and this file states them, with the cautions the design is asked to heed and the result it owes.
 How the unit reaches the goal — what it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
-the unit agent's, recorded with its grounds in its artifact ([`CLAUDE.md`](../../CLAUDE.md) > Rule
+the unit agent's, recorded with its grounds in its artifact ([`core.md`](../core.md) > Rule
 Scope, principle 2).
 
 - **Goal**: a design the build unit can implement and verify — the architecture decisions with
@@ -21,10 +21,21 @@ Scope, principle 2).
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the unit never
   scores its own artifact (*Verification — GATE:PLAN* below).
 - **Loop cap**: a GATE:PLAN FAIL re-runs the unit with the evaluator's findings and the previous
-  documents (*Re-entry* below), max 3× (`CLAUDE.md` > Flow Control > Regressions).
+  documents (*Re-entry* below), max 3× (`docs/core.md` > Flow Control > Regressions).
 - **Result owed**: the two artifact paths and a one-line summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
   orchestrator does not receive the design's body.
+
+## Transitions
+
+The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
+
+| Transition | Condition |
+|------|------|
+| ARCHITECT → GATE:PLAN | the feature design's `## Decision requests` section says `none` (a reduced verification disposition carrying a stated reason is not a request — `docs/units/design.md` > *Report routing*), and the verification design's `## Tools` section carries no `operator` item |
+| ARCHITECT (design point) → advisor | the `## Decision requests` section names a design point the unit did not settle → the advisor decides; the answer is an `A` entry, and the cycle continues to GATE:PLAN where it is the option the design took, otherwise to a unit re-run on the answer — consuming no re-entry budget (ARCHITECT > *Report routing*) |
+| ARCHITECT (acceptance-criterion content change) → orchestrator / advisor | the `## Decision requests` section proposes excluding, revising or splitting an issue acceptance criterion, or adding one → the orchestrator decides it before GATE:PLAN is spawned, and puts it to the advisor only where the proposal's grounds do not settle it or it is not confident; the decision is recorded as `[ac-decision]` entries (`docs/decision-ledger.md`) and the cycle continues to GATE:PLAN — or, where the decision differs from the proposal, to a unit re-run on the entries — consuming no re-entry budget |
+| GATE:PLAN → BUILD | plan evaluation PASS + its recommendations triaged (no attempt open) |
 
 ## Unit spawn
 
@@ -64,13 +75,13 @@ Scope, principle 2).
 
    **[MUST]** The document carries a `## Decision requests` section: each decision the design
    needs that is not the unit's to make, one entry each, written situation-first
-   ([`CLAUDE.md`](../../CLAUDE.md) > Execution Principles > *Human-decision presentation*) —
+   ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*) —
    - an **acceptance-criterion content change** — excluding, revising or splitting an issue
      acceptance criterion, or adding one: the criterion, the proposed change and the fact that
      shows the need ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
      decisions*);
    - a **design point** the unit is not confident to settle, or whose choice is not its own
-     ([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 3): the options and what each changes.
+     ([`core.md`](../core.md) > Rule Scope, principle 3): the options and what each changes.
 
    A design with no such request says `none`. The unit designs on its proposal and states the
    proposal as pending; it never applies an acceptance-criterion change itself.
@@ -239,9 +250,9 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
   tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
   it is used, is the design's judgment in the target.
 - **Availability is settled here, not at BUILD.** After the unit returns, the orchestrator reads
-  this section — a targeted excerpt, not a full read ([`CLAUDE.md`](../../CLAUDE.md)
+  this section — a targeted excerpt, not a full read ([`core.md`](../core.md)
   > Cost Control > *Orchestrator context discipline*) — before GATE:PLAN. An `operator` item is the
-  tool request pause ([`CLAUDE.md`](../../CLAUDE.md) > Flow Control > *tool or referenced material →
+  tool request pause ([`core.md`](../core.md) > Flow Control > *tool or referenced material →
   user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
   `target procedure` item is started when the phase that uses it begins — by the orchestrator when
   the tool must outlive a role spawn. A tool found missing later, at BUILD, takes the same pause.
@@ -365,5 +376,5 @@ the previous documents.
   of the previous cycle's design the new one carries over is the unit's own, recorded in the design.
 
 The unit reads and writes no `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state file, so the ARCHITECT re-entry
-counter is the orchestrator's own accounting (Regressions, [`CLAUDE.md`](../../CLAUDE.md) >
+counter is the orchestrator's own accounting (Regressions, [`core.md`](../core.md) >
 Development Lifecycle).

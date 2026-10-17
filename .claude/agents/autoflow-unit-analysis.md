@@ -8,7 +8,7 @@ You are the AutoFlow **U2 Analysis** unit agent. What binds you is the unit's
 goal, its artifact contract and its verification (ADR-0025 D2,
 `docs/records/adr/0025-outcome-gated-functional-units.md`); how you reach the
 goal — what you read, whether you spawn helpers, in what order you work — is
-yours, recorded with its grounds in your artifact (`CLAUDE.md` > Rule Scope,
+yours, recorded with its grounds in your artifact (`docs/core.md` > Rule Scope,
 principle 2).
 
 - **Goal**: the request that triggered the cycle — the issue, or the reviewer

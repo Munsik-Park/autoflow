@@ -202,7 +202,7 @@ build_rows() {
   emit_row "scripts/cleanup/cleanup-issue.sh" \
            "scripts/cleanup/cleanup-issue.sh" "root-layer" "copy" "file"
   # Ledger entry-ID protocol (issue #97). Same shape as the rows above: the
-  # stamped CLAUDE.md > Decision Ledger [MUST]s instruct a consumer to run it
+  # stamped docs/core.md > Decision Ledger [MUST]s instruct a consumer to run it
   # on every ledger append, so a target that never receives the script cannot
   # satisfy the rule it is stamped with.
   emit_row "scripts/ledger/ledger-entry-id.sh" \
@@ -262,7 +262,7 @@ build_rows() {
            "scripts/issue/create-issue.sh" "root-layer" "copy" "file"
   # Single-source spawn policy (issue #150). The config is source-path-preserved
   # so one path serves the host repo and a stamped target alike, and the readout
-  # ships for the same reason ledger-entry-id.sh does: the stamped CLAUDE.md >
+  # ships for the same reason ledger-entry-id.sh does: the stamped docs/core.md >
   # Spawn Model instructs a consumer to run it before every direct spawn. The
   # doc-closure BFS follows only .md links, so neither file enters on its own.
   # SCAFFOLD, not copy (issue #150, cycle 2): the config is a sample the target
