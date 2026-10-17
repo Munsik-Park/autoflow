@@ -183,7 +183,9 @@ CYCLE="$REPO_ROOT/skills/cycle/SKILL.md"
 CRIT="$REPO_ROOT/skills/criterion-review/SKILL.md"
 if [ -f "$CYCLE" ]; then
   first=$(body_after_frontmatter "$CYCLE" | grep -m1 -v '^[[:space:]]*$')
-  lead=$(body_after_frontmatter "$CYCLE" | awk '/^<!-- core:leading-end/ { found = 1; exit } { print } END { if (!found) exit 3 }')
+  # Read to end of input rather than exit at the marker: an early exit closes
+  # the pipe on the upstream awk, whose SIGPIPE fails the pipeline under pipefail.
+  lead=$(body_after_frontmatter "$CYCLE" | awk '/^<!-- core:leading-end/ { found = 1 } !found { print } END { if (!found) exit 3 }')
   lrc=$?
   lbytes=$(printf '%s\n' "$lead" | LC_ALL=C wc -c | tr -d ' ')
   case "$first" in
