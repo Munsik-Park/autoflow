@@ -44,7 +44,7 @@ The `Next:` line names the action the next session continues from (see
 ## Git Clean Check
 
 The conditions PREFLIGHT starts from ([`units/preparation.md`](units/preparation.md) > *What is asked*).
-`scripts/preflight/cycle-status.sh` reports the working tree and the default branch against its
+`<autoflow-root>/scripts/preflight/cycle-status.sh` reports the working tree and the default branch against its
 remote-tracking ref; bringing them to this state is the orchestrator's.
 
 ```bash
@@ -151,7 +151,7 @@ git checkout main
 git pull origin main                # with sub-repos: each submodule follows the host's pointer
 git branch -d <branch>             # local branch
 git push origin --delete <branch>  # remote branch (if not auto-deleted)
-scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/<repo-key>-issue-<N>/ directory to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
+<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/<repo-key>-issue-<N>/ directory to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
 ```
 
 The remote-branch deletion is a push: the hook admits it only while no cycle is
@@ -166,7 +166,7 @@ run is the target's practice*) — and then **archives** (moves) its issue direc
 reports, proposal record) **and the rest of its cycle-layer store `issue-{N}-local/`** (the
 uncommitted `automated` / `delivery-check` / `manual` assets of that cycle) — to
 `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<stamp>/` at cleanup via
-`scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). `<stamp>` is the `<date>-<time>` of
+`<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). `<stamp>` is the `<date>-<time>` of
 the dev branch the state file names in `branch`, so each cycle archives under its own name; a state
 file that names none falls back to the archive date, and a name already taken gets a `-2`, `-3`, …
 suffix. Nothing outside the reserved path is
@@ -181,7 +181,7 @@ path and archives only the resolved issue's directory, matched by its **exact na
 repository's issue `<N>` is taken) — with a digits-only `N` guard and one scoped `mv` of that
 directory to `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<stamp>/` (default `~/.autoflow`;
 repo-key = `<org>__<repo>` derived from `origin`, the same key the live directory carries —
-`scripts/lib/issue-dir.sh`), moved less its store's reserved path. Its one deletion is that
+`<autoflow-root>/scripts/lib/issue-dir.sh`), moved less its store's reserved path. Its one deletion is that
 reserved path, `issue-<N>-local/disposable`, removed without following a symbolic link. Allow-list the wrapper
 (`Bash(./scripts/cleanup/cleanup-issue.sh:*)`).
 
@@ -194,7 +194,7 @@ reserved path, `issue-<N>-local/disposable`, removed without following a symboli
 - No direct pushes.
 - Require PR with at least 1 approval.
 - Require CI checks to pass.
-- Require AutoFlow evaluation PASS (enforced by `.claude/hooks/check-autoflow-gate.sh`).
+- Require AutoFlow evaluation PASS (enforced by `<autoflow-root>/hooks/check-autoflow-gate.sh`).
 
 ---
 

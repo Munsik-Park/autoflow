@@ -113,7 +113,7 @@ A change passes two independent quality procedures, and neither stands in for th
   the analysis, the design and its verification, test-first and the build's records, the completed
   change against the acceptance criteria and the cycle's scope — and holds the gate's authority:
   its scores decide PASS, and a FAIL routes the re-entry.
-- **The reviewers** (`.codex/review.md`; [U6 Delivery](units/delivery.md) > *Reviewer review*)
+- **The reviewers** (`<autoflow-root>/.codex/review.md`; [U6 Delivery](units/delivery.md) > *Reviewer review*)
   review each pull request the cycle opened — its diff against the linked acceptance criteria —
   for defects in the result; the aggregation of their reviews takes the
   `blocked-by-review` label off when a round is clean.
@@ -179,7 +179,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLA
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
 - **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`units/delivery.md`](units/delivery.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
-- **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`docs/core.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
+- **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`<autoflow-root>/docs/core.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
 ### Build observations (GATE:QUALITY input)
 
@@ -209,7 +209,7 @@ not re-classify.
   disallowed content is never a failed item, while a defect a comment carries on its own ground is
   classed like any other, *Code comments in a target* below), `test` (test assets), `impl`
   (implementation), `design` (the
-  agreed design itself) — starting from the default per item (`scripts/gate/remedy-route.sh
+  agreed design itself) — starting from the default per item (`<autoflow-root>/scripts/gate/remedy-route.sh
   default-class <item>`) and overriding it with a stated reason when the default misreads the
   defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
 - **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
@@ -363,7 +363,7 @@ or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
 
 #### ADR-conformance check (scored within Decision grounds / Scope)
 
-This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to GATE:QUALITY's *Known blind-spot checks* below). A **governing ADR** for the change surface is an ADR in the repository's ADR directory (`docs/records/adr/` in this repository; a consuming target's own ADR location) with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a **trigger area** of `docs/development-guideline.md` > ADR Policy > *When to create an ADR* — the list is defined there, in a shipped usage document, and nowhere else.
+This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to GATE:QUALITY's *Known blind-spot checks* below). A **governing ADR** for the change surface is an ADR in the repository's ADR directory (`docs/records/adr/` in this repository; a consuming target's own ADR location) with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a **trigger area** of `<autoflow-root>/docs/development-guideline.md` > ADR Policy > *When to create an ADR* — the list is defined there, in a shipped usage document, and nowhere else.
 
 - **Trigger → cap**: divergence from a governing ADR, **or** an architecture-impacting change with no governing ADR/owner decision → cap.
 - **Per-item cap distribution**: `Decision grounds` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
@@ -441,7 +441,7 @@ AUDIT*).
 AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores — the fresh
 evaluator, the five items below, the PASS thresholds — and the target owns what each item is judged
 by. Which version AUDIT reads is the record line of
-`bash scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`, which the
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`, which the
 orchestrator runs at AUDIT entry ([U4 Build and verify](units/build.md) > *Security checklist*):
 
 - `none-declared` → no checklist: the five items are scored from the change alone, and the report
@@ -561,12 +561,12 @@ each-item ≥ 7 criterion:
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
     rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `docs/core.md`, `docs/state-tracking.md`, `docs/autoflow-guide.md`, `docs/units/*`, `docs/role-contracts.md`,
-    `docs/role-common-rules.md`, `docs/submodule-common-rules.md`, `docs/evaluation-system.md`,
-    `.claude/agents/*`, and the sections of an ADR that state a decision still in force);
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
+    `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
     (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
     boundary of (c) is the manifest generator's markdown-link closure of `CLAUDE.md` +
-    `docs/INDEX.md` plus its other artifact rows (`setup/gen-manifest-hashes.sh` >
+    `<autoflow-root>/docs/INDEX.md` plus its other artifact rows (`<autoflow-root>/setup/gen-manifest-hashes.sh` >
     `compute_doc_closure`).
   - *Historical records* are what is kept as a record of a past state and followed by no one:
     per-issue manual-verification records, report-excerpt fixtures
@@ -585,7 +585,7 @@ each-item ≥ 7 criterion:
   on a `cycle` row, an uncommitted asset on a `standing` row, or a token outside the list caps
   `Test quality` at 6. The token check is a set relation, not a judgment, and it is performed
   **by the device**: the evaluator runs
-  `bash scripts/gate/verification-layer-check.sh .autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md` and
+  `bash <autoflow-root>/scripts/gate/verification-layer-check.sh .autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md` and
   attaches its output — a non-zero exit is a token outside D1's closed list and caps the item; the
   device's second output, the row↔asset pairing report, is input to this check and to
   `Test coverage`, never a verdict. The device is not delivered to targets and the check does not
@@ -620,7 +620,7 @@ each-item ≥ 7 criterion:
     **fails** is a defect, scored and classed like any other.
 - **Fit — ADR conformance**: on the final change set, re-confirm the shipped change conforms to any governing ADR (same
   governing-ADR / trigger-area / N/A definition as the GATE:PLAN ADR-conformance check; the
-  trigger areas are `docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
+  trigger areas are `<autoflow-root>/docs/development-guideline.md` > ADR Policy > *When to create an ADR*). A
   divergence from a governing ADR, or an architecture-impacting change with no governing
   ADR/owner decision, caps Fit at 6.
 - **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced **after** ARCHITECT — a test the
@@ -680,7 +680,7 @@ not lower the item.
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
-  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — .codex/review.md > Severity>", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
+  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — <autoflow-root>/.codex/review.md > Severity>", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
 }
 ```
 
@@ -721,7 +721,7 @@ GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptanc
 observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
 decisions*), the criterion's row in `.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
-`severity` — a level of `.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
+`severity` — a level of `<autoflow-root>/.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
 `remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF
 review triage asks of a reviewer finding. After the PASS of any rubric-scored gate the orchestrator
 triages the list ([U5 Completion evaluation](units/completion-evaluation.md) > *Recommendation

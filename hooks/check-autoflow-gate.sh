@@ -1,0 +1,1345 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# AutoFlow Gate Check
+# The hook computes pass/fail directly from the raw `scores` object so that the
+# trust chain stops at the script level — the AI's own `pass`/`avg`/`min` fields
+# are ignored.
+#
+# Command matching and check ordering follow docs/gate-matching-standard.md:
+#   - P1: gates match with the shared CMD_BOUNDARY prefix + word boundary,
+#         never a bare `^` (which `cd x && git push` would bypass).
+#   - P2: unconditional denies (gh pr merge / default-branch push /
+#         blocked-by-subrepo label removal) run in Section 1, BEFORE the
+#         activity check, so an inactive/absent state file cannot nullify them.
+#
+# PASS criteria (defined in docs/core.md):
+#   - average ≥ 7.5
+#   - each item ≥ 7
+#   - security ≤ 3 → automatic block
+#
+# Gate points:
+#   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
+#   - Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)
+#   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only)
+#   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
+#                                     (POST to the issues collection). Filing goes
+#                                     through scripts/issue/create-issue.sh, which
+#                                     re-runs the duplicate search from a draft
+#                                     (docs/issue-proposal.md)
+#   - Bash(remove blocked-by-subrepo label) → DENIED unconditionally; matches the
+#                                     label name across gh pr edit / gh issue edit
+#                                     --remove-label and gh api DELETE .../labels/…
+#                                     (merge-order clearance is the operator's job;
+#                                     blocked-by-review is not gated here)
+#   - Agent (any spawn)             → explicit `model` parameter required
+#                                     (state-independent — docs/core.md > Spawn Model)
+#   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
+#                                     keywords (docs/gate-matching-standard.md P3):
+#                                     planning → GATE:HYPOTHESIS pass (bug issue;
+#                                     verdict containing "skip" → bypass, non-bug),
+#                                     implementation → GATE:PLAN pass,
+#                                     analysis / evaluation / research / advisor
+#                                     → pass. Unit agents (ADR-0025): unit-analysis
+#                                     → analysis, unit-design → planning,
+#                                     unit-build → implementation
+#   - Agent (spawn BY a unit agent) → no declaration needed; judged by the
+#                                     caller's class (a declared role's own gate
+#                                     also applies, a `name` notwithstanding)
+#   - Write/Edit/MultiEdit on a ledger → append-only (prior text kept); only
+#                                     autoflow-advisor adds `advisor decision` /
+#                                     A<n>; only the main session adds `operator
+#                                     decision` / O<n>; the advisor adds no
+#                                     O,F,E (state-independent, Section 1e, D7)
+#   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
+#                                     role via subagent_type autoflow-<role> —
+#                                     see resolve_spawn_role)
+#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required, and neither
+#                                     gate's latest record carries a remedy_class (an
+#                                     open re-entry — a recommendation attempt
+#                                     not yet re-scored clean; issue #275)
+#   - Bash(gh pr create)            → the same two conditions
+#   - Bash(git commit)              → while the latest GATE:QUALITY record carries
+#                                     remedy_class "doc": the doc re-entry's sweep
+#                                     record issue-N-remedy-sweep.md (beside the
+#                                     state file) must
+#                                     exist with non-empty `## Command` and
+#                                     `## Output` sections (issue #140, Gate 5)
+
+set -e
+
+AUTOFLOW_DIR="${CLAUDE_PROJECT_DIR:-.}/.autoflow"
+INPUT=$(cat)
+
+# ── AutoFlow paths: helper lookup and the paths a message names ──
+# The AutoFlow tree this hook belongs to is looked up from the plugin root first
+# and then from this script's own location — never from the project dir, which
+# is the target's tree. `$CLAUDE_PLUGIN_ROOT` is set in the hook environment; the
+# relative candidate is for a direct invocation without it: the repository root
+# is the plugin root, and this script sits at <root>/hooks/ (ADR-0027 D1).
+_AF_HOOKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# af_resolve <rel> — the absolute path of <rel> in the AutoFlow tree, or nothing.
+af_resolve() {
+  local _root _abs
+  for _root in "${CLAUDE_PLUGIN_ROOT:-}" "$_AF_HOOKDIR/.."; do
+    [ -n "$_root" ] && [ -e "$_root/$1" ] || continue
+    _abs="$(cd "$_root" 2>/dev/null && pwd)" || continue
+    printf '%s/%s' "$_abs" "$1"
+    return 0
+  done
+  return 0
+}
+# af_path <rel> — what a message names: the absolute path when the AutoFlow tree
+# carries <rel>, otherwise <rel> as written.
+af_path() {
+  local _p
+  _p="$(af_resolve "$1")"
+  printf '%s' "${_p:-$1}"
+}
+# af_helper <rel> — a helper script to run: the AutoFlow tree's own copy, then
+# the copy a stamped target carries in its own tree (ranked last, so the
+# plugin's helper wins wherever the plugin carries one). Nothing when neither
+# exists.
+af_helper() {
+  local _p
+  _p="$(af_resolve "$1")"
+  if [ -n "$_p" ] && [ -f "$_p" ]; then printf '%s' "$_p"; return 0; fi
+  if [ -f "${CLAUDE_PROJECT_DIR:-.}/$1" ]; then printf '%s' "${CLAUDE_PROJECT_DIR:-.}/$1"; fi
+  return 0
+}
+
+# ── Hook target detection ──
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+
+# Shared command-boundary prefix (docs/gate-matching-standard.md > P1).
+# Matches command start or the position after ; & | && || — so a gate is
+# not bypassed by `cd x && git push` / `a && gh pr create`. Backtick / (
+# are intentionally NOT boundary chars: command-substitution evasion is out
+# of scope, and including them caused heredoc/body false-positives.
+CMD_BOUNDARY='(^|[;&|]|&&|\|\|)[[:space:]]*'
+
+# Scan target: the command with body text removed so a quoted/heredoc body
+# that merely mentions a prohibited token does not false-positive, while a
+# real chained command outside quotes is preserved (gate-matching-standard
+# > Known Limitation refinement):
+#   1. drop everything from the first heredoc introducer (`<<`) onward;
+#   2. delete single- and double-quoted substrings (inline --body "...").
+SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
+
+# `git` may carry global options (-c key=value, -C <path>) between the binary
+# and the subcommand: `git -c protocol.version=2 push origin main`. Match zero
+# or more such option tokens so push detection is not bypassed (issue #13).
+# Scope: -c/-C interposition that arises in NORMAL operation. Adversarial
+# wrappers (subshell/backtick/command-substitution) stay out of P1's threat
+# model and are NOT covered here (docs/gate-matching-standard.md > P1). Defined
+# at global scope (before the Bash guard and the is_score_gated_surface
+# definition) so all three consumers — the P2 default-branch deny, Gate 3, and
+# is_score_gated_surface (called on the Agent path too) — reference a set value.
+GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
+GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
+
+# ── Caller identity ──
+# The hook input's `agent_type` names the sub-agent that made the call; the
+# harness sets it on a sub-agent's calls and omits it on the main loop's (Claude
+# Code CHANGELOG 2.1.69: "Added `agent_id` (for subagents) and `agent_type` …
+# to hook events"). Section 1e (ledger authorship) and the unit-caller class
+# below read it.
+CALLER_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || true)
+
+# ── _fold_continuations (issue #134 c2) ────────────────────────────────────
+# Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
+# CMD_BOUNDARY / GIT_PUSH (and for the same reason: every consumer references
+# ONE definition). Two consumers today — the _JOINED segment fold below and the
+# backgrounded-suite-run deny's BG_SCAN pipeline.
+#
+# CONTRACT. Input: text on stdin. Output on stdout: the same text with each bare
+# trailing `\` and the newline after it replaced by a single space (chaining
+# permitted); every other newline preserved as a real command separator; a
+# trailing `\` on the final line keeps its content with the `\` removed; a
+# trailing CR stripped from each physical line before the continuation test.
+# The output carries NO trailing newline (`printf '%s'`), so a caller using the
+# sentinel idiom below reproduces the pre-extraction in-shell result BYTE FOR
+# BYTE. TOTAL: content is never discarded, on any input shape or platform.
+#
+# IMPLEMENTATION (issue #13 AUDIT cycle 3, user-approved): the fold is a pure
+# POSIX-shell while-read loop, NOT `sed`. Rationale: BSD and GNU `sed` diverge
+# on `N` at the LAST line of the buffer when it ends in a trailing `\` (a
+# continuation with no following line to append) — BSD `N` at EOF has no next
+# line and DISCARDS the pattern space, so _JOINED went EMPTY and the whole
+# segment-based deny failed OPEN. The cycle-2 `$s/\\$//` pre-strip covered only
+# a trailing `\` already present on the LAST physical line; it did NOT cover the
+# case where a mid-fold join RE-CREATED a trailing `\` on the new last line
+# INSIDE the `N`/`ta` loop, re-triggering the same BSD N-at-EOF discard one
+# iteration later on 2+-hop composite input (AC-2t). Rather than patch the sed
+# program again, this removes the divergent primitive entirely. The loop reads
+# physical lines in order; when a line ends in a bare trailing `\` it strips
+# that `\` and joins the next line with a single space (chaining permitted); a
+# final line whose `\` has no following line to append keeps its content with
+# the `\` removed; a bare newline is preserved as a real separator. It is a
+# TOTAL function — input/content is never discarded on any platform or input
+# shape, so the BSD/GNU sed N-at-EOF divergence cannot participate.
+#
+# The loop reads its input from STDIN, so every caller drives it with the same
+# `<<<` here-string / pipe idiom and no caller's variables are touched: the
+# loop's own variables are function-local. It deliberately does NOT wrap the
+# `case` in `$( … )` command substitution: macOS /bin/bash 3.2.57 mis-parses a
+# `case` pattern's `)` inside `$( )` as the substitution's closing paren.
+# Primitives used: `read` / `case` / `printf`-free string append / `${v%\\}`
+# parameter expansion — POSIX sh; no external tool is invoked.
+#
+# Moving the loop into a function does NOT re-introduce the /bin/bash 3.2.57
+# `case`-inside-`$( )` hazard noted above: the `case` is parsed once here, at
+# function-definition time and at global scope, and no call site contains any
+# `case` text of its own.
+_fold_continuations() {
+  local _fc_joined='' _fc_acc='' _fc_cont=0 _fc_first=1 _fc_line
+  while IFS= read -r _fc_line || [ -n "$_fc_line" ]; do
+    # CR normalization (issue #13 AUDIT cycle 4, user-approved): strip a trailing
+    # CR from each physical line before the continuation check. `read` splits on
+    # LF only, so a CRLF-style continuation (`\`+CR+LF) leaves the CR on the line
+    # and `_fc_acc` ends in CR, not the literal `\` the `*\\)` case matches — the
+    # fold misses and the composite command passes through unmerged (same bypass
+    # class as AC-2t, via a CRLF line ending). By real shell semantics `\`+CR+LF
+    # is NOT a line continuation (only `\`+LF is); this normalization is a
+    # DELIBERATE over-block so the gate is never weaker on CRLF input than on LF.
+    _fc_line="${_fc_line%$'\r'}"
+    if [ "$_fc_cont" = 1 ]; then
+      _fc_acc="$_fc_acc $_fc_line"     # join continuation with a single space
+    else
+      _fc_acc="$_fc_line"
+    fi
+    case "$_fc_acc" in
+      *\\)
+        _fc_acc="${_fc_acc%\\}"     # strip the bare trailing backslash; keep assembling
+        _fc_cont=1
+        ;;
+      *)
+        _fc_cont=0               # completed logical line — append, newline-separated
+        if [ "$_fc_first" = 1 ]; then _fc_joined="$_fc_acc"; _fc_first=0
+        else _fc_joined="$_fc_joined
+$_fc_acc"; fi
+        ;;
+    esac
+  done
+  # Continuation `\` on the final line with no following line to append: content
+  # is preserved (the backslash was already stripped), nothing is discarded.
+  if [ "$_fc_cont" = 1 ]; then
+    if [ "$_fc_first" = 1 ]; then _fc_joined="$_fc_acc"; else _fc_joined="$_fc_joined
+$_fc_acc"; fi
+  fi
+  printf '%s' "$_fc_joined"
+}
+
+# ── _strip_heredoc_bodies (issue #134 c2) ──────────────────────────────────
+# Heredoc-body remover, defined at GLOBAL SCOPE. Used by the backgrounded
+# suite-run deny's BG_SCAN pipeline only; SCAN / _JOINED / _SEGMENTS do not
+# read it.
+#
+# WHY IT DELETES-AND-CONTINUES RATHER THAN STOPPING. The earlier `${COMMAND%%<<*}`
+# truncation stopped at the FIRST heredoc introducer, so every later logical line
+# left the deny's buffer: a heredoc that writes a file followed by
+# `bash …/run-suites.sh --all &` — or any earlier `grep -q x <<< "$V"` followed by
+# the same invocation — admitted a genuinely backgrounded whole-tree run. That is
+# the UNDER-inclusive direction, the harmful one for this gate. This function
+# removes bodies and keeps reading to the end of the input instead.
+#
+# CONTRACT. Input: the folded text on stdin. Output on stdout, no trailing
+# newline:
+#   - each heredoc introducer token (`<<WORD`, `<<-WORD`, `<<"WORD"`, `<<'WORD'`)
+#     is deleted FROM ITS OWN LINE and the remainder of that line — including a
+#     trailing `&` — is kept;
+#   - the body lines through the matching terminator are removed, and processing
+#     continues: no line after a heredoc is lost;
+#   - `<<<` is NOT an introducer (a here-string has no body), so the scan steps
+#     over it and keeps looking on the same line;
+#   - the terminator is a body line equal to the delimiter word exactly; under
+#     `<<-`, leading tabs and spaces are stripped before the comparison, and the
+#     delimiter's surrounding quotes are removed before matching.
+#
+# [MUST] TOTALITY ON AN UNTERMINATED HEREDOC. Body lines are BUFFERED, not
+# discarded, until the terminator is seen; if the input ends with the body still
+# open, the buffer is emitted. This is what makes a MISREAD introducer harmless:
+# the strip runs while the buffer is still quoted (stage order — see the BG_SCAN
+# call site), so a literal `<<` inside a quoted argument reads as an introducer.
+# Under the stopping shape that misreading dropped every later line; under this
+# clause it costs only the delimiter-shaped word on that one line, and the
+# following real command line is buffered, never terminated, and emitted.
+#
+# Pure POSIX shell (`read` / `case` / parameter expansion), NOT `sed`, for the
+# reason recorded on _fold_continuations above: matching a heredoc body needs a
+# delimiter carried across lines, which in `sed` means `N`/hold space — the exact
+# primitive class this file removed after the BSD/GNU divergence. Net effect on
+# BG_SCAN: one `sed` stage is REMOVED and none added.
+#
+# Accepted residuals, all OVER-inclusive (content retained, so the deny can only
+# fire more, never less): multiple introducers on one line (`cat <<A <<B`) — only
+# the first is stripped; an unterminated heredoc keeps its body; a body line
+# ending in a bare `\` is folded into the following line before the strip sees it,
+# so such a body merges with its terminator and stays in the buffer.
+#
+# _shb_ltrim: shared leading-space/tab stripper, used both on a candidate
+# terminator line (under `<<-`) and on a parsed delimiter token — the same
+# trim rule applied at two points in the scan below.
+_shb_ltrim() {
+  local _v="$1"
+  while :; do
+    case "$_v" in
+      ' '*|$'\t'*) _v="${_v#?}" ;;
+      *) break ;;
+    esac
+  done
+  printf '%s' "$_v"
+}
+_strip_heredoc_bodies() {
+  local _shb_all='' _shb_first=1 _shb_buf='' _shb_bufn=0
+  local _shb_in=0 _shb_delim='' _shb_dash=0
+  local _shb_line _shb_rest _shb_keep _shb_before _shb_after _shb_orig
+  local _shb_tok _shb_t _shb_c _shb_cmp
+  while IFS= read -r _shb_line || [ -n "$_shb_line" ]; do
+    if [ "$_shb_in" = 1 ]; then
+      _shb_cmp="$_shb_line"
+      if [ "$_shb_dash" = 1 ]; then
+        _shb_cmp=$(_shb_ltrim "$_shb_cmp")
+      fi
+      if [ "$_shb_cmp" = "$_shb_delim" ]; then
+        _shb_in=0; _shb_buf=''; _shb_bufn=0    # terminator: body dropped, keep reading
+      elif [ "$_shb_bufn" = 0 ]; then
+        _shb_buf="$_shb_line"; _shb_bufn=1     # buffered, not discarded (totality)
+      else
+        _shb_buf="$_shb_buf
+$_shb_line"
+      fi
+      continue
+    fi
+    _shb_rest="$_shb_line"
+    _shb_keep=''
+    while :; do
+      case "$_shb_rest" in
+        *'<<'*) : ;;
+        *) _shb_keep="$_shb_keep$_shb_rest"; break ;;
+      esac
+      _shb_before="${_shb_rest%%<<*}"
+      _shb_orig="${_shb_rest#*<<}"
+      case "$_shb_orig" in
+        '<'*)
+          # `<<<` — a here-string, not an introducer: step over it, keep looking.
+          _shb_keep="$_shb_keep$_shb_before<<<"
+          _shb_rest="${_shb_orig#?}"
+          continue
+          ;;
+      esac
+      _shb_tok="$_shb_orig"
+      _shb_dash=0
+      case "$_shb_tok" in -*) _shb_dash=1; _shb_tok="${_shb_tok#-}" ;; esac
+      _shb_tok=$(_shb_ltrim "$_shb_tok")
+      _shb_delim=''; _shb_after=''
+      case "$_shb_tok" in
+        '"'*)
+          _shb_t="${_shb_tok#\"}"
+          case "$_shb_t" in
+            *'"'*) _shb_delim="${_shb_t%%\"*}"; _shb_after="${_shb_t#*\"}" ;;
+          esac
+          ;;
+        "'"*)
+          _shb_t="${_shb_tok#\'}"
+          case "$_shb_t" in
+            *"'"*) _shb_delim="${_shb_t%%\'*}"; _shb_after="${_shb_t#*\'}" ;;
+          esac
+          ;;
+        *)
+          _shb_after="$_shb_tok"
+          while [ -n "$_shb_after" ]; do
+            _shb_c="${_shb_after:0:1}"
+            case "$_shb_c" in
+              ' '|$'\t'|';'|'&'|'|'|'<'|'>'|'('|')') break ;;
+            esac
+            _shb_delim="$_shb_delim$_shb_c"
+            _shb_after="${_shb_after#?}"
+          done
+          ;;
+      esac
+      if [ -z "$_shb_delim" ]; then
+        # No delimiter word (`<<` at end of line, before a metachar, or an
+        # unclosed quote): no body can be matched, so keep the text as ordinary
+        # content — the over-inclusive direction — and keep looking on this line.
+        _shb_keep="$_shb_keep$_shb_before<<"
+        _shb_rest="$_shb_orig"
+        continue
+      fi
+      # Real introducer: drop the token, keep the rest of the line, open the body.
+      _shb_keep="$_shb_keep$_shb_before$_shb_after"
+      _shb_in=1; _shb_buf=''; _shb_bufn=0
+      break
+    done
+    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_keep"; _shb_first=0
+    else _shb_all="$_shb_all
+$_shb_keep"; fi
+  done
+  # Unterminated heredoc at end of input: emit the buffer (totality clause).
+  if [ "$_shb_in" = 1 ] && [ "$_shb_bufn" = 1 ]; then
+    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_buf"
+    else _shb_all="$_shb_all
+$_shb_buf"; fi
+  fi
+  printf '%s' "$_shb_all"
+}
+
+# ── Section 1: Unconditional blocks (state-independent — P2) ──
+# AutoFlow never merges and never pushes to the default branch through the
+# agent's tools. Enforced regardless of any .autoflow state so that a
+# terminal phase setting active:false (or a removed state file) cannot
+# disable the prohibition. Merging is performed by external review.
+
+if [ "$TOOL_NAME" = "Bash" ]; then
+  # Shell-separator segment split shared by the co-occurrence denies below
+  # (label-gate REST form, default-branch push). Computed once from SCAN.
+  # NOTE (C3): fold backslash-newline line-continuations into ONE logical line
+  # BEFORE the separator split. A `\`<newline> continuation is a single logical
+  # shell command, but it leaves a literal newline in SCAN, so the per-segment
+  # `while read` loops below (which read one physical line at a time) would split
+  # that one command into several segments and let a same-segment co-occurrence
+  # AND fail OPEN in a security gate (issue #13 AUDIT regression). A bare newline
+  # (a physical line NOT ending in `\`) is a real command separator and is
+  # deliberately left intact (over-block guard).
+  # The fold itself is _fold_continuations (global scope, above); this call site
+  # keeps the C4 guard below. SENTINEL IDIOM: command substitution strips trailing
+  # newlines, and the fold's output legitimately ends in one when the last logical
+  # line is empty — a shape the in-shell loop preserved. Appending `X` inside the
+  # substitution and removing it after keeps _JOINED BYTE-IDENTICAL to what the
+  # inlined loop produced, so _SEGMENTS and every gate reading it are unmoved.
+  _JOINED=$(_fold_continuations <<< "$SCAN"; printf X); _JOINED="${_JOINED%X}"
+  # NOTE (C4): fail-closed assertion (defense-in-depth). The while-read fold above
+  # is a total function, so a non-empty SCAN always yields a non-empty _JOINED and
+  # this guard is not reachable in normal operation. It is retained deliberately:
+  # in a security gate an explicit fail-closed invariant is worth its zero cost —
+  # should a future refactor reintroduce a path that empties a non-empty SCAN,
+  # fall back to the raw SCAN so the segment scan runs against real content and
+  # the deny fires, never against an empty buffer that would fail OPEN.
+  [ -n "$SCAN" ] && [ -z "$_JOINED" ] && _JOINED=$SCAN
+  # NOTE (C2): the replacement is a POSIX literal backslash-newline (an escaped
+  # real newline), NOT the `\n` escape — `\n`-in-replacement is undefined by
+  # POSIX and a sed that emits literal `n` would collapse segmentation and let a
+  # co-occurrence deny fail OPEN in a security gate. The literal form is
+  # standard-guaranteed on BSD (macOS operator) and GNU (CI) sed alike.
+  _SEGMENTS=$(printf '%s' "$_JOINED" | sed -E 's/(&&|\|\||[;&|])/\
+/g')
+
+  if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
+    echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied ($(af_path docs/core.md) > Push and PR creation)." >&2
+    echo "Merging, issue close, and deployment are owned by an external review process." >&2
+    exit 2
+  fi
+
+  # ── Backgrounded suite-run deny (issue #134; state-independent — P2) ──
+  # A suite run's result is evidence only if the tree stood still under it, and a
+  # backgrounded run outlives the turn that started it. The foreground obligation was prose only
+  # (docs/role-common-rules.md > Bash Execution Mode); it moves to the tool
+  # boundary here. Three surfaces, all reading BG_SCAN (below):
+  #   (a) payload   — .tool_input.run_in_background is true AND the command carries
+  #                   a run-suites.sh invocation token;
+  #   (b) prefix    — BG_PREFIX: a mandatory nohup/setsid wrapper word at the
+  #                   command position of the invocation;
+  #   (c) trailing& — BG_TAIL: the command containing the invocation is terminated
+  #                   by a backgrounding `&` (one `&`, not `&&`, not `&>`, not `2>&1`).
+  # Residual over-block, accepted: a PreToolUse hook has no actor or phase
+  # knowledge, so the operator's own backgrounded sweep is refused too — the remedy
+  # is to run the same command in the foreground. Residual escapes, accepted: a
+  # wrapper word outside the group below, a shell variable holding the path, and
+  # the `{ …; } &` brace-group form (out of P1's threat model, as above).
+  #
+  # BG_SCAN / RUN_SUITES / BG_PREFIX / BG_TAIL — rationale (the unquote-vs-delete
+  # split, the ordered-alternative argument, the token-interposition shape shared
+  # with GIT_PUSH, and the BG_TAIL window rule) is documented once, in full, at
+  # docs/gate-matching-standard.md > "Backgrounded-invocation refinement —
+  # BG_SCAN / BG_PREFIX / BG_TAIL (applied)"; this deny's OWN scan buffer — SCAN
+  # and _SEGMENTS are untouched.
+  # BG_SCAN — an ordered THREE-STAGE pipeline over COMMAND (issue #134 c2), with a
+  # fail-closed guard. Stage order is load-bearing and each boundary is argued:
+  #   1. _fold_continuations — a `\`<newline> continuation is ONE logical shell
+  #      command, but `grep -qE` is line-oriented, so `… run-suites.sh --all \`⏎`&`
+  #      put the invocation token and its terminating `&` on two physical lines and
+  #      no surface matched. Folding FIRST also makes an introducer sitting on a
+  #      continued line (`… --all \`⏎`<<EOF &`) visible to stage 2, and restores
+  #      quote parity for stage 3 on a quoted span split across a continuation.
+  #   2. _strip_heredoc_bodies — remove heredoc BODIES, keep every later line
+  #      (see the function's own WHY block). Runs BEFORE unquoting because a body
+  #      is arbitrary text and routinely carries an unbalanced apostrophe (`it's`),
+  #      which would corrupt stage 3's quote pairing for every real command line
+  #      after it. The reverse order buys nothing symmetric: unquoting KEEPS the
+  #      contents of a separator-free quoted span, so `git commit -m "a << b"`
+  #      still presents a bare `<<` to the strip. That misread is not avoided by
+  #      reordering — it is made harmless by the strip's totality clause.
+  #   3. the unquoting sed — unchanged from cycle 1.
+  BG_SCAN=$(_fold_continuations <<< "$COMMAND" \
+    | _strip_heredoc_bodies \
+    | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
+  # NOTE (bg-fail-closed): the same invariant as C4 above, stated here rather than
+  # left to inference. In a security gate an empty buffer fails OPEN, and this
+  # cycle grows BG_SCAN from one parameter expansion plus one sed into a
+  # two-function, one-sed substitution read by ALL THREE deny surfaces — so the
+  # surface on which an empty result could arise widens rather than narrows. The
+  # fallback is the RAW COMMAND, not a partially-built buffer: it is the only text
+  # guaranteed to be real content.
+  [ -n "$COMMAND" ] && [ -z "$BG_SCAN" ] && BG_SCAN=$COMMAND
+  BG_WRAPPER='(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|nohup|setsid|env|time|command)[[:space:]]+)*'
+  BG_INTERP='((sh|bash|zsh|dash|ksh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?'
+  RUN_SUITES_TAIL="${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
+  RUN_SUITES="${CMD_BOUNDARY}${BG_WRAPPER}${RUN_SUITES_TAIL}"
+  # BG_PREFIX — RUN_SUITES_TAIL with the wrapper word made MANDATORY; BG_WRAPPER
+  # appears on both sides of it so `env FOO=1 nohup bash …` and `nohup setsid
+  # bash …` match too.
+  BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${RUN_SUITES_TAIL}"
+  BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
+  RUN_IN_BACKGROUND=$(echo "$INPUT" | jq -r '.tool_input.run_in_background // empty' 2>/dev/null)
+  _bg_deny=0
+  if [ "$RUN_IN_BACKGROUND" = "true" ] && printf '%s' "$BG_SCAN" | grep -qE "$RUN_SUITES"; then
+    _bg_deny=1
+  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_PREFIX|$BG_TAIL"; then
+    _bg_deny=1
+  fi
+  if [ "$_bg_deny" = 1 ]; then
+    echo "BLOCKED: a backgrounded run of $(af_path scripts/test/run-suites.sh) is denied — run it in the foreground ($(af_path docs/role-common-rules.md) > Bash Execution Mode)." >&2
+    echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
+    exit 2
+  fi
+
+  # AutoFlow never clears the `blocked-by-subrepo` merge-order label — that is
+  # the operator's step at merge (the workflow no longer auto-removes it — not
+  # viable for N sub-repos). `blocked-by-review` is not gated: the HANDOFF
+  # review aggregator takes it off on a clean round (ADR-0026). Match the LABEL NAME in a removal
+  # context so the deny (a) covers every natural surface that drops the label —
+  # `gh pr edit` / `gh issue edit --remove-label blocked-by-subrepo` (a PR's
+  # labels are issue labels) and the `gh api … -X DELETE …/labels/
+  # blocked-by-subrepo` REST form — while (b) NOT firing on unrelated label
+  # edits such as HANDOFF's `gh issue edit … --remove-label status:in-progress`
+  # or the aggregator's `--remove-label blocked-by-review`, and (c) leaving
+  # other labels removable. Residual (accepted; shared by every
+  # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
+  # stripped by SCAN and slips — the threat model is the naive self-clear, and
+  # the bare form is what callers write.
+  # (A) --remove-label <gate label> is a single-pattern gate — unaffected by
+  # segment scoping (one pattern has no co-occurrence to mis-scope).
+  # (B) the `gh api … -X DELETE …/labels/<gate label>` REST form is an AND of
+  # two patterns; require them to co-occur in ONE segment so unrelated
+  # sub-commands (…/labels/blocked-by-subrepo GET ; curl -X DELETE …/other)
+  # no longer false-positive over the whole buffer (issue #13; P1 refinement).
+  _label_deny=0
+  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-subrepo\b"; then
+    _label_deny=1
+  else
+    while IFS= read -r _seg; do
+      if printf '%s' "$_seg" | grep -qE "/labels/blocked-by-subrepo\b" \
+         && printf '%s' "$_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)DELETE\b"; then
+        _label_deny=1; break
+      fi
+    done <<< "$_SEGMENTS"
+  fi
+  if [ "$_label_deny" = 1 ]; then
+    echo "BLOCKED: AutoFlow does not clear the 'blocked-by-subrepo' merge-order label." >&2
+    echo "blocked-by-subrepo is the operator's step at merge ($(af_path docs/external-review-sequencing.md) > Merge-order clearance)." >&2
+    exit 2
+  fi
+
+  # AI-initiated issue creation is denied at the tool boundary (issue #96). The
+  # obligation to review before filing was prose only, so an agent could assert
+  # it had checked for duplicates and file anyway — the assertion and the act
+  # had no mechanical relation. Filing now goes through
+  # scripts/issue/create-issue.sh, which derives the issue from a draft in
+  # .autoflow/ and RE-RUNS the duplicate search itself. That wrapper carries no
+  # `gh issue create` token in its own invocation string, so this deny does not
+  # block it; the operator's permission prompt on the wrapper is layer three.
+  # State-independent (P2), like every Section-1 deny: no cycle need be active
+  # for the review obligation to hold.
+  #
+  # Two surfaces, both segment-scoped so an adjacent sub-command cannot be
+  # mistaken for this one:
+  #   (A) the `gh issue create` subcommand, anchored at a segment start so
+  #       `gh issue list --search create` (the read-only lookup an agent runs
+  #       BEFORE filing, which must stay available) is untouched;
+  #   (B) the REST form — a POST whose path ENDS at the issues collection.
+  #       Requiring the path to end there keeps `…/issues/12/comments --method
+  #       POST` (commenting on an existing issue) out of the deny, which
+  #       creates nothing.
+  #       A path component ends at a query delimiter `?`, a fragment delimiter
+  #       `#`, whitespace, or the segment end — all four are terminators here.
+  #       `/` is deliberately excluded: it continues the path into the
+  #       sub-resource forms this deny exists to leave alone.
+  _issue_create_deny=0
+  while IFS= read -r _ic_seg; do
+    if printf '%s' "$_ic_seg" | grep -qE "^[[:space:]]*gh[[:space:]]+issue[[:space:]]+create\b"; then
+      _issue_create_deny=1; break
+    fi
+    if printf '%s' "$_ic_seg" | grep -qE "repos/[^[:space:]]+/issues([?#[:space:]]|$)" \
+       && printf '%s' "$_ic_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)POST\b"; then
+      _issue_create_deny=1; break
+    fi
+  done <<< "$_SEGMENTS"
+  if [ "$_issue_create_deny" = 1 ]; then
+    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/issue-proposal.md))." >&2
+    echo "Write a draft to .autoflow/<name>.md per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft .autoflow/<name>.md" >&2
+    echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
+    exit 2
+  fi
+
+  DEFAULT_BRANCH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+  DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+  # Segment-scoped default-branch-push deny (issue #3): the "git push" and the
+  # "target is the default branch" patterns must co-occur in ONE command segment,
+  # not merely somewhere in the multi-line scan buffer. Splitting on the shell
+  # command separators turns each separator into a newline so the per-segment
+  # loop treats one command at a time — a composite cleanup command whose only
+  # push is a delete-refspec to a non-default branch no longer AND-matches an
+  # unrelated `… origin <default>` sub-command.
+  # Reuses the shared $_SEGMENTS split (computed once above) so the fragile
+  # segmentation primitive has a single source — see the _SEGMENTS NOTE (C2) for
+  # the sed literal-newline rationale. The interposition-tolerant $GIT_PUSH
+  # fragment lets `git -c k=v push origin <default>` still match (issue #13).
+  while IFS= read -r _bp_seg; do
+    if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
+       && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
+      echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR ($(af_path docs/core.md) > Push and PR creation)." >&2
+      exit 2
+    fi
+  done <<< "$_SEGMENTS"
+fi
+
+# ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
+# docs/core.md > Spawn Model [MUST]: every Agent spawn (any subagent_type)
+# declares the `model` parameter explicitly. An omitted model silently
+# inherits the HOST SESSION model, bypassing the per-phase model policy — and
+# bills at whatever tier the host runs (2x the policy model when the host is on
+# a premium tier). Enforced BEFORE the state check so ad-hoc spawns outside an
+# Auto-Flow cycle are covered too. Research (Explore/Plan) and evaluation spawns
+# are NOT exempt: the declaration rule applies to every spawn (the spawn policy
+# .claude/autoflow/spawn-policy.json models some of these types; a type it does
+# not model still declares — see Section 1d) — their
+# bypasses below apply only to the score gates, not to this declaration rule.
+# Presence-only check: the Agent tool's own enum validates the value.
+if [ "$TOOL_NAME" = "Agent" ]; then
+  AGENT_MODEL=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
+  if [ -z "$AGENT_MODEL" ]; then
+    echo "BLOCKED: Agent spawn without an explicit 'model' parameter ($(af_path docs/core.md) > Spawn Model)." >&2
+    echo "Declare the phase-policy model on every spawn (e.g. model: \"sonnet\" / \"opus\") — omitting it inherits the host session model and bypasses the per-phase policy." >&2
+    exit 2
+  fi
+fi
+
+# ── Section 1e: decision-ledger integrity (state-independent — ADR-0025 D7) ──
+# The ledger carries two authorities at a decision point — the advisor's first
+# judgment and the operator's override — and each is worth only its writer and
+# its record staying as written. On a Write / Edit / MultiEdit of an
+# issue-*-ledger.md:
+#   1. Append-only: the write is applied to the file on disk here, and the
+#      result must keep the whole prior content as its prefix — an entry is
+#      never rewritten or removed; a decision changes by a new entry that names
+#      the one it replaces (docs/decision-ledger.md).
+#   2. Authorship of the added text: an `advisor decision` authority or an
+#      `A<n>` heading only from the advisor (caller agent_type
+#      autoflow-advisor); an `operator decision` authority or an `O<n>` heading
+#      only from the main session (no caller agent_type); the advisor adds no
+#      O / F / E heading.
+# The threat is an agent overstepping in routine work, not a determined evasion
+# (docs/role-contracts.md > Advisor > Independence): shell writes and malformed
+# text are outside this check.
+is_advisor_type() {
+  case "$1" in autoflow-advisor|*:autoflow-advisor) return 0 ;; esac
+  return 1
+}
+ledger_deny() {
+  echo "BLOCKED: decision ledger — $1 (ADR-0025 D7; $(af_path docs/role-contracts.md) > Advisor > Independence; $(af_path docs/decision-ledger.md))." >&2
+  echo "The ledger is append-only: add a new entry that names the entry it supersedes or overrides. The advisor writes A entries only; O entries and the operator's authority are the main session's." >&2
+  exit 2
+}
+# _ledger_has <adv|opr|nonadv>: stdin text; true when a line carries the mark.
+_ledger_has() {
+  local _re
+  case "$1" in
+    adv)    _re='^- Authority: advisor decision|^## A[0-9]+ ' ;;
+    opr)    _re='^- Authority: operator decision|^## O[0-9]+ ' ;;
+    nonadv) _re='^- Authority: operator decision|^## [OFE][0-9]+ ' ;;
+  esac
+  grep -qE -- "$_re"
+}
+# _lit_replace <text> <old> <new> <all>: literal replacement, portable to
+# /bin/bash 3.2 (whose ${v/"$o"/"$n"} keeps the quotes of the replacement).
+_lit_replace() {
+  local _t=$1 _o=$2 _n=$3 _out=''
+  while [[ "$_t" == *"$_o"* ]]; do
+    _out="$_out${_t%%"$_o"*}$_n"
+    _t="${_t#*"$_o"}"
+    [ "$4" = true ] || break
+  done
+  printf '%s' "$_out$_t"
+}
+case "$TOOL_NAME" in
+  Write|Edit|MultiEdit)
+    _lp=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
+    if [[ "$_lp" =~ (^|/)issue-[0-9]+-ledger\.md$ ]]; then
+      _cur=""
+      if [ -f "$_lp" ]; then _cur=$(cat "$_lp" 2>/dev/null; printf X); _cur="${_cur%X}"; fi
+      if [ "$TOOL_NAME" = Write ]; then
+        _res=$(echo "$INPUT" | jq -j '.tool_input.content // ""' 2>/dev/null; printf X); _res="${_res%X}"
+      else
+        _res="$_cur"
+        _n=$(echo "$INPUT" | jq -r 'if .tool_name == "MultiEdit" then (.tool_input.edits // [] | length) else 1 end' 2>/dev/null || echo 0)
+        _i=0
+        while [ "$_i" -lt "$_n" ]; do
+          _sel=".tool_input"; [ "$TOOL_NAME" = MultiEdit ] && _sel=".tool_input.edits[$_i]"
+          _o=$(echo "$INPUT" | jq -j "$_sel.old_string // \"\"" 2>/dev/null; printf X); _o="${_o%X}"
+          _nw=$(echo "$INPUT" | jq -j "$_sel.new_string // \"\"" 2>/dev/null; printf X); _nw="${_nw%X}"
+          _all=$(echo "$INPUT" | jq -r "$_sel.replace_all // false" 2>/dev/null || echo false)
+          if [ -z "$_o" ]; then
+            _res="$_nw"
+          else
+            _res=$(_lit_replace "$_res" "$_o" "$_nw" "$_all"; printf X); _res="${_res%X}"
+          fi
+          _i=$((_i + 1))
+        done
+      fi
+      [[ "$_res" == "$_cur"* ]] || ledger_deny "a write that changes or removes text already in the ledger"
+      _added="${_res#"$_cur"}"
+      if [ -n "$_added" ]; then
+        if is_advisor_type "$CALLER_TYPE"; then
+          printf '%s\n' "$_added" | _ledger_has nonadv \
+            && ledger_deny "the advisor adds no 'operator decision' authority and no O / F / E entry"
+        else
+          printf '%s\n' "$_added" | _ledger_has adv \
+            && ledger_deny "only the advisor (subagent_type autoflow-advisor) adds an 'advisor decision' authority or an A entry"
+          if [ -n "$CALLER_TYPE" ]; then
+            printf '%s\n' "$_added" | _ledger_has opr \
+              && ledger_deny "only the main session adds an 'operator decision' authority or an O entry — caller '$CALLER_TYPE' is a sub-agent"
+          fi
+        fi
+      fi
+    fi
+    ;;
+esac
+
+# ── Spawn role resolution (declaration, not inference) ──
+# A spawn's gate class comes from a STRUCTURAL declaration, never from prompt
+# keywords. Keyword inference failed in both directions in live cycles: benign
+# spawns whose prompts mentioned "수정"/"design"/"create" were over-blocked and
+# then re-spawned with sanitized wording (training the orchestrator to phrase
+# around the regex), while a keyword-free implementation prompt slipped past
+# GATE:PLAN entirely. Declaration channel (docs/gate-matching-standard.md P3):
+#   - direct spawn: subagent_type = autoflow-<role> (defined in <root>/agents/)
+#   - research:     built-in read-only types Explore / Plan / claude-code-guide
+# `subagent_type` is the SOLE channel. The teammate-name-prefix channel was
+# removed jointly with the spawn-mode migration (ADR-0021, discharging ADR-0017
+# C7/C8; the removal itself is ADR-0017 Q3): with every role spawned anonymously
+# and directly, retaining the prefix branch would leave an unreachable path that
+# still name-prefix-overrode `subagent_type`.
+# Prints: research|analysis|planning|implementation|evaluation|advisor,
+# or "" (undeclared). A unit agent type prints the class unit_role_of gives it. The role→gate mapping below is owned by this hook — a spawn
+# declares WHO it is; it never declares which gate applies to it.
+resolve_spawn_role() {
+  local _subtype _name _role=""
+  _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
+  _name=$(echo "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null)
+  # A payload carrying `name` stays undeclared → denied while a cycle is
+  # active, even when subagent_type also names a valid role. What `name`
+  # selects is decided by the RUNTIME, not by this hook: a named spawn launches
+  # as a persistent, resumable teammate (addressable by name; a later
+  # SendMessage re-wakes it from its transcript), so admitting the payload on
+  # its subagent_type would not turn it into a direct spawn — it would create
+  # the persistent teammate the policy forbids. The policy this branch encodes
+  # is "no persistent teammate inside a cycle", and its grounds are cost and
+  # consistency, not delivery correctness (issue #168):
+  #   - cost: every wake of a persistent teammate re-writes context it had
+  #     already read — 16–43% of agent cost across two measured cycles
+  #     (ADR-0017 > Notes > C8, issue #136); the #168 probe re-wrote 53% of
+  #     the prefix on a warm wake 57 s after the previous turn and 100% on a
+  #     cold wake past the cache TTL; a fresh
+  #     direct spawn per phase pays for its prefix once and carries continuity
+  #     through .autoflow/* instead;
+  #   - no offsetting benefit: the C7 pilot found the direct spawn's VERIFY
+  #     detection EQUAL_OR_BETTER than the named baseline (ADR-0021);
+  #   - consistency: one delivery path (the return value) and one declaration
+  #     channel (subagent_type) for every role (ADR-0017 Q3).
+  # The #40 final-text loss that first motivated the migration is NOT a ground:
+  # re-measured on Claude Code 2.1.260 (issue #168) a named spawn's final text
+  # does reach the lead, in its idle notification's `result` field — see
+  # docs/role-common-rules.md > Result delivery path by spawn mode. This
+  # branch keys on the presence of `name` alone (no prefix, no subagent_type):
+  # what it blocks is the named, persistent form. Resuming an anonymous spawn
+  # by raw agentId through SendMessage is outside this hook's surface.
+  if [ -n "$_name" ]; then
+    printf ''
+    return 0
+  fi
+  role_of_type "$_subtype"
+}
+
+# role_of_type <subagent_type>: the declared class of a type, name aside.
+role_of_type() {
+  local _subtype=$1 _role=""
+  case "$_subtype" in
+    Explore|Plan|claude-code-guide)              _role="research" ;;
+    autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
+    autoflow-reviewer|*:autoflow-reviewer)       _role="analysis" ;;
+    autoflow-criterion-tracer|*:autoflow-criterion-tracer)         _role="analysis" ;;
+    autoflow-criterion-analyzer|*:autoflow-criterion-analyzer)     _role="analysis" ;;
+    autoflow-criterion-reconciler|*:autoflow-criterion-reconciler) _role="analysis" ;;
+    autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
+    autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
+    *)
+      _role=$(unit_role_of "$_subtype")
+      ;;
+  esac
+  printf '%s' "$_role"
+}
+
+# Functional-unit agents (ADR-0025 D1/D5) and the gate class each carries —
+# U2 Analysis → analysis, U3 Design → planning, U4 Build → implementation.
+# Prints the class for a unit agent type, or "" for any other type.
+unit_role_of() {
+  case "$1" in
+    autoflow-unit-analysis|*:autoflow-unit-analysis) printf 'analysis' ;;
+    autoflow-unit-design|*:autoflow-unit-design)     printf 'planning' ;;
+    autoflow-unit-build|*:autoflow-unit-build)       printf 'implementation' ;;
+  esac
+}
+
+# A spawn made BY a unit agent (the hook input's caller `agent_type`) needs no
+# role declaration: the unit chooses its own method, helpers included, and the
+# spawn inherits the unit's gate class (ADR-0025 D5). The caller is the
+# immediate one only — a helper's own spawn is classified by its own
+# declaration, since the hook sees no ancestry.
+CALLER_UNIT_ROLE=$(unit_role_of "$CALLER_TYPE")
+
+# Shared by the corrupt-state and multi-active fail-closed branches below: both
+# need the identical "does this call hit the score-gated surface?" test (git
+# push / gh pr create, or a non-research/non-evaluation Agent spawn) — a single
+# definition keeps the two branches from silently drifting apart on a future
+# edit to that surface (issue #843 REFINE).
+is_score_gated_surface() {
+  if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}(${GIT_PUSH}|gh[[:space:]]+pr[[:space:]]+create)\b"; then
+    return 0
+  elif [ "$TOOL_NAME" = "Agent" ]; then
+    # Research is read-only and evaluation must stay spawnable (it produces the
+    # scores a repaired state needs); every other role — and an undeclared
+    # spawn — fails closed. A unit agent's spawn carries the unit's class,
+    # which is never research or evaluation.
+    [ -z "$CALLER_UNIT_ROLE" ] || return 0
+    local _role
+    _role=$(resolve_spawn_role)
+    [ "$_role" != "research" ] && [ "$_role" != "evaluation" ]
+  else
+    return 1
+  fi
+}
+
+# ── Section 1c: standing decision-ledger identifier advisory (NON-GATING) ──
+# docs/core.md > Decision Ledger requires each settled-decision entry to carry a
+# uniquely allocated identifier. This step surfaces a violation early; it does
+# NOT enforce one. It never exits and never denies: a ledger defect is a
+# methodology defect, not a reason to block a tool call, and the ledger is not
+# a gate input. The only observable effect is a warning: on stderr, and — on a
+# call the hook admits — to the model as `additionalContext` (below).
+#
+# Placement is load-bearing (docs/core.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
+# Section 2's activity check, so it still runs on every path the script exits 0
+# early — no state file, `active != true`, and a research/analysis/evaluation
+# spawn. Placed after any one of those, it would silently never run for that
+# traffic.
+#
+# Fail-open by construction: the whole step runs under `|| true`, which also
+# suspends `set -e` for its body, so a missing helper, a missing hashing tool,
+# an unreadable ledger or an unwritable cache degrades to "no advice" rather
+# than to a broken hook.
+ledger_advisory_check() {
+  local _helper _cache _ledger _hash _prev _out
+  # The helper is resolved by af_helper (top of this file): the AutoFlow tree's
+  # own copy first, the stamped target's copy last.
+  _helper="$(af_helper scripts/ledger/ledger-entry-id.sh)"
+  [ -n "$_helper" ] || return 0
+  command -v shasum >/dev/null 2>&1 || return 0
+
+  # Content-hash cache: re-check a ledger only when its bytes changed since the
+  # last observation, so an unchanged defective ledger does not repeat the same
+  # warning on every tool call of a session. Keyed by path, scoped to this
+  # project's .autoflow (gitignored scratch), and named outside the issue
+  # directories so state-file discovery never picks it up.
+  _cache="$AUTOFLOW_DIR/.ledger-check-cache"
+  for _ledger in "$AUTOFLOW_DIR"/*-issue-*/issue-*-ledger.md; do
+    [ -f "$_ledger" ] || continue
+    _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
+    [ -n "$_hash" ] || continue
+    _prev=""
+    if [ -f "$_cache" ]; then
+      # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
+      # spaces, so both fields are read by fixed offset rather than by
+      # whitespace field splitting (which would never match such a path and
+      # would re-warn on every call for an unchanged ledger).
+      _prev=$(awk -v p="$_ledger" \
+        'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
+        "$_cache" 2>/dev/null)
+    fi
+    [ "$_prev" = "$_hash" ] && continue
+
+    _out=$(bash "$_helper" check "$_ledger" 2>&1 >/dev/null)
+    if [ -n "$_out" ]; then
+      echo "WARNING: decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):" >&2
+      # Bounded: the helper already sanitises and truncates each heading it
+      # echoes; this caps how many defect lines one warning can emit.
+      printf '%s\n' "$_out" | head -20 >&2
+      echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next ($(af_path docs/core.md) > Decision Ledger)." >&2
+      LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
+$(printf '%s\n' "$_out" | head -20)
+A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
+"
+    fi
+
+    # Drop this ledger's prior row by the same fixed-offset path comparison
+    # (a substring match would mis-handle paths containing spaces), then
+    # append the fresh one.
+    { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
+      printf '%s  %s\n' "$_hash" "$_ledger"
+    } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
+  done
+  return 0
+}
+# Model-visible delivery (issue #422). Stderr of a PreToolUse hook that exits 0
+# is not the model's channel; `hookSpecificOutput.additionalContext` is
+# (anthropics/claude-code CHANGELOG `## 2.1.9`: "Added support for `PreToolUse`
+# hooks to return `additionalContext` to the model"; the minimum runtime is
+# 2.1.277). The writer no longer runs `check` itself, so this warning is the
+# only signal of a defect. It reaches whichever actor makes the next hooked call
+# after the ledger changes — once per ledger content, project-wide (the cache
+# above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
+# (exit 2) already carries stderr to the model — and nothing else in this hook
+# writes stdout, so the JSON object is the whole of it.
+# shellcheck disable=SC2329  # invoked by the EXIT trap below
+_ledger_advisory_emit() {
+  [ "$1" -eq 0 ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -cn --arg ctx "$LEDGER_ADVISORY" \
+    '{hookSpecificOutput: {hookEventName: "PreToolUse", additionalContext: $ctx}}' 2>/dev/null || true
+}
+LEDGER_ADVISORY=""
+ledger_advisory_check || true
+[ -z "$LEDGER_ADVISORY" ] || trap '_ledger_advisory_emit $?' EXIT
+
+# ── Section 1d: spawn-policy model advisory (NON-GATING, issue #150) ──────────
+# docs/core.md > Spawn Model routes every per-phase model value through
+# .claude/autoflow/spawn-policy.json. The hook sees `subagent_type` and `model`
+# on the payload but not which phase is active, so a phase↔model comparison is
+# not available to it. What IS derivable is the set of models the config admits
+# for that subagent_type — `spawn-policy.sh models-for <type>`. When that set is
+# NON-EMPTY and the declared model falls outside it, this step emits one warning
+# line and returns.
+#
+# An EMPTY admitted set yields no advice, keyed on the SET and never on the
+# type's provenance: the harness research types `Plan` / `claude-code-guide`
+# are modelled by no phase row, so warning on them would make the advisory a
+# steady false-positive stream on calls the policy has nothing to say about —
+# and an advisory that cries wolf on correct calls is worse than absent.
+# `Explore` yields an empty set like the other research types and draws no
+# advice, while every `autoflow-*` type a phase row names draws it — a
+# provenance-keyed rule would get both wrong. The case where the policy SHOULD
+# have governed a type is caught in the tree by `spawn-policy.sh check`'s
+# partition rule, not by a runtime warning.
+#
+# Advisory only: Section 1b's presence-only `model` deny already ran above and
+# is untouched. This step never exits and never denies. Fail-open by
+# construction — the whole step runs under `|| true`, so a missing helper, a
+# missing `jq` or an unreadable config degrades to "no advice" rather than to a
+# broken hook (which would block the evaluation spawns that must stay
+# spawnable). The helper is resolved by the same af_helper lookup
+# `ledger_advisory_check` uses; the config is then resolved by the readout
+# itself (the target's policy first, the AutoFlow default after it), never by
+# this hook.
+spawn_policy_advisory_check() {
+  local _helper _subtype _model _admitted
+  [ "$TOOL_NAME" = "Agent" ] || return 0
+  _helper="$(af_helper scripts/spawn-policy/spawn-policy.sh)"
+  [ -n "$_helper" ] || return 0
+
+  _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
+  _model=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
+  [ -n "$_subtype" ] || return 0
+  [ -n "$_model" ] || return 0
+  # Both values come from the payload and are passed as ONE quoted argument
+  # each — never interpolated into a command string, never word-split, never
+  # glob-expanded. The readout treats an unknown type as the empty set, so a
+  # hostile or malformed `subagent_type` yields silence, not an error path.
+  case "$_subtype" in
+    *[!A-Za-z0-9:_-]*) return 0 ;;
+  esac
+  _admitted=$(bash "$_helper" models-for "$_subtype" 2>/dev/null) || return 0
+  [ -n "$_admitted" ] || return 0
+  if ! printf '%s\n' "$_admitted" | grep -qxF "$_model"; then
+    echo "WARNING: spawn model '$_model' is outside the spawn policy's admitted set for subagent_type '$_subtype' (advisory — this call is NOT blocked)." >&2
+    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with $(af_path scripts/spawn-policy/spawn-policy.sh) model <phase-key> ($(af_path docs/core.md) > Spawn Model)." >&2
+  fi
+  return 0
+}
+spawn_policy_advisory_check || true
+
+# ── Section 2: Activity check — locate the active issue state file ──
+# No state file means AutoFlow has not started — let the call through
+# (pre-PREFLIGHT). The Section 1 denies above already ran unconditionally.
+#
+# Discovery is JSON-semantic (jq), not a textual grep: a state file is "active"
+# iff `.active == true` as JSON, regardless of serialization whitespace. A prior
+# `grep -rl '"active": true'` matched only the exact one-space form, so a valid
+# but compact (`{"active":true}`) or reformatted (`"active" : true`) state file
+# was silently not found — leaving STATE_FILE empty and bypassing every score
+# gate (issue #241). jq decides by value; the loop keeps the first active file
+# (one issue runs at a time).
+#
+# Parse-validity and `.active` are decided in a SINGLE jq read per file, not two:
+# a `jq -e '.active == true'` returns non-zero for both a parse error AND
+# `.active == false`, and reading the file twice (validate, then re-read for
+# active) leaves a TOCTOU window where a mid-write between the two reads validates
+# on the first and parse-errors on the second — slipping past both branches into a
+# silent fail-open (PR #242 review). One `jq -er 'if .active == true ...'` snapshot
+# distinguishes the three outcomes atomically: jq exits non-zero on a parse error
+# (→ corrupt, recorded in MALFORMED_STATE and made to FAIL CLOSED for the
+# score-gated commands below, never silently skipped); otherwise it prints
+# "active" / "inactive". The assignment sits in the `if` condition so a jq failure
+# does not trip `set -e`.
+STATE_FILE=""
+STATE_JSON=""
+MALFORMED_STATE=""
+ACTIVE_COUNT=0
+ACTIVE_FILES=""
+if [ -d "$AUTOFLOW_DIR" ]; then
+  # AUTOFLOW-ISSUE-DIR (issue #423): an issue's files live in its own directory
+  # .autoflow/<repo-key>-issue-<N>/, so the state file is
+  # .autoflow/<repo-key>-issue-<N>/issue-<N>.json. Every such file counts,
+  # whatever the key — the hook computes no repository key — so the PR Wait
+  # Rule holds across every issue directory in this .autoflow/.
+  for _sf in "$AUTOFLOW_DIR"/*-issue-*/issue-*.json; do
+    [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
+    # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
+    # (docs/state-tracking.md > AutoFlow State Tracking). Any other JSON in an issue directory
+    # — e.g. a VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a
+    # state-file candidate: skip it BEFORE the cat+jq validator so a non-state JSON
+    # can never take the MALFORMED path and fail-closed block push-class commands
+    # (#64). The file's number must also be its directory's.
+    _base=${_sf##*/}
+    case "$_base" in issue-*.json) ;; *) continue ;; esac
+    _num=${_base#issue-}; _num=${_num%.json}
+    case "$_num" in ''|*[!0-9]*) continue ;; esac
+    _dir=${_sf%/*}; _dir=${_dir##*/}
+    case "$_dir" in *-issue-"$_num") ;; *) continue ;; esac
+    # Read the file ONCE into memory and decide parse-validity + active on that
+    # single snapshot. Every downstream consumer (ACTIVE, VERDICT, check_scores)
+    # reads STATE_JSON, never the file again — so a partial write occurring after
+    # discovery cannot turn a later re-read into a jq parse error that exits 5,
+    # which PreToolUse treats as a NON-blocking error (only exit 2 blocks). The
+    # cat+jq pair sits in the `if` condition so neither failure trips `set -e`.
+    # `jq -s` slurps the file: a valid state is EXACTLY ONE top-level JSON object.
+    # jq is a stream parser, so two concatenated objects would otherwise parse to
+    # "active\nactive" and slip past both the active and the malformed branches
+    # (PR #242 review). Zero/multiple top-level values, a non-object top-level, or
+    # a parse error all take the malformed path → fail closed.
+    # AUTOFLOW-SCHEMA-VALIDATION (issue #245): the filter is CLOSED-WORLD — it accepts ONLY
+    # the declared shape (top-level keys in the allowlist or fix_regression_cycle_N; each
+    # field's type; verdict in {"",pending,evaluated,skipped (non-bug issue),skipped (feat issue)}; scores
+    # number|{score:number} in [0,10]; phases only at root + fix_regression* cycles) and
+    # routes EVERY other shape to error() -> the MALFORMED path -> exit 2. "Reject all not
+    # explicitly allowed" (vs the prior open-world "reject known-bad shapes") structurally
+    # closes the corrupt-but-valid-JSON fail-open class (issue #245 cycle 2; verdict-value #5,
+    # unknown-key/field-type #6). Single source of the vocabulary: tests/fixtures/gate-schema.json
+    # (verdict_enum, top_level_keys, cycle_key_grammar, score_range), changed together with
+    # this validator (issue #293 retired the standing drift check). check_scores below is UNTOUCHED — a
+    # validator-passing doc has phases only at grammar-legal cycles, so its walk is uncontaminated.
+    if _content=$(cat "$_sf" 2>/dev/null) \
+       && _verdict=$(printf '%s' "$_content" | jq -s -er 'def in_range: type == "number" and . >= 0 and . <= 10; def is_score: in_range or (type == "object" and (.score | in_range)); def scores_ok: (type == "object") and ((to_entries | map(.value | is_score)) | all); def verdict_ok: (type == "string") and (. == "" or . == "pending" or . == "evaluated" or . == "skipped (non-bug issue)" or . == "skipped (feat issue)"); def remedy_ok: (type == "string") and (. == "doc" or . == "test" or . == "impl" or . == "design" or . == "operator"); def phase_ok($p): (.phases[$p] == null) or ((.phases[$p] | type == "object") and ((.phases[$p].verdict == null) or (.phases[$p].verdict | verdict_ok)) and ((.phases[$p].scores == null) or (.phases[$p].scores | scores_ok))); def remedy_field_ok($p): (.phases[$p] == null) or ((.phases[$p] | type != "object") or ((.phases[$p] | has("remedy_class")) | not) or (.phases[$p].remedy_class | remedy_ok)); def topkeys_ok: (keys_unsorted - ["active","issue","title","date","branch","cycle","mode","phase","phases","fix_regression"]) | map(select(test("^fix_regression_cycle_[0-9]+$") | not)) | length == 0; def topvalues_ok: ((has("issue")|not) or (.issue|type=="string")) and ((has("title")|not) or (.title|type=="string")) and ((has("date")|not) or (.date|type=="string")) and ((has("branch")|not) or (.branch|type=="string")) and ((has("cycle")|not) or (.cycle|type=="number")) and ((has("mode")|not) or (.mode|type=="string")) and ((has("phase")|not) or (.phase|type=="string")) and ((has("phases")|not) or (.phases|type=="object")); if (length != 1) or (.[0] | type != "object") then error("state file must be exactly one JSON object") else .[0] | if (has("active") | not) or (.active | type != "boolean") then error("active must be a boolean") elif .active != true then "inactive" elif (topkeys_ok | not) then error("unknown top-level key") elif (topvalues_ok | not) then error("top-level field has wrong type") else ( [.. | objects | select(has("phases"))] as $cycles | ([., (to_entries[] | select(.key == "fix_regression" or (.key | test("^fix_regression_cycle_[0-9]+$"))) | .value)] | map(select(type == "object" and has("phases")))) as $allowed | if (($cycles | length) != ($allowed | length)) then error("phases in a disallowed location") elif ($cycles | map(.phases | type == "object") | all | not) then error("phases must be an object") elif ($cycles | map(. as $c | ["gate_hypothesis","gate_plan","audit","gate_quality"] | map(. as $p | $c | phase_ok($p)) | all) | all | not) then error("gated phase has invalid shape") elif ($cycles | map(. as $c | ["gate_hypothesis","gate_plan","audit","gate_quality"] | map(. as $p | $c | remedy_field_ok($p)) | all) | all | not) then error("remedy_class outside its enum") else "active" end ) end end' 2>/dev/null); then
+      if [ "$_verdict" = "active" ]; then
+        # Count EVERY active file (no break) so a second simultaneously-active
+        # state file cannot be silently ignored: the first-active-wins glob
+        # order would otherwise decide every score gate by whichever file sorts
+        # first, regardless of which issue the command targets (issue #843).
+        # The first active file is still remembered as STATE_FILE so the
+        # single-active path is byte-identical to before; the ≥2 fail-closed
+        # branch below consults ACTIVE_COUNT.
+        ACTIVE_COUNT=$((ACTIVE_COUNT + 1))
+        ACTIVE_FILES="${ACTIVE_FILES:+$ACTIVE_FILES }$_sf"
+        if [ -z "$STATE_FILE" ]; then
+          STATE_FILE="$_sf"
+          STATE_JSON="$_content"
+        fi
+      fi
+    else
+      MALFORMED_STATE="$_sf"    # parse error / unreadable → corrupt; cannot trust its active flag
+    fi
+  done
+fi
+
+# Fail closed on corrupt state: no readable active file, but a malformed state
+# file exists whose active flag we cannot determine. The state file gates BOTH
+# git push / gh pr create AND score-gated Agent spawns,
+# so refuse all of those on corrupt state — while leaving read-only commands and
+# the writes needed to repair the file unblocked (no recovery deadlock). Research
+# (Explore / Plan / claude-code-guide) and evaluation agents never gate, so they
+# stay allowed even on corrupt state. The unconditional Section 1 denies already ran.
+if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
+  if is_score_gated_surface; then
+    echo "BLOCKED: malformed AutoFlow state file: $MALFORMED_STATE" >&2
+    echo "A .autoflow/<repo-key>-issue-<N>/issue-<N>.json state file is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
+    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
+    exit 2
+  fi
+fi
+
+# Fail closed on multiple active state files: one issue runs at a time
+# (docs/core.md > PR Wait Rule). When two or more state files are simultaneously
+# active, the first-active-wins discovery above would decide every score gate by
+# whichever file sorts first in the glob — regardless of which issue the pushed
+# branch / spawn actually targets (issue #843). Shares `is_score_gated_surface`
+# with the corrupt-state branch above: only the score-gated surface (git push /
+# gh pr create / gated Agent spawns, undeclared spawns included) fails closed;
+# read-only commands, repair writes, and research/evaluation spawns stay
+# unblocked so the operator can deactivate the stale file without a deadlock.
+# Runs while STATE_FILE is set to the first active file, ahead of every score
+# gate.
+if [ "$ACTIVE_COUNT" -ge 2 ]; then
+  if is_score_gated_surface; then
+    echo "BLOCKED: multiple active AutoFlow state files — one issue runs at a time ($(af_path docs/core.md) > PR Wait Rule)." >&2
+    echo "Active: $ACTIVE_FILES" >&2
+    echo "Deactivate all but the in-flight cycle's state file before score-gated work." >&2
+    exit 2
+  fi
+fi
+
+if [ -z "$STATE_FILE" ]; then
+  exit 0
+fi
+
+ACTIVE=$(printf '%s' "$STATE_JSON" | jq -r '.active // false' 2>/dev/null)
+if [ "$ACTIVE" != "true" ]; then
+  exit 0
+fi
+
+# ── Compute PASS verdict from raw scores ──
+# Output: JSON { "pass": bool, "avg": float, "min": int, "security": int|null, "reason": string }
+#
+# State files can nest cycles (`fix_regression`, `fix_regression_cycle_2`, …)
+# alongside the top-level `phases.*`. A previous cycle's gate scores are
+# preserved at the top level, so a naive top-level lookup silently passes the
+# stale verdict instead of the current cycle's. Select the scores of the LAST
+# cycle location that HAS a `phases[$phase]` key at all — JSON authoring order
+# corresponds to cycle order (base → fix_regression → fix_regression_cycle_N),
+# so `last` is the most recent cycle that recorded this phase. An empty
+# `scores` at that most-recent recording location is treated as "evaluation not
+# run" (fail closed via the length==0 branch below) — NEVER a fallback to an
+# earlier cycle's PASS. The removed `map(select(non-empty))` empty-skipping is
+# exactly what let the stale-PASS fallback through, so it is not re-added: a
+# future author must not filter empty score objects out before `last`.
+# Companion invariant (deadlock-safety, not code-enforced): a nested
+# `fix_regression*` object must record ONLY the phases actually re-run in that
+# regression — never a full empty-template reset of all five phase keys. This
+# keeps the GATE:QUALITY→BUILD regression (which re-runs AUDIT/GATE:QUALITY but
+# not GATE:PLAN) deadlock-free: the regression carries no `phases.gate_plan`
+# key, so `select(.phases | has("gate_plan"))` skips it and the walk resolves
+# the base cycle's gate_plan PASS. Current top-level-reset authoring never
+# produces the all-`{}` shape.
+check_scores() {
+  local phase_key=$1
+  printf '%s' "$STATE_JSON" | jq --arg phase "$phase_key" '
+    [.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase].scores]
+    | (last // {}) |
+    if length == 0 then
+      { pass: false, avg: 0, min: 0, security: null, reason: "evaluation not run" }
+    else
+      (to_entries | map(.value | if type == "object" then .score else . end | tonumber)) as $vals |
+      ($vals | add / length * 10 | round / 10) as $avg |
+      ($vals | min) as $min |
+      (.["security"] // .["보안"] // null | if type == "object" then .score else . end) as $sec |
+      if $sec != null and $sec <= 3 then
+        { pass: false, avg: $avg, min: $min, security: $sec,
+          reason: ("security score " + ($sec | tostring) + " — automatic rework") }
+      elif $min < 7 then
+        { pass: false, avg: $avg, min: $min, security: $sec,
+          reason: ("lowest score " + ($min | tostring) + " — each item must be ≥ 7") }
+      elif $avg < 7.5 then
+        { pass: false, avg: $avg, min: $min, security: $sec,
+          reason: ("average " + ($avg | tostring) + " — must be ≥ 7.5") }
+      else
+        { pass: true, avg: $avg, min: $min, security: $sec, reason: "PASS" }
+      end
+    end
+  '
+}
+
+# Block if the gate's check_scores result is not pass.
+block_with_scores() {
+  local gate_name=$1
+  local phase_key=$2
+  local result pass
+  # A security gate must never let an error in score evaluation become a
+  # non-blocking exit. If check_scores fails — e.g. a raw score is non-numeric so
+  # jq's `tonumber` errors and exits 5, which PreToolUse does NOT treat as
+  # blocking (only exit 2 blocks) — fail closed with an explicit exit 2 (PR #242
+  # review). The assignment sits in the `if` condition so the failure does not
+  # trip `set -e` before it is handled. All four score gates route through here,
+  # so this single guard closes the whole "jq error → exit 5 → fail-open" class.
+  if ! result=$(check_scores "$phase_key" 2>/dev/null); then
+    echo "BLOCKED: ${gate_name}" >&2
+    echo "Reason: state scores are not evaluable (corrupt or non-numeric) — failing closed." >&2
+    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  pass=$(echo "$result" | jq -r '.pass')
+
+  if [ "$pass" != "true" ]; then
+    local reason avg min_val
+    reason=$(echo "$result" | jq -r '.reason')
+    avg=$(echo "$result" | jq -r '.avg')
+    min_val=$(echo "$result" | jq -r '.min')
+    echo "BLOCKED: ${gate_name}" >&2
+    echo "Reason: ${reason}" >&2
+    echo "Current scores — average: ${avg}, lowest: ${min_val}" >&2
+    echo "PASS criteria — average ≥ 7.5, each ≥ 7, security > 3" >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+}
+
+# ── Gate: Agent spawn (declared role → gate; the hook owns the mapping) ──
+# apply_role_gate <role> <label>: returns when the role's gate admits the spawn,
+# exits 2 when it does not. <label> names what the class was read from.
+apply_role_gate() {
+  local ROLE=$1 _label=$2
+  case "$ROLE" in
+    research|analysis|evaluation|advisor)
+      # research: read-only, never gates. evaluation: must stay spawnable —
+      # blocking it would deadlock the very gate it produces scores for.
+      # analysis: DIAGNOSE precedes every gate, so it has no prerequisite.
+      # advisor: answers a decision point in any phase (ADR-0025 D7).
+      return 0
+      ;;
+    planning)
+      # Gate 1: planning spawn → GATE:HYPOTHESIS pass required (bug issues only).
+      # gate_hypothesis.verdict carries the bug signal: a value without "skip" is a bug issue.
+      # Fail closed if the verdict cannot be read — a JSON-valid but schema-corrupt
+      # state (e.g. `.phases` is not an object) makes this jq error and would
+      # otherwise exit 5, a NON-blocking PreToolUse code (PR #242 review). The
+      # assignment sits in the `if` condition so set -e does not fire first.
+      if ! VERDICT=$(printf '%s' "$STATE_JSON" | jq -r '.phases.gate_hypothesis.verdict // empty' 2>/dev/null); then
+        echo "BLOCKED: AutoFlow state schema is corrupt (.phases is not an object) — failing closed for the Agent spawn." >&2
+        echo "State file: $STATE_FILE" >&2
+        exit 2
+      fi
+      if [ -n "$VERDICT" ] && ! echo "$VERDICT" | grep -qi "skip"; then
+        block_with_scores "planning agent spawn${_label} requires GATE:HYPOTHESIS pass" "gate_hypothesis"
+      fi
+      ;;
+    implementation)
+      # Gate 2: implementation spawn → GATE:PLAN pass required.
+      block_with_scores "${ROLE} agent spawn${_label} requires GATE:PLAN pass" "gate_plan"
+      ;;
+    *)
+      # Undeclared spawn while a cycle is active: deny LOUDLY. Inference from
+      # prompt text is deliberately not attempted — a silent misclassification
+      # (either direction) is worse than this explicit, self-describing stop.
+      echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
+      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
+      echo "State file: $STATE_FILE" >&2
+      exit 2
+      ;;
+  esac
+}
+
+if [ "$TOOL_NAME" = "Agent" ]; then
+  ROLE=$(resolve_spawn_role)
+  if [ -n "$CALLER_UNIT_ROLE" ]; then
+    # A unit agent's spawn: admitted without a declaration and judged by the
+    # caller's class (ADR-0025 D5). A declared role that has a gate of its own
+    # keeps it as well, so an existing role type is never judged more loosely
+    # because a unit spawned it.
+    apply_role_gate "$CALLER_UNIT_ROLE" " (inherited from caller $CALLER_TYPE)"
+    # The declared type is read with any `name` set aside: a name admits the
+    # spawn under a unit caller, but never hides the gate its type carries.
+    ROLE=$(role_of_type "$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)")
+    case "$ROLE" in
+      ''|research) ;;
+      *) apply_role_gate "$ROLE" "" ;;
+    esac
+  else
+    apply_role_gate "$ROLE" ""
+  fi
+  exit 0
+fi
+
+# An open re-entry is not pushed past: while a gate's latest record carries
+# `remedy_class`, a re-entry is open — a recommendation attempt not yet
+# re-scored clean.
+# The value is read at the same most-recent-cycle location as check_scores reads
+# scores; a FAIL's class is already behind its failing scores, so this branch
+# only ever adds the PASS-with-open-attempt case. The validator above closes
+# the value to the doc|test|impl|design|operator enum (a malformed value is a
+# MALFORMED state, fail-closed before any gate) and admits only the field's
+# ABSENCE as "no open re-entry" — an explicit null is malformed, not absent —
+# and the reader applies the same distinction (has(), not == null) and fails
+# closed on its own if it meets anything but a non-empty enum string.
+block_if_open_reentry() {
+  local action=$1 phase_key=$2 _open
+  if ! _open=$(printf '%s' "$STATE_JSON" | jq -r --arg phase "$phase_key" '[.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase]] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
+    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.${phase_key}.remedy_class; failing closed for ${action}." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  if [ -n "$_open" ]; then
+    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open ($(af_path docs/units/completion-evaluation.md) > Recommendation triage)." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+}
+
+# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required, no open re-entry ──
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_PUSH}"; then
+  block_with_scores "git push requires AUDIT pass" "audit"
+  block_with_scores "git push requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "git push" "audit"
+  block_if_open_reentry "git push" "gate_quality"
+fi
+
+# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required, no open re-entry ──
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+create\b"; then
+  block_with_scores "gh pr create requires AUDIT pass" "audit"
+  block_with_scores "gh pr create requires GATE:QUALITY pass" "gate_quality"
+  block_if_open_reentry "gh pr create" "audit"
+  block_if_open_reentry "gh pr create" "gate_quality"
+fi
+
+# ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required ──
+# A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
+# doc commit instead of BUILD. The remedy obligation for that class is
+# class-level, not site-level: the fix anchors on a repo-wide sweep (command +
+# output), not on the evaluator's listed sites. The gate checks the sweep
+# RECORD FILE — its presence and its two sections — never the wording of any
+# instruction or prompt.
+# `remedy_class` is read from the same most-recent-cycle location as
+# check_scores reads scores; an absent or non-`doc` value leaves commits
+# ungated. Fail closed only on the jq read erroring, as the score gates do.
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_COMMIT}"; then
+  if ! _remedy=$(printf '%s' "$STATE_JSON" | jq -r '[.. | objects | select(has("phases")) | select(.phases | has("gate_quality")) | .phases.gate_quality] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
+    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.gate_quality.remedy_class; failing closed for git commit." >&2
+    echo "State file: $STATE_FILE" >&2
+    exit 2
+  fi
+  if [ "$_remedy" = "doc" ]; then
+    _sweep="${STATE_FILE%.json}-remedy-sweep.md"
+    _sweep_ok=0
+    if [ -r "$_sweep" ] \
+       && awk 'BEGIN{c=0;o=0} /^## Command[[:space:]]*$/{s="c";next} /^## Output[[:space:]]*$/{s="o";next} /^## /{s=""} s=="c" && NF{c=1} s=="o" && NF{o=1} END{exit !(c&&o)}' "$_sweep"; then
+      _sweep_ok=1
+    fi
+    if [ "$_sweep_ok" -ne 1 ]; then
+      echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy ($(af_path docs/units/completion-evaluation.md) > FAIL routing)." >&2
+      echo "State file: $STATE_FILE" >&2
+      exit 2
+    fi
+  fi
+fi
+
+# Pass.
+exit 0

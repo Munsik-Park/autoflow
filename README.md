@@ -157,18 +157,20 @@ of every artifact the installer writes; nothing is hardcoded in `init.sh`.
 claude-autoflow/
 │
 ├── README.md
-├── CLAUDE.md                          # Core operating manual
+├── CLAUDE.md                          # Notes for developing AutoFlow itself (the core is docs/core.md)
 │
-├── .claude/
-│   ├── agents/                        # AutoFlow role subagent definitions (.claude/agents/)
-│   └── hooks/
-│       └── check-autoflow-gate.sh     # AutoFlow gate hook
+├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
+├── agents/                            # AutoFlow role subagent definitions
+├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, hooks.json
+├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md), install
+├── bin/                               # autoflow-root — prints the plugin root
 │
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
 │
 ├── docs/                              # Usage documents — stamped to targets
 │   ├── INDEX.md                       # Router: usage documents vs records
+│   ├── core.md                        # The core: cross-unit invariants and authority rules
 │   ├── autoflow-guide.md              # Lifecycle overview + index of the unit documents
 │   ├── evaluation-system.md           # Evaluation scoring details
 │   ├── git-workflow.md                # Git procedures
@@ -182,7 +184,6 @@ claude-autoflow/
 │       ├── adr/                       # Architecture Decision Records
 │       └── design-reviews/            # Design reviews behind the ADRs
 │
-├── plugin/                            # Packaged plugin distribution surface (plugin/)
 ├── scripts/                           # Helper / handoff scripts (scripts/)
 ├── tests/                             # Guard & regression suites (tests/)
 │

@@ -23,9 +23,11 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
 CACHE_MANIFEST="$REPO_ROOT/setup/manifest.json"
-CACHE_PLUGIN_JSON="$REPO_ROOT/plugin/autoflow/.claude-plugin/plugin.json"
-PLUGIN_SRC="$REPO_ROOT/plugin/autoflow"
-SKILL_MD="$REPO_ROOT/plugin/autoflow/skills/install/SKILL.md"
+CACHE_PLUGIN_JSON="$REPO_ROOT/.claude-plugin/plugin.json"
+SKILL_MD="$REPO_ROOT/skills/install/SKILL.md"
+# The repository root is the plugin root (ADR-0027 D1); the package is copied
+# the way an install lays it out.
+. "$REPO_ROOT/tests/lib/plugin-package.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -55,10 +57,7 @@ mk_clone() {
 # mk_cache_plugin <config-dir> <version> — the versioned plugin copy the
 # harness installs; prints its path (that install's CLAUDE_PLUGIN_ROOT).
 mk_cache_plugin() {
-  _cp="$1/plugins/cache/autoflow/autoflow/$2"
-  mkdir -p "$_cp"
-  cp -R "$PLUGIN_SRC"/. "$_cp/"
-  printf '%s\n' "$_cp"
+  install_plugin_package "$REPO_ROOT" "$1" "$2"
 }
 
 # ── Temp fixtures ─────────────────────────────────────────────────────────────

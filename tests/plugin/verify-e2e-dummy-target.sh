@@ -48,7 +48,7 @@ REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
 INIT_SH="$REPO_ROOT/setup/init.sh"
 MANIFEST="$REPO_ROOT/setup/manifest.json"
-HOOK="$REPO_ROOT/plugin/autoflow/hooks/check-autoflow-gate.sh"
+HOOK="$REPO_ROOT/hooks/check-autoflow-gate.sh"
 TOKENS="$REPO_ROOT/tests/fixtures/host-purity-tokens.txt"
 E2A_BASELINE="$REPO_ROOT/tests/fixtures/e2e-bundle-purity-baseline.txt"
 IMPORT_LINE='@./.claude/autoflow/METHODOLOGY.md'

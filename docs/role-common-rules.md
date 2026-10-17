@@ -107,8 +107,8 @@ git status                  # any uncommitted work?
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-- **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
+- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+- **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
 
@@ -124,7 +124,7 @@ git status                  # any uncommitted work?
 ## Work Completion Process
 
 ```
-Implement → the comment check (docs/units/build.md > What the build owes) → tests pass → commit → return the report
+Implement → the comment check (<autoflow-root>/docs/units/build.md > What the build owes) → tests pass → commit → return the report
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
@@ -174,7 +174,7 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 - Read and understand the existing code before changing it.
 - Run the relevant tests after each change and confirm they pass.
-- Do not add unnecessary refactors or type annotations. A comment carries only what `docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
+- Do not add unnecessary refactors or type annotations. A comment carries only what `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
 - Do not introduce security vulnerabilities.
 - Do not make changes outside the assigned scope.
 

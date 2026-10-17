@@ -21,7 +21,7 @@ mechanisms conform to these rules.
 Terminology: the **plugin package** is the
 marketplace-distributed, versioned component (`agents/`, `hooks/`, `skills/`);
 the **thin root layer** is what the installer stamps into the target's project
-root (`CLAUDE.md` methodology prose, framework usage documents under `docs/`,
+root (`CLAUDE.md` methodology prose, framework usage documents under `<autoflow-root>/docs/`,
 the shipped scripts, the committed settings pin). "Delivered surface"
 below means both tiers together.
 
@@ -77,7 +77,7 @@ below means both tiers together.
   branch, repository structure, stack and deployment specifics, service names,
   and any target-local operating rules — never lives in the delivered
   `CLAUDE.md`. It lives in the project's own information and rule files
-  (`docs/core.md` > Project Information); which files, and what they say, are the
+  (`<autoflow-root>/docs/core.md` > Project Information); which files, and what they say, are the
   project's.
 - **[MUST]** The tool never ships, stamps, scaffolds, or overwrites a project
   information file. Such a file is outside the delivered surface and outside
@@ -116,18 +116,18 @@ below means both tiers together.
   hooks.
 - **[MUST]** The drift test also compares the installed bundle with **upstream
   as locally available**: the installed manifest against the marketplace
-  clone's `setup/manifest.json` per artifact by sha256 (drift-check D4), and
+  clone's `<autoflow-root>/setup/manifest.json` per artifact by sha256 (drift-check D4), and
   the installed plugin's files against the clone's plugin source (D5). A
   self-consistent bundle that is older than what the clone would stamp is a
   reported drift, not a silent pass. Both legs, and the R2 skew check (D2),
   resolve the plugin and the clone from the harness's local registries
-  (`scripts/lib/plugin-root.sh`, shipped with the bundle) rather than from the
+  (`<autoflow-root>/scripts/lib/plugin-root.sh`, shipped with the bundle) rather than from the
   hook-only `CLAUDE_PLUGIN_ROOT`; each reports `SKIP`, never a failure, when
   its side is not locally resolvable. No network access. The
   same test also checks the one artifact a re-stamp never refreshes against
   the tool it must agree with (D6): the target-owned
   `.claude/autoflow/spawn-policy.json` scaffold is run through
-  `scripts/spawn-policy/spawn-policy.sh check` against the agent definitions
+  `<autoflow-root>/scripts/spawn-policy/spawn-policy.sh check` against the agent definitions
   the session loads (phase-row effort equals the definition's `effort:`
   frontmatter; every `agent_type` is shipped), and its row set is compared
   with the clone's sample; the comparison names a row the current version
@@ -137,10 +137,10 @@ below means both tiers together.
   of the shipped suite selector that lives in target-owned files (D7),
   **on a target that opted into AutoFlow's suite plane** (the opt-in is
   `.claude/autoflow.local.json` > `tests` > `suite_plane: true`, resolved
-  through the shipped `scripts/test/suite-manifest.sh` — the plane's one
+  through the shipped `<autoflow-root>/scripts/test/suite-manifest.sh` — the plane's one
   resolver, run from the detector's own tree): every
   executable spec under the target's `tests/**` declares a usable
-  `# ci-subject:` header, or `scripts/test/select-suites.sh` BLOCKs every
+  `# ci-subject:` header, or `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every
   selection. The check is the selector's own `--check-headers` stage run from
   the detector's tree, each header-less suite is a FAIL, and the remedy is
   back-filling the header — a re-stamp never touches `tests/**`. A target

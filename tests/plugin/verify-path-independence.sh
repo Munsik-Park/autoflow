@@ -50,7 +50,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-HOOK_SRC="$REPO_ROOT/plugin/autoflow/hooks/check-autoflow-gate.sh"
+HOOK_SRC="$REPO_ROOT/hooks/check-autoflow-gate.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -85,7 +85,7 @@ make_plugin_root() {
   local d="$1"
   mkdir -p "$d/hooks" "$d/agents" "$d/.claude/autoflow" "$d/.codex"
   cp "$HOOK_SRC" "$d/hooks/check-autoflow-gate.sh"
-  cp "$REPO_ROOT"/plugin/autoflow/agents/autoflow-*.md "$d/agents/"
+  cp "$REPO_ROOT"/agents/autoflow-*.md "$d/agents/"
   cp -R "$REPO_ROOT/scripts" "$d/scripts"
   cp -R "$REPO_ROOT/docs" "$d/docs"
   cp "$REPO_ROOT/.codex/review.md" "$d/.codex/review.md"

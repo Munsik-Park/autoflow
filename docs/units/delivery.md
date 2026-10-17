@@ -45,11 +45,11 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | DELIVER → INTEGRATE | the cycle's branches pushed, a changed sub-repo's included |
 | INTEGRATE → HANDOFF | integration tests pass |
 | INTEGRATE → BUILD | integration / bundle failure — fixed `impl` class → a BUILD unit re-run with the failing check → AUDIT → … → INTEGRATE again |
-| HANDOFF (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`docs/units/delivery.md` > *Review triage*; the case is `scripts/handoff/review-gate.sh` exit `10`) |
-| HANDOFF (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`docs/units/delivery.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
-| HANDOFF → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` → AutoFlow ends; external review reviews and merges out of band (`docs/units/delivery.md` > *End*) |
+| HANDOFF (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`<autoflow-root>/scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`<autoflow-root>/docs/units/delivery.md` > *Review triage*; the case is `<autoflow-root>/scripts/handoff/review-gate.sh` exit `10`) |
+| HANDOFF (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`<autoflow-root>/docs/units/delivery.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
+| HANDOFF → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/delivery.md` > *End*) |
 | HANDOFF → HANDOFF (retry) | environment / transient error or push rejection → internal retry (max 2) |
-| HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`docs/units/delivery.md` > *CI-failure re-entry*) |
+| HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`<autoflow-root>/docs/units/delivery.md` > *CI-failure re-entry*) |
 | HANDOFF → user | HANDOFF internal retry exhausted (2×) |
 
 ## Push and pull request
@@ -89,7 +89,7 @@ What a pull request of a cycle usually carries — offered as what to weigh, not
 - the acceptance-criterion check — one line per issue criterion: whether it is met, the commit it
   was confirmed at and where the evidence is, under a head naming the commit the results stand at
   ([`pr-body-guide.md`](../pr-body-guide.md) > *수용 기준 대조*);
-- the `## Verification dispositions` list — the reviewer reads it (`.codex/review.md` > Before
+- the `## Verification dispositions` list — the reviewer reads it (`<autoflow-root>/.codex/review.md` > Before
   Reviewing): every issue acceptance criterion not verified by an automated test, with its
   disposition and one-line reason from its verification-design row; the run record of each
   cycle-layer `automated` row and the observation record of each AI-executed `manual` row, from the
@@ -163,7 +163,7 @@ A bundle item that misses a real breakage on the target where it runs is filed b
 ## CI
 
 ```
-bash scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
+bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
 ```
 
 The script reads the PR's mergeable state first and then runs one finite, deadline-bounded poll over
@@ -197,7 +197,7 @@ is confirmed is the orchestrator's judgment. A cycle that added no test file has
 
 ### CI-failure re-entry
 
-A CI failure (exit `12`) re-enters by `remedy_class` through `scripts/gate/remedy-route.sh route`
+A CI failure (exit `12`) re-enters by `remedy_class` through `<autoflow-root>/scripts/gate/remedy-route.sh route`
 ([Transitions](#transitions)). The orchestrator
 does not read the failure log itself (Cost Control): an anonymous direct subagent —
 `subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
@@ -206,7 +206,7 @@ check's output (`gh run view <run-id> --log-failed`, or the check's own log), wr
 **one `remedy_class`** (`doc` / `test` / `impl` / `design` / `operator`) and the grounds for it —
 the class of change that clears the failure, `design` when clearing it would discard or change a
 decision the design settled — and returns the class plus a one-line summary.
-`scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `BUILD` /
+`<autoflow-root>/scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `BUILD` /
 `ARCHITECT` / `PAUSE`); the re-entered phase runs forward to HANDOFF again and *CI* re-confirms.
 Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
 ([`core.md`](../core.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
@@ -230,20 +230,20 @@ routing reads the verdict in the findings file (*The case*).
   model the policy names for `handoff-review`. Its prompt names the PR as `<owner>/<name>#<N>`, the
   path of its review record, and the cycle's design artifacts — the analysis report, the feature
   design, the verification design, the decision ledger and the build report. What it reviews against
-  and what it writes are its definition's (`.claude/agents/autoflow-reviewer.md`); the prompt adds no
+  and what it writes are its definition's (`<autoflow-root>/agents/autoflow-reviewer.md`); the prompt adds no
   direction of its own.
 - **Each external reviewer** the target configures (`.claude/autoflow.local.json` >
   `.review.reviewers`; [`reviewer-backend.md`](../reviewer-backend.md)) runs beside it — the
-  `reviewers:` line `bash scripts/preflight/check-review-backend.sh` prints names them, read rather
+  `reviewers:` line `bash <autoflow-root>/scripts/preflight/check-review-backend.sh` prints names them, read rather
   than recalled. Today that is `codex`, launched in the background:
 
 ```
-bash scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]
-bash scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's captured output>]
+bash <autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]
+bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's captured output>]
 ```
 
 The wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs codex
-over the PR with `.codex/review.md` (its model and effort per *Model and effort* there); codex
+over the PR with `<autoflow-root>/.codex/review.md` (its model and effort per *Model and effort* there); codex
 writes its review to the record and nothing else.
 
 Each review lands in a **review record**,
@@ -302,8 +302,8 @@ it leaves behind is fixed:
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
-- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`.codex/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` and `blocked-by-review` label rest on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. What keeps a host PR from merging ahead of its sub-repo PR is `blocked-by-subrepo`, not the host PR's review label ([`external-review-sequencing.md`](../external-review-sequencing.md) > *Review gate and merge-order gate*).
+- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `<autoflow-root>/scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
+- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/.codex/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` and `blocked-by-review` label rest on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. What keeps a host PR from merging ahead of its sub-repo PR is `blocked-by-subrepo`, not the host PR's review label ([`external-review-sequencing.md`](../external-review-sequencing.md) > *Review gate and merge-order gate*).
 - **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 
 ### The case
@@ -311,7 +311,7 @@ It returns `{max_severity, findings}`.
 **2. The case is read by script.**
 
 ```
-bash scripts/handoff/review-gate.sh --issue {N} --pr <P> [--repo <owner/name>]
+bash <autoflow-root>/scripts/handoff/review-gate.sh --issue {N} --pr <P> [--repo <owner/name>]
 ```
 
 It reads the verdict (`max_severity`) and the auto-resolution attempts on record, and names the
@@ -359,7 +359,7 @@ that did not take — is not this case; it is routed like any finding.
 
 ### Routing
 
-A `Medium`+ verdict does not end the cycle. Route by `bash scripts/gate/remedy-route.sh route <class>...` over the classes of the Medium+ findings that hold, in whole or in part (mixed → farthest; `operator` anywhere stops routing and goes to the advisor) — the same single owner of the mapping the late gates use:
+A `Medium`+ verdict does not end the cycle. Route by `bash <autoflow-root>/scripts/gate/remedy-route.sh route <class>...` over the classes of the Medium+ findings that hold, in whole or in part (mixed → farthest; `operator` anywhere stops routing and goes to the advisor) — the same single owner of the mapping the late gates use:
 
 | Route | What the orchestrator runs | Re-review |
 |---|---|---|

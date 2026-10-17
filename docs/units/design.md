@@ -21,7 +21,7 @@ Scope, principle 2).
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the unit never
   scores its own artifact (*Verification — GATE:PLAN* below).
 - **Loop cap**: a GATE:PLAN FAIL re-runs the unit with the evaluator's findings and the previous
-  documents (*Re-entry* below), max 3× (`docs/core.md` > Flow Control > Regressions).
+  documents (*Re-entry* below), max 3× (`<autoflow-root>/docs/core.md` > Flow Control > Regressions).
 - **Result owed**: the two artifact paths and a one-line summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
   orchestrator does not receive the design's body.
@@ -32,22 +32,22 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 
 | Transition | Condition |
 |------|------|
-| ARCHITECT → GATE:PLAN | the feature design's `## Decision requests` section says `none` (a reduced verification disposition carrying a stated reason is not a request — `docs/units/design.md` > *Report routing*), and the verification design's `## Tools` section carries no `operator` item |
+| ARCHITECT → GATE:PLAN | the feature design's `## Decision requests` section says `none` (a reduced verification disposition carrying a stated reason is not a request — `<autoflow-root>/docs/units/design.md` > *Report routing*), and the verification design's `## Tools` section carries no `operator` item |
 | ARCHITECT (design point) → advisor | the `## Decision requests` section names a design point the unit did not settle → the advisor decides; the answer is an `A` entry, and the cycle continues to GATE:PLAN where it is the option the design took, otherwise to a unit re-run on the answer — consuming no re-entry budget (ARCHITECT > *Report routing*) |
-| ARCHITECT (acceptance-criterion content change) → orchestrator / advisor | the `## Decision requests` section proposes excluding, revising or splitting an issue acceptance criterion, or adding one → the orchestrator decides it before GATE:PLAN is spawned, and puts it to the advisor only where the proposal's grounds do not settle it or it is not confident; the decision is recorded as `[ac-decision]` entries (`docs/decision-ledger.md`) and the cycle continues to GATE:PLAN — or, where the decision differs from the proposal, to a unit re-run on the entries — consuming no re-entry budget |
+| ARCHITECT (acceptance-criterion content change) → orchestrator / advisor | the `## Decision requests` section proposes excluding, revising or splitting an issue acceptance criterion, or adding one → the orchestrator decides it before GATE:PLAN is spawned, and puts it to the advisor only where the proposal's grounds do not settle it or it is not confident; the decision is recorded as `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md`) and the cycle continues to GATE:PLAN — or, where the decision differs from the proposal, to a unit re-run on the entries — consuming no re-entry budget |
 | GATE:PLAN → BUILD | plan evaluation PASS + its recommendations triaged (no attempt open) |
 
 ## Unit spawn
 
 - **The spawn.** One `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
-  `bash scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-design` names). The prompt states the goal
   and names the inputs by path — the acceptance-criterion list
   (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`), the decision ledger
   (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`), the DIAGNOSE artifact (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`, the
   GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
   re-entry is for and the previous documents (*Re-entry* below).
 - **Documents.** Injection is role-minimal and routed via
-  `docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
+  `<autoflow-root>/docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
   `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
   design needs, by its own judgment.
 - **Before the gate (orchestrator-side).** The orchestrator confirms
@@ -324,7 +324,7 @@ to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 ## Verification — GATE:PLAN
 
 One fresh Evaluation AI (`autoflow-evaluator`, the model
-`bash scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its
 documents line names that document alone.
 

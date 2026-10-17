@@ -23,7 +23,7 @@ principle 2).
   (*Verification — AUDIT* below).
 - **Loop cap**: a test-first finding or an AUDIT FAIL re-runs the unit with its findings and the
   previous artifacts (*Re-entry* below), max 2× together — the AUDIT FAIL cap
-  (`docs/core.md` > Flow Control > Regressions).
+  (`<autoflow-root>/docs/core.md` > Flow Control > Regressions).
 - **Result owed**: the build report's path, the commit SHAs and a one-line summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The orchestrator
   does not receive the report's body.
@@ -34,17 +34,17 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 
 | Transition | Condition |
 |------|------|
-| BUILD → AUDIT | the unit returned (`docs/units/build.md` > *Report routing*) |
-| AUDIT (test-first) → BUILD | the AUDIT evaluator does not confirm that a `driving` / `regression` test's Red run precedes its implementation commit with its failure shown in its log → it scores nothing, and a unit re-run takes its `## Test-first` section; consumes the AUDIT FAIL counter (Regressions below) (`docs/evaluation-system.md` > AUDIT > *Test-first*; `docs/units/build.md` > *Verification — AUDIT*) |
+| BUILD → AUDIT | the unit returned (`<autoflow-root>/docs/units/build.md` > *Report routing*) |
+| AUDIT (test-first) → BUILD | the AUDIT evaluator does not confirm that a `driving` / `regression` test's Red run precedes its implementation commit with its failure shown in its log → it scores nothing, and a unit re-run takes its `## Test-first` section; consumes the AUDIT FAIL counter (Regressions below) (`<autoflow-root>/docs/evaluation-system.md` > AUDIT > *Test-first*; `<autoflow-root>/docs/units/build.md` > *Verification — AUDIT*) |
 | BUILD → ARCHITECT | design contradiction — implementation and tests each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}-green-blocker.md` → ARCHITECT unit re-run → GATE:PLAN re-evaluation → BUILD re-entry (cap: Regressions below) |
 | BUILD → user | a harness-level block — a lint chain covering a staged file stays `not-run (unexecuted)` because it is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
-| AUDIT entry (security-checklist change) → advisor | `scripts/gate/security-checklist.sh status` exits `3` (the cycle changed the target's declared security checklist and no `[checklist-decision]` entry covers the committed version) → AUDIT is **not** spawned until the advisor's `[checklist-decision]` entry is recorded and the status re-run; `rejected` → the change is reverted first; consumes no re-entry budget (`docs/units/build.md` > *Security checklist*) |
+| AUDIT entry (security-checklist change) → advisor | `<autoflow-root>/scripts/gate/security-checklist.sh status` exits `3` (the cycle changed the target's declared security checklist and no `[checklist-decision]` entry covers the committed version) → AUDIT is **not** spawned until the advisor's `[checklist-decision]` entry is recorded and the status re-run; `rejected` → the change is reverted first; consumes no re-entry budget (`<autoflow-root>/docs/units/build.md` > *Security checklist*) |
 | AUDIT → GATE:QUALITY | security audit PASS + its recommendations triaged (no attempt open) |
 
 ## Unit spawn
 
 - **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
-  `bash scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
   prompt states the goal and names the inputs by path — the two design documents
   (`.autoflow/{repo-key}-issue-{N}/issue-{N}-feature-design.md`, `.autoflow/{repo-key}-issue-{N}/issue-{N}-verification-design.md`), the
   acceptance-criterion list (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`), the
@@ -53,7 +53,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — and the build report's path. On a
   re-entry it also names what the re-entry is for and the material that carries it (*Re-entry*
   below).
-- **Documents.** Injection stays role-minimal and routed via `docs/INDEX.md`: the prompt carries a
+- **Documents.** Injection stays role-minimal and routed via `<autoflow-root>/docs/INDEX.md`: the prompt carries a
   documents line naming the documents the build needs (this file, the affected docs DIAGNOSE
   identified); the unit reads anything further by its own judgment. The return is routed
   (*Report routing* below).
@@ -115,7 +115,7 @@ These are the rules other documents cite; everything else about the work is the 
   and the fact that shows the need — never worked around by keeping the criterion's letter
   ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
   cycle*).
-- **Commits.** Every commit follows `docs/core.md` > Commit Rules, the lint chain over its staged files
+- **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included, and a manifest-registered source regenerates `setup/manifest.json` in the same commit
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > Derived
   artifacts). The unit does not push.
@@ -149,7 +149,7 @@ worth and where it loses.
   | One per observation | the observation with its tool: running it, judging match or mismatch, probing a cause | `unit-build-observe` |
 
   A helper is spawned as `general-purpose` with the model and the effort its row reads out
-  (`bash scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
+  (`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
   the `Agent` tool's `effort` parameter — or the parameter omitted when the row reads out the
   inherit sentinel, which is the policy file's own value and never an argument (`effort_contract`).
 - **What crosses a boundary.** To an area: its section of the feature design, the sections every
@@ -157,7 +157,12 @@ worth and where it loses.
   note of the repository's conventions (how its tests and lint run, its commit rules) the unit
   writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
   its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
-  observations, and what a later area needs to know of its changes. Requirements of two areas that
+  observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
+  root (the unit's root declaration) and the paths of the rules its work follows —
+  `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
+  Change Surface Rules > *Lint chain on the staged surface* and `<autoflow-root>/docs/role-common-rules.md` >
+  Bash Execution Mode — since a `general-purpose` helper receives no AutoFlow rule text of its own
+  (ADR-0027 D2). Requirements of two areas that
   cannot both hold take the design-contradiction path above; a design point two areas meet
   differently is a decision point.
 - **A deterministic run is a command, not a context.** Running tests, lint and builds, and
@@ -223,7 +228,7 @@ found — is its own, written where it judges useful.
 ## Verification — AUDIT
 
 One fresh Evaluation AI (`autoflow-evaluator`, the model
-`bash scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
 change on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
 Its documents line names that document alone. Its spawn prompt carries the security-checklist record
 line (*Security checklist* below).
@@ -241,7 +246,7 @@ line (*Security checklist* below).
 The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
 in the target-owned scaffold `.claude/autoflow.local.json`
 (`{"audit":{"security_checklist":"<repository-relative path>"}}`). At AUDIT entry the orchestrator
-runs `bash scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` and
+runs `bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger .autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` and
 acts on its one record line:
 
 | Exit | Verdict | What follows |
@@ -295,19 +300,19 @@ orchestrator's own accounting.
 
 Opted-in targets only; this repository does not opt in. Every executable spec under `tests/**`
 declares, in a column-1 comment header, what it is and what it costs — at creation, not
-retroactively. The grammar's single definition site is `scripts/test/suite-manifest.sh`, and
-`scripts/test/check-suite-manifest.sh` enforces it.
+retroactively. The grammar's single definition site is `<autoflow-root>/scripts/test/suite-manifest.sh`, and
+`<autoflow-root>/scripts/test/check-suite-manifest.sh` enforces it.
 
   ```
   # ci-subject: <path-or-glob> [<path-or-glob> ...]
   # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
   ```
 
-- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `scripts/test/select-suites.sh` consumes it to decide which suites a change requires.
+- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `<autoflow-root>/scripts/test/select-suites.sh` consumes it to decide which suites a change requires.
 - **The grammar is those two fields and nothing else.** The lint admits no other field.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. drift-check D7 names each one at install and at PREFLIGHT, and `bash scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. drift-check D7 names each one at install and at PREFLIGHT, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
 1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
 2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
@@ -318,7 +323,7 @@ The fields go in the file's leading comment block at column 1, before its first 
 
 **Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
 
-**Leaf rule**: a suite executes its subject, not another suite. Enforced by `scripts/test/check-suite-leaf.sh`.
+**Leaf rule**: a suite executes its subject, not another suite. Enforced by `<autoflow-root>/scripts/test/check-suite-leaf.sh`.
 
 **Admission**: before creating a suite file at all, answer these two questions.
 

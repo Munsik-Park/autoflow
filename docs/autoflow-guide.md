@@ -24,7 +24,7 @@ Key principles:
 - **Judged route, fixed checks** — the phases run in the order below; which of them a change passes through, and how deep, is the working AI's judgment recorded with its grounds, while the independent checks — the gates, the push gate, CI, the reviewer review — are never skipped ([`core.md`](core.md) > Rule Scope, principles 1–3; > Execution Principles).
 - **Multi-agent separation** — distinct roles handle implementation, testing, and evaluation.
 - **Quantified quality** — 10-point evaluation with a defined PASS threshold.
-- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
+- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 The phase names generalize upstream's numeric `STEP 0~9` identifiers; the
 mapping is preserved below, with upstream's STEP 4–5.5 merged into one BUILD unit (ADR-0025).

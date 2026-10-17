@@ -20,7 +20,7 @@ the triage of a PASS report's recommendations. The rubric the evaluator scores o
   `recommendations`, and `rescore` on a re-entry — whose `scores` the orchestrator records verbatim
   as `phases.gate_quality`.
 - **Verification**: the evaluator's independence — a fresh Evaluation AI (`autoflow-evaluator`,
-  the model `bash scripts/spawn-policy/spawn-policy.sh model gate-quality` names) for every
+  the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-quality` names) for every
   evaluation, never the author of what it scores, read-only
   ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); the orchestrator's acceptance of its
   report, which rejects and re-spawns a report missing what the contract requires; and the hook,
@@ -44,7 +44,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | Transition | Condition |
 |------|------|
 | GATE:QUALITY → DELIVER | completion evaluation PASS + its recommendations triaged (no attempt open) |
-| GATE:QUALITY (FAIL) → doc commit / BUILD / ARCHITECT | FAIL routed by each failed item's `remedy_class` (mixed → farthest: `design` > `impl` > `test` > `doc` — `scripts/gate/remedy-route.sh route`): `doc` → orchestrator doc commit → GATE:QUALITY re-score; `test` / `impl` → a BUILD unit re-run with the failed items → AUDIT; `design` → ARCHITECT (consumes the ARCHITECT re-entry counter). The doc route's sweep record and the re-score scope: `docs/units/completion-evaluation.md` > *FAIL routing* / *Re-entry re-score* |
+| GATE:QUALITY (FAIL) → doc commit / BUILD / ARCHITECT | FAIL routed by each failed item's `remedy_class` (mixed → farthest: `design` > `impl` > `test` > `doc` — `<autoflow-root>/scripts/gate/remedy-route.sh route`): `doc` → orchestrator doc commit → GATE:QUALITY re-score; `test` / `impl` → a BUILD unit re-run with the failed items → AUDIT; `design` → ARCHITECT (consumes the ARCHITECT re-entry counter). The doc route's sweep record and the re-score scope: `<autoflow-root>/docs/units/completion-evaluation.md` > *FAIL routing* / *Re-entry re-score* |
 | GATE:QUALITY (FAIL) → advisor | any failed item carries `remedy_class: operator` (the evaluator could not classify it with confidence) → the advisor's answer fixes the class and the cycle re-enters on that class's route. A FAIL report missing `remedy_class` on a failed item is rejected and the evaluator re-spawned (same disposition as a missing `fail_hypothesis`) |
 
 ## Verification result
@@ -66,9 +66,9 @@ No separate disposition system exists for gate recommendations.
 
 | Review triage | Gate recommendation |
 |---|---|
-| Classification: the reviewer's severity level (`.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
+| Classification: the reviewer's severity level (`<autoflow-root>/.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
 | `remedy_class` on every `Medium`+ finding, by the aggregator — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
-| Route: `scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
+| Route: `<autoflow-root>/scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(c) | the same three, read for a gate (below) |
 | `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
 | Verification of the fix: the next review round (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
@@ -91,7 +91,7 @@ No separate disposition system exists for gate recommendations.
   later in the cycle*).
 - **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
   the change:
-  - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `scripts/gate/remedy-route.sh
+  - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `<autoflow-root>/scripts/gate/remedy-route.sh
     route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere stops routing and goes to the advisor)
     and re-enters where it prints (`DOC_COMMIT` / `BUILD` / `ARCHITECT`, exactly as at
     *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
@@ -181,12 +181,12 @@ re-classify.
 
 - **Default class per item** — the evaluator's starting point, overridable with a stated reason:
   `Doc updates` → `doc`; `Test coverage`, `Test quality` → `test`; `Fit` → `design`; every other
-  item → `impl` (`scripts/gate/remedy-route.sh default-class <item>`). A `Doc updates` cap caused
+  item → `impl` (`<autoflow-root>/scripts/gate/remedy-route.sh default-class <item>`). A `Doc updates` cap caused
   by text that executes — a prompt string inside a workflow script, a hook message — is `impl`, not
   `doc`. When the evaluator is not confident, it writes `operator` rather than guessing: an
   unclassifiable item is never carried along a route chosen for its neighbours.
 - **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
-  stops routing and goes to the advisor. `scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
+  stops routing and goes to the advisor. `<autoflow-root>/scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
   orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
   ([`core.md`](../core.md) > AutoFlow State Tracking > Remedy class recording).
 - **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
@@ -198,7 +198,7 @@ re-classify.
 The `doc` route's remedy must be **class-level, not site-level**. The fix anchors on a **repo-wide sweep
 for the pattern the evaluator named**, not on the list of sites it happened to find. The sweep
 enumerates; **which hits the remedy fixes is the orchestrator's judgment**, recorded with its grounds
-in the sweep record (`docs/core.md` > Rule Scope, principle 2).
+in the sweep record (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2).
 
 1. Write `.autoflow/{repo-key}-issue-{N}/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
    command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
@@ -239,7 +239,7 @@ carry, never routes the cycle.
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Code comments*),
   is a `Low` finding. It never counts toward the review verdict that keeps `blocked-by-review`
-  (`.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
+  (`<autoflow-root>/.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
   it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). It is
   therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or

@@ -5,7 +5,7 @@
 # AutoFlow manifest generator / hash-recorder (issue #792 [#785-S5], WI-2 §4.5)
 # =============================================================================
 # Dev-time helper. Regenerates setup/manifest.json:
-#   - version  := plugin/autoflow/.claude-plugin/plugin.json .version (R2 stamp)
+#   - version  := .claude-plugin/plugin.json .version (R2 stamp)
 #   - artifacts[] := the fixed thin-root/root-layer set PLUS the transitive
 #     markdown-link closure of CLAUDE.md + docs/INDEX.md (the Unit Document
 #     Loading Contract's on-demand Read set — DCR-7 / feature §3.1 O1), each a
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-PLUGIN_JSON="plugin/autoflow/.claude-plugin/plugin.json"
+PLUGIN_JSON=".claude-plugin/plugin.json"
 OUT="setup/manifest.json"
 
 VERSION="$(jq -r '.version' "$PLUGIN_JSON")"

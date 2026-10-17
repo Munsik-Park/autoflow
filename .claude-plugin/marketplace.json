@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "autoflow",
-      "source": "./plugin/autoflow",
-      "description": "AutoFlow phase-gate engine (hooks + role subagents + install skill).",
+      "source": "./",
+      "description": "AutoFlow phase-gate engine: hooks, role subagents, the cycle and criterion-review commands, and the core, usage documents and scripts they cite.",
       "version": "0.2.35"
     }
   ]
