@@ -58,8 +58,8 @@
 # enumerated suite whose `ci-subject` header is absent or empty, one path per
 # line on stdout, and no selection. It resolves no delta, so it needs no git
 # checkout and never sources the root's tests/lib/base-ref.sh — which is what
-# lets setup/thin-root-layer/drift-check.sh (D7) run it from its own tree over a
-# target it has not been confirmed to trust. A suite that predates the header
+# lets scripts/preflight/target-check.sh (D7) run it from the AutoFlow root over
+# a target whose code it does not execute. A suite that predates the header
 # contract is the case it exists for (issue #213): the contract binds a suite at
 # creation, the selection below binds every enumerated suite, and a target that
 # held suites before adopting the suite plane meets that gap at its first BUILD.
@@ -173,7 +173,8 @@ select_over() {
 
   # THE OPT-IN, resolved before anything is required of the root. It gates the
   # SELECTION path only: `--check-headers` answers over any root (P4/F5), and
-  # keying it would make drift-check D7 report clean on a root it never read.
+  # keying it would make the target check's D7 report clean on a root it never
+  # read.
   if [ "$mode" != headers ]; then
     suite_plane_opted_in "$root"
     plane_rc=$?

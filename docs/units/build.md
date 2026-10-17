@@ -116,9 +116,7 @@ These are the rules other documents cite; everything else about the work is the 
   ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
   cycle*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
-  included, and a manifest-registered source regenerates `setup/manifest.json` in the same commit
-  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > Derived
-  artifacts). The unit does not push.
+  included. The unit does not push.
 
 ## Dividing the work
 
@@ -312,14 +310,14 @@ retroactively. The grammar's single definition site is `<autoflow-root>/scripts/
 - **The grammar is those two fields and nothing else.** The lint admits no other field.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. drift-check D7 names each one at install and at PREFLIGHT, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The PREFLIGHT target check (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7) names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
 1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
 2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
 3. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
 4. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
 
-The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and drift-check reports `PASS: D7`.
+The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and the target check reports `PASS: D7`.
 
 **Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
 

@@ -1,7 +1,0 @@
-{
-  "extraKnownMarketplaces": {
-    "autoflow": {
-      "source": { "source": "github", "repo": "Munsik-Park/autoflow" }
-    }
-  }
-}

@@ -69,77 +69,29 @@ fi
 command -v jq >/dev/null 2>&1 || { echo "spawn-policy: jq is required" >&2; exit 1; }
 jq -e . "$CONFIG" >/dev/null 2>&1 || { echo "spawn-policy: $CONFIG does not parse as JSON" >&2; exit 1; }
 
-# The agent definitions are resolved from the tree the RUNTIME loads them from
-# for the config actually loaded, never from the caller's working directory.
-# Two locations exist (issue #169): the framework repository — and any target
-# that carries its own copies — ships them at <base>/.claude/agents, while a
-# thin-root target receives none of them (setup/manifest.json delivers the
-# config and this readout only) and the harness loads them from the installed
-# plugin's agents/ directory. `check` therefore reads <base>/.claude/agents
-# when it holds at least one autoflow-*.md, and otherwise the plugin's agents/
-# — resolved by scripts/lib/plugin-root.sh from $CLAUDE_PLUGIN_ROOT (hook
-# context) or the harness's own registries under ${CLAUDE_CONFIG_DIR:-~/.claude}
-# (a plain shell, where the operator runs `check`). The membership rule below
-# stays a comparison of one tree's config against the definitions that tree's
-# sessions spawn; what changed is only that the definitions' home is looked up
-# rather than assumed adjacent (the gate hook already resolved this readout
-# across the same two locations — hooks/check-autoflow-gate.sh § 1d).
-_cfgdir="$(cd "$(dirname "$CONFIG")" && pwd)"          # <base>/.claude/autoflow
-_base="$(cd "$_cfgdir/../.." && pwd)"                    # <base>
-AGENTS_DIR=""
-AGENTS_SOURCE=""
-_local_agents="$_base/.claude/agents"
+# The agent definitions are the ones the session loads: the AutoFlow root this
+# readout runs from carries them at <root>/agents, and the root a script runs
+# from is the root the session loaded (ADR-0027 D1, D3). They are never looked
+# up from the caller's working directory or from the config's tree — a target's
+# own policy is checked against the definitions of the plugin that runs it.
 _self_agents="$(cd "$_selfdir/../.." && pwd)/agents"     # <root>/agents
-if [ -d "$_local_agents" ] && ls "$_local_agents"/autoflow-*.md >/dev/null 2>&1; then
-  AGENTS_DIR="$_local_agents"; AGENTS_SOURCE="tree"
-elif [ -d "$_self_agents" ] && ls "$_self_agents"/autoflow-*.md >/dev/null 2>&1; then
-  # The AutoFlow tree this readout runs from carries the definitions at its
-  # root: the root this script runs from is the root the session loaded.
-  AGENTS_DIR="$_self_agents"; AGENTS_SOURCE="plugin"
-else
-  # Helper lookup: beside this script, then the base tree, then the project
-  # dir — the same three-way resolution the hook applies to this script.
-  for _lib in \
-    "$_selfdir/../lib/plugin-root.sh" \
-    "$_base/scripts/lib/plugin-root.sh" \
-    "${CLAUDE_PROJECT_DIR:-}/scripts/lib/plugin-root.sh"; do
-    [ -n "$_lib" ] && [ -f "$_lib" ] || continue
-    # shellcheck source=scripts/lib/plugin-root.sh
-    . "$_lib"; break
-  done
-  _plugin_root=""
-  if type autoflow_plugin_root >/dev/null 2>&1; then
-    _plugin_root="$(autoflow_plugin_root "$_base" 2>/dev/null)" || _plugin_root=""
-  elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-    _plugin_root="$CLAUDE_PLUGIN_ROOT"
-  fi
-  if [ -n "$_plugin_root" ] && ls "$_plugin_root"/agents/autoflow-*.md >/dev/null 2>&1; then
-    AGENTS_DIR="$_plugin_root/agents"; AGENTS_SOURCE="plugin"
-  fi
+AGENTS_DIR=""
+if [ -d "$_self_agents" ] && ls "$_self_agents"/autoflow-*.md >/dev/null 2>&1; then
+  AGENTS_DIR="$_self_agents"
 fi
 
-# Diagnostic for the fail-closed arm of `check`: every location consulted.
+# Diagnostic for the fail-closed arm of `check`: the location consulted.
 agents_dir_candidates() {
-  if [ -d "$_local_agents" ]; then
-    printf '%s (no autoflow-*.md)\n' "$_local_agents"
-  else
-    printf '%s (absent)\n' "$_local_agents"
-  fi
   if [ -d "$_self_agents" ]; then
     printf '%s (no autoflow-*.md)\n' "$_self_agents"
   else
     printf '%s (absent)\n' "$_self_agents"
   fi
-  if type autoflow_plugin_root_candidates >/dev/null 2>&1; then
-    autoflow_plugin_root_candidates "$_base" | sed 's|/*$|/agents|'
-  else
-    printf '$CLAUDE_PLUGIN_ROOT (%s)/agents [scripts/lib/plugin-root.sh not found — the registry and cache lookups were unavailable]\n' "${CLAUDE_PLUGIN_ROOT:-unset}"
-  fi
 }
 
 # No admitted MODEL set lives here (issue #150, cycle 2). The config is a sample
-# carrying the values currently applied, configured by the user at stamp/install
-# time — not a universal vocabulary this script enforces — so a model value is
+# carrying the values currently applied, configured by each target for its own
+# runtime — not a universal vocabulary this script enforces — so a model value is
 # checked for presence and shape only. The admitted EFFORT vocabulary is not
 # hardcoded either: `check` reads it out of the config's own `effort_contract`,
 # which makes `check` a self-consistency check over one source rather than a
@@ -352,20 +304,19 @@ cmd_check() {
   done < <(jq -r '.workflow_sites | to_entries[] | .key as $wf | .value | to_entries[] | "workflow_sites.\($wf).\(.key)\t\(if (.value|has("effort")) then (.value.effort|type) else "absent" end)\t\(.value.effort // "" | tostring)"' "$CONFIG")
 
   # Agent-type membership: every phases[].agent_type is either a shipped
-  # `autoflow-*.md` definition basename (from the tree or the installed plugin
-  # — see the AGENTS_DIR resolution above), one of the three harness research
-  # types, or the harness `general-purpose` type a unit spawns its helpers as,
-  # and nothing else.
+  # `autoflow-*.md` definition basename (at the AutoFlow root — see the
+  # AGENTS_DIR resolution above), one of the three harness research types, or
+  # the harness `general-purpose` type a unit spawns its helpers as, and
+  # nothing else.
   if [ -z "$AGENTS_DIR" ]; then
-    # No definitions anywhere is NOT read as an empty set: the partition rule
-    # below would then hold vacuously and `check` would report success on a
-    # tree it never saw. Fail closed, naming every location consulted and the
-    # override that points `check` at a plugin the lookup cannot see.
+    # No definitions is NOT read as an empty set: the partition rule below
+    # would then hold vacuously and `check` would report success on a tree it
+    # never saw. Fail closed, naming the location consulted.
     {
       echo "spawn-policy check: no agent definitions (autoflow-*.md) found for $CONFIG"
-      echo "  consulted, in order:"
+      echo "  consulted:"
       agents_dir_candidates | sed 's/^/    /'
-      echo "  a thin-root target reads its definitions from the installed plugin; if the lookup above cannot see it, run: CLAUDE_PLUGIN_ROOT=<plugin dir> bash scripts/spawn-policy/spawn-policy.sh check"
+      echo "  run this readout from the AutoFlow root the session loads: bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh check"
     } >&2
     return 1
   fi
@@ -424,8 +375,8 @@ cmd_check() {
   # leave effort to the definition. So a
   # phases[].effort is deliverable only when the LOADED definition carries the
   # same line (`effort: <v>`, or no line for the inherit sentinel). The
-  # definitions are versioned tool source (a thin-root target loads the
-  # plugin's), which makes phase-row effort fixed per plugin version and NOT a
+  # definitions are versioned tool source (every target loads the plugin's),
+  # which makes phase-row effort fixed per plugin version and NOT a
   # per-target lever; only workflow_sites effort reaches its spawn from this
   # file at run time. Fail closed on a mismatch, so a config that claims an
   # effort the runtime will not apply cannot pass `check`.

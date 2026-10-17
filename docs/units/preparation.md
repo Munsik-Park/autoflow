@@ -14,7 +14,8 @@ every change — to git, to GitHub, to the cycle's state — is made by the orch
 - **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
   every earlier cycle of this checkout whose pull request is merged or closed cleared away.
 - **Artifact contract**: the state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` and the dev branch checked out
-  (*What is asked*), and the local-checks record in the ledger (*Stop conditions*).
+  (*What is asked*), and the plugin record and the local-checks record in the ledger (*What is
+  asked*, *Stop conditions*).
 - **Verification**: PREFLIGHT has no gate. Its readiness conditions are deterministic — the facts
   `<autoflow-root>/scripts/preflight/cycle-status.sh` reports and the *Stop conditions* — and DIAGNOSE does
   not begin until they hold. PREFLIGHT never judges an issue's content: on a new issue it reads only
@@ -22,7 +23,7 @@ every change — to git, to GitHub, to the cycle's state — is made by the orch
   ([`criterion-review.md`](../criterion-review.md)).
 - **Loop cap**: A condition that does not hold stops the cycle and is reported; PREFLIGHT
   runs again once it is resolved.
-- **Result owed**: the state file, the dev branch and the local-checks record above. A resume also
+- **Result owed**: the state file, the dev branch and the two ledger records above. A resume also
   owes its re-entry point, recorded with grounds in the ledger (*Resume*).
 
 ## Transitions
@@ -33,7 +34,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 |------|------|
 | PREFLIGHT → DIAGNOSE | earlier cycles resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for `mode: new-issue`), and the state file written for `mode: new-issue` or `mode: review-response` (`<autoflow-root>/docs/units/preparation.md` > *What is asked*, *Modes*) |
 | PREFLIGHT → resume | the requested issue's own state reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `<autoflow-root>/scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`<autoflow-root>/docs/units/preparation.md` > *Resume*) |
-| PREFLIGHT → user | another issue mid-cycle (hold), a pause for a human decision, a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, or a fail-closed stop condition — bundle drift, an unreadable reviewer configuration, a target-declared local check that does not pass after its declared repair, a new issue with no operator confirmation of its criterion review on record for its current body → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
+| PREFLIGHT → user | another issue mid-cycle (hold), a pause for a human decision, a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, or a fail-closed stop condition — a failed target check, an unreadable reviewer configuration, a target-declared local check that does not pass after its declared repair, a new issue with no operator confirmation of its criterion review on record for its current body → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
 
 ## What is asked
 
@@ -42,13 +43,15 @@ bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue {N}
 ```
 
 prints the facts the work is decided from and changes nothing: the working tree, the default branch
-against its remote-tracking ref, and — for every state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` — `active`, `phase`,
+against its remote-tracking ref, the AutoFlow this run uses (the root the script runs from, the
+plugin name and version that root's `.claude-plugin/plugin.json` names, and, when the root is a git
+work tree of its own, its `HEAD` and whether it is dirty), and — for every state file `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` — `active`, `phase`,
 `mode`, `cycle`, and every dev branch carrying the issue's number together with the one the state
 file's `branch` names, each with its side and its pull request. With `--issue {N}` and no state file
 of that issue, a dev branch carrying its number is reported too. Each branch line carries its
 `record`: `state-file` for the branch the issue's state file names, `none` for any other — another
 checkout's cycle of the same issue, or no state file here — and `unconfirmed` for every branch of a
-state file that names none (one written before the `branch` field). Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file); the line
+state file that names none (one written before the `branch` field). Exit `3` means a fact could not be read (a `gh` lookup, an unreadable state file, an unreadable `plugin.json`); the line
 says which. From those facts the orchestrator brings about the following.
 
 - **Earlier cycles are resolved.** A cycle this checkout ran — its state file is in this
@@ -71,8 +74,18 @@ says which. From those facts the orchestrator brings about the following.
   a review-response — matches the remote ([`git-workflow.md`](../git-workflow.md) > Git Clean
   Check). In a project with sub-repos, syncing the host also brings each submodule to the commit
   the host's pointer names; this is the orchestrator's work item, and no script checks it.
-- **The stop conditions pass** (*Stop conditions*): bundle drift, a readable reviewer configuration,
-  the target-declared local checks, and — for a new issue — criterion readiness.
+- **The stop conditions pass** (*Stop conditions*): the target check, a readable reviewer
+  configuration, the target-declared local checks, and — for a new issue — criterion readiness.
+- **The plugin record is written.** On `new-issue` and `review-response` entry, before the state
+  file is written, the orchestrator appends the AutoFlow values `cycle-status.sh` reported to the
+  issue's ledger as a record entry, `<C>` being the cycle the state file will carry:
+
+  ```
+  ### preflight-plugin | cycle: <C>
+  - plugin: <name> <version>
+  - root: <the root path>
+  - git: <HEAD> clean | <HEAD> dirty (<n> path(s)) | not a git work tree
+  ```
 - **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-HHMMSS-issue-N`
   from the default branch, named from the time it is created, the state file from the Creation
   template with that name in `branch`, `mode: "new-issue"` and `phase: "in-progress"`
@@ -176,7 +189,7 @@ over those facts**, recorded with its grounds in the ledger. Cautions:
 
 Each is a fail-closed hard stop, run by the orchestrator before the state file is created: DIAGNOSE does not begin until every one that applies passes — the first three in every mode that runs them, *Criterion readiness* in `new-issue` mode only.
 
-**Bundle drift.** On a target that carries an installed manifest (`.claude/autoflow/manifest.json` — every thin-root target; the framework repository itself carries none and skips this check), PREFLIGHT runs `sh .claude/autoflow/drift-check.sh`; a non-zero exit stops the cycle. It asserts the installed files match the installed manifest (D1), the manifest version matches the installed plugin (D2), state never resolves from the plugin root (D3), the installed bundle matches the **marketplace clone** per artifact by sha256 (D4 — a self-consistent bundle that is older than what the clone would stamp, with or without a version bump, is drift), the installed plugin matches the clone's plugin source (D5), and the target-owned `.claude/autoflow/spawn-policy.json` scaffold agrees with the agent definitions the session loads (D6 — `<autoflow-root>/scripts/spawn-policy/spawn-policy.sh check` over the scaffold, plus its row set against the clone's sample: a `phases` / `workflow_sites` row the current version requires and the scaffold lacks, or a `phases` row whose `agent_type` changed, is named here), and — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`; the leg resolves the opt-in through the shipped `<autoflow-root>/scripts/test/suite-manifest.sh` and a target that has not opted in PASSes without the selector being consulted) — every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the shipped selector requires (D7 — the selector's own `--check-headers` stage); a declaration file that is present but unreadable is a D7 FAIL, and a scaffold with no `tests` object at all is named by a `HINT` beside the PASS (a re-stamp never adds it). The plugin and the clone are resolved from the harness's local registries by the shipped `<autoflow-root>/scripts/lib/plugin-root.sh`, not from the hook-only `CLAUDE_PLUGIN_ROOT`; a side that is not locally resolvable reports `SKIP`, never a failure. Remedies: D1/D3 → repair the file; D2/D4 → re-stamp (`/autoflow:install`, or `<clone>/setup/init.sh --target <root> --force`; refresh the clone first with `/plugin marketplace update` if it is the side that is behind); D5 → `/plugin update`; D6 → edit the scaffold by hand (a re-stamp never overwrites it): set each named row to the loaded definition's values and add each missing row from `<clone>/.claude/autoflow/spawn-policy.json` — model values and `workflow_sites` effort are the target's own and are never findings; D7 → back-fill each named suite's header per [U4 Build and verify](build.md) > Header contract > *Adopting the contract over existing suites* (the suites are target-owned; a re-stamp never touches `tests/**`), or repair the unreadable `.claude/autoflow.local.json` it names. A `WARN` (a changed scaffold sample, an artifact the current manifest does not ship) does not stop the cycle; the orchestrator reports it. See `<autoflow-root>/setup/SETUP-GUIDE.md` > *Self-verify with the drift detector*.
+**Target check.** PREFLIGHT runs `bash <autoflow-root>/scripts/preflight/target-check.sh` from the target; a non-zero exit stops the cycle. It runs from the AutoFlow root the session loads — the agent definitions, the readout, the selector and the default spawn policy beside it — and reads the target's files as data, executing none of them. **D6** — when the target keeps its own `.claude/autoflow/spawn-policy.json`, which overrides the plugin's default: `<autoflow-root>/scripts/spawn-policy/spawn-policy.sh check` over it against the loaded agent definitions, and its row set against the default `<autoflow-root>/.claude/autoflow/spawn-policy.json` — a `phases` / `workflow_sites` row the default carries and the target's copy lacks, or a `phases` row whose `agent_type` differs, is named. Model values and `workflow_sites` effort are the target's own and are never findings; a target with no policy of its own passes, its readouts answered by the default. **D7** — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`, resolved through `<autoflow-root>/scripts/test/suite-manifest.sh`): every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the selector requires (the selector's own `--check-headers` stage). A target that has not opted in passes without the selector being consulted, and a declaration file that is present but unreadable is a FAIL. Remedies: D6 → edit the target's policy — set each named row to the loaded definition's values and add each missing row from the default — or delete it to take the default; D7 → back-fill each named suite's header per [U4 Build and verify](build.md) > Header contract > *Adopting the contract over existing suites*, or repair the unreadable `.claude/autoflow.local.json`. The AutoFlow version is not a stop condition: a newer release reaches the operator through Claude Code's plugin update.
 
 **Reviewer configuration.** PREFLIGHT runs `<autoflow-root>/scripts/preflight/check-review-backend.sh`, which reads the external reviewers HANDOFF runs beside the built-in review from `.claude/autoflow.local.json` (`.review.reviewers`, or the earlier `.review.backend`; none when both are absent) and probes each one's CLI presence-only (`command -v`; auth is not probed). Exit `2` — a review configuration that cannot be read as configured — stops the cycle until it is fixed. Exit `1` — a configured reviewer's CLI absent — does not: the orchestrator records it in the ledger's PREFLIGHT entry, and HANDOFF runs the built-in review without that reviewer and names it on the aggregated comment. See [`reviewer-backend.md`](../reviewer-backend.md) > *Availability*.
 

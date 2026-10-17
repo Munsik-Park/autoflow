@@ -37,8 +37,7 @@
 #
 # Scope: docs/**/*.md except docs/records/ (records are read, not rewritten —
 # docs/development-guideline.md), agents/*.md, skills/cycle/SKILL.md and
-# skills/criterion-review/SKILL.md. The install skill is stamp machinery,
-# retired with setup/ (issue #454 PR-4), and is outside it.
+# skills/criterion-review/SKILL.md.
 # =============================================================================
 
 set -uo pipefail
@@ -62,33 +61,24 @@ trap 'rm -rf "$WORK"' EXIT
 # the target is this repository, its working tree, not the plugin root: the
 # host repository's own scope (the core's Cross-Project Boundary Rules, carried
 # into the cycle body generated from it), the target's decision records and
-# ADR directory, the rule documents a change to this repository edits, the
-# manifest a change to this repository regenerates, and this repository's own
-# security checklist items.
+# ADR directory, the rule documents a change to this repository edits, and
+# this repository's own security checklist items.
 ALLOW_SPANS='docs/core.md|scripts/
 docs/core.md|docs/
 skills/cycle/SKILL.md|scripts/
 skills/cycle/SKILL.md|docs/
 docs/units/build.md|scripts/
 docs/git-workflow.md|docs/<issue>-<desc>
-docs/thin-root-layer.md|docs/autoflow/
-docs/thin-root-layer.md|docs/
 docs/development-guideline.md|docs/
 docs/development-guideline.md|docs/records/
 docs/development-guideline.md|.codex/
-docs/development-guideline.md|setup/
 docs/development-guideline.md|scripts/test/check-host-purity-delta.sh
 docs/evaluation-system.md|docs/records/adr/
 docs/submodule-common-rules.md|docs/records/adr/
 docs/submodule-common-rules.md|docs/records/design-rationale.md
 docs/units/design.md|docs/records/adr/*
 docs/units/design.md|docs/records/design-rationale.md
-docs/security-checklist.md|scripts/gate/security-checklist.sh
-docs/security-checklist.md|setup/init.sh
-docs/submodule-common-rules.md|setup/manifest.json
-docs/submodule-common-rules.md|setup/gen-manifest-hashes.sh
-docs/units/build.md|setup/manifest.json
-docs/units/design.md|setup/manifest.json'
+docs/security-checklist.md|scripts/gate/security-checklist.sh'
 # Fenced-block tokens likewise: "<file>|<token>" — a branch name, and the
 # paths of a target's pull-request body in the guide's examples.
 ALLOW_FENCE='docs/git-workflow.md|docs/55-update-api-reference

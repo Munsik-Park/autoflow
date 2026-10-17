@@ -13,6 +13,10 @@
 # Reported:
 #   - the working tree: the checked-out branch and its dirty paths
 #   - the default branch against its remote-tracking ref, as of the last fetch
+#   - the AutoFlow this run uses — the root this script runs from, the plugin
+#     name and version its .claude-plugin/plugin.json names, and, when that
+#     root is a git work tree of its own, its HEAD and whether it is dirty: the
+#     plugin record PREFLIGHT writes to the ledger (ADR-0027 D4)
 #   - per state file `.autoflow/<repo-key>-issue-<N>/issue-<N>.json` (issue
 #     #423) — every one the gate hook counts: `active`, `phase`, `mode`,
 #     `cycle`; for this repository's own key, every dev branch carrying the
@@ -33,8 +37,9 @@
 #
 # Exit codes:
 #   0   every fact was read
-#   3   a fact could not be read — a `gh` lookup failed or a state file is not
-#       JSON; the line that reports it says which
+#   3   a fact could not be read — a `gh` lookup failed, a state file is not
+#       JSON, or the AutoFlow root's plugin.json could not be read; the line
+#       that reports it says which
 #   64  usage
 #
 # Usage: scripts/preflight/cycle-status.sh [--issue N]
@@ -157,6 +162,26 @@ if git show-ref --verify --quiet "refs/heads/$DEFAULT" && git show-ref --verify 
   echo "default branch: $DEFAULT at $(git rev-parse --short "$DEFAULT"), origin/$DEFAULT at $(git rev-parse --short "origin/$DEFAULT") as of the last fetch — ahead $(git rev-list --count "origin/$DEFAULT..$DEFAULT"), behind $(git rev-list --count "$DEFAULT..origin/$DEFAULT")"
 else
   echo "default branch: $DEFAULT — no local branch or no remote-tracking ref"
+fi
+
+# The AutoFlow this run uses: the root this script runs from is the root the
+# session loaded (ADR-0027 D3), which `claude plugin list` does not show for a
+# `--plugin-dir` session. Read from the root, never from the target.
+AF_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
+af_plugin="$(jq -r '"\(.name) \(.version)"' "$AF_ROOT/.claude-plugin/plugin.json" 2>/dev/null)" || af_plugin=""
+echo "autoflow root: $AF_ROOT"
+if [ -n "$af_plugin" ]; then
+  echo "  plugin: $af_plugin"
+else
+  echo "  plugin: unreadable ($AF_ROOT/.claude-plugin/plugin.json)"; incomplete=1
+fi
+af_top="$(git -C "$AF_ROOT" rev-parse --show-toplevel 2>/dev/null)" || af_top=""
+if [ -n "$af_top" ] && [ "$(cd "$af_top" && pwd -P)" = "$(cd "$AF_ROOT" && pwd -P)" ]; then
+  af_dirty="$(git -C "$AF_ROOT" status --porcelain 2>/dev/null | grep -c .)"
+  if [ "$af_dirty" -eq 0 ]; then af_state=clean; else af_state="dirty ($af_dirty path(s))"; fi
+  echo "  git: $(git -C "$AF_ROOT" rev-parse HEAD 2>/dev/null) $af_state"
+else
+  echo "  git: not a git work tree"
 fi
 
 own_seen=0

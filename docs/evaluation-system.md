@@ -564,10 +564,9 @@ each-item ≥ 7 criterion:
     (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
     `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
     `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
-    (b) the scripts, hooks and workflows that run; (c) every document delivered to a target — the
-    boundary of (c) is the manifest generator's markdown-link closure of `CLAUDE.md` +
-    `<autoflow-root>/docs/INDEX.md` plus its other artifact rows (`<autoflow-root>/setup/gen-manifest-hashes.sh` >
-    `compute_doc_closure`).
+    (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a
+    role to read — the command bodies under `<autoflow-root>/skills/` and the usage documents
+    `<autoflow-root>/docs/INDEX.md` routes, outside the records under `<autoflow-root>/docs/records/`.
   - *Historical records* are what is kept as a record of a past state and followed by no one:
     per-issue manual-verification records, report-excerpt fixtures
     (`tests/fixtures/*`), an ADR's change-history and superseded sections, and archived cycle

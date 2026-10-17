@@ -71,7 +71,7 @@ DEDUP="$ROOT/hooks/check-read-dedup.sh"
 # the installed copy, CLAUDE_PROJECT_DIR and the working directory the target,
 # the developer's own session variables cleared.
 run_hook() {
-  (cd "$1" && env -u AUTOFLOW_SPAWN_POLICY -u AUTOFLOW_MARKETPLACE_ROOT \
+  (cd "$1" && env -u AUTOFLOW_SPAWN_POLICY \
     CLAUDE_CONFIG_DIR="$CFG" CLAUDE_PLUGIN_ROOT="$ROOT" CLAUDE_PROJECT_DIR="$1" bash "$2")
 }
 

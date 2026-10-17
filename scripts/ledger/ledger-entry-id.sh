@@ -55,7 +55,7 @@ EOF
 
 # Heading grammar shared by both subcommands: a settled-decision entry is a
 # LEVEL-2 heading `## <NS><serial> — <title> (cycle <C>, <PHASE>)`. Level-3
-# headings are record entries (preflight-local-checks)
+# headings are record entries (preflight-plugin, preflight-local-checks)
 # and carry no identifier by design, so both subcommands ignore them.
 
 # next <ledger-path> <namespace>

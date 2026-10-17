@@ -3,8 +3,9 @@
 # .github/workflows/contract-suites.yml — deployment-level checks (ADR-0024 D1, D5; issue #293)
 #
 # This repository's standing layer: the checks whose defect surfaces only after
-# deployment — the shipped artifact installs or stamps (`packaging`), and a
-# declared inventory agrees with the tree it describes (`manifest`). A change's
+# deployment — the shipped artifact resolves from where it is installed, apart
+# from the target (`packaging`), and a declared inventory agrees with the tree
+# it describes (`manifest`). A change's
 # functional verification is a one-shot cycle run recorded in the PR body, not a
 # step here (docs/development-guideline.md > 7. Testing Policy).
 #
@@ -40,36 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - name: verify-install-into-target.sh
-        timeout-minutes: 10
-        run: bash tests/plugin/verify-install-into-target.sh
-
-      - name: verify-install-skill-scripts.sh
-        timeout-minutes: 10
-        run: bash tests/plugin/verify-install-skill-scripts.sh
-
-      - name: verify-thin-root-layer.sh
-        timeout-minutes: 10
-        run: bash tests/plugin/verify-thin-root-layer.sh
-
-      - name: test-issue-236-restamp-removal.sh
-        timeout-minutes: 10
-        run: bash tests/test-issue-236-restamp-removal.sh
-
-      - name: test-issue-979-bundle-delivery.sh
-        timeout-minutes: 10
-        run: bash tests/test-issue-979-bundle-delivery.sh
-
-      - name: test-cycle-layer-devices-shipped.sh
-        timeout-minutes: 10
-        run: bash tests/test-cycle-layer-devices-shipped.sh
-
       - name: verify-path-independence.sh
         timeout-minutes: 10
         run: bash tests/plugin/verify-path-independence.sh
-
-      - name: manifest regen-clean lint
-        run: bash scripts/test/check-manifest-regen-clean.sh
 
       - name: suite CI-coverage lint
         run: bash scripts/test/check-suite-ci-coverage.sh
