@@ -62,9 +62,7 @@ trap 'rm -rf "$WORK"' EXIT
 # host repository's own scope (the core's Cross-Project Boundary Rules, carried
 # into the cycle body generated from it), the target's decision records and
 # ADR directory, the rule documents a change to this repository edits, and
-# this repository's own security checklist items (the checklist is maintained
-# by a human, never auto-edited — one item still names a file issue #454 PR-4
-# removed, until the maintainer revises it).
+# this repository's own security checklist items.
 ALLOW_SPANS='docs/core.md|scripts/
 docs/core.md|docs/
 skills/cycle/SKILL.md|scripts/
@@ -80,8 +78,7 @@ docs/submodule-common-rules.md|docs/records/adr/
 docs/submodule-common-rules.md|docs/records/design-rationale.md
 docs/units/design.md|docs/records/adr/*
 docs/units/design.md|docs/records/design-rationale.md
-docs/security-checklist.md|scripts/gate/security-checklist.sh
-docs/security-checklist.md|setup/init.sh'
+docs/security-checklist.md|scripts/gate/security-checklist.sh'
 # Fenced-block tokens likewise: "<file>|<token>" — a branch name, and the
 # paths of a target's pull-request body in the guide's examples.
 ALLOW_FENCE='docs/git-workflow.md|docs/55-update-api-reference

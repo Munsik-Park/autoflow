@@ -1,12 +1,12 @@
 # Security Checklist — AutoFlow Repository
 
-> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `<autoflow-root>/scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`<autoflow-root>/docs/evaluation-system.md` > AUDIT). It is **not** stamped to targets: a target's security checklist is the target's own, declared in its own scaffold.
+> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads it at the version `<autoflow-root>/scripts/gate/security-checklist.sh status` names, and GATE:QUALITY's `Security` item references the AUDIT result (`<autoflow-root>/docs/evaluation-system.md` > AUDIT). It does not apply to targets: a target's security checklist is the target's own, declared in its own `.claude/autoflow.local.json`.
 
 ---
 
 ## Scope
 
-This repository ships meta artifacts — rules, docs, the gate hook, the installer and the scripts it stamps into targets. Its threat surface is bounded by *who can run the hook* and *what the hook trusts*.
+This repository ships meta artifacts as the plugin package — rules, docs, the gate hook and the scripts the plugin runs. Its threat surface is bounded by *who can run the hook* and *what the hook trusts*.
 
 The items below are grouped under AUDIT's five rubric items. A rubric item with no section here is scored from the change alone.
 
@@ -27,14 +27,10 @@ The items below are grouped under AUDIT's five rubric items. A rubric item with 
 
 - [ ] `.autoflow/*-issue-*/issue-*.json` is gitignored and treated as working data; AI evaluation output that quotes user input is not pushed to public mirrors.
 
-### 5. Dependency Vulnerabilities
-
-- [ ] `setup/init.sh` does `set -euo pipefail` and uses only the system `sed`/`cp` — no curl|sh of remote scripts.
-
 ---
 
 ## Update Protocol
 
-This file is updated when a new attack surface is introduced (a hook change, or a new stamped script or installer step) or when a CVE in a dependency requires permanent mitigation steps.
+This file is updated when a new attack surface is introduced (a hook change, or a new script the plugin ships) or when a CVE in a dependency requires permanent mitigation steps.
 
 Maintainer: Human (never auto-edited). Inside an AutoFlow cycle a change to this file is read by AUDIT only once the operator accepts it ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*).
