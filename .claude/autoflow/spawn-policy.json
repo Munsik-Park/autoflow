@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Single source of truth for AutoFlow's per-phase spawn policy (model + effort). Read it with scripts/spawn-policy/spawn-policy.sh; never restate its values in prose (CLAUDE.md > Spawn Model — Phase-by-Phase).",
-  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; a workflow that reads a workflow_sites row fails closed on a missing one. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. workflow_sites effort stays target-configurable.",
+  "sample_contract": "This file is a SAMPLE carrying the values currently applied, not a universal vocabulary the framework enforces. It ships as a `scaffold` artifact: a stamp/install creates it only when absent and never overwrites it (not even under --force), so the values here are the target's to configure at stamp time and afterwards. On a version bump, run `scripts/spawn-policy/spawn-policy.sh check` and add any newly required row — the drift detector's D6 leg runs that check and the required-row comparison against the clone's sample at /autoflow:install and PREFLIGHT, so a stale scaffold is reported there with the rows to fix; a workflow that reads a workflow_sites row fails closed on a missing one. `check` reads the agent definitions from `.claude/agents/` when it holds autoflow-*.md files, otherwise from the installed plugin's agents/ (resolved via scripts/lib/plugin-root.sh: CLAUDE_PLUGIN_ROOT in a hook, the harness registries under ~/.claude/plugins in a plain shell) — a thin-root target has only the plugin copy; `CLAUDE_PLUGIN_ROOT=<plugin dir>` points it there explicitly. A phases[].effort on a shipped definition is not a target-side lever: it must equal the `effort:` frontmatter line of the definition the target actually loads (the plugin's, on a thin-root target) and `check` fails closed otherwise — see effort_contract.phase_effort_ownership; a target that needs a different direct-spawn effort changes the shipped definition, not this row. A `general-purpose` helper row's effort and workflow_sites effort stay target-configurable.",
   "effort_contract": {
     "is_the_vocabulary_check_applies": "`scripts/spawn-policy/spawn-policy.sh check` reads its admitted effort vocabulary and its inherit sentinel from THIS object. A runtime with a different effort vocabulary is accommodated by editing this contract, never by patching the checker; model values are not validated beyond presence and shape",
     "admitted_values": [
@@ -14,9 +14,9 @@
     ],
     "admitted_one_spelling_per_level": "this policy admits one spelling per level; the harness alias \"med\" for \"medium\" is not admitted here",
     "config_inherit_sentinel": "inherit",
-    "sentinel_is_config_only": "\"inherit\" is this file's own vocabulary and is never written to either harness channel: a Workflow agent() opts object omits the effort key, and an agent-definition frontmatter omits the effort line",
+    "sentinel_is_config_only": "\"inherit\" is this file's own vocabulary and is never written to any harness channel: a Workflow agent() opts object omits the effort key, an agent-definition frontmatter omits the effort line, and an Agent call that spawns a general-purpose helper omits the effort parameter",
     "absent_means": "identical to \"inherit\" — the row declares no override and the spawn inherits the session effort. A row carrying no effort key at all is a validation error, not an inherit: `spawn-policy.sh check` rejects it",
-    "phase_effort_ownership": "A phases[] row's effort is DELIVERED by the agent definition's `effort:` frontmatter line, not by this file. Phase-row effort is fixed per plugin version and is not a per-target lever; this file's phases[].effort is the projection source at the tool repository and must equal the loaded definition's line — `check` fails closed on a mismatch. Only workflow_sites effort reaches its spawn from this file at run time and is configurable per target. A row that uses a harness research type (Explore / Plan / claude-code-guide) admits the inherit sentinel only; `check` refuses a concrete effort there. The projection is recognised in one canonical spelling only — `effort: <value>` at column 0 of the first YAML block, unquoted, no trailing comment; any other spelling a YAML parser could read as that key — including an indented key — is refused by `check`. The block itself is accepted in block style only — one plain `key: value` per line at column 0, blank lines and `#` comments; a flow mapping, an explicit key, a merge key or a multi-line scalar is refused as a shape, before any \"no effort line means inherit\" verdict."
+    "phase_effort_ownership": "A phases[] row's effort is DELIVERED by the agent definition's `effort:` frontmatter line, not by this file. Phase-row effort is fixed per plugin version and is not a per-target lever; this file's phases[].effort is the projection source at the tool repository and must equal the loaded definition's line — `check` fails closed on a mismatch. Only workflow_sites effort reaches its spawn from this file at run time and is configurable per target. A row that uses a harness research type (Explore / Plan / claude-code-guide) admits the inherit sentinel only; `check` refuses a concrete effort there. A row that uses the harness `general-purpose` type — the helpers a unit spawns — has no definition to carry its effort: the spawn passes the row's effort as the Agent tool's `effort` parameter, or omits the parameter when the row reads out the inherit sentinel, so `check` admits any value in the vocabulary there, does not require such rows to agree with each other, and compares no frontmatter. The projection is recognised in one canonical spelling only — `effort: <value>` at column 0 of the first YAML block, unquoted, no trailing comment; any other spelling a YAML parser could read as that key — including an indented key — is refused by `check`. The block itself is accepted in block style only — one plain `key: value` per line at column 0, blank lines and `#` comments; a flow mapping, an explicit key, a merge key or a multi-line scalar is refused as a shape, before any \"no effort line means inherit\" verdict."
   },
   "policy_unmapped_agent_types": {},
   "phases": {
@@ -73,6 +73,24 @@
       "model": "opus",
       "effort": "xhigh",
       "work_type": "U4 Build-and-verify unit (DISPATCH..VALIDATE + AUDIT span) as one spawn — goal, artifact contract and verification prescribed, method its own (ADR-0025 D2); model and effort held at the values of the RED / GREEN rows it replaced"
+    },
+    "unit-build-area": {
+      "agent_type": "general-purpose",
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "U4 helper (docs/units/build.md > Dividing the work) — one design area's Red→Green, its tests, lint and commits, in a context of its own; the unit's own implementation work, held at the unit-build row's values"
+    },
+    "unit-build-verify": {
+      "agent_type": "general-purpose",
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "U4 helper (docs/units/build.md > Dividing the work) — verification and integration after the last implementation commit: run record, verification-row checks, observation follow-up, comment check, build report; the unit's own judgment work, held at the unit-build row's values"
+    },
+    "unit-build-observe": {
+      "agent_type": "general-purpose",
+      "model": "opus",
+      "effort": "xhigh",
+      "work_type": "U4 helper (docs/units/build.md > Dividing the work) — one observation with a tool: run, judge match / mismatch, probe the cause; non-deterministic work, held at the effort the unit's observation helpers already ran at by inheritance"
     },
     "advisor": {
       "agent_type": "autoflow-advisor",

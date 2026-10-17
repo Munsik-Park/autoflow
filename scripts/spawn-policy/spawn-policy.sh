@@ -334,8 +334,9 @@ cmd_check() {
 
   # Agent-type membership: every phases[].agent_type is either a shipped
   # `autoflow-*.md` definition basename (from the tree or the installed plugin
-  # — see the AGENTS_DIR resolution above) or one of the three harness
-  # research types, and nothing else.
+  # — see the AGENTS_DIR resolution above), one of the three harness research
+  # types, or the harness `general-purpose` type a unit spawns its helpers as,
+  # and nothing else.
   if [ -z "$AGENTS_DIR" ]; then
     # No definitions anywhere is NOT read as an empty set: the partition rule
     # below would then hold vacuously and `check` would report success on a
@@ -361,9 +362,9 @@ cmd_check() {
   while IFS= read -r t; do
     [ -n "$t" ] || continue
     case "$t" in
-      Explore|Plan|claude-code-guide) continue ;;
+      Explore|Plan|claude-code-guide|general-purpose) continue ;;
     esac
-    printf '%s\n' "$defs" | grep -qxF "$t" || _err "phases[].agent_type='$t' names neither a shipped agent definition nor a harness research type"
+    printf '%s\n' "$defs" | grep -qxF "$t" || _err "phases[].agent_type='$t' names neither a shipped agent definition nor a harness research or general-purpose type"
   done < <(printf '%s\n' "$all_agent_types")
 
   # Partition (over the autoflow-* half only): the definition basenames equal
@@ -386,18 +387,22 @@ cmd_check() {
   done < <(printf '%s\n' "$unmapped")
 
   # Effort agreement: phases sharing an agent type declare the same effort.
-  # Per-agent-type is the only granularity the direct-spawn channel has, so a
+  # Per-agent-type is the only granularity the frontmatter channel has, so a
   # divergent declaration is undeliverable and fails here rather than silently.
+  # `general-purpose` rows are delivered per call instead — the spawn passes the
+  # row's effort as the Agent tool's `effort` parameter — so they may differ.
   while IFS= read -r t; do
     [ -n "$t" ] || continue
+    [ "$t" = "general-purpose" ] && continue
     if [ "$(jq -r --arg t "$t" '[.phases[] | select(.agent_type == $t) | .effort | tostring] | unique | length' "$CONFIG")" != "1" ]; then
       _err "phases sharing agent_type '$t' declare divergent effort values"
     fi
   done < <(printf '%s\n' "$all_agent_types")
 
-  # Effort projection (issue #180, PR #183 review): a direct spawn's effort is
-  # read by the harness from the agent definition's frontmatter, never from
-  # this config — the Agent tool carries `model` per call but no effort. So a
+  # Effort projection (issue #180, PR #183 review): a direct spawn of a shipped
+  # definition takes its effort from the definition's frontmatter, never from
+  # this config — the spawns that read these rows pass `model` per call and
+  # leave effort to the definition. So a
   # phases[].effort is deliverable only when the LOADED definition carries the
   # same line (`effort: <v>`, or no line for the inherit sentinel). The
   # definitions are versioned tool source (a thin-root target loads the
@@ -418,6 +423,10 @@ cmd_check() {
         # A harness research type ships no definition, so nothing carries an
         # effort line to the spawn: its rows admit the inherit sentinel only.
         [ "$_exp" = "$inherit_sentinel" ] || _err "phases rows for the harness research type '$t' declare effort '$_exp', but that type ships no agent definition, so a direct spawn of it inherits the session effort — only the inherit sentinel is deliverable there; a governed phase that needs a fixed effort uses a shipped definition (.claude/autoflow/spawn-policy.json > effort_contract.phase_effort_ownership)"
+        continue ;;
+      general-purpose)
+        # No definition carries the effort; the spawn passes the row's effort
+        # as the Agent tool's `effort` parameter, so there is no line to equal.
         continue ;;
     esac
     [ -f "$AGENTS_DIR/$t.md" ] || continue   # absence is the membership error above, not a projection error
