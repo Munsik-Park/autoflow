@@ -107,6 +107,66 @@ These are the rules other documents cite; everything else about the work is the 
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > Derived
   artifacts). The unit does not push.
 
+## Dividing the work
+
+A recommendation, not a rule: whether the unit divides its work, and how, stays its own, and the
+division it chose and its grounds go in the build report. This section records what a division is
+worth and where it loses.
+
+- **What a boundary is worth.** A context's cost is what it carries times the requests that carry
+  it: what was read for finished work is read again on every later request. A boundary pays when
+  the context it drops, less what a new context takes in to start (the standing prompt and the
+  handoff below), is large and many requests follow it. A boundary that drops little more than
+  that, or that few requests follow, costs more than it saves.
+- **Where to divide.** On a build whose design names several areas that share no code, two
+  boundaries pay:
+  - between areas — an area's code is not used by the next, so the next carries none of it;
+  - after the last implementation commit — verification and integration read again what they
+    need, which costs far less than carrying every area's context.
+
+  Inside an area the Red→Green loop is not divided: the test, the implementation and the reading
+  of a failure use the same code.
+- **A layout.**
+
+  | Context | Its work | Policy row |
+  |---|---|---|
+  | The unit itself | reads the design and the rules, assigns the areas, checks each return, spawns the observations | `unit-build` |
+  | One per area | the area's Red→Green, its tests and lint, its commits | `unit-build-area` |
+  | Verification and integration | the run record, each verification row's check, the follow-up of the observations, the comment check, the build report | `unit-build-verify` |
+  | One per observation | the observation with its tool: running it, judging match or mismatch, probing a cause | `unit-build-observe` |
+
+  A helper is spawned as `general-purpose` with the model and the effort its row reads out
+  (`bash scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
+  the `Agent` tool's `effort` parameter.
+- **What crosses a boundary.** To an area: its section of the feature design, the sections every
+  area shares (`## Scope` and the common constraints the design names), its verification rows, a
+  note of the repository's conventions (how its tests and lint run, its commit rules) the unit
+  writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
+  its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
+  observations, and what a later area needs to know of its changes. Requirements of two areas that
+  cannot both hold take the design-contradiction path above; a design point two areas meet
+  differently is a decision point.
+- **A deterministic run is a command, not a context.** Running tests, lint and builds, and
+  committing, take no judgment; what they cost is their output carried in the context that reads
+  it. A run goes through a command that bounds its time, keeps the full output in a log under the
+  cycle-layer store, and prints the exit status, the summary line, the names of failing tests, the
+  first error block and the log's path. That short result fills `## Run record` and `## Test-first`;
+  the log stays the evidence. A run with no bound holds the context that started it, and every
+  helper report waiting on that context. A model spawned for each run costs more than it saves:
+  each spawn writes its standing prompt anew.
+- **A judgment stays with the work it judges.** An observation's match or mismatch is judged by
+  the context that ran it, which can probe a cause while the state is in front of it; a judging
+  context split from the run reads the records and captures again and cannot probe. The comment
+  check and the scope judgments belong to the context that holds the whole diff.
+- **When a division loses.**
+  - The areas share code: what each must read again of the others' code outweighs the context
+    dropped.
+  - The build is small: the context before a boundary is near what a new context starts with, or
+    few requests follow it.
+  - A model is spawned for each deterministic run.
+  - The handoff is the whole design and every convention rather than the area's part: most of the
+    saving is lost.
+
 ## Build report
 
 `.autoflow/{repo-key}-issue-{N}/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to

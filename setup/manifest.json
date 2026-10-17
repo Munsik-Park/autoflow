@@ -111,7 +111,7 @@
       "dest": ".claude/autoflow/docs/role-contracts.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "cbfe1a9e83c486955fe51afd592035e3e49dc1f0b50d46cfd64b4e1a7ac7d1ff"
+      "sha256": "9dbaabe50fef989084f19c2b1e1d51df2a528238de5c16b7b441bfe18392622c"
     },
     {
       "source": "docs/submodule-common-rules.md",
@@ -139,7 +139,7 @@
       "dest": ".claude/autoflow/docs/tool-delivery-contract.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "27d70b99080b75d0c1ead1fa79c7595042c32b6f9d5e15dd5f09774c8479cd51"
+      "sha256": "52787e3b35839c009a551ade187c3cc190f816c9440e2cf1de561d28916872a5"
     },
     {
       "source": "docs/units/analysis.md",
@@ -153,7 +153,7 @@
       "dest": ".claude/autoflow/docs/units/build.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "7a401d2e426d64b4796b7fc56339527c7fddb73001536a26906c3f4b755404d3"
+      "sha256": "fb1b7fec285f6386ab5a94353da5fc51958e0f2048a0f38da8ad928f745b3688"
     },
     {
       "source": "docs/units/completion-evaluation.md",
@@ -398,14 +398,14 @@
       "dest": ".claude/autoflow/spawn-policy.json",
       "tier": "root-layer",
       "kind": "scaffold",
-      "sha256": "40f09d8ff5b0d42db4fccfd1cc4aad8b333701e403a87a106fa3a6de3671f02e"
+      "sha256": "6b043c50a7d36b0129494f0e3e398d3979f199affcd6deb000d3069976392531"
     },
     {
       "source": "scripts/spawn-policy/spawn-policy.sh",
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "95be055ac412986024a20b588a2345ad9bff1c73acf715029a30a2e31bcecb47"
+      "sha256": "a5f64831eea6052baa6f92b97916963ed19aa07e3f10d244ca1e411997d1b7b6"
     },
     {
       "source": "scripts/lib/plugin-root.sh",
