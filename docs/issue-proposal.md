@@ -2,10 +2,10 @@
 
 An issue is filed from a **draft on disk**, never from arguments typed at the
 moment of filing. `gh issue create` is denied at the tool boundary
-(`.claude/hooks/check-autoflow-gate.sh` > Section 1); the only filing path is:
+(`<autoflow-root>/hooks/check-autoflow-gate.sh` > Section 1); the only filing path is:
 
 ```bash
-scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
+<autoflow-root>/scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
 ```
 
 The wrapper derives search terms from the draft's **own title**, runs the query
@@ -19,7 +19,7 @@ Three layers guard the path:
 | Layer | Mechanism |
 |-------|-----------|
 | 1 | hook deny on `gh issue create` and its REST form |
-| 2 | `scripts/issue/create-issue.sh` re-runs the query and compares dispositions |
+| 2 | `<autoflow-root>/scripts/issue/create-issue.sh` re-runs the query and compares dispositions |
 | 3 | the operator permission prompt on the wrapper |
 
 Layer three works by **omission**: keep the wrapper off every allow list —
@@ -39,7 +39,7 @@ heading to the next level-2 heading or to end of file:
 [feat] one line, exactly as the issue title should read
 
 ## Grounds
-`scripts/issue/create-issue.sh` > `has_section "Grounds"` — "a grounding anchor under '## Grounds'": the check runs here, not in the caller
+`<autoflow-root>/scripts/issue/create-issue.sh` > `has_section "Grounds"` — "a grounding anchor under '## Grounds'": the check runs here, not in the caller
 
 ## Duplicate check
 searched: create-issue duplicate gate

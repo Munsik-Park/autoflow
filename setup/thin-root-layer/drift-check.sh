@@ -74,7 +74,7 @@
 #   over existing suites; a re-stamp never touches tests/**), or repair the
 #   unreadable declaration file it names.
 #
-# Consumers that parse this output (plugin/autoflow/skills/install/scripts/
+# Consumers that parse this output (skills/install/scripts/
 # detect.sh) key on the `FAIL: <id> -- ` line grammar; keep it.
 # =============================================================================
 
@@ -174,7 +174,7 @@ fi
 #
 # The `_pin_key` branch stays live as back-compat and is not an orphan: this
 # detector also runs as the marketplace cache's known-good copy against a target
-# tree (plugin/autoflow/skills/install/SKILL.md), and a target stamped before
+# tree (skills/install/SKILL.md), and a target stamped before
 # #245 still carries `enabledPlugins: { "<plugin>@<marketplace>": true }` in its
 # PIN_REF. Deleting the branch would fail OPEN — an unresolved plugin root makes
 # D2/D4 SKIP at exit 0, the worst signal shape available.
@@ -402,7 +402,9 @@ elif [ -z "$_clone_plugin" ]; then
 else
   _d5_fail_before=$FAIL_COUNT
   _d5_tmp=$(mktemp)
-  (CDPATH= cd -- "$_clone_plugin" && find . -type f | sed 's|^\./||' | LC_ALL=C sort) > "$_d5_tmp"
+  # The plugin source is the clone's root (ADR-0027 D1): its .git/ is the
+  # clone's own, never copied into the installed plugin, so it is not skew.
+  (CDPATH= cd -- "$_clone_plugin" && find . -path ./.git -prune -o -type f -print | sed 's|^\./||' | LC_ALL=C sort) > "$_d5_tmp"
   while IFS= read -r _relf; do
     [ -n "$_relf" ] || continue
     if [ ! -f "$_plugin_root/$_relf" ]; then

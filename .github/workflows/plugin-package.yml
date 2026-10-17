@@ -2,14 +2,19 @@
 # SPDX-License-Identifier: Elastic-2.0
 # .github/workflows/plugin-package.yml — plugin packaging acceptance suite (issue #790)
 #
-# Runs the plugin packaging acceptance suite (tests/plugin/verify-package.sh),
-# which checks that the shipped plugin under plugin/autoflow/ and the self-hosted
-# marketplace at .claude-plugin/marketplace.json package correctly: manifest and
-# marketplace validity, hooks.json wiring under ${CLAUDE_PLUGIN_ROOT}, one
-# invocation of the packaged gate hook, byte-copy parity with the .claude/
-# originals and structure conformance — deployment-level checks only (ADR-0024
-# D1; issue #293). It runs on every pull request and every push to main, with no
-# `paths:` filter.
+# Runs the plugin packaging acceptance suites. The repository root is the plugin
+# root (ADR-0027 D1):
+#   - tests/plugin/verify-package.sh: manifest and marketplace validity,
+#     hooks.json wiring under ${CLAUDE_PLUGIN_ROOT}, one invocation of the
+#     packaged gate hook, one copy of each component and structure conformance;
+#   - tests/plugin/verify-skill-bodies.sh: the generated command bodies equal
+#     their generator's output, the leading-part budget, and the
+#     <autoflow-root>/… path closure (ADR-0027 D2, D3);
+#   - tests/plugin/verify-installed-layout.sh: the package copied the way an
+#     install lays it out, run against an unstamped target — the hook finds its
+#     helpers and every rule citation resolves at the installed location.
+# Deployment-level checks only (ADR-0024 D1; issue #293). They run on every pull
+# request and every push to main, with no `paths:` filter.
 #
 # Why GitHub Actions: the suite is pure POSIX sh + jq/cmp/diff -r/grep/git with
 # no node/npm, no bats, and no submodule checkout; ubuntu-latest ships bash 5.x +
@@ -40,3 +45,11 @@ jobs:
       - name: Run plugin packaging acceptance suite
         timeout-minutes: 10
         run: bash tests/plugin/verify-package.sh
+
+      - name: verify-skill-bodies.sh
+        timeout-minutes: 10
+        run: bash tests/plugin/verify-skill-bodies.sh
+
+      - name: verify-installed-layout.sh
+        timeout-minutes: 10
+        run: bash tests/plugin/verify-installed-layout.sh

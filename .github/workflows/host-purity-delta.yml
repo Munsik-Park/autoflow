@@ -26,8 +26,10 @@ on:
     # guard. Kept in lock-step with the `include` globs in
     # tests/fixtures/host-purity-paths.txt (enforced by the AC7 drift check).
     paths:
-      - '.claude/hooks/**'
-      - '.claude/agents/**'
+      - 'hooks/**'
+      - 'agents/**'
+      - 'skills/**'
+      - 'bin/**'
       - '.claude/workflows/**'
       - 'scripts/**'
       - 'setup/**'
@@ -40,7 +42,6 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'CLAUDE.md'
-      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'tests/lib/**'
   push:
     branches: [main]
@@ -48,8 +49,10 @@ on:
     # lock-step with the `include` globs in tests/fixtures/host-purity-paths.txt
     # (enforced by the AC7 drift check).
     paths:
-      - '.claude/hooks/**'
-      - '.claude/agents/**'
+      - 'hooks/**'
+      - 'agents/**'
+      - 'skills/**'
+      - 'bin/**'
       - '.claude/workflows/**'
       - 'scripts/**'
       - 'setup/**'
@@ -62,7 +65,6 @@ on:
       - 'tests/fixtures/host-purity-tokens.txt'
       - 'tests/fixtures/host-purity-paths.txt'
       - 'CLAUDE.md'
-      - 'plugin/autoflow/hooks/check-autoflow-gate.sh'
       - 'tests/lib/**'
 
 permissions:

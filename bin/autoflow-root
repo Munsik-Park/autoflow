@@ -1,0 +1,9 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# autoflow-root — print the AutoFlow root: the plugin root this script ships in
+# (ADR-0027 D3). The plugin's bin/ is on the Bash PATH of the main session and
+# of every subagent, while CLAUDE_PLUGIN_ROOT is not set there; a context that
+# carries no root declaration (a U4 helper, a session handed a hook message, an
+# operator shell) runs this to resolve `<autoflow-root>/…` paths.
+CDPATH= cd -- "$(dirname -- "$0")/.." && pwd

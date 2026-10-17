@@ -1,0 +1,10 @@
+{
+  "name": "autoflow",
+  "description": "AutoFlow methodology engine for Claude Code: phase gate hooks, role subagents, the /autoflow:cycle and /autoflow:criterion-review commands, and the core (docs/core.md), usage documents and scripts they cite. State is kept in the target project's .autoflow (CLAUDE_PROJECT_DIR).",
+  "version": "0.2.35",
+  "author": {
+    "name": "Munsik-Park"
+  },
+  "homepage": "https://github.com/Munsik-Park/autoflow",
+  "repository": "https://github.com/Munsik-Park/autoflow"
+}

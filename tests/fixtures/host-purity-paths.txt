@@ -12,8 +12,10 @@
 # other character is literal.
 
 # host tool / mechanism files that must stay service-agnostic
-include .claude/hooks/**
-include .claude/agents/**
+include hooks/**
+include agents/**
+include skills/**
+include bin/**
 include .claude/workflows/**
 include scripts/**
 include setup/**

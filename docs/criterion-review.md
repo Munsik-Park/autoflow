@@ -27,7 +27,7 @@ The review makes that premise hold more often; it does not change it.
   ([U1 Preparation](units/preparation.md) > *What is asked*). A confirmation written into that
   directory is therefore archived with it, and PREFLIGHT stops `NOT READY`. The order is: (1) clear
   the earlier cycle — the Post-Merge Cleanup ([`git-workflow.md`](git-workflow.md) > Post-Merge
-  Cleanup, `scripts/cleanup/cleanup-issue.sh <N>` for the directory), or one PREFLIGHT run, which
+  Cleanup, `<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>` for the directory), or one PREFLIGHT run, which
   clears it and then stops at criterion readiness; (2) review and confirm, into the fresh directory;
   (3) run PREFLIGHT. `criterion-ready.sh status` reports `NOT READY` while the directory still holds
   an earlier cycle's state file, so a confirmation written too early is caught when it is checked.
@@ -44,7 +44,7 @@ The review makes that premise hold more often; it does not change it.
   `high`; another model or effort may be used. The setting for the session lives here because the
   review is the session's own work, not an `Agent` spawn. Its spawns take theirs from
   `.claude/autoflow/spawn-policy.json` like every other spawn ([`core.md`](core.md) > Spawn
-  Model): the model each declares is read with `bash scripts/spawn-policy/spawn-policy.sh model
+  Model): the model each declares is read with `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model
   criterion-trace`, `… model criterion-in-depth` or `… model criterion-reconciliation`, and the
   effort is the one its agent
   definition carries. The record's `## Inputs` names the model and effort the session and each
@@ -56,7 +56,7 @@ The review makes that premise hold more often; it does not change it.
 ## Inputs
 
 - **The issue as filed** — its body as GitHub holds it now, identified by the sha256
-  `scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
+  `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
   criterion references, opened by the reviewer; one that cannot be opened is recorded with the
   reason.
 - **The target's code** — each repository the issue reaches, read at a named commit (the default
@@ -268,11 +268,11 @@ Decision-point entries > *Criterion-readiness confirmations*):
 - Authority: operator decision
 ```
 
-The identifier comes from `bash scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
+The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger). `cycle 0` marks an
 entry written before the issue's first cycle.
 
-**The confirmation is bound to the body.** `scripts/preflight/criterion-ready.sh status --issue N`
+**The confirmation is bound to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
 reads the last `[criterion-ready]` entry and reports `READY` only when it is an `O` entry under
 `operator decision`, its record exists, and its `- Issue body sha256:` equals the sha256 of the
 issue body read from GitHub now. Any edit to the body after the confirmation leaves the issue not

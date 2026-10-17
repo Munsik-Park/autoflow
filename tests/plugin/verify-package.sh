@@ -4,22 +4,28 @@
 # =============================================================================
 # Test: plugin packaging acceptance suite
 # =============================================================================
-# Checks that the plugin package under plugin/autoflow/ and the self-hosted
-# marketplace at .claude-plugin/marketplace.json are produced, complete, and
-# wired to resolve from the packaged location. Plain POSIX sh +
-# jq/cmp/diff -r/grep/git only.
+# Checks that the plugin package — the repository root, which is the plugin
+# root (ADR-0027 D1) — and the self-hosted marketplace at
+# .claude-plugin/marketplace.json are complete and wired to resolve from the
+# packaged location. Plain POSIX sh + jq/cmp/grep only.
 #
 # packaging:
-#   AC1e   declared components (agents/, hooks/hooks.json, skills/) resolve
-#   AC1a/AC1b/AC1d  the plugin-only install skill: SKILL.md, every shipped
-#          scripts/*.sh, and its resolver lib byte-identical to scripts/lib/
+#   AC1e   declared components (agents/, hooks/hooks.json, skills/, bin/)
+#          resolve; bin/autoflow-root is executable
+#   AC1a/AC1b  the command skills cycle and criterion-review: SKILL.md present
+#          with its frontmatter name
+#   AC1a/AC1b/AC1d  the install skill (retired with the stamp, PR-4): SKILL.md,
+#          every shipped scripts/*.sh, and its resolver lib byte-identical to
+#          scripts/lib/
 #   AC1f   every packaged SKILL.md frontmatter parses (POSIX defect-class
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
 #   AC3 8a the packaged gate hook, invoked once, returns a decision (allow)
-#   AC5    byte-copy parity host <-> package (hooks, agents);
-#          no component directory inside any .claude-plugin/
-#   AC-R1a claude plugin validate (gating when the CLI is present)
+#   AC5    no duplicate copy of the components (.claude/agents, .claude/hooks,
+#          plugin/) remains; no component directory inside .claude-plugin/
+#   AC-R1a claude plugin validate on the repository root (gating when the CLI
+#          is present; its warning that a root CLAUDE.md is not loaded is
+#          expected — that file is this repository's own)
 # manifest:
 #   AC1    plugin.json parses; `name` (the only spec-required field) is
 #          'autoflow'; `version` is explicit and non-'latest' (R1 pin)
@@ -31,16 +37,11 @@
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
-PLUGIN_DIR="$REPO_ROOT/plugin/autoflow"
+PLUGIN_DIR="$REPO_ROOT"
 PLUGIN_MANIFEST="$PLUGIN_DIR/.claude-plugin/plugin.json"
 MARKETPLACE="$REPO_ROOT/.claude-plugin/marketplace.json"
 HOOKS_JSON="$PLUGIN_DIR/hooks/hooks.json"
 GATE_SH="$PLUGIN_DIR/hooks/check-autoflow-gate.sh"
-DEDUP_SH="$PLUGIN_DIR/hooks/check-read-dedup.sh"
-
-ORIG_GATE="$REPO_ROOT/.claude/hooks/check-autoflow-gate.sh"
-ORIG_DEDUP="$REPO_ROOT/.claude/hooks/check-read-dedup.sh"
-ORIG_AGENTS="$REPO_ROOT/.claude/agents"
 
 # Install skill (plugin-only, no .claude/skills/install host twin)
 INSTALL_SKILL_DIR="$PLUGIN_DIR/skills/install"
@@ -64,19 +65,6 @@ failc() {
 skipc() {
   SKIP_COUNT=$((SKIP_COUNT + 1))
   printf 'SKIP: %s -- %s\n' "$1" "$2"
-}
-
-compare_file() {
-  # $1 = description, $2 = plugin-side path, $3 = .claude/ original path
-  if [ -f "$2" ] && [ -f "$3" ]; then
-    if cmp -s "$2" "$3"; then
-      pass "AC5 parity: $1 byte-identical"
-    else
-      failc "AC5 parity" "$1 differs: cmp $2 $3"
-    fi
-  else
-    failc "AC5 parity" "$1 -- missing file(s): $2 or $3"
-  fi
 }
 
 # ── AC1: plugin manifest ─────────────────────────────────────────────────
@@ -128,15 +116,39 @@ if [ -d "$PLUGIN_DIR/skills" ]; then
 else
   failc "AC1e" "skills/ does not exist at $PLUGIN_DIR/skills"
 fi
+if [ -f "$PLUGIN_DIR/bin/autoflow-root" ] && [ -x "$PLUGIN_DIR/bin/autoflow-root" ]; then
+  pass "AC1e: bin/autoflow-root resolves and is executable"
+else
+  failc "AC1e" "bin/autoflow-root missing or not executable at $PLUGIN_DIR/bin/autoflow-root"
+fi
+
+# ── AC1a/AC1b: the command skills ────────────────────────────────────────
+# /autoflow:cycle and /autoflow:criterion-review carry the rules a main
+# session runs by (ADR-0027 D2); their bodies are generated and checked by
+# tests/plugin/verify-skill-bodies.sh.
+echo "== AC1a/AC1b: command skills cycle and criterion-review =="
+for _cmd in cycle criterion-review; do
+  _md="$PLUGIN_DIR/skills/$_cmd/SKILL.md"
+  if [ -f "$_md" ]; then
+    _nm=$(awk '/^---$/{n++; next} n==1 && /^name:/{print; exit}' "$_md" | sed -E 's/^name:[[:space:]]*//')
+    if [ "$_nm" = "$_cmd" ]; then
+      pass "AC1a: skills/$_cmd/SKILL.md exists with frontmatter name '$_cmd'"
+    else
+      failc "AC1a" "skills/$_cmd/SKILL.md frontmatter name='$_nm' (expected '$_cmd')"
+    fi
+  else
+    failc "AC1b" "skills/$_cmd/SKILL.md missing at $_md"
+  fi
+done
 
 # ── AC1a/AC1b: install skill presence + component resolution ────────────
 # The install skill is plugin-only -- it has no `.claude/skills/install` host
-# twin, so it is outside the AC5 byte-parity checks below. AC1a presence +
+# twin and no parity check. AC1a presence +
 # AC1b component-resolution are therefore this skill's sole packaging guard: both SKILL.md and every
 # shipped scripts/*.sh must resolve inside the PACKAGED plugin tree.
 echo "== AC1a (#943): install skill SKILL.md presence + frontmatter =="
 if [ -f "$INSTALL_SKILL_MD" ]; then
-  pass "AC1a: plugin/autoflow/skills/install/SKILL.md exists"
+  pass "AC1a: skills/install/SKILL.md exists"
   INSTALL_NAME=$(awk '/^---$/{n++; next} n==1 && /^name:/{print; exit}' "$INSTALL_SKILL_MD" | sed -E 's/^name:[[:space:]]*//')
   if [ "$INSTALL_NAME" = "install" ]; then
     pass "AC1a: install SKILL.md frontmatter name == 'install'"
@@ -182,7 +194,7 @@ fi
 if [ -f "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" ] && cmp -s "$INSTALL_SKILL_SCRIPTS/lib/plugin-root.sh" "$REPO_ROOT/scripts/lib/plugin-root.sh"; then
   pass "AC1d: skills/install/scripts/lib/plugin-root.sh is byte-identical to scripts/lib/plugin-root.sh"
 else
-  failc "AC1d" "skills/install/scripts/lib/plugin-root.sh missing or differs from scripts/lib/plugin-root.sh -- re-copy: cp scripts/lib/plugin-root.sh plugin/autoflow/skills/install/scripts/lib/plugin-root.sh"
+  failc "AC1d" "skills/install/scripts/lib/plugin-root.sh missing or differs from scripts/lib/plugin-root.sh -- re-copy: cp scripts/lib/plugin-root.sh skills/install/scripts/lib/plugin-root.sh"
 fi
 
 # ── AC1f: gating POSIX frontmatter oracle ─────────────────────────────────
@@ -334,10 +346,10 @@ if [ -f "$MARKETPLACE" ] && jq -e . "$MARKETPLACE" >/dev/null 2>&1; then
     failc "AC2b" "plugins[0].name='$P0_NAME' (expected 'autoflow')"
   fi
 
-  if [ "$P0_SOURCE" = "./plugin/autoflow" ]; then
-    pass "AC2c: plugins[0].source == './plugin/autoflow' (starts with ./)"
+  if [ "$P0_SOURCE" = "./" ]; then
+    pass "AC2c: plugins[0].source == './' (the repository root is the plugin root, ADR-0027 D1)"
   else
-    failc "AC2c" "plugins[0].source='$P0_SOURCE' (expected './plugin/autoflow')"
+    failc "AC2c" "plugins[0].source='$P0_SOURCE' (expected './')"
   fi
 
   if [ -n "$VERSION" ] && [ -n "$P0_VERSION" ] && [ "$VERSION" = "$P0_VERSION" ]; then
@@ -400,27 +412,25 @@ if [ -f "$GATE_SH" ] && [ -x "$GATE_SH" ]; then
   fi
   rm -rf "$BENIGN_DIR"
 else
-  failc "AC3 8a" "plugin/autoflow/hooks/check-autoflow-gate.sh missing or not executable — cannot drive the real script"
+  failc "AC3 8a" "hooks/check-autoflow-gate.sh missing or not executable — cannot drive the real script"
 fi
 
-# ── AC5: byte-copy parity (D-1 guard) ────────────────────────────────────
-echo "== AC5: parity (byte-copies) =="
-compare_file "hooks/check-autoflow-gate.sh" "$GATE_SH" "$ORIG_GATE"
-compare_file "hooks/check-read-dedup.sh" "$DEDUP_SH" "$ORIG_DEDUP"
-
-if [ -d "$ORIG_AGENTS" ]; then
-  for f in "$ORIG_AGENTS"/*.md; do
-    [ -e "$f" ] || continue
-    base=$(basename "$f")
-    compare_file "agents/$base" "$PLUGIN_DIR/agents/$base" "$f"
-  done
-else
-  failc "AC5 parity" "reference directory missing: $ORIG_AGENTS"
-fi
+# ── AC5: one copy of each component ──────────────────────────────────────
+# The components live once, at the plugin root (ADR-0027 D1). A second copy
+# under .claude/ would load as project agents beside the plugin's own, and the
+# former plugin/ package directory would be a second plugin source.
+echo "== AC5: no duplicate component copies =="
+for _dup in .claude/agents .claude/hooks plugin; do
+  if [ -e "$REPO_ROOT/$_dup" ]; then
+    failc "AC5 single copy" "$_dup exists — the components live only at the plugin root (agents/, hooks/, skills/)"
+  else
+    pass "AC5 single copy: no $_dup"
+  fi
+done
 
 # ── AC5: structure conformance (spec Warning) ────────────────────────────
 echo "== AC5: structure conformance =="
-for d in "$REPO_ROOT/.claude-plugin" "$PLUGIN_DIR/.claude-plugin"; do
+for d in "$REPO_ROOT/.claude-plugin"; do
   if [ -d "$d" ]; then
     if [ -d "$d/agents" ] || [ -d "$d/skills" ] || [ -d "$d/hooks" ]; then
       failc "AC5 structure" "$d contains agents/skills/hooks — spec Warning violation"
@@ -473,9 +483,9 @@ if command -v claude >/dev/null 2>&1 && [ -d "$PLUGIN_DIR" ]; then
   VALIDATE_OUT=$(claude plugin validate "$PLUGIN_DIR" 2>&1)
   VALIDATE_RC=$?
   if [ "$VALIDATE_RC" -eq 0 ]; then
-    pass "AC-R1a: claude plugin validate ./plugin/autoflow -> exit 0 (frontmatter parses; full-parser gate)"
+    pass "AC-R1a: claude plugin validate <repository root> -> exit 0 (frontmatter parses; full-parser gate)"
   else
-    failc "AC-R1a" "claude plugin validate ./plugin/autoflow -> exit $VALIDATE_RC: $VALIDATE_OUT"
+    failc "AC-R1a" "claude plugin validate <repository root> -> exit $VALIDATE_RC: $VALIDATE_OUT"
   fi
 else
   skipc "AC-R1a" "claude CLI not present in this environment -- the AC1f POSIX subset oracle is the standing CI witness"

@@ -114,7 +114,7 @@ escape.
 
 Single-pattern gates are unaffected — they match `CMD_BOUNDARY` over the
 whole `SCAN`. Reference: the default-branch push deny in
-`.claude/hooks/check-autoflow-gate.sh`.
+`<autoflow-root>/hooks/check-autoflow-gate.sh`.
 
 **Second consumer — the label-gate deny.** The
 `blocked-by-subrepo` gate-label deny has two forms: the
@@ -127,7 +127,7 @@ segment**. Both denies share the single `_SEGMENTS` split computed once from
 
 ### Backgrounded-invocation refinement — `BG_SCAN` / `BG_PREFIX` / `BG_TAIL`
 
-The backgrounded suite-run deny (`.claude/hooks/check-autoflow-gate.sh`
+The backgrounded suite-run deny (`<autoflow-root>/hooks/check-autoflow-gate.sh`
 Section 1) adds three named primitives to P1's vocabulary.
 
 **`BG_SCAN` reads shell *logical* lines, not physical lines.** `BG_SCAN` is
@@ -223,7 +223,7 @@ bounded when a later line happens to equal the misread delimiter word exactly �
 
 ```
 echo "<< EOF is a heredoc"
-bash scripts/test/run-suites.sh --all &
+bash <autoflow-root>/scripts/test/run-suites.sh --all &
 EOF
 ```
 
@@ -263,7 +263,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `.claude/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `<autoflow-root>/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 | Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 

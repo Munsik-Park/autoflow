@@ -36,7 +36,7 @@ This clearance sits alongside the protections the reviewer verifies before mergi
 
 A host PR that depends on a sub-repo PR carries two labels, and each guards one thing:
 
-- `blocked-by-review` guards the host PR's **own review**. Its target is what the host repository tracks directly — the submodule pointer included, a submodule's contents excluded (`.codex/review.md` > Before Reviewing) — so the label reflects `Medium`+ findings in host-tracked files alone. A finding in sub-repo code keeps the sub-repo PR's label, never the host's.
+- `blocked-by-review` guards the host PR's **own review**. Its target is what the host repository tracks directly — the submodule pointer included, a submodule's contents excluded (`<autoflow-root>/.codex/review.md` > Before Reviewing) — so the label reflects `Medium`+ findings in host-tracked files alone. A finding in sub-repo code keeps the sub-repo PR's label, never the host's.
 - `blocked-by-subrepo` guards **merge order**: the host PR does not merge before the sub-repo PR its pointer depends on. The operator clears it (*Merge-order clearance* above).
 
 The host PR differs from a sub-repo PR only in carrying `blocked-by-subrepo`; its review and review label follow the same per-PR rule. A host PR whose review label has cleared while its sub-repo PR's review is still open is held by `blocked-by-subrepo` alone — the intended gate, not a gap.

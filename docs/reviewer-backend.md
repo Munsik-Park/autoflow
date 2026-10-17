@@ -13,12 +13,12 @@ aggregation*.
 
 | Reviewer | Runs | Input | Runtime |
 |----------|------|-------|---------|
-| built-in (`claude`) | every pull request | the PR (diff, body, linked issue), `.codex/review.md`, the cycle's design artifacts — analysis report, feature design, verification design, decision ledger, build report | a fresh `autoflow-reviewer` spawn (`.claude/agents/autoflow-reviewer.md`), on the model `.claude/autoflow/spawn-policy.json` names for `handoff-review` |
-| external (`codex`) | when `.claude/autoflow.local.json` names it | the PR (diff, body, linked issue), `.codex/review.md` | `scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, loading the repo's `AGENTS.md`; the prompt names AutoFlow's `.codex/review.md` by its absolute path |
+| built-in (`claude`) | every pull request | the PR (diff, body, linked issue), `<autoflow-root>/.codex/review.md`, the cycle's design artifacts — analysis report, feature design, verification design, decision ledger, build report | a fresh `autoflow-reviewer` spawn (`<autoflow-root>/agents/autoflow-reviewer.md`), on the model `.claude/autoflow/spawn-policy.json` names for `handoff-review` |
+| external (`codex`) | when `.claude/autoflow.local.json` names it | the PR (diff, body, linked issue), `<autoflow-root>/.codex/review.md` | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, loading the repo's `AGENTS.md`; the prompt names AutoFlow's `<autoflow-root>/.codex/review.md` by its absolute path |
 
 An external reviewer is another vendor's model reviewing the same pull request;
 the same model is not run twice under two settings. A new external reviewer is a
-name the resolver supports (`scripts/review/lib/review-config.sh`) plus its
+name the resolver supports (`<autoflow-root>/scripts/review/lib/review-config.sh`) plus its
 runtime.
 
 ## Contract
@@ -27,10 +27,10 @@ runtime.
 Contract: reviewer
   Output : one review record per reviewer, PR and round —
            .autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
-           in the .codex/review.md Output Format, in Korean.
+           in the <autoflow-root>/.codex/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
-Contract: aggregator  (docs/units/delivery.md > Review aggregation)
+Contract: aggregator  (<autoflow-root>/docs/units/delivery.md > Review aggregation)
   Input  : every review record of the PR and round.
   Output : one PR comment; the PR's findings file (source and disposition per
            finding); `blocked-by-review` taken off the PR when the round is
@@ -44,7 +44,7 @@ Label  : the orchestrator puts `blocked-by-review` on the PR when it runs a
 The external wrapper takes the record path:
 
 ```
-scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
+<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
 ```
 
 It stops (exit `3`) when the PR is not that OPEN PR on that head branch, and
@@ -59,7 +59,7 @@ The external reviewers are recorded in the target-owned scaffold
 { "review": { "reviewers": ["codex"] } }
 ```
 
-Read type-aware by `scripts/review/lib/review-config.sh` (the key's JSON type
+Read type-aware by `<autoflow-root>/scripts/review/lib/review-config.sh` (the key's JSON type
 first, then its value). `.review.reviewers` lists the external reviewers run
 beside the built-in review; `[]` names none. When it is absent, the earlier
 single-reviewer key is read: `.review.backend: "codex"` reads as `["codex"]`.
@@ -89,7 +89,7 @@ scaffold. Every key is optional:
 }
 ```
 
-**Single source of truth.** `scripts/review/lib/review-config.sh` is the one
+**Single source of truth.** `<autoflow-root>/scripts/review/lib/review-config.sh` is the one
 parser, validator and flag-mapper for the whole `review` section. It is
 **sourced** by both the live wrapper (`codex-review-pr.sh`) and
 `check-review-backend.sh` (presence path and `--probe`), and it ships to targets
@@ -146,7 +146,7 @@ effort follow the user's session settings. None of them reads another.
 
 ## Availability (PREFLIGHT, advisory)
 
-`scripts/preflight/check-review-backend.sh` resolves the `review` section
+`<autoflow-root>/scripts/preflight/check-review-backend.sh` resolves the `review` section
 through the shared resolver, prints the configured external reviewers as one
 `reviewers: <names|none>` line on stdout — the readout HANDOFF runs them from
 ([`units/delivery.md`](units/delivery.md) > *Reviewer review*) — and probes each
@@ -168,7 +168,7 @@ failure surfaces at the HANDOFF run, where it counts as a failed run.
 
 ## On-demand auth probe (`--probe`)
 
-`scripts/preflight/check-review-backend.sh --probe` is a **separate on-demand
+`<autoflow-root>/scripts/preflight/check-review-backend.sh --probe` is a **separate on-demand
 mode**: it performs **one real authenticated round-trip** against each
 configured external reviewer — for `codex`, the same model-API connection a
 `codex exec` opens. With no external reviewer configured it reports so and exits
@@ -192,7 +192,7 @@ to abort an install or gate a cycle.
 
 ## Start-confirmation oracle
 
-`scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
+`<autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
 reads these signals for an external run and reports the first one it finds
 ([`units/delivery.md`](units/delivery.md) > *Reviewer review*): a session
 rollout under `~/.codex/sessions/` written since the launch whose prompt names

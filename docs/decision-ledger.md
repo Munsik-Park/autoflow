@@ -26,8 +26,8 @@ A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, w
 
 This table is the mapping's only documentary home; other documents cite it rather than restate it.
 
-- **Allocation**. `bash scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` issues every identifier, called immediately before that entry's own append ([`core.md`](core.md) > Decision Ledger). It takes the next serial above both the highest in the file and the highest already reserved, and reserves it before printing it — an empty directory `issue-{N}-ledger.ids/<ID>` beside the ledger, which one caller alone can create. Writers of one namespace that call it concurrently — two advisors spawned together, each allocating before the other has appended — therefore receive distinct identifiers. A reserved identifier that is never appended (the append denied, the writer stopped) leaves a gap in the serial; a gap is not a defect, and `check` does not report one. A writer whose append must be retried keeps the identifier it was issued.
-- **Identifier collision**. Two entries can share an identifier — entries written before this protocol or before `next` reserved what it issued, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair. A reader that resolves a supersession by identifier (`scripts/gate/security-checklist.sh`) displaces every earlier entry it counts that the named identifier matches — never an operator entry by an advisor's — so a re-deriving entry written by the colliding entries' own authority is the one that stands.
+- **Allocation**. `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` issues every identifier, called immediately before that entry's own append ([`core.md`](core.md) > Decision Ledger). It takes the next serial above both the highest in the file and the highest already reserved, and reserves it before printing it — an empty directory `issue-{N}-ledger.ids/<ID>` beside the ledger, which one caller alone can create. Writers of one namespace that call it concurrently — two advisors spawned together, each allocating before the other has appended — therefore receive distinct identifiers. A reserved identifier that is never appended (the append denied, the writer stopped) leaves a gap in the serial; a gap is not a defect, and `check` does not report one. A writer whose append must be retried keeps the identifier it was issued.
+- **Identifier collision**. Two entries can share an identifier — entries written before this protocol or before `next` reserved what it issued, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair. A reader that resolves a supersession by identifier (`<autoflow-root>/scripts/gate/security-checklist.sh`) displaces every earlier entry it counts that the named identifier matches — never an operator entry by an advisor's — so a re-deriving entry written by the colliding entries' own authority is the one that stands.
 
 ## Decision-point entries
 
@@ -105,7 +105,7 @@ row and its discharging site like any other.
 against is the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist`,
 and a cycle's AUDIT reads it as of the cycle's base commit ([`core.md`](core.md) > Rule Scope, principle 1). Changing it inside a cycle — the file, or the
 declaration that points at it — is never the cycle's own to accept: the **advisor** decides first
-and the **operator** may override. When `scripts/gate/security-checklist.sh status` reports the
+and the **operator** may override. When `<autoflow-root>/scripts/gate/security-checklist.sh status` reports the
 change at AUDIT entry, the orchestrator spawns the advisor, and the answer is recorded in the same
 trailing-marker grammar: the heading `## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]` (an
 override: `## O<n> — …`), followed by a `- Checklist:` line (the declared path at HEAD, or `none` when
@@ -131,9 +131,9 @@ and the operator reviews and may override them; the confirmation that follows is
 ([`core.md`](core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
 `## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
 line, a `- Record:` line (the repository-relative path of the review record), an
-`- Issue body sha256:` line (the value `scripts/preflight/criterion-ready.sh hash --issue N` prints
+`- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
 for the body as confirmed), and the ordinary Grounds and Authority lines with the authority value
-`operator decision`. No `A<n>` entry carries the marker. `scripts/preflight/criterion-ready.sh
+`operator decision`. No `A<n>` entry carries the marker. `<autoflow-root>/scripts/preflight/criterion-ready.sh
 status` reads the **last** entry carrying the marker and counts it only when it is an `O` entry
 under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
 the body is confirmed by a new entry, never by editing this one. PREFLIGHT reads that status in

@@ -270,7 +270,7 @@ If the clone itself is behind upstream, refresh it first
 ## Troubleshooting
 
 ### Hook not running
-- Confirm the hook is executable: `chmod +x .claude/hooks/check-autoflow-gate.sh`.
+- Confirm the hook is executable: `chmod +x hooks/check-autoflow-gate.sh` under the plugin root (`autoflow-root` prints it).
 - Confirm `CLAUDE_PROJECT_DIR` is set by Claude Code.
 
 ### Evaluation not working

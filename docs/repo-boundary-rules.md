@@ -18,11 +18,11 @@ Throughout these rules, **target** (equivalently **target scope**) means the sco
 
 ### Artifacts (산출물)
 
-Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so the build unit commits on that sub-repo's branch and the Orchestrator opens the PR. *See:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`docs/core.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
+Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger and AutoFlow state belong to the host; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so the build unit commits on that sub-repo's branch and the Orchestrator opens the PR. *See:* the Commit Ownership committer column and the Decision Ledger host-ownership rule (`<autoflow-root>/docs/core.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
 
 ### Procedures (절차)
 
-Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → host pointer), the sub-repo push and the host reconcile on request are the Orchestrator's coordination surface; merge ordering is the operator's. *See:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`docs/core.md`).
+Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → host pointer), the sub-repo push and the host reconcile on request are the Orchestrator's coordination surface; merge ordering is the operator's. *See:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`<autoflow-root>/docs/core.md`).
 
 ### Backlog (백로그)
 
@@ -127,7 +127,7 @@ When two repos need changes that conflict (e.g., incompatible interface changes)
 
 1. **Detect**: Orchestrator identifies the conflict during coordination
 2. **Pause**: Both repos pause their AutoFlow at current phase
-3. **Resolve**: Orchestrator proposes a resolution; a choice that is not its own to make goes to the advisor (`docs/role-contracts.md` > Advisor)
+3. **Resolve**: Orchestrator proposes a resolution; a choice that is not its own to make goes to the advisor (`<autoflow-root>/docs/role-contracts.md` > Advisor)
 4. **Record**: Resolution recorded in the decision ledger
 5. **Resume**: Repos resume with the agreed approach
 

@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `docs/*.md`, `docs/units/*.md`, `.claude/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -39,12 +39,12 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
-- Spawn model: resolved from the spawn policy, never restated here — `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
-- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
+- Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
+- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
+1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `<autoflow-root>/docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `<autoflow-root>/docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
 3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
@@ -123,7 +123,7 @@ it and the unit documents cite it.
   orchestrator cannot route with confidence (a pause criterion, a rebuttal the re-score or the
   reviewer keeps while the two sides still disagree) are already decisions the working AI could not
   settle. A security-checklist change (`[checklist-decision]`) is the one decision point by its
-  kind: `scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
+  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
   ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*). Outside a cycle,
   a point the criterion review cannot settle is one as well, put by the review session, which takes
   the orchestrator's part in the procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
@@ -149,19 +149,19 @@ it and the unit documents cite it.
    decision surfaced in). The advisor starts from that reading rather than gathering the material
    anew.
 2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
-   `bash scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
+   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
    `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
    phase. The spawn is never score-gated. Where two or more decisions are open and none depends on
    another's answer, their advisors may be spawned together, and a decision that depends on another's
    answer is spawned after that answer is recorded; whether to spawn them together or one after
-   another is the orchestrator's judgment (`docs/core.md` > Rule Scope, principle 2), within the
-   concurrent-spawn limit (`docs/core.md` > Cost Control).
+   another is the orchestrator's judgment (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2), within the
+   concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
    `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
    `- Record:` line to the answer file and the marker and fields the decision's kind requires
    ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
-   `bash scripts/ledger/ledger-entry-id.sh next <ledger> A`, called immediately before the append; the
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> A`, called immediately before the append; the
    call reserves the identifier, so advisors spawned together receive distinct ones
    ([`decision-ledger.md`](decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
@@ -178,7 +178,7 @@ agent, role spawn or orchestrator whose work raised the point, and its record ca
 Its authority is worth only that separation, and the operator's override only its own — so each
 is written by its own writer alone and stays as written. Three locks:
 
-- **Authorship — the gate hook** (`.claude/hooks/check-autoflow-gate.sh`, *Section 1e*,
+- **Authorship — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
   state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
   authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
   text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
@@ -187,15 +187,15 @@ is written by its own writer alone and stays as written. Three locks:
 - **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
   on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
   A decision changes only by a new entry that names the one it replaces
-  (`docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
+  (`<autoflow-root>/docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
 - **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
   `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
-  `- Supersedes:` / `- Overrides:` line (`scripts/gate/security-checklist.sh`; the gate backstops
+  `- Supersedes:` / `- Overrides:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`; the gate backstops
   match the `[ac-decision]` marker and read the authority as recorded).
 
 The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
 meant to append to, or writing an authority that is not its own — not a determined evasion (the
-same model as `docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
+same model as `<autoflow-root>/docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
 (redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
 line, a malformed heading, a variant spelling of an authority).
 
@@ -234,12 +234,12 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 - **Method is the unit's.** How the unit reaches its goal — what it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
   with its grounds in the unit's artifact ([`core.md`](core.md) > Rule Scope, principle 2).
-  The definitions (`.claude/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
+  The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
   verification, and nothing else.
 - **A unit agent's spawns inherit its gate class.** The hook admits a spawn whose caller
   (`agent_type`) is a unit agent without a role declaration and judges it by the unit's class; a
   declared role that has a gate of its own keeps that gate too, so an existing role type is never
-  judged more loosely because a unit spawned it (`docs/gate-matching-standard.md`
+  judged more loosely because a unit spawned it (`<autoflow-root>/docs/gate-matching-standard.md`
   > P3). The caller is the immediate one: a helper's own spawn is judged by its own declaration.
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never writes
   the state file or the ledger, never pushes, merges or files an issue, and a decision point it meets
@@ -251,7 +251,9 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
   `unit-build-area`, `unit-build-verify` and `unit-build-observe`: each is spawned as
   `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
   `effort` parameter, omitted when the row reads out the inherit sentinel
-  ([U4 Build and verify](units/build.md) > *Dividing the work*).
+  ([U4 Build and verify](units/build.md) > *Dividing the work*). A helper receives in its prompt
+  the AutoFlow root and the paths of the rules its work follows
+  ([U4 Build and verify](units/build.md) > *What crosses a boundary*).
 
 ---
 

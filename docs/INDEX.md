@@ -4,7 +4,7 @@ Use this page as the first stop before assigning or implementing an issue.
 It routes two document classes that live in separate trees: the **usage
 documents** an agent reads and follows while a cycle runs — the source of the
 rules, stamped to every target — and the **design and decision records** under
-`docs/records/`, read for a decision's history and grounds, the source of no
+`<autoflow-root>/docs/records/`, read for a decision's history and grounds, the source of no
 rule, and never stamped.
 
 ## Usage documents
@@ -21,7 +21,7 @@ These documents are the operating source of truth.
 
 | Document | Role |
 | --- | --- |
-| [Core](core.md) | AutoFlow operating manual and phase router (imported by `CLAUDE.md`). |
+| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle` and `/autoflow:criterion-review` command bodies (ADR-0027 D2). |
 | [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
 | [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |
@@ -31,20 +31,20 @@ These documents are the operating source of truth.
 | [Tool Delivery Contract](tool-delivery-contract.md) | Version pin, CLAUDE.md re-stamp, target-identity separation, and install-manifest rules for AutoFlow as a consumed tool. |
 | [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Criterion Review](criterion-review.md) | The review of a new issue's acceptance criteria against the target's code and policy outside the cycle, the operator's `[criterion-ready]` confirmation, and the readiness fact PREFLIGHT reads. |
-| [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
+| [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 | [Thin Root Layer Contract](thin-root-layer.md) | The artifacts that must live at a consuming target's project root and the `CLAUDE_CODE_*` env contract. |
 
 ### Quick Routing
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `docs/core.md`, `docs/autoflow-guide.md`, `docs/units/*.md` |
-| Sub-repo implementation (a project with sub-repos) | `docs/repo-boundary-rules.md` |
-| Issue decomposition or readiness | `docs/development-guideline.md` |
-| Filing a new issue | `docs/issue-proposal.md` |
-| Making a filed issue ready for its first cycle | `docs/criterion-review.md` |
-| Tool distribution, install/upgrade, or version pinning | `docs/tool-delivery-contract.md`, `docs/thin-root-layer.md` |
-| Reviewers (built-in + external), review aggregation | `docs/reviewer-backend.md`, `docs/external-review-sequencing.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*.md` |
+| Sub-repo implementation (a project with sub-repos) | `<autoflow-root>/docs/repo-boundary-rules.md` |
+| Issue decomposition or readiness | `<autoflow-root>/docs/development-guideline.md` |
+| Filing a new issue | `<autoflow-root>/docs/issue-proposal.md` |
+| Making a filed issue ready for its first cycle | `<autoflow-root>/docs/criterion-review.md` |
+| Tool distribution, install/upgrade, or version pinning | `<autoflow-root>/docs/tool-delivery-contract.md`, `<autoflow-root>/docs/thin-root-layer.md` |
+| Reviewers (built-in + external), review aggregation | `<autoflow-root>/docs/reviewer-backend.md`, `<autoflow-root>/docs/external-review-sequencing.md` |
 
 ## Design and decision records
 
@@ -53,5 +53,5 @@ usage document to a record resolves in this repository only.
 
 | Record tree | Use When |
 | --- | --- |
-| `docs/records/` — [Design Rationale](records/design-rationale.md), the ADRs registered in [ADR README](records/adr/README.md) (drafts start from its template), [design reviews](records/design-reviews/issue-177-deliberation-participant-lifetime.md) | You need the history or grounds of a decision: why a rule exists, when and by whom it was settled, which alternatives were rejected, or you are creating or amending an ADR. |
+| `<autoflow-root>/docs/records/` — [Design Rationale](records/design-rationale.md), the ADRs registered in [ADR README](records/adr/README.md) (drafts start from its template), [design reviews](records/design-reviews/issue-177-deliberation-participant-lifetime.md) | You need the history or grounds of a decision: why a rule exists, when and by whom it was settled, which alternatives were rejected, or you are creating or amending an ADR. |
 
