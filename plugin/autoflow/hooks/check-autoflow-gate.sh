@@ -71,6 +71,45 @@ set -e
 AUTOFLOW_DIR="${CLAUDE_PROJECT_DIR:-.}/.autoflow"
 INPUT=$(cat)
 
+# ── AutoFlow paths: helper lookup and the paths a message names ──
+# The AutoFlow tree this hook belongs to is looked up from the plugin root first
+# and then from this script's own location — never from the project dir, which
+# is the target's tree. `$CLAUDE_PLUGIN_ROOT` is set in the hook environment; the
+# relative candidates are for a direct invocation without it (`<root>/hooks/`,
+# and the two in-checkout copies .claude/hooks/ and plugin/autoflow/hooks/ two
+# and three levels below the repository root). Keeping every candidate here is
+# what lets this file stay byte-identical to its mirror.
+_AF_HOOKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# af_resolve <rel> — the absolute path of <rel> in the AutoFlow tree, or nothing.
+af_resolve() {
+  local _root _abs
+  for _root in "${CLAUDE_PLUGIN_ROOT:-}" "$_AF_HOOKDIR/.." "$_AF_HOOKDIR/../.." "$_AF_HOOKDIR/../../.."; do
+    [ -n "$_root" ] && [ -e "$_root/$1" ] || continue
+    _abs="$(cd "$_root" 2>/dev/null && pwd)" || continue
+    printf '%s/%s' "$_abs" "$1"
+    return 0
+  done
+  return 0
+}
+# af_path <rel> — what a message names: the absolute path when the AutoFlow tree
+# carries <rel>, otherwise <rel> as written.
+af_path() {
+  local _p
+  _p="$(af_resolve "$1")"
+  printf '%s' "${_p:-$1}"
+}
+# af_helper <rel> — a helper script to run: the AutoFlow tree's own copy, then
+# the copy a stamped target carries in its own tree (ranked last, so the
+# plugin's helper wins wherever the plugin carries one). Nothing when neither
+# exists.
+af_helper() {
+  local _p
+  _p="$(af_resolve "$1")"
+  if [ -n "$_p" ] && [ -f "$_p" ]; then printf '%s' "$_p"; return 0; fi
+  if [ -f "${CLAUDE_PROJECT_DIR:-.}/$1" ]; then printf '%s' "${CLAUDE_PROJECT_DIR:-.}/$1"; fi
+  return 0
+}
+
 # ── Hook target detection ──
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
@@ -462,7 +501,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     _bg_deny=1
   fi
   if [ "$_bg_deny" = 1 ]; then
-    echo "BLOCKED: a backgrounded run of scripts/test/run-suites.sh is denied — run it in the foreground (docs/role-common-rules.md > Bash Execution Mode)." >&2
+    echo "BLOCKED: a backgrounded run of $(af_path scripts/test/run-suites.sh) is denied — run it in the foreground ($(af_path docs/role-common-rules.md) > Bash Execution Mode)." >&2
     echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
@@ -500,7 +539,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   fi
   if [ "$_label_deny" = 1 ]; then
     echo "BLOCKED: AutoFlow does not clear the 'blocked-by-subrepo' merge-order label." >&2
-    echo "blocked-by-subrepo is the operator's step at merge (docs/external-review-sequencing.md > Merge-order clearance)." >&2
+    echo "blocked-by-subrepo is the operator's step at merge ($(af_path docs/external-review-sequencing.md) > Merge-order clearance)." >&2
     exit 2
   fi
 
@@ -539,8 +578,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     fi
   done <<< "$_SEGMENTS"
   if [ "$_issue_create_deny" = 1 ]; then
-    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied (docs/issue-proposal.md)." >&2
-    echo "Write a draft to .autoflow/<name>.md per docs/issue-proposal.md, then run: scripts/issue/create-issue.sh --draft .autoflow/<name>.md" >&2
+    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/issue-proposal.md))." >&2
+    echo "Write a draft to .autoflow/<name>.md per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft .autoflow/<name>.md" >&2
     echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
     exit 2
   fi
@@ -610,7 +649,7 @@ is_advisor_type() {
   return 1
 }
 ledger_deny() {
-  echo "BLOCKED: decision ledger — $1 (ADR-0025 D7; docs/role-contracts.md > Advisor > Independence; docs/decision-ledger.md)." >&2
+  echo "BLOCKED: decision ledger — $1 (ADR-0025 D7; $(af_path docs/role-contracts.md) > Advisor > Independence; $(af_path docs/decision-ledger.md))." >&2
   echo "The ledger is append-only: add a new entry that names the entry it supersedes or overrides. The advisor writes A entries only; O entries and the operator's authority are the main session's." >&2
   exit 2
 }
@@ -812,18 +851,10 @@ is_score_gated_surface() {
 # an unreadable ledger or an unwritable cache degrades to "no advice" rather
 # than to a broken hook.
 ledger_advisory_check() {
-  local _helper="" _cand _hookdir _cache _ledger _hash _prev _out
-  _hookdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  # The helper is resolved relative to this script, not to the project dir, so
-  # both installed copies find it: .claude/hooks/ and plugin/autoflow/hooks/
-  # sit two and three levels below the repo root respectively. Keeping both
-  # candidates here is what lets this file stay byte-identical to its mirror.
-  for _cand in \
-    "$_hookdir/../../scripts/ledger/ledger-entry-id.sh" \
-    "$_hookdir/../../../scripts/ledger/ledger-entry-id.sh" \
-    "${CLAUDE_PROJECT_DIR:-.}/scripts/ledger/ledger-entry-id.sh"; do
-    if [ -f "$_cand" ]; then _helper="$_cand"; break; fi
-  done
+  local _helper _cache _ledger _hash _prev _out
+  # The helper is resolved by af_helper (top of this file): the AutoFlow tree's
+  # own copy first, the stamped target's copy last.
+  _helper="$(af_helper scripts/ledger/ledger-entry-id.sh)"
   [ -n "$_helper" ] || return 0
   command -v shasum >/dev/null 2>&1 || return 0
 
@@ -855,10 +886,10 @@ ledger_advisory_check() {
       # Bounded: the helper already sanitises and truncates each heading it
       # echoes; this caps how many defect lines one warning can emit.
       printf '%s\n' "$_out" | head -20 >&2
-      echo "  Allocate identifiers with scripts/ledger/ledger-entry-id.sh next (CLAUDE.md > Decision Ledger)." >&2
+      echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next (CLAUDE.md > Decision Ledger)." >&2
       LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
 $(printf '%s\n' "$_out" | head -20)
-A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as docs/decision-ledger.md > Entry identifier > Identifier collision says.
+A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
 "
     fi
 
@@ -917,20 +948,14 @@ ledger_advisory_check || true
 # construction — the whole step runs under `|| true`, so a missing helper, a
 # missing `jq` or an unreadable config degrades to "no advice" rather than to a
 # broken hook (which would block the evaluation spawns that must stay
-# spawnable). The helper is resolved relative to THIS script, by the same
-# three-candidate list `ledger_advisory_check` uses, which is precisely what
-# lets .claude/hooks/ and plugin/autoflow/hooks/ stay byte-identical; the config
-# is then resolved by the readout relative to itself, never by this hook.
+# spawnable). The helper is resolved by the same af_helper lookup
+# `ledger_advisory_check` uses; the config is then resolved by the readout
+# itself (the target's policy first, the AutoFlow default after it), never by
+# this hook.
 spawn_policy_advisory_check() {
-  local _helper="" _cand _hookdir _subtype _model _admitted
+  local _helper _subtype _model _admitted
   [ "$TOOL_NAME" = "Agent" ] || return 0
-  _hookdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  for _cand in \
-    "$_hookdir/../../scripts/spawn-policy/spawn-policy.sh" \
-    "$_hookdir/../../../scripts/spawn-policy/spawn-policy.sh" \
-    "${CLAUDE_PROJECT_DIR:-.}/scripts/spawn-policy/spawn-policy.sh"; do
-    if [ -f "$_cand" ]; then _helper="$_cand"; break; fi
-  done
+  _helper="$(af_helper scripts/spawn-policy/spawn-policy.sh)"
   [ -n "$_helper" ] || return 0
 
   _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
@@ -948,7 +973,7 @@ spawn_policy_advisory_check() {
   [ -n "$_admitted" ] || return 0
   if ! printf '%s\n' "$_admitted" | grep -qxF "$_model"; then
     echo "WARNING: spawn model '$_model' is outside the spawn policy's admitted set for subagent_type '$_subtype' (advisory — this call is NOT blocked)." >&2
-    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with scripts/spawn-policy/spawn-policy.sh model <phase-key> (CLAUDE.md > Spawn Model)." >&2
+    echo "  Admitted: $(printf '%s' "$_admitted" | tr '\n' ' ')— resolve the phase's model with $(af_path scripts/spawn-policy/spawn-policy.sh) model <phase-key> (CLAUDE.md > Spawn Model)." >&2
   fi
   return 0
 }
@@ -1264,7 +1289,7 @@ block_if_open_reentry() {
   fi
   if [ -n "$_open" ]; then
     echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open (docs/units/completion-evaluation.md > Recommendation triage)." >&2
+    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open ($(af_path docs/units/completion-evaluation.md) > Recommendation triage)." >&2
     echo "State file: $STATE_FILE" >&2
     exit 2
   fi
@@ -1311,7 +1336,7 @@ if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}$
     fi
     if [ "$_sweep_ok" -ne 1 ]; then
       echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
-      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy (docs/units/completion-evaluation.md > FAIL routing)." >&2
+      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy ($(af_path docs/units/completion-evaluation.md) > FAIL routing)." >&2
       echo "State file: $STATE_FILE" >&2
       exit 2
     fi

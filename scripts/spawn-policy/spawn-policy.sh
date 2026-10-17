@@ -39,17 +39,26 @@ usage() {
   exit 2
 }
 
-# ── Config resolution: script-relative, never cwd-relative ────────────────────
-# The hook is the one caller whose working directory is not the repo root, so a
-# bare `.` candidate would silently hand it "no policy". $AUTOFLOW_SPAWN_POLICY
-# is the explicit override (the scratch-copy propagation leg), and it moves the
-# agent-definition lookup below with it — the base tree is the config's tree.
+# ── Config resolution: override, then the target's policy, then the default ───
+# $AUTOFLOW_SPAWN_POLICY is the explicit override (the scratch-copy propagation
+# leg), and it moves the agent-definition lookup below with it — the base tree
+# is the config's tree. Without it, the target's own policy wins over the
+# default the AutoFlow tree carries beside this script: the target is
+# $CLAUDE_PROJECT_DIR when the harness set it (the hook, whose working directory
+# is not always the repository root), otherwise the git toplevel of the working
+# directory; never a bare `.`, which would hand a caller in a subdirectory "no
+# policy". The default is the policy two levels above this script.
 _selfdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  _target_root="$CLAUDE_PROJECT_DIR"
+else
+  _target_root="$(git rev-parse --show-toplevel 2>/dev/null)" || _target_root=""
+fi
 CONFIG=""
 for _cand in \
   "${AUTOFLOW_SPAWN_POLICY:-}" \
-  "$_selfdir/../../.claude/autoflow/spawn-policy.json" \
-  "${CLAUDE_PROJECT_DIR:-}/.claude/autoflow/spawn-policy.json"; do
+  "${_target_root:+$_target_root/.claude/autoflow/spawn-policy.json}" \
+  "$_selfdir/../../.claude/autoflow/spawn-policy.json"; do
   [ -n "$_cand" ] || continue
   if [ -f "$_cand" ]; then CONFIG="$_cand"; break; fi
 done
@@ -80,8 +89,13 @@ _base="$(cd "$_cfgdir/../.." && pwd)"                    # <base>
 AGENTS_DIR=""
 AGENTS_SOURCE=""
 _local_agents="$_base/.claude/agents"
+_self_agents="$(cd "$_selfdir/../.." && pwd)/agents"     # <root>/agents
 if [ -d "$_local_agents" ] && ls "$_local_agents"/autoflow-*.md >/dev/null 2>&1; then
   AGENTS_DIR="$_local_agents"; AGENTS_SOURCE="tree"
+elif [ -d "$_self_agents" ] && ls "$_self_agents"/autoflow-*.md >/dev/null 2>&1; then
+  # The AutoFlow tree this readout runs from carries the definitions at its
+  # root: the root this script runs from is the root the session loaded.
+  AGENTS_DIR="$_self_agents"; AGENTS_SOURCE="plugin"
 else
   # Helper lookup: beside this script, then the base tree, then the project
   # dir — the same three-way resolution the hook applies to this script.
@@ -110,6 +124,11 @@ agents_dir_candidates() {
     printf '%s (no autoflow-*.md)\n' "$_local_agents"
   else
     printf '%s (absent)\n' "$_local_agents"
+  fi
+  if [ -d "$_self_agents" ]; then
+    printf '%s (no autoflow-*.md)\n' "$_self_agents"
+  else
+    printf '%s (absent)\n' "$_self_agents"
   fi
   if type autoflow_plugin_root_candidates >/dev/null 2>&1; then
     autoflow_plugin_root_candidates "$_base" | sed 's|/*$|/agents|'

@@ -47,7 +47,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# The root examined without --root is the git toplevel of the working directory
+# (the target), never the tree this script ships in.
+DEFAULT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || DEFAULT_ROOT=""
 
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
@@ -67,6 +69,10 @@ while [ $# -gt 0 ]; do
   shift
 done
 ROOT="${ROOT:-$DEFAULT_ROOT}"
+if [ -z "$ROOT" ]; then
+  echo "check-cycle-layer-index: no --root given and the working directory is not inside a git repository — pass --root <dir>" >&2
+  exit 2
+fi
 
 if [ ! -d "$ROOT" ]; then
   echo "check-cycle-layer-index: --root is not a directory: $ROOT" >&2

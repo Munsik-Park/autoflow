@@ -14,7 +14,7 @@ aggregation*.
 | Reviewer | Runs | Input | Runtime |
 |----------|------|-------|---------|
 | built-in (`claude`) | every pull request | the PR (diff, body, linked issue), `.codex/review.md`, the cycle's design artifacts — analysis report, feature design, verification design, decision ledger, build report | a fresh `autoflow-reviewer` spawn (`.claude/agents/autoflow-reviewer.md`), on the model `.claude/autoflow/spawn-policy.json` names for `handoff-review` |
-| external (`codex`) | when `.claude/autoflow.local.json` names it | the PR (diff, body, linked issue), `.codex/review.md` | `scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, loading `AGENTS.md` → `.codex/review.md` |
+| external (`codex`) | when `.claude/autoflow.local.json` names it | the PR (diff, body, linked issue), `.codex/review.md` | `scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, loading the repo's `AGENTS.md`; the prompt names AutoFlow's `.codex/review.md` by its absolute path |
 
 An external reviewer is another vendor's model reviewing the same pull request;
 the same model is not run twice under two settings. A new external reviewer is a

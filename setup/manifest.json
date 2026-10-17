@@ -97,7 +97,7 @@
       "dest": ".claude/autoflow/docs/reviewer-backend.md",
       "tier": "reference",
       "kind": "copy",
-      "sha256": "90598b6e5f4094dec58892b4361719c5bb44ea96f7cad9bfc12a66b27ecb6a14"
+      "sha256": "002d60e43cc36c3420fe7c351eff6bcfea5a7001d1db971bdc3b6701ab87a926"
     },
     {
       "source": "docs/role-common-rules.md",
@@ -223,7 +223,7 @@
       "dest": "scripts/review/codex-review-pr.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "714d13578c9f7cba3cfe5e28fa22aa61d00b42edd8cede648c751236158ef1c6"
+      "sha256": "4e1c2dc3277bbf873c45ec0717bd08dfcbca0847c3fef35c0c29f1fe0c7f151f"
     },
     {
       "source": "scripts/review/lib/review-config.sh",
@@ -342,14 +342,14 @@
       "dest": "scripts/test/select-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b785f00c4807c774c1518ef965326c81602c81c448e4decc29e233dd4390bad7"
+      "sha256": "635b8f9c4c7a275edca61a8cb2c6b8b2dfff4df67763a589ab7ed200a5785088"
     },
     {
       "source": "scripts/test/run-suites.sh",
       "dest": "scripts/test/run-suites.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "0dc32eb38e4add029bc35971264198f39caede6819247262323e03dcb78b7e62"
+      "sha256": "1bdd26cf17f51c14c54096955d9bde77e628117e79118e9907fcdcee08e8b98f"
     },
     {
       "source": "scripts/test/invocation-scan.sh",
@@ -384,7 +384,7 @@
       "dest": "scripts/test/check-cycle-layer-index.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "b4e86187b5d6a8547012e24066f2c5b1752261d30066e2c396a2f1a11b904ead"
+      "sha256": "3d299f16961f019135a96fbfe6dcde8676dc1fd33f4b1960507bc60fc1858b8c"
     },
     {
       "source": "scripts/issue/create-issue.sh",
@@ -405,7 +405,7 @@
       "dest": "scripts/spawn-policy/spawn-policy.sh",
       "tier": "root-layer",
       "kind": "copy",
-      "sha256": "a5f64831eea6052baa6f92b97916963ed19aa07e3f10d244ca1e411997d1b7b6"
+      "sha256": "4232b9a4cf3950ddf17ee78121960e90410521034e803cd51c70cb2a06a600df"
     },
     {
       "source": "scripts/lib/plugin-root.sh",

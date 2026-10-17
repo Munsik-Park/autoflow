@@ -64,6 +64,10 @@ jobs:
         timeout-minutes: 10
         run: bash tests/test-cycle-layer-devices-shipped.sh
 
+      - name: verify-path-independence.sh
+        timeout-minutes: 10
+        run: bash tests/plugin/verify-path-independence.sh
+
       - name: manifest regen-clean lint
         run: bash scripts/test/check-manifest-regen-clean.sh
 
