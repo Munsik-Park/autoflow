@@ -175,7 +175,7 @@ written):
 
 AutoFlow does not classify the target's repository structure and writes no
 project information file. Later work reads the project's own information and
-rule files where they exist (`.claude/autoflow/CLAUDE.md` > Project
+rule files where they exist (`.claude/autoflow/docs/core.md` > Project
 Information). Include in the Step 1 report, as a recommendation: if you look at
 the repository's structure and describe the project's information, later work
 can use it. What to write, and where, is yours to decide. Nothing is written

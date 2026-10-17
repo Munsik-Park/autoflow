@@ -1,6 +1,6 @@
 # Role Contracts
 
-> This document defines the role contracts for the role spawns that the AI Orchestrator dispatches in AutoFlow: **Evaluation AI**, the **advisor**, the **functional-unit agents**, and the **build unit in a target scope**. The Orchestrator's own coordination responsibilities remain in [`CLAUDE.md`](../CLAUDE.md) > Team Structure. Per-phase spawn model policy: see [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
+> This document defines the role contracts for the role spawns that the AI Orchestrator dispatches in AutoFlow: **Evaluation AI**, the **advisor**, the **functional-unit agents**, and the **build unit in a target scope**. The Orchestrator's own coordination responsibilities remain in [`core.md`](core.md) > Team Structure. Per-phase spawn model policy: see [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### Spawn mode by role lifetime
 
-Every role is an anonymous direct spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase); each role's mode and per-call scope:
+Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — Phase-by-Phase); each role's mode and per-call scope:
 
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
@@ -44,7 +44,7 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`CLAUDE.md`](../CLAUDE.md#cost-control) > Cost Control.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `docs/evaluation-system.md > [section]` or `.autoflow/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
 3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
@@ -62,7 +62,7 @@ The four keys match the `gated_phase_keys` allow-list in `tests/fixtures/gate-sc
 
 - **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`. Recording is permitted, not required.
 
-See [`CLAUDE.md`](../CLAUDE.md#autoflow-state-tracking-hook-integration) for the full schema.
+See [`state-tracking.md`](state-tracking.md) for the full schema.
 
 
 ---
@@ -71,7 +71,7 @@ See [`CLAUDE.md`](../CLAUDE.md#autoflow-state-tracking-hook-integration) for the
 
 The U4 build unit (`autoflow-unit-build`; *Functional-unit agents* below) works in the target scope the
 orchestrator assigns it — the target repository, or in a project with sub-repos one sub-repo's directory
-([`CLAUDE.md`](../CLAUDE.md) > Cross-Project Boundary Rules). What it owes the build is
+([`core.md`](core.md) > Cross-Project Boundary Rules). What it owes the build is
 [`units/build.md`](units/build.md) > *What the build owes*; what it owes the scope is below.
 
 - Works directly in the target repository and commits to the cycle's branch. It does not push: the
@@ -94,7 +94,7 @@ orchestrator assigns it — the target repository, or in a project with sub-repo
   work needs*).
 - Common rules: [`submodule-common-rules.md`](submodule-common-rules.md).
 
-*Secondary (multi-repo):* in a project with sub-repos (see [`CLAUDE.md`](../CLAUDE.md) > Project
+*Secondary (multi-repo):* in a project with sub-repos (see [`core.md`](core.md) > Project
 Information), a changed sub-repo is a target scope of its own: the unit commits there on that
 sub-repo's branch, which the orchestrator pushes at DELIVER, and PR creation remains the
 orchestrator's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*).
@@ -104,13 +104,13 @@ orchestrator's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*
 ## Advisor (first judgment at a decision point)
 
 ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
-This section is the procedure's single home; [`CLAUDE.md`](../CLAUDE.md) > Flow Control routes to
+This section is the procedure's single home; [`core.md`](core.md) > Flow Control routes to
 it and the unit documents cite it.
 
 ### Decision points and harness-level blocks
 
 - **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
-  confident of ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 3). An acceptance-criterion
+  confident of ([`core.md`](core.md) > Rule Scope, principle 3). An acceptance-criterion
   change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
   analysis records, a reviewer finding that repeats the previous attempt's complaint, and a
   GATE:HYPOTHESIS PASS the orchestrator judges unreachable are where such a decision arises, not
@@ -133,12 +133,12 @@ it and the unit documents cite it.
   denial), or a tool, credential, installation or material the environment does not provide — for a
   tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
   such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
-  `phase:"awaiting-user"` ([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > Human-decision
+  `phase:"awaiting-user"` ([`core.md`](core.md) > Execution Principles > Human-decision
   presentation). A decision at one of those points can end the cycle instead — a non-code lever or cause, a
   prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
   confirm closing the issue, the cycle not closing it itself ([U2 Analysis](units/analysis.md) >
   *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
-  points and are unchanged ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 1).
+  points and are unchanged ([`core.md`](core.md) > Rule Scope, principle 1).
 
 ### Procedure
 
@@ -154,8 +154,8 @@ it and the unit documents cite it.
    phase. The spawn is never score-gated. Where two or more decisions are open and none depends on
    another's answer, their advisors may be spawned together, and a decision that depends on another's
    answer is spawned after that answer is recorded; whether to spawn them together or one after
-   another is the orchestrator's judgment (`CLAUDE.md` > Rule Scope, principle 2), within the
-   concurrent-spawn limit (`CLAUDE.md` > Cost Control).
+   another is the orchestrator's judgment (`docs/core.md` > Rule Scope, principle 2), within the
+   concurrent-spawn limit (`docs/core.md` > Cost Control).
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
    `.autoflow/{repo-key}-issue-{N}/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
@@ -233,7 +233,7 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 
 - **Method is the unit's.** How the unit reaches its goal — what it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
-  with its grounds in the unit's artifact ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principle 2).
+  with its grounds in the unit's artifact ([`core.md`](core.md) > Rule Scope, principle 2).
   The definitions (`.claude/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
   verification, and nothing else.
 - **A unit agent's spawns inherit its gate class.** The hook admits a spawn whose caller

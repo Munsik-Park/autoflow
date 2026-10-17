@@ -2,7 +2,7 @@
 
 > Audience: the external reviewer who merges AutoFlow PRs, and the operator who bootstraps the host repository. AutoFlow ends at PR creation; this document covers what happens after.
 
-A project's sub-repos, and where each one's pull request goes (a fork, the upstream), are the project's own information ([`CLAUDE.md`](../CLAUDE.md) > Project Information). The merge order below concerns the PR of the host's direct sub-repo; a sub-repo nested inside it is merged and reconciled by that sub-repo's own procedure, outside host handoff scope. The rule AutoFlow keeps for a host that points at a sub-repo is [`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*.
+A project's sub-repos, and where each one's pull request goes (a fork, the upstream), are the project's own information ([`core.md`](core.md) > Project Information). The merge order below concerns the PR of the host's direct sub-repo; a sub-repo nested inside it is merged and reconciled by that sub-repo's own procedure, outside host handoff scope. The rule AutoFlow keeps for a host that points at a sub-repo is [`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*.
 
 ## Operator prerequisites
 

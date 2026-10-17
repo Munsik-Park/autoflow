@@ -17,7 +17,7 @@
 #
 # The grammar carried four further fields until ADR-0024 (issue #228) retired
 # them; their arms left with them, in the same change as the grammar's own
-# declaration (`CLAUDE.md` > Rule Scope, principle 4). The retirement grounds are
+# declaration (`docs/core.md` > Rule Scope, principle 4). The retirement grounds are
 # ADR-0024's, recorded there > Area 3 and summarised at the grammar site.
 #
 # THE SUITE PLANE IS OPT-IN, and this lint is one of the resolver's three

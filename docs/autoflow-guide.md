@@ -6,8 +6,9 @@
 > cautions and `[MUST]`/`[DENY]` constraints live in that unit's own file under `units/`
 > (*Unit Documents* below).
 > The cross-unit invariants, the router (unit and phase list + Flow Control table), the
-> regression / escalation caps, the Execution Principles, and the state schema live in
-> [`CLAUDE.md`](../CLAUDE.md).
+> regression / escalation caps and the Execution Principles live in [`core.md`](core.md);
+> each unit's Flow Control rows are its unit document's `## Transitions` section, and the
+> state schema is [`state-tracking.md`](state-tracking.md).
 
 ---
 
@@ -20,10 +21,10 @@ by an external review process; AutoFlow does not merge.
 
 Key principles:
 
-- **Judged route, fixed checks** — the phases run in the order below; which of them a change passes through, and how deep, is the working AI's judgment recorded with its grounds, while the independent checks — the gates, the push gate, CI, the reviewer review — are never skipped ([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1–3; > Execution Principles).
+- **Judged route, fixed checks** — the phases run in the order below; which of them a change passes through, and how deep, is the working AI's judgment recorded with its grounds, while the independent checks — the gates, the push gate, CI, the reviewer review — are never skipped ([`core.md`](core.md) > Rule Scope, principles 1–3; > Execution Principles).
 - **Multi-agent separation** — distinct roles handle implementation, testing, and evaluation.
 - **Quantified quality** — 10-point evaluation with a defined PASS threshold.
-- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`CLAUDE.md`](../CLAUDE.md) > Spawn Model — Phase-by-Phase.
+- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 The phase names generalize upstream's numeric `STEP 0~9` identifiers; the
 mapping is preserved below, with upstream's STEP 4–5.5 merged into one BUILD unit (ADR-0025).
@@ -151,7 +152,7 @@ BUILD (one unit spawn)
 
 Each functional unit's body lives in its own file
 ([`ADR-0025`](records/adr/0025-outcome-gated-functional-units.md) D1, D2);
-[`CLAUDE.md`](../CLAUDE.md) > Unit Document Loading Contract routes to the same files.
+[`core.md`](core.md) > Unit Document Loading Contract routes to the same files.
 
 | Unit | Phases | Unit document |
 |------|--------|---------------|
@@ -170,7 +171,7 @@ document routes each gate's result.
 
 ## Execution Principles
 
-→ Single source of truth: [`CLAUDE.md`](../CLAUDE.md) > Execution Principles. These are
+→ Single source of truth: [`core.md`](core.md) > Execution Principles. These are
 always-on orchestrator invariants: Safety first, Verify before transition, The route is the AI's judgment (the independent
 checks are not), Role-spawn idle
 handling, **Verify role-spawn claims before dispatch** (every report's Evidence anchor is
@@ -181,7 +182,8 @@ error.
 
 ## See Also
 
-- [`CLAUDE.md`](../CLAUDE.md) — cross-unit invariants, the router (unit and phase list + Flow Control), regression caps, Execution Principles, state schema.
+- [`core.md`](core.md) — cross-unit invariants, the router (unit and phase list + Flow Control), regression caps, Execution Principles; each unit's Flow Control rows are its unit document's `## Transitions` section.
+- [`state-tracking.md`](state-tracking.md) — state schema.
 - *Unit Documents* above — the six unit documents.
 - [`evaluation-system.md`](evaluation-system.md) — the evaluator's standard, scoring, PASS thresholds and the rubrics of all four gates.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.

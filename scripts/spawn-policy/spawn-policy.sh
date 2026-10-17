@@ -9,7 +9,7 @@
 # consumer — the orchestrator before a direct spawn, the gate hook's advisory,
 # the contract suites — obtains a value by running this script, never by
 # reading a prose table. Editing one config row therefore changes the next
-# spawn with no other file touched (CLAUDE.md > Spawn Model — Phase-by-Phase).
+# spawn with no other file touched (docs/core.md > Spawn Model — Phase-by-Phase).
 #
 # Usage:
 #   spawn-policy.sh model <phase-key>          -> the model literal

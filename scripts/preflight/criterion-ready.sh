@@ -16,7 +16,7 @@
 # `.autoflow/<repo-key>-issue-<N>/issue-<N>-ledger.md`. It counts only when:
 #   - its identifier is in the `O` namespace and its `- Authority:` line reads
 #     `operator decision` (the gate hook admits both from the main session
-#     only — CLAUDE.md > Hook gates);
+#     only — docs/state-tracking.md > Hook gates);
 #   - its `- Record:` line names a review record that exists (repo-relative);
 #   - its `- Issue body sha256:` line equals the sha256 of the issue body read
 #     from GitHub now, so an issue edited after the confirmation is not ready.

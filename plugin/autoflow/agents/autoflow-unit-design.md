@@ -9,7 +9,7 @@ goal, its artifact contract and its verification (ADR-0025 D2,
 `docs/records/adr/0025-outcome-gated-functional-units.md`); how you reach the
 goal — what you read, whether you spawn helpers or hold a dialogue, how you
 design this issue's own verification — is yours, recorded with its grounds in
-your artifact (`CLAUDE.md` > Rule Scope, principle 2).
+your artifact (`docs/core.md` > Rule Scope, principle 2).
 
 - **Goal**: a design the build unit can implement and verify: the architecture
   decisions with the constraints they hold under and the alternatives rejected,
@@ -24,7 +24,7 @@ your artifact (`CLAUDE.md` > Rule Scope, principle 2).
 - **Verification**: the unit's exit is `gate_plan` — a fresh Evaluation AI's
   GATE:PLAN score on the rubric of `docs/evaluation-system.md` > GATE:PLAN (ADR-0025 D1). A
   FAIL returns its findings and your previous artifacts to a fresh U3 spawn, up
-  to the existing ARCHITECT re-entry cap (`CLAUDE.md` > Flow Control >
+  to the existing ARCHITECT re-entry cap (`docs/core.md` > Flow Control >
   Regressions).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own

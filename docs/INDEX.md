@@ -21,7 +21,8 @@ These documents are the operating source of truth.
 
 | Document | Role |
 | --- | --- |
-| [CLAUDE.md](../CLAUDE.md) | AutoFlow operating manual and phase router. |
+| [Core](core.md) | AutoFlow operating manual and phase router (imported by `CLAUDE.md`). |
+| [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
 | [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |
 | [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
@@ -37,7 +38,7 @@ These documents are the operating source of truth.
 
 | If the issue touches... | Read first |
 | --- | --- |
-| AutoFlow rules, gates, agent roles, or hook behavior | `CLAUDE.md`, `docs/autoflow-guide.md`, `docs/units/*.md` |
+| AutoFlow rules, gates, agent roles, or hook behavior | `docs/core.md`, `docs/autoflow-guide.md`, `docs/units/*.md` |
 | Sub-repo implementation (a project with sub-repos) | `docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `docs/development-guideline.md` |
 | Filing a new issue | `docs/issue-proposal.md` |

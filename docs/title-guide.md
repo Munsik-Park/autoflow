@@ -61,7 +61,7 @@ epic 서브이슈가 아닌 경우(독립 이슈, epic 트래커)는 `epic-slice
 
 ## 커밋 메시지와의 관계
 
-커밋 메시지 규칙(`CLAUDE.md` > Commit Rules)은 별도로 유지된다.
+커밋 메시지 규칙(`docs/core.md` > Commit Rules)은 별도로 유지된다.
 
 ```
 feat(#231): 소진 내역 탭 프론트 — 기간 필터 + 검색   ← 커밋

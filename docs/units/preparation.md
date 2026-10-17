@@ -1,6 +1,6 @@
 # U1 Preparation — PREFLIGHT
 
-> Unit document for U1. [`CLAUDE.md`](../../CLAUDE.md) > Unit Document Loading Contract routes to
+> Unit document for U1. [`core.md`](../core.md) > Unit Document Loading Contract routes to
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
@@ -8,7 +8,7 @@ PREFLIGHT is functional unit U1 Preparation
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). U1 has no unit agent: it
 is the orchestrator's own work. This file states what it is asked for, the cautions and the result
 owed; the order of the work and the commands are the orchestrator's
-([`CLAUDE.md`](../../CLAUDE.md) > Rule Scope, principle 2). A script only reads and reports (D8):
+([`core.md`](../core.md) > Rule Scope, principle 2). A script only reads and reports (D8):
 every change — to git, to GitHub, to the cycle's state — is made by the orchestrator itself.
 
 - **Goal**: the requested issue starts, or continues, on a clean tree synced with the remote, with
@@ -24,6 +24,16 @@ every change — to git, to GitHub, to the cycle's state — is made by the orch
   runs again once it is resolved.
 - **Result owed**: the state file, the dev branch and the local-checks record above. A resume also
   owes its re-entry point, recorded with grounds in the ledger (*Resume*).
+
+## Transitions
+
+The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
+
+| Transition | Condition |
+|------|------|
+| PREFLIGHT → DIAGNOSE | earlier cycles resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for `mode: new-issue`), and the state file written for `mode: new-issue` or `mode: review-response` (`docs/units/preparation.md` > *What is asked*, *Modes*) |
+| PREFLIGHT → resume | the requested issue's own state reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`docs/units/preparation.md` > *Resume*) |
+| PREFLIGHT → user | another issue mid-cycle (hold), a pause for a human decision, a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, or a fail-closed stop condition — bundle drift, an unreadable reviewer configuration, a target-declared local check that does not pass after its declared repair, a new issue with no operator confirmation of its criterion review on record for its current body → report and stop; DIAGNOSE does not begin (`docs/units/preparation.md`) |
 
 ## What is asked
 
@@ -66,7 +76,7 @@ says which. From those facts the orchestrator brings about the following.
 - **A new issue gets its branch and its state**: the dev branch `dev/YYYY-MM-DD-HHMMSS-issue-N`
   from the default branch, named from the time it is created, the state file from the Creation
   template with that name in `branch`, `mode: "new-issue"` and `phase: "in-progress"`
-  ([`CLAUDE.md`](../../CLAUDE.md) > AutoFlow State Tracking), and the issue's
+  ([`state-tracking.md`](../state-tracking.md) > AutoFlow State Tracking), and the issue's
   `status:in-progress` label. The name is the cycle's for the life of its state file: a
   review-response continues on it, and the archive takes its name from it. A review-response gets *Review-response setup*.
 
@@ -79,7 +89,7 @@ Cautions:
   update.
 - **A push is gated by the active cycle.** Deleting a remote dev branch is a push, and the hook
   admits a push only while no cycle is active or once the active one has passed AUDIT and
-  GATE:QUALITY ([`CLAUDE.md`](../../CLAUDE.md) > Hook gates). A branch a cleared cycle left on the
+  GATE:QUALITY ([`state-tracking.md`](../state-tracking.md) > Hook gates). A branch a cleared cycle left on the
   remote is therefore deleted before the requested issue's state file is created or reactivated;
   on a resume it waits until the hook admits a push.
 - **The state file is created last.** A stop condition that fails, a hold or a pause leaves no
@@ -92,7 +102,7 @@ Cautions:
 ## PR Wait Rule
 
 The readiness check that clears the requested issue to start. Its source of truth is AutoFlow's own
-`.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state files; the start signal is [`CLAUDE.md`](../../CLAUDE.md) > PR Wait
+`.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state files; the start signal is [`core.md`](../core.md) > PR Wait
 Rule.
 
 - **[MUST]** An `active:false` state file (`phase: awaiting-external-review`) is **cleared and

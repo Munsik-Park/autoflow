@@ -35,7 +35,7 @@ The review makes that premise hold more often; it does not change it.
   for the issue. The review is that session's own work, and it writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's
   `## Inputs` with what it read and why, and what it left out and why (Rule Scope, principle 2 —
-  [`CLAUDE.md`](../CLAUDE.md)). The session carries stage 1 itself, the screening included; stage 2,
+  [`core.md`](core.md)). The session carries stage 1 itself, the screening included; stage 2,
   the in-depth analysis and the reconciliation run in fresh contexts it spawns —
   `autoflow-criterion-tracer`, `autoflow-criterion-analyzer` and `autoflow-criterion-reconciler`
   (*Stages of the review*, *Cause reach and rule conflict (stage 2)* and *In-depth analysis and
@@ -43,7 +43,7 @@ The review makes that premise hold more often; it does not change it.
 - **Reference model and effort.** The review session runs on Opus 5.5 (`claude-opus-5-5`) at effort
   `high`; another model or effort may be used. The setting for the session lives here because the
   review is the session's own work, not an `Agent` spawn. Its spawns take theirs from
-  `.claude/autoflow/spawn-policy.json` like every other spawn ([`CLAUDE.md`](../CLAUDE.md) > Spawn
+  `.claude/autoflow/spawn-policy.json` like every other spawn ([`core.md`](core.md) > Spawn
   Model): the model each declares is read with `bash scripts/spawn-policy/spawn-policy.sh model
   criterion-trace`, `… model criterion-in-depth` or `… model criterion-reconciliation`, and the
   effort is the one its agent
@@ -64,7 +64,7 @@ The review makes that premise hold more often; it does not change it.
   at the commit the host's pointer names.
 - **The target's policy** — the decision records and rule documents the criteria touch: the ADRs,
   the project's own information and rule files (a `README.md`, a `CLAUDE.local.md`, whatever the
-  project keeps — [`CLAUDE.md`](../CLAUDE.md) > Project Information), and the documents of the
+  project keeps — [`core.md`](core.md) > Project Information), and the documents of the
   sub-repos the issue reaches.
 
 ## Purpose and scope
@@ -203,10 +203,10 @@ and returns the record's path and a one-line summary.
 verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
 receives the issue body and the stage 1 record and none of the session's conversation, and the
 in-depth context receives the target file and nothing of the session's verdicts or grounds. What each context reads, in what order and with
-which tool, is its own (Rule Scope, principle 2 — [`CLAUDE.md`](../CLAUDE.md)). Each spawn
+which tool, is its own (Rule Scope, principle 2 — [`core.md`](core.md)). Each spawn
 declares its role by its `subagent_type` and the model its policy row names
-([`CLAUDE.md`](../CLAUDE.md) > Spawn Model), at most five are in flight at once
-([`CLAUDE.md`](../CLAUDE.md) > Cost Control > *Concurrent spawns*), and its prompt states the
+([`core.md`](core.md) > Spawn Model), at most five are in flight at once
+([`core.md`](core.md) > Cost Control > *Concurrent spawns*), and its prompt states the
 delivery as "return … as your report".
 
 ## Review record
@@ -228,14 +228,14 @@ section with nothing to record says `none`.
 | `## Operator decisions` | written after the operator reviews the record: each proposed change and each advisor answer `accepted` / `rejected` / `modified` — a rejected or modified advisor answer is an override — and the issue edit that applied them |
 
 The record is situation-first where the operator reads it to decide
-([`CLAUDE.md`](../CLAUDE.md) > Execution Principles > *Human-decision presentation*): what each
+([`core.md`](core.md) > Execution Principles > *Human-decision presentation*): what each
 finding means for the issue's behavior comes before its anchors.
 
 ## Authority
 
 The review follows the same authority over acceptance-criterion content as the cycle: the working
 AI judges first, the advisor where it cannot settle a point, the operator by review and override
-([`CLAUDE.md`](../CLAUDE.md) > Rule Scope, principles 1 and 3). The reviewer judges
+([`core.md`](core.md) > Rule Scope, principles 1 and 3). The reviewer judges
 each finding and records its disposition with its grounds — a proposed change to the criterion, or
 the criterion kept as written; a point the code or a policy settles, or that it can reasonably
 choose, it settles and records. A point it cannot settle, or is not confident of, is a decision point: the review session
@@ -256,7 +256,7 @@ issue body as the operator confirmed it, and the review record is the evidence i
 The operator's confirmation is a decision-ledger entry in the issue's ledger
 `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` — an `O<n>` entry under the authority
 `operator decision`, which the gate hook admits from the main session only
-([`CLAUDE.md`](../CLAUDE.md) > Hook gates; grammar: [`decision-ledger.md`](decision-ledger.md) >
+([`state-tracking.md`](state-tracking.md) > Hook gates; grammar: [`decision-ledger.md`](decision-ledger.md) >
 Decision-point entries > *Criterion-readiness confirmations*):
 
 ```markdown
@@ -269,7 +269,7 @@ Decision-point entries > *Criterion-readiness confirmations*):
 ```
 
 The identifier comes from `bash scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
-immediately before the append ([`CLAUDE.md`](../CLAUDE.md) > Decision Ledger). `cycle 0` marks an
+immediately before the append ([`core.md`](core.md) > Decision Ledger). `cycle 0` marks an
 entry written before the issue's first cycle.
 
 **The confirmation is bound to the body.** `scripts/preflight/criterion-ready.sh status --issue N`

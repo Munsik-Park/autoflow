@@ -77,7 +77,7 @@ below means both tiers together.
   branch, repository structure, stack and deployment specifics, service names,
   and any target-local operating rules — never lives in the delivered
   `CLAUDE.md`. It lives in the project's own information and rule files
-  (`CLAUDE.md` > Project Information); which files, and what they say, are the
+  (`docs/core.md` > Project Information); which files, and what they say, are the
   project's.
 - **[MUST]** The tool never ships, stamps, scaffolds, or overwrites a project
   information file. Such a file is outside the delivered surface and outside
@@ -159,7 +159,7 @@ below means both tiers together.
 
 ### Spawn policy scaffold
 
-`.claude/autoflow/spawn-policy.json` — the per-phase spawn model and effort policy ([`CLAUDE.md`](../CLAUDE.md) > Spawn Model) — is a **sample carrying the values currently applied, and it is target-owned**: it ships as
+`.claude/autoflow/spawn-policy.json` — the per-phase spawn model and effort policy ([`core.md`](core.md) > Spawn Model) — is a **sample carrying the values currently applied, and it is target-owned**: it ships as
 a `scaffold` artifact, so a stamp or re-stamp creates it only when absent and never overwrites it
 (not even under `--force`), and each target is expected to configure it for its own runtime — its model
 rows, its `general-purpose` helper rows' effort and its `workflow_sites` effort. The effort of a `phases[]` row
