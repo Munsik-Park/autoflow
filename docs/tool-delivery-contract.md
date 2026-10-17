@@ -169,7 +169,8 @@ and the definitions are versioned tool source a thin-root target loads from the 
 fixed per plugin version; the config row is the projection source at this repository and `check` fails
 closed when it differs from the loaded definition. A row on a harness research type admits the inherit
 sentinel only, and a row on `general-purpose` — a unit's helper, spawned with the row's effort as the Agent
-tool's `effort` parameter — admits any value in the vocabulary (`effort_contract.phase_effort_ownership`). Its
+tool's `effort` parameter, or with the parameter omitted for the inherit sentinel — admits any value in the
+vocabulary (`effort_contract.phase_effort_ownership`, `sentinel_is_config_only`). Its
 `effort_contract` is the effort vocabulary `check` applies to it — a runtime with a different
 vocabulary is accommodated by editing that contract, never by patching the checker — and the
 `effort` readout prints the inherit sentinel that contract declares rather than a fixed literal. On

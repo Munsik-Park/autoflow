@@ -250,7 +250,8 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
   The helpers a U4 unit spawns when it divides its work take theirs from the rows
   `unit-build-area`, `unit-build-verify` and `unit-build-observe`: each is spawned as
   `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
-  `effort` parameter ([U4 Build and verify](units/build.md) > *Dividing the work*).
+  `effort` parameter, omitted when the row reads out the inherit sentinel
+  ([U4 Build and verify](units/build.md) > *Dividing the work*).
 
 ---
 

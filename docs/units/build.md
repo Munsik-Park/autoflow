@@ -137,7 +137,8 @@ worth and where it loses.
 
   A helper is spawned as `general-purpose` with the model and the effort its row reads out
   (`bash scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
-  the `Agent` tool's `effort` parameter.
+  the `Agent` tool's `effort` parameter — or the parameter omitted when the row reads out the
+  inherit sentinel, which is the policy file's own value and never an argument (`effort_contract`).
 - **What crosses a boundary.** To an area: its section of the feature design, the sections every
   area shares (`## Scope` and the common constraints the design names), its verification rows, a
   note of the repository's conventions (how its tests and lint run, its commit rules) the unit
