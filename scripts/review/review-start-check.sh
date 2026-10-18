@@ -25,6 +25,11 @@
 #       miss goes to the operator
 #   3   the wrapper completed with a non-zero exit — the review run itself
 #       failed, or left no review record
+#   4   the wrapper's output (--log) carries the marker line
+#       `user-config: UNREADABLE <path> — <error>`: the operator's
+#       ~/.autoflow/config.json was the source and could not be read, so no
+#       reviewer started — the orchestrator asks the operator whether to
+#       proceed without external review (issue #463)
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]
@@ -61,6 +66,11 @@ REACH_MIN=$(( WINDOW / 60 + 2 ))
 elapsed=0
 while :; do
   if [ -n "$LOGFILE" ] && [ -f "$LOGFILE" ]; then
+    unreadable_line="$(grep -E '^user-config: UNREADABLE ' "$LOGFILE" | tail -1)"
+    if [ -n "$unreadable_line" ]; then
+      echo "not started: $unreadable_line"
+      exit 4
+    fi
     done_line="$(grep -E "^\[review\] [a-z]+ completed for PR #${PR} \(exit=[0-9]+\)" "$LOGFILE" | tail -1)"
     if [ -n "$done_line" ]; then
       echo "completed: $done_line"

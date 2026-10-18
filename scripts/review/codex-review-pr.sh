@@ -12,10 +12,21 @@
 # posts no PR comment and changes no label — the aggregation of every review of
 # the PR posts the one comment (docs/units/delivery.md > Review aggregation).
 #
-# codex runs only when `.claude/autoflow.local.json` names it as an external
-# reviewer (docs/reviewer-backend.md); the orchestrator launches this wrapper
-# once per pull request and round for it. Model and effort come from the shared
-# resolver (scripts/review/lib/review-config.sh).
+# codex runs only when the external-reviewer configuration names it
+# (docs/reviewer-backend.md) — the target's `.claude/autoflow.local.json` when
+# it has `.review`, else the operator's `~/.autoflow/config.json`; the
+# orchestrator launches this wrapper once per pull request and round for it.
+# Model and effort come from the shared resolver
+# (scripts/review/lib/review-config.sh), from the same file the
+# `check-review-backend.sh` readout names; the wrapper prints the same
+# `source:` and `user-config:` lines.
+#
+# When the user file is the source and cannot be read as configured, nothing
+# in it applies: the wrapper prints the fixed marker line
+# `user-config: UNREADABLE <path> — <error>`, starts no codex and exits 6. The
+# marker line, not the exit code, tells this result from a codex exit; the
+# orchestrator asks the operator whether to proceed without external review.
+# An unreadable target file stops here with exit 2.
 #
 # Per-PR review (Model A): every PR — the host PR AND each sub-repo PR — is
 # reviewed on its OWN diff, over its OWN repository's tree — a submodule's
@@ -92,10 +103,19 @@ esac
 mkdir -p "$(dirname "$OUT")"
 rm -f "$OUT"
 
-# Model / effort resolution: a present-but-unreadable file, an empty model or
-# effort, or an effort outside codex's vocabulary fails closed here (exit 2) —
-# no reviewer launches on a rejected config.
+# Model / effort resolution: a present-but-unreadable target file, an empty
+# model or effort, or an effort outside codex's vocabulary fails closed here
+# (exit 2) — no reviewer launches on a rejected config. An unreadable user file
+# that is the source is the marker result below.
 resolve_reviewer_settings codex-review codex
+review_readout
+if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
+  echo "[codex-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — codex was not started. Fix the file and run again to apply it, or proceed without external review — the operator's choice." >&2
+  exit "$REVIEW_USER_UNREADABLE_EXIT"
+fi
+if [[ "$REVIEW_USER_STATE" == warning ]]; then
+  echo "[codex-review] warning: ${REVIEW_USER_CFG_PATH} cannot be read as configured (its error is on the user-config: readout line); not applied — ${REVIEW_CFG_PATH} decides." >&2
+fi
 build_review_backend_args
 
 if [[ -n "$REPO" ]]; then
