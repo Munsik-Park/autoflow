@@ -25,7 +25,7 @@
 #     `operator decision` (the gate hook admits both from the main session
 #     only — docs/state-tracking.md > Hook gates);
 #   - its `- Record:` line names a review record that exists — a file name in
-#     the attempt's directory, or an absolute path;
+#     the attempt's own directory (no `/`: another attempt's record never counts);
 #   - its `- Issue body sha256:` line equals the sha256 of the issue body read
 #     from GitHub now, so an issue edited after the entry is not ready.
 # and only while the attempt has no state file: an attempt that has started
@@ -138,7 +138,8 @@ auth="$(trim "${auth:-}")"; rec="$(trim "${rec:-}")"; rec="${rec#\`}"; rec="${re
 [[ "$id" =~ ^O[0-9]+$ ]] || not_ready "entry $id is not an O entry (O<digits>) — a [criterion-ready] entry is an O entry under 'operator decision'"
 [ "$auth" = "operator decision" ] || not_ready "entry $id: '- Authority:' is '$auth', not 'operator decision'"
 [ -n "$rec" ] || not_ready "entry $id: no '- Record:' line"
-case "$rec" in /*) recp="$rec" ;; *) recp="$DIR/$rec" ;; esac
+case "$rec" in */*) not_ready "entry $id: '- Record:' is '$rec' — the review record is a file name in the attempt's own directory" ;; esac
+recp="$DIR/$rec"
 [ -f "$recp" ] || not_ready "entry $id: review record '$rec' does not exist ($recp)"
 printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$' || not_ready "entry $id: '- Issue body sha256:' is not a sha256 ('$sha')"
 

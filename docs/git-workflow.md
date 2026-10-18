@@ -154,7 +154,7 @@ until a checkout takes it over, and a dev branch with no attempt record
 ([`units/preparation.md`](units/preparation.md) > *What is asked*):
 
 ```bash
-git switch --detach origin/main      # only when <branch> is the checked-out branch
+git switch --detach origin/<default> # only when <branch> is the checked-out branch
 git branch -D <branch>               # the local dev branch
 <autoflow-root>/scripts/cleanup/cleanup-issue.sh <branch>  # delete its issue-<N>-local/disposable/, then mark the attempt completed (accepts several branches)
 ```

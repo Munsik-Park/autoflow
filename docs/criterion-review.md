@@ -299,7 +299,7 @@ Decision-point entries > *Criterion-readiness confirmations*):
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger). `cycle 0` marks an
 entry written before the attempt's first cycle. `- Record:` names a file in the attempt's record
-directory (an absolute path is also read).
+directory, by its name alone: a path to another attempt's record is not read.
 
 **The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
 reads the last `[criterion-ready]` entry in the ledger of the attempt on the checked-out dev branch

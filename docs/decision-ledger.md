@@ -133,8 +133,8 @@ the decisions made under the policy the operator set for the review, under the a
 `operator decision` — the same authority over acceptance content as an override
 ([`core.md`](core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
 `## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
-line, a `- Record:` line (the review record's file name in the attempt's record directory, or an
-absolute path), an
+line, a `- Record:` line (the review record's file name in the attempt's own record directory, by name
+alone), an
 `- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
 for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
 `operator decision`. No `A<n>` entry carries the marker, and an attempt that has a state file takes

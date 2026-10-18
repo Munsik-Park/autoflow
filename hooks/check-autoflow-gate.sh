@@ -59,7 +59,8 @@
 #                                     open re-entry — a recommendation attempt
 #                                     not yet re-scored clean; issue #275)
 #   - Bash(gh pr create)            → the same two conditions
-#   - (no jq, a dev branch checked out) → push / PR creation / a spawn other than
+#   - (no jq) → the state-independent denies above, read from the raw input;
+#     and, a dev branch checked out → push / PR creation / a spawn other than
 #                                     research or evaluation DENIED: neither the
 #                                     input nor this checkout's state can be read
 #                                     (Section 0, issue #466)
@@ -138,7 +139,21 @@ GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b
 # A session with no AutoFlow dev branch checked out can have no attempt in
 # progress, so what the record root and the input are read for is nothing a
 # gate decides there. Any `dev/…-issue-<N>` name counts, the pre-#433 form too.
+# A detached HEAD is read through an interrupted rebase or `git am`, whose
+# head-name file still names the branch being rebuilt — a push of `HEAD:<dev
+# branch>` from the middle of one is a dev-branch session's push.
 SESSION_BRANCH=$(git -C "$PROJECT_DIR" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+if [ -z "$SESSION_BRANCH" ]; then
+  for _hn in rebase-merge/head-name rebase-apply/head-name; do
+    _hf=$(git -C "$PROJECT_DIR" rev-parse --git-path "$_hn" 2>/dev/null || true)
+    case "$_hf" in /*) ;; ?*) _hf="$PROJECT_DIR/$_hf" ;; esac
+    if [ -n "$_hf" ] && [ -f "$_hf" ]; then
+      IFS= read -r SESSION_BRANCH < "$_hf" || true
+      SESSION_BRANCH=${SESSION_BRANCH#refs/heads/}
+      break
+    fi
+  done
+fi
 DEV_SESSION=0
 if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev/.+-issue-[0-9]+$'; then DEV_SESSION=1; fi
 
@@ -154,6 +169,25 @@ if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev/.+-issue-[0-9]+$'; then DEV_
 # research / evaluation spawns pass. Outside a dev-branch session nothing here
 # applies, and the hook reads nothing it could gate on.
 if ! command -v jq >/dev/null 2>&1; then
+  # The state-independent denies of Sections 1 and 1b hold with no jq too, read
+  # the same over-inclusive way: a merge, an issue filing, a push naming the
+  # default branch, the merge-order label's removal, a backgrounded suite run,
+  # a spawn with no `model`.
+  _raw_def=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+  _raw_def="${_raw_def:-main}"
+  _raw_why=""
+  if printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge\b'; then _raw_why="'gh pr merge' — AutoFlow does not merge"
+  elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
+       || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
+  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?${_raw_def}\b|:[[:space:]]*${_raw_def}\b)"; then _raw_why="a push to ${_raw_def}"
+  elif printf '%s' "$INPUT" | grep -qE 'remove-label[[:space:]=]+blocked-by-subrepo|labels/blocked-by-subrepo'; then _raw_why="a change naming the 'blocked-by-subrepo' label"
+  elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
+  elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
+  fi
+  if [ -n "$_raw_why" ]; then
+    echo "BLOCKED: jq is not installed, and this call reads as ${_raw_why} — a deny that holds in every state ($(af_path docs/state-tracking.md) > Hook gates)." >&2
+    exit 2
+  fi
   [ "$DEV_SESSION" = 1 ] || exit 0
   _raw_tool=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' | head -1 | sed -E 's/.*"([A-Za-z_]+)"$/\1/')
   _raw_deny=0
@@ -911,7 +945,14 @@ if [ -n "$_records_lib" ] && . "$_records_lib" 2>/dev/null; then
 else
   RECORD_ROOT_MARKER="record-root: UNDETERMINED — $(af_path scripts/lib/records.sh) cannot be loaded"
 fi
+# A directory under the root that cannot be listed hides whatever attempt it
+# holds; in a dev-branch session that is a state that cannot be found.
+RECORD_ROOT_UNREADABLE=""
 if [ -n "$RECORD_ROOT" ]; then
+  for _kd in "$RECORD_ROOT"/*/ "$RECORD_ROOT"/*/*-issue-*/; do
+    [ -d "$_kd" ] || continue
+    if [ ! -r "$_kd" ] || [ ! -x "$_kd" ]; then RECORD_ROOT_UNREADABLE="${RECORD_ROOT_UNREADABLE:+$RECORD_ROOT_UNREADABLE }${_kd%/}"; fi
+  done
   for _ck in "$RECORD_ROOT"/*/*-issue-*/checkout; do
     [ -f "$_ck" ] || continue
     _od="${_ck%/checkout}"
@@ -1096,7 +1137,7 @@ spawn_policy_advisory_check || true
 #     user file's path and error. A session with no dev branch checked out can
 #     have no attempt in progress and is not refused.
 _legacy=""
-for _lsf in "$PROJECT_DIR"/.autoflow/*-issue-*/issue-*.json; do
+for _lsf in "${PROJECT_TOP:-$PROJECT_DIR}"/.autoflow/*-issue-*/issue-*.json; do
   [ -f "$_lsf" ] || continue
   _lb=${_lsf##*/}; _ln=${_lb#issue-}; _ln=${_ln%.json}
   case "$_ln" in ''|*[!0-9]*) continue ;; esac
@@ -1107,6 +1148,11 @@ done
 if [ -n "$_legacy" ] && is_score_gated_surface; then
   echo "BLOCKED: AutoFlow state recorded inside the checkout's tree, before the record root (issue #466): $_legacy" >&2
   echo "Move it to the record root with $(af_path scripts/migrate/migrate-in-tree-records.sh) before score-gated work — the cycle continues from there ($(af_path docs/state-tracking.md) > Record location)." >&2
+  exit 2
+fi
+if [ -n "$RECORD_ROOT_UNREADABLE" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then
+  echo "BLOCKED: a directory under the AutoFlow record root cannot be read, so this checkout's attempt state may be in it: $RECORD_ROOT_UNREADABLE — and the dev branch $SESSION_BRANCH is checked out." >&2
+  echo "Restore its read and search permission; the next call reads it anew ($(af_path docs/state-tracking.md) > Record location)." >&2
   exit 2
 fi
 if [ -z "$RECORD_ROOT" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then

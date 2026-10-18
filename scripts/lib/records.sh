@@ -27,8 +27,9 @@
 # never moves with it. No file, no key, or a JSON `null` → the default
 # $HOME/.autoflow. A file that cannot be read as JSON (a syntax error, no jq),
 # or a `record_root` that is not an absolute path string, leaves the record
-# root UNDETERMINED — never the default in its stead. A record root inside the
-# session's checkout, or one that cannot be created or written, is UNUSABLE.
+# root UNDETERMINED — never the default in its stead (a `.` or `..` component
+# included). A record root inside the session's checkout, or one that cannot be
+# created or written, is UNUSABLE.
 # Nothing else — no environment variable — names the root or a part of it.
 #
 #   af_physical_path <path>
@@ -108,6 +109,7 @@ af_record_root() {
             elif $r == "" then "error\trecord_root is an empty string"
             elif ($r | test("[[:cntrl:]]")) then "error\trecord_root carries a control character"
             elif ($r | startswith("/")) | not then "error\trecord_root is not an absolute path"
+            elif ($r | split("/") | any(. == "." or . == "..")) then "error\trecord_root has a . or .. component"
             else "value\t" + $r end
         end' "$AF_RECORD_ROOT_CFG" 2>&1)"; then
       AF_RECORD_ROOT_STATE=undetermined
@@ -136,12 +138,21 @@ af_record_root() {
       AF_RECORD_ROOT_ERROR="the path cannot be resolved"
       return 1
     fi
-    case "${_arp%/}/" in
-      "${1%/}"/*)
-        AF_RECORD_ROOT_STATE=unusable
-        AF_RECORD_ROOT_ERROR="it is inside the working tree of the checkout $1"
-        return 1 ;;
-    esac
+    # Inside the checkout: by the physical prefix, and by identity (`-ef`) of
+    # every existing ancestor — which a case variant on a case-insensitive file
+    # system, or any other spelling of the same directory, cannot escape.
+    _arin=0
+    case "${_arp%/}/" in "${1%/}"/*) _arin=1 ;; esac
+    _arq="$_arr"
+    while [ "$_arin" = 0 ] && [ -n "$_arq" ]; do
+      if [ -e "$_arq" ] && [ "$_arq" -ef "$1" ]; then _arin=1; fi
+      _arq="${_arq%/*}"
+    done
+    if [ "$_arin" = 1 ]; then
+      AF_RECORD_ROOT_STATE=unusable
+      AF_RECORD_ROOT_ERROR="it is inside the working tree of the checkout $1"
+      return 1
+    fi
   fi
   return 0
 }

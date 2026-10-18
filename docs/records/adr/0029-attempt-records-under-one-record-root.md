@@ -76,10 +76,13 @@ touched until a checkout takes it over (A5).
 **D6 — The hook gates per checkout.** The state files that gate a session are those of the attempts
 whose `checkout` names the session's checkout (`CLAUDE_PROJECT_DIR`); one active per checkout, two
 fail closed. In a session with a dev branch checked out, an undetermined or unusable root, or no
-`jq`, refuses the score-gated surface (push, PR creation, a spawn other than research or
-evaluation) with the user file's path and error; reads, repairing writes and research / evaluation
+`jq`, or a directory under the root that cannot be read, refuses the score-gated surface (push, PR
+creation, a spawn other than research or evaluation) with the user file's path and error — a
+detached HEAD in the middle of a rebase of a dev branch counts as that branch; reads, repairing writes and research / evaluation
 spawns pass. With no `jq` this check runs before any jq read, on the raw input: the hook used to
-exit 127 there, a non-blocking status, so every gate failed open. A state file left in the
+exit 127 there, a non-blocking status, so every gate failed open; the state-independent denies (merge,
+issue filing, a default-branch push, the merge-order label, a backgrounded suite run, a spawn with no
+model) are now read from the raw input there too, in every session. A state file left in the
 checkout's own `.autoflow/` refuses the score-gated surface until it is moved (D8).
 
 **D7 — Nothing stays in the target's tree.** codex's sandbox writes only inside the working tree, so
@@ -89,8 +92,9 @@ absolute path from the target checkout's root and finds the tree from its workin
 
 **D8 — Migration of in-tree records.** `scripts/migrate/migrate-in-tree-records.sh` moves each
 `.autoflow/<repo-key>-issue-<N>/` whose state file names a `dev/<stamp>-issue-<N>` branch to that
-attempt's record directory, with this checkout as owner; one that names no such branch is reported and
-left for the operator, and a directory with no state file is not a cycle and is left. A legacy
+attempt's record directory, with this checkout as owner; one that names no such branch is moved as a
+completed record when it reads `active: false`, and reported and left for the operator when it reads
+`active: true`; a directory with no state file is not a cycle and is left. A legacy
 issue-level `[criterion-ready]` entry belongs to no attempt: such an issue stops `NOT READY` until a
 new attempt's review records its own.
 
