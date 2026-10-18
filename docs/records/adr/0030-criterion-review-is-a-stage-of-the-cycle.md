@@ -67,6 +67,9 @@ attempt's directory, and the body hash.
   with an open PR; its dev branch is checked out first.
 - `paused <key>` / `stop paused <keys>` when the attempts of N left here are paused only — reported,
   with their re-entry the user's decision.
+- `stop unreadable <keys>` when a fact of an attempt of N could not be read (a `gh` lookup, an
+  unreadable state file): such an attempt is neither entered nor passed over by a new attempt, and
+  an entry of a run that exits `3` is never acted on.
 - `new` only when no attempt of N is left in this checkout, or every one is cleared.
 - `stop dirty-tree` for `new` and `criterion-review` on a dirty tree; the stage starts on a clean
   tree.
@@ -74,8 +77,12 @@ attempt's directory, and the body hash.
 **D4 — A new attempt beside the ones still here is the operator's explicit request.** `/autoflow:cycle
 <N> new` (`cycle-status.sh --issue <N> --new`) gives `new` whatever attempts of N are left; another
 active attempt of the checkout still holds it (PR Wait Rule). The request is spent once its attempt
-exists: on an attempt of N this checkout keeps, checked out, it enters that attempt as without it,
+exists: on an attempt of N this checkout keeps, checked out, with no state file or an active one —
+the states the attempt it made is in while its cycle runs — it enters that attempt as without it,
 so the re-invocation a compacted session makes with the same arguments creates no second attempt.
+On a checked-out attempt with an open PR or a pause the request stands: it gives `new`, never that
+attempt's own `review-response` or `paused`. A unit session reads the request the same way
+(`cycle-status.sh --issue <N> --new`).
 
 **D5 — `/autoflow:criterion-review <N> [new]` runs the stage alone** (operator decision
 2026-10-19). It is entered from the same entries — `new` creates the attempt, `criterion-review`
@@ -86,6 +93,23 @@ no state file; `/autoflow:cycle <N>` then enters that attempt as `start`.
 exists, so the hook's Section 2 lets the call through as it did for a review outside the cycle, and
 its ledger check admits the `O` entry from the main session only — the `/autoflow:cycle` session as
 it did the review session.
+
+**D7 — A stage in progress does not hold its checkout.** The PR Wait Rule's signal stays `active`
+in the state file, which the stage does not have: another issue's `new` in the same checkout
+switches the branch away, on a clean tree only, and the stage's records stay in its attempt
+directory, from which `criterion-review` re-enters it later. Counting an attempt with no state file
+as active would let an unfinished review left for good hold the checkout with nothing to clear. As
+before this change, `autoflow-records new` refuses only beside an active state file.
+
+**D8 — The session that settled the criteria also makes the first in-cycle judgment on a criterion
+defect** (the review's RC4, left to the cycle). This is accepted. The authority rule places that
+judgment with the orchestrator and does not require that it took no part in the review
+(`docs/core.md` > Flow Control > *Any unit*; `docs/decision-ledger.md` > *A criterion can be
+wrong*). What checks the criteria inside the cycle does not share the stage's context: DIAGNOSE is
+an `autoflow-unit-analysis` spawn that reads the review record as "an input, not a verdict"
+(`docs/units/analysis.md` > *Criterion review record*); each gate is a fresh evaluator; and the
+advisor, where the orchestrator is not confident, is a fresh spawn
+(`docs/role-contracts.md` > Advisor > *Independence*).
 
 ## Alternatives Considered
 
@@ -114,6 +138,8 @@ it did the review session.
 
 - The cycle session carries the review's stage 1 context into DIAGNOSE and on; a compaction there
   is likelier, and a session that ends inside the stage re-enters it from `criterion-review`.
+- Two sessions in one checkout can switch a stage's branch away (D7); the stage resumes from its
+  records.
 
 ### Neutral / Trade-Offs
 

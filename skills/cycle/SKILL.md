@@ -14,7 +14,7 @@ argument-hint: "<issue-number> [new] [unit=U1…U6]"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N> [--new]` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
 ## Instruction Conventions
 
@@ -35,9 +35,9 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Development Lifecycle — AutoFlow
 
-**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
+**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the block first and report.
 
-**An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage (U1), against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
+**An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage, against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
 
 ### Flow Control
 

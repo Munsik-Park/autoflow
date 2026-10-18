@@ -49,7 +49,8 @@
 #   stop multiple-active   this checkout has two or more active attempts
 #   resume <key>           this checkout's attempt of N is active
 #   with --new — the operator's explicit request for a new attempt, spent
-#   when the checked-out branch is an attempt of N this checkout keeps:
+#   when the checked-out branch is an attempt of N this checkout keeps with
+#   no state file or an active one:
 #     new                         a new attempt, whatever attempts of N exist
 #   on the checked-out branch, when it is an attempt of N — taken over first
 #   (`claim <key>`) when its checkout is gone:
@@ -67,11 +68,13 @@
 #     stop candidates <key> …         two or more — check one's dev branch out
 #     paused <key>                    none of those, one paused attempt
 #     stop paused <key> …             none of those, two or more paused
+#     stop unreadable <key> …         before those two, a fact of an attempt
+#                                     of N could not be read (exit 3)
 #     new                             no attempt of N left — the cycle creates
 #                                     one (autoflow-records new) and runs its
 #                                     criterion review stage
-#   `new` and `criterion-review` on a dirty tree are `stop dirty-tree`: the
-#   stage starts on a clean tree.
+#   `new` and `criterion-review` on a dirty tree are `stop dirty-tree` (no
+#   `claim:` line then): the stage starts on a clean tree.
 #
 # Exit codes:
 #   0   every fact was read
@@ -376,10 +379,13 @@ while [ "$i" -lt "${#A_KEY[@]}" ]; do
 done
 
 # A request for a new attempt is spent once its attempt exists: run on an
-# attempt of N this checkout keeps, checked out, it enters that attempt as
-# without --new — so the same request, invoked again after a compaction, makes
-# no second attempt.
-if [ "$NEW" -eq 1 ] && [ -n "$branch_slot" ] && [ "${A_OWN[$branch_slot]}" = this ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
+# attempt of N this checkout keeps, checked out, with no state file or an
+# active one — the only states the attempt it made is in while its cycle runs —
+# it enters that attempt as without --new, so the same request, invoked again
+# after a compaction, makes no second attempt. On a checked-out attempt with an
+# open pull request or a pause the request stands.
+if [ "$NEW" -eq 1 ] && [ -n "$branch_slot" ] && [ "${A_OWN[$branch_slot]}" = this ] \
+   && case "$(kind_of "$branch_slot")" in start|criterion-review|resume) true ;; *) false ;; esac; then
   NEW=0
   echo "new-attempt request: spent — the checked-out branch is this checkout's attempt ${A_KEY[$branch_slot]} of #$ISSUE, entered as without it"
 fi
@@ -410,12 +416,13 @@ elif [ -n "$branch_slot" ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
 else
   # An attempt of N still here is entered or reported, never passed over by a
   # new one: a new attempt beside it is the operator's explicit request (--new).
-  cands=(); paused=(); i=0
+  cands=(); paused=(); unread=(); i=0
   while [ "$i" -lt "${#A_KEY[@]}" ]; do
     if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_OWN[$i]}" = this ]; then
       case "$(kind_of "$i")" in
         start|criterion-review|review-response) cands+=("$i") ;;
         paused) paused+=("$i") ;;
+        unread|unreadable) unread+=("$i") ;;
       esac
     fi
     i=$((i + 1))
@@ -426,6 +433,8 @@ else
     emit_entry "$(kind_of "${cands[0]}") ${A_KEY[${cands[0]}]}" "${cands[0]}"
   elif [ "${#cands[@]}" -ge 2 ]; then
     emit_entry "stop candidates $(for s in "${cands[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— check one attempt's dev branch out to name it"
+  elif [ "${#unread[@]}" -ge 1 ]; then
+    emit_entry "stop unreadable $(for s in "${unread[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— a fact of an attempt of #$ISSUE could not be read; it is neither entered nor passed over by a new attempt"
   elif [ "${#paused[@]}" -eq 1 ]; then
     emit_entry "paused ${A_KEY[${paused[0]}]} — report its pending decision; its re-entry is the operator's decision, and a new attempt is the operator's explicit request (--new)" "${paused[0]}"
   elif [ "${#paused[@]}" -ge 2 ]; then
@@ -440,7 +449,10 @@ fi
 # entered with uncommitted changes the user has not resolved.
 case "$entry" in
   new\ *|criterion-review\ *)
-    [ -z "$dirty" ] || emit_entry "stop dirty-tree — $(printf '%s' "$dirty" | grep -c .) dirty path(s); a dirty tree is resolved with the user before the criterion review stage (was: ${entry%% *})" "$entry_slot" ;;
+    if [ -n "$dirty" ]; then
+      claim=""
+      emit_entry "stop dirty-tree — $(printf '%s' "$dirty" | grep -c .) dirty path(s); a dirty tree is resolved with the user before the criterion review stage (was: ${entry%% *})" "$entry_slot"
+    fi ;;
 esac
 
 if [ -n "$entry_slot" ] && [ "${A_STATE[$entry_slot]}" = file ]; then

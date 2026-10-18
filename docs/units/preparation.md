@@ -62,7 +62,8 @@ request. `cleanup:` lines name this checkout's attempts whose pull request is me
 `--issue {N}`, `criterion:` lines give the readiness of each attempt of N this checkout could start,
 a dev branch carrying N's number with no attempt record is reported `record=none`, and the last line
 is the **entry** — which attempt the request enters, and how (*Modes*). Exit `3` means a fact could
-not be read (a `gh` lookup, an unreadable state file, an unreadable `plugin.json`), exit `7` that the
+not be read (a `gh` lookup, an unreadable state file, an unreadable `plugin.json`) — the entry of
+such a run is reported and never acted on, no attempt created on it — exit `7` that the
 record root is undetermined or unusable (its marker line says why — the operator fixes the file or
 the directory, and PREFLIGHT runs again); the line says which. From those facts the orchestrator
 brings about the following.
@@ -161,7 +162,7 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | a state file in the checkout's own `.autoflow/` | `stop in-tree-records` — moved to the record root first ([`state-tracking.md`](../state-tracking.md) > *Record location*) |
 | another issue's attempt reads `active:true` — or, on a new-attempt request, an active attempt of N not checked out | `hold` (*PR Wait Rule*) |
 | an attempt of N reads `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
-| the operator requests a new attempt, and the checked-out branch is not an attempt of N this checkout keeps | `new` — whatever attempts of N are here: the cycle creates the attempt and runs its criterion review stage (*The criterion review stage*) |
+| the operator requests a new attempt, and the checked-out branch is not an attempt of N this checkout keeps with no state file or an active one | `new` — whatever attempts of N are here: the cycle creates the attempt and runs its criterion review stage (*The criterion review stage*) |
 | the checked-out branch is an attempt of N whose checkout is still another one | `stop other-checkout` — reported, not entered (in one clone, git does not let the branch be checked out twice) |
 | the checked-out branch is an attempt of N — taken over first (`claim:`) when its checkout is gone: | |
 | — no state file, its `[criterion-ready]` entry valid for the current body | `start` — the attempt's cycle begins (*What is asked*) |
@@ -170,6 +171,7 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | — `active:false` at `phase: "awaiting-user"` (a PR open or not), or with no open PR | `paused`: the cycle waits on a human decision and is not cleared. The pending decision and its `<attempt-dir>/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
 | otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
 | otherwise, two or more | `stop candidates` — reported; checking one's dev branch out names it |
+| otherwise, an attempt of N whose facts could not be read (a `gh` lookup, an unreadable state file) | `stop unreadable` — neither entered nor passed over by a new attempt |
 | otherwise, one paused attempt of N, or two or more | `paused` (reported as above, not entered) or `stop paused` — the re-entry of each is the user's decision |
 | otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle creates the attempt and runs its criterion review stage (*The criterion review stage*) |
 
@@ -177,9 +179,11 @@ to the checkout that started it, or that took it over. Evaluated in order:
 checkout — an open PR, a paused one, or one whose criterion review is not finished — no new attempt
 is made unless the operator requests it: `/autoflow:cycle <N> new` (or
 `/autoflow:criterion-review <N> new`), which runs `cycle-status.sh --issue {N} --new`. The request is
-spent once its attempt exists: on an attempt of N this checkout keeps, checked out, it enters that
+spent once its attempt exists: on an attempt of N this checkout keeps, checked out, with no state
+file or an active one — the states the attempt it made is in while its cycle runs — it enters that
 attempt as without it (`new-attempt request: spent`), so the same request invoked again after a
-compaction makes no second attempt; to begin another beside it, check another branch out first.
+compaction makes no second attempt; to begin another beside such an attempt, check another branch
+out first. On a checked-out attempt with an open PR or a pause the request stands (`new`).
 After a compaction, the same request re-enters the active attempt (`resume`), or the attempt whose
 criterion review stage is under way (`criterion-review`).
 
@@ -217,9 +221,16 @@ its exit.
   compacted, re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
   the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
   own judgment, recorded under the review record's `## Session decisions`.
-- **One unit per session.** `/autoflow:cycle <N> unit=U1` runs U1 — this stage included — from
-  its entry (`new`, `criterion-review`, `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and
-  every stop above is reported the same way.
+- **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt,
+  read with `--new`) runs U1 — this stage included — from its entry (`new`, `criterion-review`,
+  `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and every stop above is reported the same
+  way.
+- **The stage does not hold its checkout.** No state file exists while it runs, so the PR Wait
+  Rule's `active` signal does not see it: another issue's `new` in the same checkout switches the
+  branch away — only on a clean tree, so no uncommitted work is lost, and the stage's records stay
+  in its `<attempt-dir>`. The attempt left so is reported and re-entered later like any unfinished
+  review (`criterion-review`). An attempt with no state file is not counted as active because an
+  unfinished review left for good would otherwise hold the checkout with no state to clear.
 
 ## Review-response setup
 

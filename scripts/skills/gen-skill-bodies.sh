@@ -93,7 +93,7 @@ argument-hint: "<issue-number> [new] [unit=U1…U6]"
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N> [--new]` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
 EOF
   core_body | strip_links

@@ -21,9 +21,9 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Development Lifecycle — AutoFlow
 
-**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
+**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the block first and report.
 
-**An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage (U1), against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body ([`<autoflow-root>/docs/criterion-review.md`](criterion-review.md)).
+**An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage, against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body ([`<autoflow-root>/docs/criterion-review.md`](criterion-review.md)).
 
 ### Flow Control
 
