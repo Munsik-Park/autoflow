@@ -14,8 +14,8 @@
 
 ## Overview
 
-AutoFlow runs eleven phases and gates (`PREFLIGHT` → `HANDOFF`), carried by six functional
-units, that guide every code change from issue analysis to PR hand-off. Each phase has explicit
+AutoFlow runs eleven phases and gates (`PREFLIGHT` → `HANDOFF`; PREFLIGHT carries each attempt's
+criterion review stage, `CRITERION-REVIEW`), carried by six functional units, that guide every code change from issue analysis to PR hand-off. Each phase has explicit
 entry/exit criteria. Merging is performed
 by an external review process; AutoFlow does not merge.
 
@@ -52,7 +52,7 @@ Diamond nodes are evaluation gates; stadium nodes are terminal states.
 
 ```mermaid
 flowchart TD
-    PRE([PREFLIGHT<br/>Preparation]):::phase
+    PRE([PREFLIGHT<br/>Preparation · criterion review stage]):::phase
     DIA[DIAGNOSE<br/>Analysis unit]:::phase
     HYP{{GATE:HYPOTHESIS}}:::gate
     ARC[ARCHITECT<br/>Design unit]:::phase
@@ -103,10 +103,13 @@ flowchart TD
 The same diagram in plain text, for environments without mermaid rendering:
 
 ```
-criterion review (outside the cycle; the session records its settled decisions as [criterion-ready] — criterion-review.md)
+PREFLIGHT (the entry; on `new`, the attempt created first — autoflow-records new)
     │
     ▼
-PREFLIGHT (new issue: reads the [criterion-ready] entry)
+CRITERION-REVIEW (an attempt with no state file: its criterion review; exit = its [criterion-ready] entry — criterion-review.md)
+    │
+    ▼
+PREFLIGHT (stop conditions, the [criterion-ready] entry read again, the state file)
     │
     ▼
 DIAGNOSE
@@ -156,7 +159,7 @@ Each functional unit's body lives in its own file
 
 | Unit | Phases | Unit document |
 |------|--------|---------------|
-| U1 Preparation | PREFLIGHT | [`units/preparation.md`](units/preparation.md) |
+| U1 Preparation | PREFLIGHT, CRITERION-REVIEW | [`units/preparation.md`](units/preparation.md) |
 | U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | [`units/analysis.md`](units/analysis.md) |
 | U3 Design | ARCHITECT, GATE:PLAN | [`units/design.md`](units/design.md) |
 | U4 Build and verify | BUILD, AUDIT | [`units/build.md`](units/build.md) |

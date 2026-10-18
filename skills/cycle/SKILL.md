@@ -1,10 +1,12 @@
 ---
 name: cycle
 description: >-
-  Run an AutoFlow cycle on an issue — PREFLIGHT to HANDOFF, or one functional
-  unit with unit=U1…U6. Use only when the operator starts or resumes an
-  AutoFlow cycle (/autoflow:cycle <N> [unit=Uk]), and again after a compaction.
-argument-hint: "<issue-number> [unit=U1…U6]"
+  Run an AutoFlow cycle on an issue — PREFLIGHT, with the attempt's criterion
+  review stage, to HANDOFF, or one functional unit with unit=U1…U6; `new` asks
+  for a new attempt of the issue. Use only when the operator starts or resumes
+  an AutoFlow cycle (/autoflow:cycle <N> [new] [unit=Uk]), and again after a
+  compaction.
+argument-hint: "<issue-number> [new] [unit=U1…U6]"
 ---
 
 **After a compaction** — if this conversation was compacted after this command was invoked, invoke `/autoflow:cycle $ARGUMENTS` again, with the same arguments, before any other action, then re-read the current unit's document.
@@ -12,7 +14,7 @@ argument-hint: "<issue-number> [unit=U1…U6]"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
 ## Instruction Conventions
 
@@ -33,9 +35,9 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Development Lifecycle — AutoFlow
 
-**PREFLIGHT cannot be skipped.** If PREFLIGHT's completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
+**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
 
-**An attempt's criteria are settled before its cycle.** Each attempt begins with its own criterion review, outside the cycle, against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
+**An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage (U1), against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
 
 ### Flow Control
 
@@ -51,7 +53,7 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 
 **Regressions** (cap semantics: "max N×" = N regressions permitted; the gate escalates to a human on the **(N+1)th** FAIL — e.g. `max 2×` → escalate on the 3rd FAIL): GATE:HYPOTHESIS FAIL → a re-entry the orchestrator judges (no count cap; a PASS judged unreachable → not reachable: the operator confirms the close). GATE:PLAN FAIL → ARCHITECT (max 3×; a BUILD design contradiction re-run consumes this same counter, so ARCHITECT re-entries are capped at 3 per cycle regardless of which phase triggered them; a unit re-run on an advisor answer to the unit's own `## Decision requests` is not a re-entry and consumes no counter — an acceptance-criterion decision is an authority checkpoint inside the design, not a new one — and a return to ARCHITECT that an `[ac-decision]` raised after ARCHITECT calls for consumes none either, and neither does one that the operator's answer to a tool or referenced-material request, or an operator override of an advisor decision, calls for; a return to ARCHITECT to fix a gate recommendation does consume it). AUDIT test-first finding and AUDIT FAIL → a BUILD unit re-run (max 2×, one counter shared by both; how the unit iterates inside a run is its own and is recorded in its report). GATE:QUALITY FAIL → class-routed re-entry (doc commit / BUILD / ARCHITECT by `remedy_class`; max 3× — the cap counts FAILs, not the distance re-entered; a `design` route also consumes the ARCHITECT re-entry counter above). A recommendation attempt at any rubric-scored gate is not a FAIL and consumes no FAIL cap: max 7× on its own window, counted as `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage* says; a re-score that fails is an ordinary FAIL. INTEGRATE FAIL → BUILD (`impl`). HANDOFF failure → cause classification: CI failure → class-routed re-entry by `remedy_class` (a `design` route consumes the ARCHITECT re-entry counter); environment / push rejection → HANDOFF internal retry (max 2×). reviewer-review auto-resolution (Medium+ found at HANDOFF) → class-routed re-entry, at the depth the route's recorded judgment names (max 7× — the cap counts attempts, not the distance re-entered, so a thin route consumes one exactly as a re-entry from DIAGNOSE does; on the 7th consecutive (per the count window in `<autoflow-root>/docs/units/delivery.md` > *Routing*) without the verdict falling below Medium, pause for the user).
 **Human escalation**: a gate's own regression cap exhausted without a pass (each gate's cap is the "max N×" on the Regressions line above, which fixes the escalation timing — this is **per-gate**, not a cross-gate running total); GATE:HYPOTHESIS has no count cap — the recorded judgment that its PASS is not reachable is its escalation. HANDOFF internal retry exhausted → human. A harness-level block → human.
-**Advisor at a decision point** (ADR-0025 D7): every Flow Control row that routes to the advisor — the rows above and each unit document's `## Transitions` rows — is a decision point — a fresh `autoflow-advisor` answers, its answer is recorded as an `A` ledger entry and applied, and the cycle continues without pausing. The operator stops the forward path only at a harness-level block — a permission denial, a tool, credential or material the environment does not provide, or what using a tool it has lacks (a review-infrastructure failure the reviewer re-run does not clear is one); PREFLIGHT's fail-closed readiness stop is an independent check, not a decision point, and is unchanged. An operator override of a recorded decision is an `O` entry under `operator decision`. Procedure and independence: `<autoflow-root>/docs/role-contracts.md` > Advisor.
+**Advisor at a decision point** (ADR-0025 D7): every Flow Control row that routes to the advisor — the rows above and each unit document's `## Transitions` rows — is a decision point — a fresh `autoflow-advisor` answers, its answer is recorded as an `A` ledger entry and applied, and the cycle continues without pausing. The operator stops the forward path only at a harness-level block — a permission denial, a tool, credential or material the environment does not provide, or what using a tool it has lacks (a review-infrastructure failure the reviewer re-run does not clear is one); PREFLIGHT's fail-closed readiness stop is an independent check, not a decision point. An operator override of a recorded decision is an `O` entry under `operator decision`. Procedure and independence: `<autoflow-root>/docs/role-contracts.md` > Advisor.
 **Push and PR creation**: the orchestrator pushes and opens the PR(s) with its own `git push` / `gh pr create` — the commands the hook gates, never a script that would carry them past it — and confirms CI is green. A script AutoFlow ships for a phase reads and reports; it changes nothing in git, on GitHub or in the cycle's state (ADR-0025 D8). What the PR body carries, the host PR's `Closes #N` included, is the orchestrator's; nothing checks it (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*). Merging is external; AutoFlow does not merge.
 
 ### Unit Document Loading Contract
@@ -60,7 +62,7 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 
 | Unit | Phases | Document to Read on entry | Exit |
 |------|--------|------|------|
-| U1 Preparation | PREFLIGHT | `<autoflow-root>/docs/units/preparation.md` | PREFLIGHT's readiness conditions |
+| U1 Preparation | PREFLIGHT, CRITERION-REVIEW | `<autoflow-root>/docs/units/preparation.md` | PREFLIGHT's readiness conditions |
 | U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `<autoflow-root>/docs/units/analysis.md` | GATE:HYPOTHESIS |
 | U3 Design | ARCHITECT, GATE:PLAN | `<autoflow-root>/docs/units/design.md` | GATE:PLAN |
 | U4 Build and verify | BUILD, AUDIT | `<autoflow-root>/docs/units/build.md` | AUDIT |
@@ -168,7 +170,8 @@ When the user files an issue, the flow below executes in order. Each phase auto-
 Six functional units carry the phases (`ADR-0025` D1). A unit is the unit of prescription — its goal, artifact contract, verification and loop cap — and each has one document (*Unit Document Loading Contract* above). The phase and gate names stay: they are the identifiers the state keys, the ledger headings, the spawn-policy keys and the hook messages carry.
 
 ```
-U1 Preparation         PREFLIGHT       — prior-attempt resolution (cleanup after external merge/close), Git clean check, remote sync, the entry `cycle-status.sh` prints, target-declared local checks (`preflight.local_checks[]`; none declared → recorded no-op), the attempt's criterion readiness (`<autoflow-root>/scripts/preflight/criterion-ready.sh`), the state file's creation — the orchestrator's own work, decided from the facts `<autoflow-root>/scripts/preflight/cycle-status.sh` reports
+U1 Preparation         PREFLIGHT       — prior-attempt resolution (cleanup after external merge/close), Git clean check, remote sync, the entry `cycle-status.sh` prints, the attempt's creation on a `new` entry (`autoflow-records new`), target-declared local checks (`preflight.local_checks[]`; none declared → recorded no-op), the attempt's criterion readiness (`<autoflow-root>/scripts/preflight/criterion-ready.sh`), the state file's creation — the orchestrator's own work, decided from the facts `<autoflow-root>/scripts/preflight/cycle-status.sh` reports
+                       CRITERION-REVIEW — inside PREFLIGHT, after the entry and before the stop conditions, on an attempt with no state file: the attempt's criterion review — the session's own stage 1, then the tracer, analyzer and reconciler spawns — whose exit is the attempt's `[criterion-ready]` entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`)
 U2 Analysis            DIAGNOSE        — one `autoflow-unit-analysis` spawn writes the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
                        GATE:HYPOTHESIS — one Evaluation AI: one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
 U3 Design              ARCHITECT       — one `autoflow-unit-design` spawn writes the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
@@ -194,7 +197,7 @@ The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, th
 
 | Unit | Also read on entry |
 |------|------|
-| U1 Preparation | facts: `<autoflow-root>/scripts/preflight/cycle-status.sh`; git procedures: `<autoflow-root>/docs/git-workflow.md` (Git Clean Check, Post-Merge Cleanup) |
+| U1 Preparation | facts: `<autoflow-root>/scripts/preflight/cycle-status.sh`; the criterion review stage: `<autoflow-root>/docs/criterion-review.md`; git procedures: `<autoflow-root>/docs/git-workflow.md` (Git Clean Check, Post-Merge Cleanup) |
 | U2 Analysis | unit agent: `<autoflow-root>/agents/autoflow-unit-analysis.md`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents |
 | U3 Design | unit agent: `<autoflow-root>/agents/autoflow-unit-design.md`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents |
 | U4 Build and verify | unit agent: `<autoflow-root>/agents/autoflow-unit-build.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh` |
@@ -297,7 +300,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **AutoFlow phase guide**: `<autoflow-root>/docs/autoflow-guide.md`
 - **Role contracts**: `<autoflow-root>/docs/role-contracts.md`
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
-- **Criterion review (before a new-issue cycle)**: `<autoflow-root>/docs/criterion-review.md`
+- **Criterion review (an attempt's first stage, in U1)**: `<autoflow-root>/docs/criterion-review.md`
 - **Git procedures**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`

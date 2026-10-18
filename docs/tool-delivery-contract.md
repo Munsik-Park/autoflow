@@ -46,7 +46,8 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 - The methodology prose is tool-versioned content. It reaches a session only
   through the body of the AutoFlow command that starts the session
-  (`/autoflow:cycle`, `/autoflow:criterion-review`), an AutoFlow agent
+  (`/autoflow:cycle`, or `/autoflow:criterion-review` for the cycle's
+  criterion review stage alone), an AutoFlow agent
   definition, or an AutoFlow document a role reads by path under
   `<autoflow-root>`.
 - **[DENY]** Copying AutoFlow rule text into a target's own files. A framework

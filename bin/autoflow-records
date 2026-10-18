@@ -12,8 +12,9 @@
 #       the attempt's record directory of <dev branch> (default: the checked-out
 #       branch) in this checkout's repository
 #   autoflow-records new --issue <N>
-#       a new attempt of issue N in this checkout — the criterion review's first
-#       step: on a clean tree with no active attempt of this checkout, fetches
+#       a new attempt of issue N in this checkout — made by /autoflow:cycle on
+#       the entry `new`, before its criterion review stage writes anything (issue
+#       #465): on a clean tree with no active attempt of this checkout, fetches
 #       origin, creates the record directory with this checkout as its owner,
 #       and switches to a new dev branch `dev/<stamp>-issue-<N>` at the remote
 #       default branch's latest commit. Prints `attempt:`, `branch:`, `dir:`.

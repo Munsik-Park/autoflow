@@ -6,7 +6,9 @@ Accepted (operator decision 2026-10-17, issue #454: the operator approved the #4
 ordered its implementation). Supersedes ADR-0015 D1's thin-root tier and D2's attachment mechanism.
 ADR-0015 D3 is unaffected. Amends `docs/tool-delivery-contract.md` R1, R2 and R4, and the wording
 of ADR-0025 D8 that names `drift-check.sh`. D1–D3 implemented by issue #454 PR-3; D4 and D5
-implemented by issue #454 PR-4, released together as plugin version 0.3.0.
+implemented by issue #454 PR-4, released together as plugin version 0.3.0. D2's command list
+amended by ADR-0030 (issue #465): `/autoflow:cycle <N> [new] [unit=U1…U6]`, and
+`/autoflow:criterion-review <N>` runs the cycle's criterion review stage alone.
 
 ## Context
 
@@ -92,6 +94,11 @@ No AutoFlow rule text is loaded into every request.
   - With `unit`, a session runs that unit only, from its entry to its exit transition. This is
     the coordination mode, whose launching procedure stays machine-local.
 - **`/autoflow:criterion-review <N>`** starts the criterion review outside a cycle.
+
+*Amending note (2026-10-19).* ADR-0030 (issue #465): the criterion review is the first stage of an
+attempt's cycle (CRITERION-REVIEW, inside U1); `/autoflow:cycle <N> [new] [unit=U1…U6]` runs it,
+`new` being the request for a new attempt, and `/autoflow:criterion-review <N> [new]` runs that
+stage alone.
 
 **The core**
 

@@ -1,6 +1,6 @@
 ---
 name: autoflow-criterion-reconciler
-description: AutoFlow criterion review — reconciliation of the review record with the stage 2 findings and the in-depth analyses: settles in the code every case where they differ and updates the record. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH once per review, after stage 2 and every in-depth analysis.
+description: AutoFlow criterion review stage (U1, CRITERION-REVIEW) — reconciliation of the review record with the stage 2 findings and the in-depth analyses: settles in the code every case where they differ and updates the record. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH once per review, after stage 2 and every in-depth analysis.
 tools: Read, Glob, Grep, Bash, Edit
 effort: high
 ---

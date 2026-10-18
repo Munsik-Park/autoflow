@@ -102,19 +102,19 @@
       "agent_type": "autoflow-criterion-tracer",
       "model": "opus",
       "effort": "high",
-      "work_type": "criterion review (outside the cycle) — stage 2: the reach of each confirmed cause and each required behavior's conflict with the rules in force, assuming no fix, in a context apart from the review session (issue #445); held at the review session's reference model and effort"
+      "work_type": "criterion review stage (U1, CRITERION-REVIEW) — stage 2: the reach of each confirmed cause and each required behavior's conflict with the rules in force, assuming no fix, in a context apart from the review session (issue #445); held at the review session's reference model and effort"
     },
     "criterion-in-depth": {
       "agent_type": "autoflow-criterion-analyzer",
       "model": "opus",
       "effort": "high",
-      "work_type": "criterion review (outside the cycle) — in-depth analysis of one criterion's screened cases in a context that never saw the review's verdicts (issue #442); held at the review session's reference model and effort"
+      "work_type": "criterion review stage (U1, CRITERION-REVIEW) — in-depth analysis of one criterion's screened cases in a context that never saw the review's verdicts (issue #442); held at the review session's reference model and effort"
     },
     "criterion-reconciliation": {
       "agent_type": "autoflow-criterion-reconciler",
       "model": "opus",
       "effort": "high",
-      "work_type": "criterion review (outside the cycle) — reconciliation of the review record with the in-depth analyses, settled in the code (issue #442); held at the review session's reference model and effort"
+      "work_type": "criterion review stage (U1, CRITERION-REVIEW) — reconciliation of the review record with the in-depth analyses, settled in the code (issue #442); held at the review session's reference model and effort"
     }
   },
   "workflow_sites": {}

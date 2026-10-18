@@ -112,8 +112,8 @@ The rules below are the ones other documents cite; everything else about the wor
   never edits the list; only an `[ac-decision]` ledger entry does
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
-  code and policy outside the cycle, and the review's settled decisions were recorded in a
-  `[criterion-ready]` entry before PREFLIGHT admitted the cycle
+  code and policy in the attempt's criterion review stage, and the review's settled decisions were
+  recorded in a `[criterion-ready]` entry before PREFLIGHT wrote the state file
   ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
   not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
   commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it

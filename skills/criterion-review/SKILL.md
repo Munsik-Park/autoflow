@@ -1,17 +1,18 @@
 ---
 name: criterion-review
 description: >-
-  Review an issue's acceptance criteria against the target's code and policy,
-  outside any AutoFlow cycle, as the first step of an attempt — the review
-  creates the attempt. Use only when the operator asks for the criterion review
-  (/autoflow:criterion-review <N>).
-argument-hint: "<issue-number>"
+  Run the criterion review stage of an AutoFlow cycle alone — an attempt's
+  review of the issue's acceptance criteria against the target's code and
+  policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
+  starts the attempt. Use only when the operator asks for the criterion review
+  by itself (/autoflow:criterion-review <N> [new]).
+argument-hint: "<issue-number> [new]"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** — the criterion review of issue `$ARGUMENTS`, outside any cycle: the review of the attempt on the checked-out dev branch when it is this checkout's attempt of the issue with no state file, otherwise of a new attempt it creates first (`autoflow-records new --issue $ARGUMENTS`). Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` (`--new` for `new`), `new` creates the attempt first and `criterion-review` enters the attempt it names; another entry is reported, and the session stops. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 ## Instruction Conventions
 

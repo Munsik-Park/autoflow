@@ -22,6 +22,6 @@ The repository root is the plugin root (ADR-0027 D1): `.claude-plugin/`, `agents
 
 ## AutoFlow Core
 
-AutoFlow's rules are [`docs/core.md`](docs/core.md). They reach a session through `/autoflow:cycle` and `/autoflow:criterion-review` and a subagent through its agent definition — not through this file, which does not import the core, so a cycle on this repository carries it once. Outside a cycle, read the core when the work needs it.
+AutoFlow's rules are [`docs/core.md`](docs/core.md). They reach a session through `/autoflow:cycle` and `/autoflow:criterion-review` (the cycle's criterion review stage alone) and a subagent through its agent definition — not through this file, which does not import the core, so a cycle on this repository carries it once. Outside a cycle, read the core when the work needs it.
 
 A session in this repository runs the installed plugin: the released rules and scripts, with this working tree as the target. `claude --plugin-dir .` runs the working tree's own rules, documents and scripts instead; the plugin of the same name replaces the installed one for that session.

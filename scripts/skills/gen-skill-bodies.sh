@@ -9,13 +9,14 @@
 # command that starts it, and both command bodies are generated from one source,
 # docs/core.md:
 #
-#   skills/cycle/SKILL.md            /autoflow:cycle <N> [unit=U1…U6] — the
+#   skills/cycle/SKILL.md            /autoflow:cycle <N> [new] [unit=U1…U6] — the
 #                                    command header, then the whole core in its
 #                                    own order (the leading part, up to the
 #                                    `core:leading-end` marker, first)
-#   skills/criterion-review/SKILL.md /autoflow:criterion-review <N> — the
+#   skills/criterion-review/SKILL.md /autoflow:criterion-review <N> [new] —
+#                                    U1's criterion review stage alone; the
 #                                    command header, then the core sections the
-#                                    criterion review is bound by
+#                                    stage is bound by
 #
 # The core's markdown links are reduced to their text in a body: a link is
 # relative to docs/, while a body sits under skills/<name>/, and every AutoFlow
@@ -79,10 +80,12 @@ gen_cycle() {
 ---
 name: cycle
 description: >-
-  Run an AutoFlow cycle on an issue — PREFLIGHT to HANDOFF, or one functional
-  unit with unit=U1…U6. Use only when the operator starts or resumes an
-  AutoFlow cycle (/autoflow:cycle <N> [unit=Uk]), and again after a compaction.
-argument-hint: "<issue-number> [unit=U1…U6]"
+  Run an AutoFlow cycle on an issue — PREFLIGHT, with the attempt's criterion
+  review stage, to HANDOFF, or one functional unit with unit=U1…U6; `new` asks
+  for a new attempt of the issue. Use only when the operator starts or resumes
+  an AutoFlow cycle (/autoflow:cycle <N> [new] [unit=Uk]), and again after a
+  compaction.
+argument-hint: "<issue-number> [new] [unit=U1…U6]"
 ---
 
 **After a compaction** — if this conversation was compacted after this command was invoked, invoke `/autoflow:cycle $ARGUMENTS` again, with the same arguments, before any other action, then re-read the current unit's document.
@@ -90,7 +93,7 @@ argument-hint: "<issue-number> [unit=U1…U6]"
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
 EOF
   core_body | strip_links
@@ -111,17 +114,18 @@ gen_criterion_review() {
 ---
 name: criterion-review
 description: >-
-  Review an issue's acceptance criteria against the target's code and policy,
-  outside any AutoFlow cycle, as the first step of an attempt — the review
-  creates the attempt. Use only when the operator asks for the criterion review
-  (/autoflow:criterion-review <N>).
-argument-hint: "<issue-number>"
+  Run the criterion review stage of an AutoFlow cycle alone — an attempt's
+  review of the issue's acceptance criteria against the target's code and
+  policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
+  starts the attempt. Use only when the operator asks for the criterion review
+  by itself (/autoflow:criterion-review <N> [new]).
+argument-hint: "<issue-number> [new]"
 ---
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** — the criterion review of issue `$ARGUMENTS`, outside any cycle: the review of the attempt on the checked-out dev branch when it is this checkout's attempt of the issue with no state file, otherwise of a new attempt it creates first (`autoflow-records new --issue $ARGUMENTS`). Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` (`--new` for `new`), `new` creates the attempt first and `criterion-review` enters the attempt it names; another entry is reported, and the session stops. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 EOF
   {

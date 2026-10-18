@@ -8,6 +8,11 @@ live and how an issue is entered and cleared: issue #423's in-tree issue directo
 (`docs/records/design-rationale.md` > Decision 41), ADR-0024 D2's in-tree prefix and its archival
 step, and issue #433's `record=state-file` tie of a branch to "this checkout's `.autoflow/`".
 
+Superseded in part 2026-10-19 by ADR-0030 (issue #465): D3 — the attempt is created by the cycle on
+`entry: new`, before its criterion review stage, not by a review outside the cycle — and, in D4, the
+`not-ready` and `new` entries and "`/autoflow:cycle <N>` never creates an attempt (A6)". The rest of
+D3 and D4 stands. See *D3 > Superseding note (2026-10-19)*.
+
 ## Context
 
 AI work, unlike a person's, tries one issue in several sessions and puts the results together; each
@@ -56,6 +61,12 @@ owner, and checks out a new local dev branch at `origin/<default>`. Its `[criter
 in that attempt's ledger, and `criterion-ready.sh` reads only that ledger: another attempt's entry
 never makes it ready, and another attempt's records are never a reason for `NOT READY`. An attempt
 with a state file takes no such entry.
+
+*Superseding note (2026-10-19).* ADR-0030 D2–D5: `/autoflow:cycle <N>` creates the attempt on
+`entry: new` and runs its criterion review stage (CRITERION-REVIEW, inside U1); `not-ready` is
+`criterion-review`, an unfinished attempt not checked out is a candidate, paused attempts alone give
+`paused` / `stop paused`, and a new attempt beside the ones still here is the operator's request
+(`new`). `/autoflow:criterion-review <N>` runs the stage alone.
 
 **D4 — Entry is a fact, printed.** `cycle-status.sh --issue <N>` evaluates the entry from this
 checkout's attempts and prints it (`entry:`): in-tree state first (`stop in-tree-records`), another
