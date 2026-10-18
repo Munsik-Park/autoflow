@@ -100,7 +100,8 @@ effort* rejects. What follows depends on the file:
   condition above, the list and every supported reviewer's model and effort —
   on every run, so both consumers reach the same verdict on the same file.
   - When it is the **source** (the target has no `.review`) and cannot be read,
-    nothing in it applies and no external reviewer runs. Both consumers print
+    nothing in it applies and no external reviewer runs. The readout still
+    names it as the source (`source: user <path>`), and both consumers print
     the fixed marker line `user-config: UNREADABLE <path> — <error>` and exit
     `6` — distinct from success, from exit `2` and from every exit below;
     `codex-review-pr.sh` starts no codex. The orchestrator asks the operator

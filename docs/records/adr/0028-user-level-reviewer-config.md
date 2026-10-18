@@ -66,7 +66,8 @@ reviewer list, each reviewer's model and its effort all come from it:
 **D3 — A broken operator file is reported, not fatal.** The target file keeps failing closed
 (exit `2`). The operator file follows Claude Code's handling of a broken settings file: when it is
 the source and cannot be read as configured — invalid JSON or a `.review` content error, the same
-conditions as the target file — nothing in it applies, and both consumers give a result distinct
+conditions as the target file — it stays the recorded source (`source: user <path>`), nothing in it
+applies, and both consumers give a result distinct
 from success and from exit `2`: the fixed marker line `user-config: UNREADABLE <path> — <error>`,
 exit `6` from `check-review-backend.sh` (outside its `0`–`4`) and from `codex-review-pr.sh` (which
 starts no codex; the marker line, not the exit code, tells it from a codex exit). The orchestrator

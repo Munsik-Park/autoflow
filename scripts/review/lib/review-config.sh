@@ -70,8 +70,8 @@
 # above, the list and every supported reviewer's model/effort — on every run,
 # so both consumers reach the same verdict on the same file:
 #   - user is the source (the target has no `.review`) and the file is
-#     unreadable → REVIEW_USER_STATE=unreadable: nothing in it applies, no
-#     external reviewer is resolved, and the consumer prints the fixed marker
+#     unreadable → REVIEW_SOURCE=user, REVIEW_USER_STATE=unreadable: nothing in
+#     it applies, no external reviewer is resolved, and the consumer prints the fixed marker
 #     line `user-config: UNREADABLE <path> — <error>` and exits
 #     REVIEW_USER_UNREADABLE_EXIT (6) without launching a reviewer; the
 #     orchestrator asks the operator whether to proceed without external review.
@@ -91,13 +91,15 @@
 #       selects the source and sets REVIEW_SOURCE (local | user | none),
 #       REVIEW_CFG_PATH (the deciding file, empty for none), REVIEW_USER_STATE
 #       (absent | ok | warning | unreadable), REVIEW_USER_ERROR, and
-#       REVIEW_REVIEWERS (space-separated names, empty = none); exits 2 on a
+#       REVIEW_REVIEWERS (space-separated names, empty = none — always so
+#       when REVIEW_USER_STATE is unreadable); exits 2 on a
 #       target-file condition. <tag> is the caller's stderr prefix (e.g.
 #       codex-review, check-review-backend).
 #   resolve_reviewer_settings <tag> <name>
 #       selects the source when this process has not, and sets REVIEW_REVIEWER,
-#       REVIEW_MODEL, REVIEW_EFFORT (empty = inherit) from the deciding file;
-#       exits 2 on a target-file condition.
+#       REVIEW_MODEL, REVIEW_EFFORT (empty = inherit) from the deciding file
+#       (the defaults, read from no file, when REVIEW_USER_STATE is
+#       unreadable); exits 2 on a target-file condition.
 #   review_readout
 #       prints the `source:` and `user-config:` readout lines (stdout).
 #   build_review_backend_args
@@ -340,7 +342,10 @@ _review_select_source() {
       if [[ "$REVIEW_SOURCE" == local ]]; then
         REVIEW_USER_STATE="warning"
       else
+        # 2. The user file is the source; nothing in it applies.
         REVIEW_USER_STATE="unreadable"
+        REVIEW_SOURCE="user"
+        REVIEW_CFG_PATH="$user"
       fi
     else
       REVIEW_USER_STATE="ok"
@@ -358,7 +363,7 @@ resolve_review_config() {
   local tag="$1"
   REVIEW_REVIEWERS=""
   _review_select_source "$tag"
-  [[ -n "$REVIEW_CFG_PATH" ]] || return 0
+  [[ -n "$REVIEW_CFG_PATH" && "$REVIEW_USER_STATE" != unreadable ]] || return 0
   _review_parse_list "$tag" "$REVIEW_CFG_PATH"
 }
 
@@ -372,7 +377,11 @@ resolve_reviewer_settings() {
     exit 2
   fi
   _review_select_source "$tag"
-  _review_parse_settings "$tag" "$REVIEW_CFG_PATH" "$name"
+  if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
+    _review_parse_settings "$tag" "" "$name"
+  else
+    _review_parse_settings "$tag" "$REVIEW_CFG_PATH" "$name"
+  fi
 }
 
 # The readout lines both consumers print: where the configuration came from,
