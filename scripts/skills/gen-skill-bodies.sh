@@ -112,8 +112,8 @@ description: >-
   Run the criterion review stage of an AutoFlow cycle alone — an attempt's
   review of the issue's acceptance criteria against the target's code and
   policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
-  starts the attempt. Use only when the operator asks for the criterion review
-  by itself (/autoflow:criterion-review <N> [new]).
+  continues that attempt's cycle. Use only when the operator asks for the
+  criterion review by itself (/autoflow:criterion-review <N> [new]).
 argument-hint: "<issue-number> [new]"
 ---
 
