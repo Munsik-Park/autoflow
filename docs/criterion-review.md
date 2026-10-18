@@ -1,8 +1,9 @@
 # Criterion Review — Before a New-Issue Cycle
 
 An issue's acceptance criteria are reviewed against the target's code and policy **outside the
-cycle**, before the cycle commits to them, and the operator confirms them. PREFLIGHT starts a
-`new-issue` cycle only on that confirmation
+cycle**, before the cycle commits to them. The review session settles them under the policy the
+operator set (*Authority* below) and records the settled decisions in a `[criterion-ready]` ledger
+entry; PREFLIGHT starts a `new-issue` cycle only on that record
 ([U1 Preparation](units/preparation.md) > Stop conditions > *Criterion readiness*). This is the
 Definition of Ready of backlog refinement: a criterion that presumes a fact that does not hold, that
 conflicts with a policy already in force, or that leaves a term undefined is found while it is
@@ -17,20 +18,21 @@ The review makes that premise hold more often; it does not change it.
 ## When and by whom
 
 - **When.** Any time after the issue is filed and before its first `new-issue` cycle — and again
-  after any edit to the issue body, since the confirmation is bound to the body it confirmed
-  (*Confirmation* below). Filing an issue ([`issue-proposal.md`](issue-proposal.md)) is not
-  confirming it.
+  after any edit to the issue body, since the `[criterion-ready]` entry is bound to the body it
+  records (*Confirmation* below). Filing an issue ([`issue-proposal.md`](issue-proposal.md)) does
+  not make it ready.
 - **After an earlier cycle is cleared, never before.** An issue taken up again after its earlier
   cycle's pull request was merged or closed still has that cycle's directory
   `.autoflow/{repo-key}-issue-{N}/` until it is archived, and PREFLIGHT archives it — ledger
   included — *before* it reads criterion readiness
-  ([U1 Preparation](units/preparation.md) > *What is asked*). A confirmation written into that
-  directory is therefore archived with it, and PREFLIGHT stops `NOT READY`. The order is: (1) clear
+  ([U1 Preparation](units/preparation.md) > *What is asked*). A `[criterion-ready]` entry written
+  into that directory is therefore archived with it, and PREFLIGHT stops `NOT READY`. The order is: (1) clear
   the earlier cycle — the Post-Merge Cleanup ([`git-workflow.md`](git-workflow.md) > Post-Merge
   Cleanup, `<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>` for the directory), or one PREFLIGHT run, which
-  clears it and then stops at criterion readiness; (2) review and confirm, into the fresh directory;
-  (3) run PREFLIGHT. `criterion-ready.sh status` reports `NOT READY` while the directory still holds
-  an earlier cycle's state file, so a confirmation written too early is caught when it is checked.
+  clears it and then stops at criterion readiness; (2) run the review, which records its
+  `[criterion-ready]` entry into the fresh directory; (3) run PREFLIGHT. `criterion-ready.sh status`
+  reports `NOT READY` while the directory still holds an earlier cycle's state file, so an entry
+  written too early is caught when it is checked.
 - **Reviewer.** The session the operator asks for the review, working with no AutoFlow cycle active
   for the issue. The review is that session's own work, and it writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's
@@ -49,9 +51,10 @@ The review makes that premise hold more often; it does not change it.
   effort is the one its agent
   definition carries. The record's `## Inputs` names the model and effort the session and each
   spawn ran on.
-- **What the reviewer never does.** It never edits the issue body or any criterion, and it never
-  writes the confirmation. It records its dispositions and proposes; the operator confirms
-  (*Authority* below).
+- **What the reviewer never does.** It never edits the issue body or a criterion except to apply
+  the settled decisions, never writes the `[criterion-ready]` entry while a decision is unsettled,
+  and never asks the operator to confirm, approve or re-check a settled decision or waits on the
+  operator for one (*Authority*, *Report to the operator* below).
 
 ## Inputs
 
@@ -225,16 +228,18 @@ section with nothing to record says `none`.
 | `## Proposed changes` | per finding that calls for one, from either stage or the reconciliation: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text, the grounds and where the finding came from (`stage 1`, `stage 2` or `in-depth`) — or `none` |
 | `## Open questions` | each point the review could not settle itself (what a term is meant to cover, which of two readings the issue intends) and put to the advisor (*Authority* below): the question, stated as the behavior it concerns, why the code and policy do not settle it, each option with what it changes in the criteria, and the advisor's answer with its ledger entry — or `none`. How the change will be made is never a question here (*Purpose and scope* > *What the review leaves to the cycle*) |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
-| `## Operator decisions` | written after the operator reviews the record: each proposed change and each advisor answer `accepted` / `rejected` / `modified` — a rejected or modified advisor answer is an override — and the issue edit that applied them |
+| `## Operator decisions` | each decision the operator gave when they chose to — an override of an advisor answer (with its `O` override entry) or of a disposition, or an instruction (a re-run and its scope, a text) — with what it changed; or `none`. It is not an item-by-item operator verdict on the dispositions and advisor answers, and the `[criterion-ready]` entry does not wait on it (*Authority* below) |
+| `## Session decisions` | the session's own judgments after the review, apart from the operator's decisions: each detail an operator decision leaves open, with its grounds; whether the review was run again and over what scope when the body the entry records differs from the one `## Inputs` names, with its grounds (*Confirmation* below); and the issue edit that applied the decisions, with the edited body's sha256 — or `none` |
 
-The record is situation-first where the operator reads it to decide
-([`core.md`](core.md) > Execution Principles > *Human-decision presentation*): what each
-finding means for the issue's behavior comes before its anchors.
+The record is situation-first where the operator reads it — to follow what was decided and to
+override any of it ([`core.md`](core.md) > Execution Principles > *Human-decision presentation*):
+what each finding means for the issue's behavior comes before its anchors.
 
 ## Authority
 
-The review follows the same authority over acceptance-criterion content as the cycle: the working
-AI judges first, the advisor where it cannot settle a point, the operator by review and override
+The review follows the same authority over acceptance-criterion content as the cycle, under the
+policy the operator set for it: the review session judges, the advisor decides a point the session
+cannot settle or is not confident of, and the operator overrides when they choose
 ([`core.md`](core.md) > Rule Scope, principles 1 and 3). The reviewer judges
 each finding and records its disposition with its grounds — a proposed change to the criterion, or
 the criterion kept as written; a point the code or a policy settles, or that it can reasonably
@@ -243,28 +248,42 @@ puts it to a fresh advisor by the advisor's procedure, taking the orchestrator's
 `cycle 0` and the phase `CRITERION-REVIEW` ([`role-contracts.md`](role-contracts.md) > Advisor);
 an answer that decides a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*), and the record
-carries it under `## Open questions`. The operator reviews the record's dispositions and the
-advisor's answers and accepts, rejects or modifies each — an override of an advisor answer is
-recorded as any override is ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and
-operator overrides*) — and the issue body is edited to match, by the operator or by the session on
-the operator's instruction. The operator confirms once every proposed change and advisor answer
-has its entry under `## Operator decisions`. The criteria a cycle starts from are therefore the
-issue body as the operator confirmed it, and the review record is the evidence it was confirmed on.
+carries it under `## Open questions`. The advisor's answer is itself the decision: it is applied
+as recorded and does not wait on the operator's review.
+
+The operator overrides an advisor answer or a disposition, or gives an instruction, when they
+choose; it is recorded under `## Operator decisions`, an override of an advisor answer also as any
+override is ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and operator
+overrides*). A detail an operator decision does not itself settle — one that does not change the
+decision — is the session's to judge: the session records it with its grounds under
+`## Session decisions`, as its own judgment apart from the operator's decision. Such a detail is
+not an item for an operator verdict and is not put back to the operator; a detail the session
+cannot settle, or is not confident of, goes to the advisor first.
+
+Once every decision is settled — each disposition, each advisor answer and each operator decision
+given — the session edits the issue body to match and records the `[criterion-ready]` entry
+(*Confirmation* below), without waiting on an operator response or confirmation. The condition for
+the entry is that the decisions are settled, not an operator verdict on each of them. The operator
+is asked only for a harness-level block ([`role-contracts.md`](role-contracts.md) > Advisor >
+*Decision points and harness-level blocks*). The criteria a cycle starts from are therefore the
+issue body as those decisions left it, and the review record is the evidence they were made on.
 
 ## Confirmation
 
-The operator's confirmation is a decision-ledger entry in the issue's ledger
+The confirmation — the `[criterion-ready]` entry — is the record of the decisions made under the
+policy the operator set (*Authority* above). The review session writes it once every decision is
+settled, as a decision-ledger entry in the issue's ledger
 `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` — an `O<n>` entry under the authority
 `operator decision`, which the gate hook admits from the main session only
 ([`state-tracking.md`](state-tracking.md) > Hook gates; grammar: [`decision-ledger.md`](decision-ledger.md) >
 Decision-point entries > *Criterion-readiness confirmations*):
 
 ```markdown
-## O<n> — criteria confirmed for a cycle (cycle 0, CRITERION-REVIEW) [criterion-ready]
-- Decision: the acceptance criteria of #N, as the issue body now states them, are confirmed for a cycle
+## O<n> — criteria settled for a cycle (cycle 0, CRITERION-REVIEW) [criterion-ready]
+- Decision: the acceptance criteria of #N, as the issue body now states them, are settled for a cycle
 - Record: .autoflow/<repo-key>-issue-<N>/issue-<N>-criterion-review.md
 - Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
-- Grounds: the record's findings and each proposed change's disposition
+- Grounds: the decisions recorded — the dispositions, the advisor answers (their A entries), any operator decision, the session decisions — and, when the body differs from the one ## Inputs names, the re-run judgment under ## Session decisions
 - Authority: operator decision
 ```
 
@@ -275,9 +294,31 @@ entry written before the issue's first cycle.
 **The confirmation is bound to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
 reads the last `[criterion-ready]` entry and reports `READY` only when it is an `O` entry under
 `operator decision`, its record exists, and its `- Issue body sha256:` equals the sha256 of the
-issue body read from GitHub now. Any edit to the body after the confirmation leaves the issue not
-ready until a new entry confirms the edited body; whether the edit needs the review run again, in
-whole or for the changed criteria, is the operator's call, recorded in that entry's grounds.
+issue body read from GitHub now. Any edit to the body after the entry leaves the issue not ready
+until a new entry records the edited body, written as the first one is: once the decisions are
+settled — an operator override included — with no operator confirmation asked. When the body an
+entry records differs from the body the record read (the sha256 under `## Inputs`) — an edit after
+an entry, or a body edited before the first entry to apply the decisions — whether the review is run
+again, and over what (in whole, the changed criteria only, or not at all), is the session's
+judgment: it records the judgment with its grounds under `## Session decisions`, and the new entry's
+grounds point to it. The session does not ask the operator for it. An operator instruction on the
+re-run or its scope is the decision; a session that cannot settle it, or is not confident of it,
+asks the advisor.
+
+## Report to the operator
+
+The review session's report to the operator is situation-first ([`core.md`](core.md) >
+Execution Principles > *Human-decision presentation*) and tells what the session decided as
+recorded — "recorded", not a request: the dispositions; each advisor answer with its `A` entry; each operator
+decision applied; the session decisions — the details within an operator decision and the re-run
+judgment; and the edited body's sha256 with the `[criterion-ready]` entry. The only thing it asks
+the operator is a harness-level block ([`role-contracts.md`](role-contracts.md) > Advisor >
+*Decision points and harness-level blocks*), and it asks for no other confirmation, approval or
+review: an override is the operator's to give when they choose, not something the report requests.
+`## Unchecked` is reported as fact and is put to the operator only where it is a harness-level
+block. While a harness-level block leaves a decision unsettled, the entry is not written and the
+report says which decision waits on it. A report after an operator override or instruction takes
+the same form.
 
 ## What reads it
 
@@ -291,10 +332,10 @@ whole or for the changed criteria, is the operator's call, recorded in that entr
 ## Issues filed before this procedure
 
 No issue is exempt by its filing date, and no bulk back-fill is run: an issue filed without a
-confirmation is reviewed and confirmed on its turn, when it is next taken up for a `new-issue`
-cycle. PREFLIGHT stops on it and reports the review as the next step. An issue that already has a
+`[criterion-ready]` entry is reviewed on its turn, when it is next taken up for a `new-issue`
+cycle, and the review records the entry once its decisions are settled. PREFLIGHT stops on it and reports the review as the next step. An issue that already has a
 state file — a cycle active, paused, or waiting on external review — is not affected, because those
 modes do not run the check. An issue taken up again in `new-issue` mode after an earlier cycle is
 reviewed again, once that cycle is cleared: the archive moves its ledger, and with it any earlier
-confirmation, out of the issue's directory (*When and by whom* > *After an earlier cycle is
+`[criterion-ready]` entry, out of the issue's directory (*When and by whom* > *After an earlier cycle is
 cleared, never before*).

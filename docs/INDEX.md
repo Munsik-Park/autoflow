@@ -31,7 +31,7 @@ These documents are the operating source of truth.
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through command bodies and agent definitions, target-identity separation, the packaging and PREFLIGHT checks, and the target's own spawn policy. |
 | [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
-| [Criterion Review](criterion-review.md) | The review of a new issue's acceptance criteria against the target's code and policy outside the cycle, the operator's `[criterion-ready]` confirmation, and the readiness fact PREFLIGHT reads. |
+| [Criterion Review](criterion-review.md) | The review of a new issue's acceptance criteria against the target's code and policy outside the cycle, the `[criterion-ready]` entry recording the review's settled decisions, and the readiness fact PREFLIGHT reads. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 
 ### Quick Routing

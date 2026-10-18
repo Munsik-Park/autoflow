@@ -11,7 +11,7 @@ allocation — are [`core.md`](core.md) > Decision Ledger.
 - Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `orchestrator decision`, `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`core.md`](core.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`core.md`](core.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`units/design.md`](units/design.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, its own decision at a point it settles without the advisor ([`role-contracts.md`](role-contracts.md) > Advisor > *Decision points and harness-level blocks*; an acceptance-criterion change: *Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle — the operator's criterion-readiness confirmation (*Criterion-readiness confirmations* below).
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at HANDOFF, its own decision at a point it settles without the advisor ([`role-contracts.md`](role-contracts.md) > Advisor > *Decision points and harness-level blocks*; an acceptance-criterion change: *Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle, by the criterion review session taking the orchestrator's part — the `[criterion-ready]` entry recording the review's settled decisions (*Criterion-readiness confirmations* below).
 
 ## Entry identifier
 
@@ -123,16 +123,19 @@ entry). The standing entries decide only when they agree: all `accepted` → the
 `conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
 
 **Criterion-readiness confirmations** (`[criterion-ready]`). Before an issue's first `new-issue`
-cycle, its acceptance criteria are reviewed outside the cycle and the operator confirms them
-([`criterion-review.md`](criterion-review.md) > *Authority*). The review records its
-dispositions, a point it cannot settle is answered by the advisor first as at any decision point,
-and the operator reviews and may override them; the confirmation that follows is the
-**operator's** — the same authority over acceptance content as an override
+cycle, its acceptance criteria are reviewed outside the cycle and the decisions the review settles
+are recorded ([`criterion-review.md`](criterion-review.md) > *Authority*). The review session
+judges and records its dispositions, a point it cannot settle is decided by the advisor as at any
+decision point — the answer is itself the decision and does not wait on the operator's review —
+and the operator overrides either when they choose. Once every decision is settled, the review
+session records them in one entry, with no operator confirmation asked: the entry is the record of
+the decisions made under the policy the operator set for the review, under the authority
+`operator decision` — the same authority over acceptance content as an override
 ([`core.md`](core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
 `## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
 line, a `- Record:` line (the repository-relative path of the review record), an
 `- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
-for the body as confirmed), and the ordinary Grounds and Authority lines with the authority value
+for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
 `operator decision`. No `A<n>` entry carries the marker. `<autoflow-root>/scripts/preflight/criterion-ready.sh
 status` reads the **last** entry carrying the marker and counts it only when it is an `O` entry
 under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to

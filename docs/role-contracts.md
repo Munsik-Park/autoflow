@@ -182,7 +182,9 @@ is written by its own writer alone and stays as written. Three locks:
   state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
   authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
   text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
-  the main session (no `agent_type` — the orchestrator recording the operator's answer); the advisor
+  the main session (no `agent_type` — the orchestrator, or the criterion review session taking its
+  part, recording its own decision, an operator override or instruction, or the review's
+  `[criterion-ready]` entry); the advisor
   adds no `operator decision` and no `O` / `F` / `E` heading.
 - **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
   on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
