@@ -38,7 +38,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 
 | Transition | Condition |
 |------|------|
-| PREFLIGHT → CRITERION-REVIEW | `entry: new` — the attempt created first (`autoflow-records new --issue N`) — or `entry: criterion-review`, on the attempt's dev branch with the tree clean and `origin` fetched → the attempt's criterion review stage runs in this session (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*) |
+| PREFLIGHT → CRITERION-REVIEW | `entry: new`, or the operator's request for a new attempt the session judges still to carry out (*Modes*) — the attempt created first (`autoflow-records new --issue N`) — or `entry: criterion-review`, on the attempt's dev branch with the tree clean and `origin` fetched → the attempt's criterion review stage runs in this session (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*) |
 | CRITERION-REVIEW → PREFLIGHT | the stage's exit condition: the attempt's `[criterion-ready]` entry for the current issue body (`criterion-ready.sh status` `READY`) → PREFLIGHT continues at the stop conditions on that attempt, now `entry: start` |
 | PREFLIGHT → DIAGNOSE | earlier attempts resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for an attempt's start), and the state file written for `entry: start` (`mode: new-issue`) or `entry: review-response` (`<autoflow-root>/docs/units/preparation.md` > *What is asked*, *Modes*) |
 | PREFLIGHT → resume | `entry: resume` — this checkout's attempt of the issue reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `<autoflow-root>/scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`<autoflow-root>/docs/units/preparation.md` > *Resume*) |
@@ -47,7 +47,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 ## What is asked
 
 ```
-bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue {N}          # --new: the request for a new attempt (*Modes*)
+bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue {N}
 ```
 
 prints the facts the work is decided from and changes nothing: the working tree, the default branch
@@ -62,8 +62,7 @@ request. `cleanup:` lines name this checkout's attempts whose pull request is me
 `--issue {N}`, `criterion:` lines give the readiness of each attempt of N this checkout could start,
 a dev branch carrying N's number with no attempt record is reported `record=none`, and the last line
 is the **entry** — which attempt the request enters, and how (*Modes*). Exit `3` means a fact could
-not be read (a `gh` lookup, an unreadable state file, an unreadable `plugin.json`) — the entry of
-such a run is reported and never acted on, no attempt created on it — exit `7` that the
+not be read (a `gh` lookup, an unreadable state file, an unreadable `plugin.json`), exit `7` that the
 record root is undetermined or unusable (its marker line says why — the operator fixes the file or
 the directory, and PREFLIGHT runs again); the line says which. From those facts the orchestrator
 brings about the following.
@@ -152,17 +151,15 @@ files of this checkout's attempts, `<attempt-dir>/issue-{N}.json`; the start sig
 
 ## Modes
 
-The requested issue's entry follows from this checkout's attempts' records and the operator's
-request — the `entry:` line `cycle-status.sh --issue {N}` prints (`--new` when the operator asks for
-a new attempt); none of these is a judgment. An attempt is identified by its dev branch and belongs
+The requested issue's entry follows from this checkout's attempts' records — the `entry:` line
+`cycle-status.sh --issue {N}` prints; none of these is a judgment. An attempt is identified by its dev branch and belongs
 to the checkout that started it, or that took it over. Evaluated in order:
 
 | This checkout's records | Entry |
 |---|---|
 | a state file in the checkout's own `.autoflow/` | `stop in-tree-records` — moved to the record root first ([`state-tracking.md`](../state-tracking.md) > *Record location*) |
-| another issue's attempt reads `active:true` — or, on a new-attempt request, an active attempt of N not checked out | `hold` (*PR Wait Rule*) |
+| another issue's attempt reads `active:true` | `hold` (*PR Wait Rule*) |
 | an attempt of N reads `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
-| the operator requests a new attempt, and the checked-out branch is not an attempt of N this checkout keeps with no state file or an active one | `new` — whatever attempts of N are here: the cycle creates the attempt and runs its criterion review stage (*The criterion review stage*) |
 | the checked-out branch is an attempt of N whose checkout is still another one | `stop other-checkout` — reported, not entered (in one clone, git does not let the branch be checked out twice) |
 | the checked-out branch is an attempt of N — taken over first (`claim:`) when its checkout is gone: | |
 | — no state file, its `[criterion-ready]` entry valid for the current body | `start` — the attempt's cycle begins (*What is asked*) |
@@ -171,19 +168,31 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | — `active:false` at `phase: "awaiting-user"` (a PR open or not), or with no open PR | `paused`: the cycle waits on a human decision and is not cleared. The pending decision and its `<attempt-dir>/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
 | otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
 | otherwise, two or more | `stop candidates` — reported; checking one's dev branch out names it |
-| otherwise, an attempt of N whose facts could not be read (a `gh` lookup, an unreadable state file) | `stop unreadable` — neither entered nor passed over by a new attempt |
-| otherwise, one paused attempt of N, or two or more | `paused` (reported as above, not entered) or `stop paused` — the re-entry of each is the user's decision |
-| otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle creates the attempt and runs its criterion review stage (*The criterion review stage*) |
+| otherwise, attempts of N still here, none of those — paused, or with a fact that could not be read (a `gh` lookup, an unreadable state file; exit `3`) | `none-to-enter` — each named with its kind; none is entered by the entry, and a paused one's re-entry is the user's decision |
+| otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle may create the attempt and run its criterion review stage (*The criterion review stage*) |
 
-`/autoflow:cycle <N>` creates an attempt on the `new` entry only. With an attempt of N still in this
-checkout — an open PR, a paused one, or one whose criterion review is not finished — no new attempt
-is made unless the operator requests it: `/autoflow:cycle <N> new` (or
-`/autoflow:criterion-review <N> new`), which runs `cycle-status.sh --issue {N} --new`. The request is
-spent once its attempt exists: on an attempt of N this checkout keeps, checked out, with no state
-file or an active one — the states the attempt it made is in while its cycle runs — it enters that
-attempt as without it (`new-attempt request: spent`), so the same request invoked again after a
-compaction makes no second attempt; to begin another beside such an attempt, check another branch
-out first. On a checked-out attempt with an open PR or a pause the request stands (`new`).
+**A new attempt is the operator's request.** It is created only on the `new` entry or on the operator's explicit request
+— `/autoflow:cycle <N> new` (or `/autoflow:criterion-review <N> new`). With an attempt of N still in
+this checkout — an open PR, a paused one, one whose criterion review is not finished — no new
+attempt is made without that request.
+
+The entry is a fact, and so is every line above it. Where the facts leave the way on open — the
+cases below — the way is the session's judgment, recorded with its grounds in the ledger of the
+attempt it enters or creates (an `O` entry under `orchestrator decision`), or in its report when it
+stops (Rule Scope, principle 2 — [`core.md`](../core.md)):
+
+- **A `new` in the arguments.** Whether it is a request still to carry out, or one this conversation
+  already carried out — an attempt it created, re-invoked with the same arguments after a
+  compaction — and how far that attempt has come, is the session's to judge from the attempts
+  `cycle-status.sh` reports and from what the conversation holds. A request still to carry out creates
+  the attempt whatever entry is printed beside it, under the conditions `autoflow-records new` applies.
+- **A fact that could not be read** (exit `3`: `pr: lookup failed`, an unreadable state file, a
+  `criterion:` line that could not be read): whether to run the script again, report and stop, or
+  go on with the other facts.
+- **A `claim:` line, a dirty tree, an other-checkout attempt**: whether to take the attempt over,
+  ask the user about the tree (a dirty tree is never resolved without the user — *Cautions*), or
+  report.
+
 After a compaction, the same request re-enters the active attempt (`resume`), or the attempt whose
 criterion review stage is under way (`criterion-review`).
 
@@ -193,11 +202,11 @@ CRITERION-REVIEW is the first stage of an attempt's cycle, inside PREFLIGHT: aft
 `cycle-status.sh` prints and the conditions before it — no state file left in the tree, no other
 attempt of this checkout active (*PR Wait Rule*), the record root determined and usable — and
 before the stop conditions and the state file. It runs on the entries `new` and
-`criterion-review`, in the session `/autoflow:cycle <N>` started; no other command or session is
+`criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` started; no other command or session is
 needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
 its exit.
 
-- **The attempt and its record directory come first.** On `new`, the orchestrator creates the
+- **The attempt and its record directory come first.** On `new`, or on the request, the orchestrator creates the
   attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
   with no active attempt in this checkout — fetches `origin`, makes the record directory under the
   record root with this checkout as its owner, and checks out a new dev branch
@@ -206,8 +215,8 @@ its exit.
   tree, an active attempt of this checkout, a failed fetch, no remote-tracking ref of the default
   branch, or a record root that is undetermined or unusable (exit `7`); each is a stop reported to
   the user, as PREFLIGHT reports it. On `criterion-review`, the attempt named is checked out, and
-  `git fetch origin` runs before the stage reads the code; a failed fetch is the same hard stop.
-  `cycle-status.sh` prints either entry as `stop dirty-tree` on a dirty tree.
+  `git fetch origin` runs before the stage reads the code; a failed fetch is the same hard stop,
+  and a dirty tree is resolved with the user first (*Cautions*).
 - **The stage is the attempt's criterion review.** What it reads and judges, its stages — stage 1
   in this session, then the `autoflow-criterion-tracer`, `autoflow-criterion-analyzer` and
   `autoflow-criterion-reconciler` spawns — its record, its authority and its report are
@@ -221,8 +230,8 @@ its exit.
   compacted, re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
   the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
   own judgment, recorded under the review record's `## Session decisions`.
-- **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt,
-  read with `--new`) runs U1 — this stage included — from its entry (`new`, `criterion-review`,
+- **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt)
+  runs U1 — this stage included — from its entry (`new`, `criterion-review`,
   `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and every stop above is reported the same
   way.
 - **The stage does not hold its checkout.** No state file exists while it runs, so the PR Wait

@@ -45,13 +45,8 @@
 # The entry (issues #466 AC3, #465), evaluated in order:
 #   stop in-tree-records   a state file is still in the checkout's .autoflow/
 #   hold <key>             another issue's attempt of this checkout is active
-#                          (with --new: N's own active attempt too)
 #   stop multiple-active   this checkout has two or more active attempts
 #   resume <key>           this checkout's attempt of N is active
-#   with --new — the operator's explicit request for a new attempt, spent
-#   when the checked-out branch is an attempt of N this checkout keeps with
-#   no state file or an active one:
-#     new                         a new attempt, whatever attempts of N exist
 #   on the checked-out branch, when it is an attempt of N — taken over first
 #   (`claim <key>`) when its checkout is gone:
 #     stop other-checkout <key>   its checkout is still there
@@ -66,15 +61,13 @@
 #                                     its criterion review stage, or has an
 #                                     open pull request
 #     stop candidates <key> …         two or more — check one's dev branch out
-#     paused <key>                    none of those, one paused attempt
-#     stop paused <key> …             none of those, two or more paused
-#     stop unreadable <key> …         before those two, a fact of an attempt
-#                                     of N could not be read (exit 3)
-#     new                             no attempt of N left — the cycle creates
-#                                     one (autoflow-records new) and runs its
-#                                     criterion review stage
-#   `new` and `criterion-review` on a dirty tree are `stop dirty-tree` (no
-#   `claim:` line then): the stage starts on a clean tree.
+#     none-to-enter <key>:<kind> …    none of those, but attempts of N are
+#                                     still here (paused, or a fact unread)
+#     new                             no attempt of N left — a new attempt
+#                                     may be made (autoflow-records new)
+# These are facts. What the session does with them — a new attempt the
+# operator asked for (`new`), a claim, a dirty tree, an unread fact — is its
+# judgment (docs/units/preparation.md > Modes).
 #
 # Exit codes:
 #   0   every fact was read
@@ -86,26 +79,23 @@
 #       no attempt is read and no entry is printed
 #   64  usage
 #
-# Usage: scripts/preflight/cycle-status.sh [--issue N [--new]]
+# Usage: scripts/preflight/cycle-status.sh [--issue N]
 # =============================================================================
 
 set -uo pipefail
 
 TAG="cycle-status"
 ISSUE=""
-NEW=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --issue) [ $# -ge 2 ] || { echo "Usage: $0 [--issue N [--new]]" >&2; exit 64; }; ISSUE="${2#\#}"; shift 2 ;;
-    --new) NEW=1; shift ;;
-    -h|--help) echo "Usage: $0 [--issue N [--new]]"; exit 0 ;;
-    *) echo "[$TAG] unknown argument: $1" >&2; echo "Usage: $0 [--issue N [--new]]" >&2; exit 64 ;;
+    --issue) [ $# -ge 2 ] || { echo "Usage: $0 [--issue N]" >&2; exit 64; }; ISSUE="${2#\#}"; shift 2 ;;
+    -h|--help) echo "Usage: $0 [--issue N]"; exit 0 ;;
+    *) echo "[$TAG] unknown argument: $1" >&2; echo "Usage: $0 [--issue N]" >&2; exit 64 ;;
   esac
 done
 case "$ISSUE" in
   *[!0-9]*) echo "[$TAG] --issue takes an issue number: $ISSUE" >&2; exit 64 ;;
 esac
-[ "$NEW" -eq 0 ] || [ -n "$ISSUE" ] || { echo "[$TAG] --new needs --issue N" >&2; exit 64; }
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
@@ -378,28 +368,14 @@ while [ "$i" -lt "${#A_KEY[@]}" ]; do
   i=$((i + 1))
 done
 
-# A request for a new attempt is spent once its attempt exists: run on an
-# attempt of N this checkout keeps, checked out, with no state file or an
-# active one — the only states the attempt it made is in while its cycle runs —
-# it enters that attempt as without --new, so the same request, invoked again
-# after a compaction, makes no second attempt. On a checked-out attempt with an
-# open pull request or a pause the request stands.
-if [ "$NEW" -eq 1 ] && [ -n "$branch_slot" ] && [ "${A_OWN[$branch_slot]}" = this ] \
-   && case "$(kind_of "$branch_slot")" in start|criterion-review|resume) true ;; *) false ;; esac; then
-  NEW=0
-  echo "new-attempt request: spent — the checked-out branch is this checkout's attempt ${A_KEY[$branch_slot]} of #$ISSUE, entered as without it"
-fi
-
 if [ -n "$legacy" ]; then
   emit_entry "stop in-tree-records — move them to the record root first ($AF_ROOT/scripts/migrate/migrate-in-tree-records.sh)"
 elif [ "${#active_own[@]}" -ge 2 ]; then
   emit_entry "stop multiple-active — this checkout has $(for s in "${active_own[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)active; one attempt runs at a time in a checkout"
-elif [ "${#active_own[@]}" -eq 1 ] && { [ "${A_ISSUE[${active_own[0]}]}" != "$ISSUE" ] || [ "$NEW" -eq 1 ]; }; then
+elif [ "${#active_own[@]}" -eq 1 ] && [ "${A_ISSUE[${active_own[0]}]}" != "$ISSUE" ]; then
   emit_entry "hold ${A_KEY[${active_own[0]}]} — issue #${A_ISSUE[${active_own[0]}]}'s attempt is active in this checkout (PR Wait Rule)" "${active_own[0]}"
 elif [ "${#active_own[@]}" -eq 1 ]; then
   emit_entry "resume ${A_KEY[${active_own[0]}]}" "${active_own[0]}"
-elif [ "$NEW" -eq 1 ]; then
-  emit_entry "new — the operator's request for a new attempt of issue #$ISSUE: create it (autoflow-records new --issue $ISSUE), then run its criterion review stage"
 elif [ -n "$branch_slot" ] && [ "${A_OWN[$branch_slot]}" = other ]; then
   emit_entry "stop other-checkout ${A_KEY[$branch_slot]} — it belongs to ${A_OWNER[$branch_slot]}, which is still there; it is entered from that checkout" "$branch_slot"
 elif [ -n "$branch_slot" ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
@@ -414,15 +390,15 @@ elif [ -n "$branch_slot" ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
     *) emit_entry "stop unreadable ${A_KEY[$branch_slot]} — a fact of it could not be read" "$branch_slot" ;;
   esac
 else
-  # An attempt of N still here is entered or reported, never passed over by a
-  # new one: a new attempt beside it is the operator's explicit request (--new).
-  cands=(); paused=(); unread=(); i=0
+  # `new` only when no attempt of N is left: one still here is named, and a new
+  # attempt beside it is the operator's explicit request (preparation.md > Modes).
+  cands=(); left=(); i=0
   while [ "$i" -lt "${#A_KEY[@]}" ]; do
     if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_OWN[$i]}" = this ]; then
       case "$(kind_of "$i")" in
         start|criterion-review|review-response) cands+=("$i") ;;
-        paused) paused+=("$i") ;;
-        unread|unreadable) unread+=("$i") ;;
+        cleared) ;;
+        *) left+=("$i") ;;
       esac
     fi
     i=$((i + 1))
@@ -433,27 +409,12 @@ else
     emit_entry "$(kind_of "${cands[0]}") ${A_KEY[${cands[0]}]}" "${cands[0]}"
   elif [ "${#cands[@]}" -ge 2 ]; then
     emit_entry "stop candidates $(for s in "${cands[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— check one attempt's dev branch out to name it"
-  elif [ "${#unread[@]}" -ge 1 ]; then
-    emit_entry "stop unreadable $(for s in "${unread[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— a fact of an attempt of #$ISSUE could not be read; it is neither entered nor passed over by a new attempt"
-  elif [ "${#paused[@]}" -eq 1 ]; then
-    emit_entry "paused ${A_KEY[${paused[0]}]} — report its pending decision; its re-entry is the operator's decision, and a new attempt is the operator's explicit request (--new)" "${paused[0]}"
-  elif [ "${#paused[@]}" -ge 2 ]; then
-    emit_entry "stop paused $(for s in "${paused[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— report their pending decisions; a re-entry is the operator's decision, and a new attempt is the operator's explicit request (--new)"
+  elif [ "${#left[@]}" -ge 1 ]; then
+    emit_entry "none-to-enter $(for s in "${left[@]}"; do printf '%s:%s ' "${A_KEY[$s]}" "$(kind_of "$s")"; done)— attempts of #$ISSUE still in this checkout, none ready to start, in a criterion review stage or with an open pull request"
   else
-    emit_entry "new — no attempt of issue #$ISSUE is left in this checkout: create one (autoflow-records new --issue $ISSUE), then run its criterion review stage"
+    emit_entry "new — no attempt of issue #$ISSUE is left in this checkout"
   fi
 fi
-
-# The criterion review stage starts on a clean tree: a new attempt is made on
-# one (autoflow-records new refuses otherwise), and an attempt's stage is not
-# entered with uncommitted changes the user has not resolved.
-case "$entry" in
-  new\ *|criterion-review\ *)
-    if [ -n "$dirty" ]; then
-      claim=""
-      emit_entry "stop dirty-tree — $(printf '%s' "$dirty" | grep -c .) dirty path(s); a dirty tree is resolved with the user before the criterion review stage (was: ${entry%% *})" "$entry_slot"
-    fi ;;
-esac
 
 if [ -n "$entry_slot" ] && [ "${A_STATE[$entry_slot]}" = file ]; then
   echo "detail: ${A_KEY[$entry_slot]}"

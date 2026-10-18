@@ -4,7 +4,8 @@
 
 Accepted (operator decisions 2026-10-18, issue #465 > 운영자 결정: the criterion review is a stage
 of the AutoFlow cycle, not a separate operation, and its records belong to the attempt; operator
-decision 2026-10-19: `/autoflow:criterion-review` is kept for a review by itself; the criteria as
+decision 2026-10-19: `/autoflow:criterion-review` is kept for a review by itself; operator decision
+2026-10-19, PR #475: the script reports facts and the session judges the way on (D9); the criteria as
 settled by the attempt's own criterion review, entry O1). Supersedes ADR-0029 D3 (the criterion
 review creates the attempt) and, in D4, the `not-ready` and `new` entries and "`/autoflow:cycle
 <N>` never creates an attempt (A6)". Amends ADR-0027 D2's command list: `/autoflow:cycle` takes
@@ -65,28 +66,18 @@ attempt's directory, and the body hash.
 - `criterion-review <key>` in place of `not-ready` — the attempt's stage runs on it. An attempt of
   this checkout still in its stage, not checked out, is a candidate like one ready to `start` or
   with an open PR; its dev branch is checked out first.
-- `paused <key>` / `stop paused <keys>` when the attempts of N left here are paused only — reported,
-  with their re-entry the user's decision.
-- `stop unreadable <keys>` when a fact of an attempt of N could not be read (a `gh` lookup, an
-  unreadable state file): such an attempt is neither entered nor passed over by a new attempt, and
-  an entry of a run that exits `3` is never acted on.
+- `none-to-enter <key>:<kind> …` when attempts of N are still here but none of those — paused, or
+  with a fact that could not be read (exit `3`): each is named, none is entered by the entry.
 - `new` only when no attempt of N is left in this checkout, or every one is cleared.
-- `stop dirty-tree` for `new` and `criterion-review` on a dirty tree; the stage starts on a clean
-  tree.
 
 **D4 — A new attempt beside the ones still here is the operator's explicit request.** `/autoflow:cycle
-<N> new` (`cycle-status.sh --issue <N> --new`) gives `new` whatever attempts of N are left; another
-active attempt of the checkout still holds it (PR Wait Rule). The request is spent once its attempt
-exists: on an attempt of N this checkout keeps, checked out, with no state file or an active one —
-the states the attempt it made is in while its cycle runs — it enters that attempt as without it,
-so the re-invocation a compacted session makes with the same arguments creates no second attempt.
-On a checked-out attempt with an open PR or a pause the request stands: it gives `new`, never that
-attempt's own `review-response` or `paused`. A unit session reads the request the same way
-(`cycle-status.sh --issue <N> --new`).
+<N> new` asks for it; the script takes no such argument and prints the same facts. This is the rule
+the change keeps: it binds authority (Rule Scope, principle 1) — no new attempt is made without the
+request while an attempt of N is still in the checkout.
 
 **D5 — `/autoflow:criterion-review <N> [new]` runs the stage alone** (operator decision
-2026-10-19). It is entered from the same entries — `new` creates the attempt, `criterion-review`
-enters the one named, any other entry is reported — and ends at the `[criterion-ready]` entry with
+2026-10-19). It is entered from the same facts — `new`, or the operator's `new` request, creates the
+attempt, `criterion-review` enters the one named, otherwise the session reports — and ends at the `[criterion-ready]` entry with
 no state file; `/autoflow:cycle <N>` then enters that attempt as `start`.
 
 **D6 — The hook is unchanged in behavior.** While the stage runs, no state file of the attempt
@@ -110,6 +101,17 @@ an `autoflow-unit-analysis` spawn that reads the review record as "an input, not
 (`docs/units/analysis.md` > *Criterion review record*); each gate is a fresh evaluator; and the
 advisor, where the orchestrator is not confident, is a fresh spawn
 (`docs/role-contracts.md` > Advisor > *Independence*).
+
+**D9 — The script reports facts; the way on is the session's judgment** (operator decision
+2026-10-19, PR #475: "규칙이 규칙을 다시 만든 상황입니다 … 규칙으로 상태를 true, false라고 규정하면서
+그것을 지키기 위한 코드와 그것이 유지되기 위한 코드를 계속 생성하고 있어요"). Whether a `new` in the
+arguments is a request still to carry out or one the conversation already carried out (a
+re-invocation after a compaction), what to do with a fact that could not be read, with a `claim:`
+line or with a dirty tree, is judged by the session and recorded with its grounds in the attempt's
+ledger (Rule Scope, principle 2). Earlier revisions of this PR fixed them as script verdicts — a
+`--new` flag with a "spent" rule, `stop unreadable`, `paused` / `stop paused`, `stop dirty-tree`
+and a suppressed `claim:` line; each verdict needed a further rule for its own gap, and none binds
+authority, so they are removed.
 
 ## Alternatives Considered
 

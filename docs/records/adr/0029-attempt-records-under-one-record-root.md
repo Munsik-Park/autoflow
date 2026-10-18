@@ -64,9 +64,9 @@ with a state file takes no such entry.
 
 *Superseding note (2026-10-19).* ADR-0030 D2–D5: `/autoflow:cycle <N>` creates the attempt on
 `entry: new` and runs its criterion review stage (CRITERION-REVIEW, inside U1); `not-ready` is
-`criterion-review`, an unfinished attempt not checked out is a candidate, paused attempts alone give
-`paused` / `stop paused`, and a new attempt beside the ones still here is the operator's request
-(`new`). `/autoflow:criterion-review <N>` runs the stage alone.
+`criterion-review`, an unfinished attempt not checked out is a candidate, attempts left with no
+entry to take are named (`none-to-enter`), and a new attempt beside the ones still here is the
+operator's request (`new`). `/autoflow:criterion-review <N>` runs the stage alone.
 
 **D4 — Entry is a fact, printed.** `cycle-status.sh --issue <N>` evaluates the entry from this
 checkout's attempts and prints it (`entry:`): in-tree state first (`stop in-tree-records`), another
