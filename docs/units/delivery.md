@@ -232,8 +232,9 @@ routing reads the verdict in the findings file (*The case*).
   design, the verification design, the decision ledger and the build report. What it reviews against
   and what it writes are its definition's (`<autoflow-root>/agents/autoflow-reviewer.md`); the prompt adds no
   direction of its own.
-- **Each external reviewer** the target configures (`.claude/autoflow.local.json` >
-  `.review.reviewers`; [`reviewer-backend.md`](../reviewer-backend.md)) runs beside it — the
+- **Each external reviewer** configured for the target (`.review.reviewers` of the target's
+  `.claude/autoflow.local.json`, else of the operator's `~/.autoflow/config.json`;
+  [`reviewer-backend.md`](../reviewer-backend.md) > *Config location*) runs beside it — the
   `reviewers:` line `bash <autoflow-root>/scripts/preflight/check-review-backend.sh` prints names them, read rather
   than recalled. Today that is `codex`, launched in the background:
 
@@ -243,8 +244,17 @@ bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owne
 ```
 
 The wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs codex
-over the PR with `<autoflow-root>/.codex/review.md` (its model and effort per *Model and effort* there); codex
-writes its review to the record and nothing else.
+over the PR with `<autoflow-root>/.codex/review.md` (its model and effort per *Model and effort* there, from
+the same file the readout names); codex writes its review to the record and nothing else.
+
+**An unreadable operator file.** When the operator's `~/.autoflow/config.json` is the source and
+cannot be read as configured, `check-review-backend.sh` exits `6` and the wrapper starts no codex
+and exits `6`; each prints the marker line `user-config: UNREADABLE <path> — <error>`, which
+`review-start-check.sh` reports as exit `4`. The orchestrator asks the operator, situation-first,
+with the path and the error, whether to proceed without external review. Proceeding runs the
+built-in review alone, and the aggregation names the missing external review with that reason.
+Stopping pauses the round until the operator has fixed the file; the step then runs again and reads
+it anew.
 
 Each review lands in a **review record**,
 `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
@@ -259,10 +269,12 @@ completion marker:
 | `0` | started, or already completed with exit 0 | the orchestrator ends its turn and waits for the run's completion notification ([`core.md`](../core.md) > Execution Principles > *Wait discipline*) |
 | `1` | no signal within the window (30 s) | launch the review again once; a second miss makes that reviewer unavailable for the round |
 | `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | one internal retry; a second failure makes that reviewer unavailable for the round |
+| `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the operator is asked (*An unreadable operator file* above); no relaunch |
 
 An external reviewer that is unavailable for a round — its CLI absent (PREFLIGHT reports it), its
-run failing twice — does not hold the round: the aggregation runs on the records that exist, and its
-comment names the reviewer that is missing. The built-in review is never skipped; a built-in run
+run failing twice, or the operator's choice to proceed past an unreadable operator file — does not
+hold the round: the aggregation runs on the records that exist, and its comment names the reviewer
+that is missing and why. The built-in review is never skipped; a built-in run
 that returns no record is spawned again.
 
 Cautions:
@@ -286,7 +298,7 @@ marker is `review-triage`, set by the orchestrator.
 review records or the comment body itself (Cost Control). An anonymous direct subagent —
 `subagent_type: autoflow-analyzer`, on the model the policy names for `handoff-review-triage` — is
 the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
-reviewer unavailable for the round, the decision ledger, and, for a PR whose repository has
+reviewer unavailable for the round with the reason, the decision ledger, and, for a PR whose repository has
 submodules, their paths (its `.gitmodules`) — the locations outside that review's target.
 
 Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
@@ -295,7 +307,7 @@ it leaves behind is fixed:
 
 - **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
   a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
-  grounds it does not hold; a reviewer unavailable for the round named. Its body is kept as
+  grounds it does not hold; a reviewer unavailable for the round named with the reason. Its body is kept as
   `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
 - **The findings file** (below).
 - **`blocked-by-review` taken off when the round is clean** — no `Medium`+ finding holds.
