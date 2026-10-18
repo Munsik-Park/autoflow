@@ -176,9 +176,10 @@ else
   failc "E2b" "rc=$rc head=$head_sha out=$(tr '\n' '|' < "$WORK/e2b.out")"
 fi
 
-# The attempt's record directory and its owner file are its criterion review's
-# (autoflow-records new — which fetches, so it is made here by hand), and the
-# orchestrator writes the state file at PREFLIGHT's end (docs/state-tracking.md).
+# The attempt's record directory and its owner file are made when the cycle
+# creates the attempt, before its criterion review stage (autoflow-records new —
+# which fetches, so it is made here by hand), and the orchestrator writes the
+# state file at PREFLIGHT's end (docs/state-tracking.md).
 SD="$RECORD_ROOT/$KEY/2026-10-17-000000-issue-7"
 mkdir -p "$SD"
 printf '%s\n' "$T" > "$SD/checkout"

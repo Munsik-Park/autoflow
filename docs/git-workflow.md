@@ -53,8 +53,8 @@ git status                       # must report nothing to commit, working tree c
 
 # 2. Synced with remote
 git fetch origin
-# An attempt's start: its dev branch dev/<date>-<time>-issue-<N>, made at origin/main by its
-# criterion review (autoflow-records new) and with no commit of its own yet, is checked out and
+# An attempt's start: its dev branch dev/<date>-<time>-issue-<N>, made at origin/main when the
+# cycle created the attempt (autoflow-records new) and with no commit of its own yet, is checked out and
 # fast-forwarded to the remote default branch's latest commit
 git switch dev/<date>-<time>-issue-<N>
 git merge --ff-only origin/main

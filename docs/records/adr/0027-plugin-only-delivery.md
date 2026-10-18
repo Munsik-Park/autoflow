@@ -6,7 +6,11 @@ Accepted (operator decision 2026-10-17, issue #454: the operator approved the #4
 ordered its implementation). Supersedes ADR-0015 D1's thin-root tier and D2's attachment mechanism.
 ADR-0015 D3 is unaffected. Amends `docs/tool-delivery-contract.md` R1, R2 and R4, and the wording
 of ADR-0025 D8 that names `drift-check.sh`. D1–D3 implemented by issue #454 PR-3; D4 and D5
-implemented by issue #454 PR-4, released together as plugin version 0.3.0.
+implemented by issue #454 PR-4, released together as plugin version 0.3.0. D2's command list
+amended by ADR-0030 (issue #465): `/autoflow:cycle <N> [new] [unit=U1…U6]`, and
+`/autoflow:criterion-review <N>` runs the cycle's criterion review stage alone. D2's compaction
+bullets (the leading part within 18,000 bytes, the re-invocation first line) and the R1 budget
+check amendment superseded by ADR-0031 (PR #475): AutoFlow does not consider compaction.
 
 ## Context
 
@@ -93,6 +97,11 @@ No AutoFlow rule text is loaded into every request.
     the coordination mode, whose launching procedure stays machine-local.
 - **`/autoflow:criterion-review <N>`** starts the criterion review outside a cycle.
 
+*Amending note (2026-10-19).* ADR-0030 (issue #465): the criterion review is the first stage of an
+attempt's cycle (CRITERION-REVIEW, inside U1); `/autoflow:cycle <N> [new] [unit=U1…U6]` runs it,
+`new` being the request for a new attempt, and `/autoflow:criterion-review <N> [new]` runs that
+stage alone.
+
 **The core**
 
 - The body of both commands is generated from one source, `docs/core.md`, the cross-unit
@@ -102,6 +111,10 @@ No AutoFlow rule text is loaded into every request.
   stay within the 5,000-token re-attach cap.
 - The body's first line instructs a compacted session to invoke the command again, with the same
   arguments, before any other action.
+
+*Superseding note (2026-10-19).* ADR-0031: the two compaction bullets above are superseded —
+AutoFlow requires idle compaction off and keeps no device for compaction; the bodies have no
+leading part, no size limit and no re-invocation line.
 
 **Other homes**
 

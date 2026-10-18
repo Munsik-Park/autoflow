@@ -1,6 +1,6 @@
 ---
 name: autoflow-criterion-analyzer
-description: AutoFlow criterion review — in-depth analysis of one criterion's screened cases, judged on the code that decides the behavior, in a context that never saw the review's earlier verdicts. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH for every criterion of every review.
+description: AutoFlow criterion review stage (U1, CRITERION-REVIEW) — in-depth analysis of one criterion's screened cases, judged on the code that decides the behavior, in a context that never saw the review's earlier verdicts. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH for every criterion of every review.
 tools: Read, Glob, Grep, Bash, Write
 effort: high
 ---

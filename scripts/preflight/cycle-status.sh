@@ -28,9 +28,10 @@
 #   - a state file left in the checkout's own `.autoflow/` (before #466)
 #   - per attempt of this repository not yet marked completed: its owner
 #     (`this`, `other <path>` — a checkout still there — or `gone <path>`),
-#     its state (`active`, `phase`, `mode`, `cycle`, or `none` — a criterion
-#     review not yet started as a cycle), its dev branch with each side and,
-#     for a state file that is not active, its pull request
+#     its state (`active`, `phase`, `mode`, `cycle`, or `none` — no state file
+#     yet: in its criterion review stage, or ready to start), its dev branch
+#     with each side and, for a state file that is not active, its pull
+#     request
 #   - `cleanup:` per attempt of this checkout whose pull request is merged or
 #     closed — the Post-Merge Cleanup it is owed
 #   - with --issue N: `criterion:` for each attempt of N with no state file
@@ -41,7 +42,7 @@
 #     markers and the last local-checks record of the current cycle; and the
 #     `entry:` line
 #
-# The entry (issue #466 AC3), evaluated in order:
+# The entry (issues #466 AC3, #465), evaluated in order:
 #   stop in-tree-records   a state file is still in the checkout's .autoflow/
 #   hold <key>             another issue's attempt of this checkout is active
 #   stop multiple-active   this checkout has two or more active attempts
@@ -50,15 +51,23 @@
 #   (`claim <key>`) when its checkout is gone:
 #     stop other-checkout <key>   its checkout is still there
 #     start <key>                 no state file, criterion READY
-#     not-ready <key>             no state file, criterion NOT READY
+#     criterion-review <key>      no state file, criterion NOT READY — the
+#                                 attempt's criterion review stage runs
 #     review-response <key>       not active, an open pull request
 #     paused <key>                not active, awaiting-user or no open PR
 #   otherwise, among this checkout's attempts of N (cleared ones aside):
-#     start / review-response <key>   exactly one is ready to start or has an
+#     start / criterion-review / review-response <key>
+#                                     exactly one is ready to start, still in
+#                                     its criterion review stage, or has an
 #                                     open pull request
 #     stop candidates <key> …         two or more — check one's dev branch out
-#     new                             none — a new attempt begins with its
-#                                     criterion review, which creates it
+#     none-to-enter <key>:<kind> …    none of those, but attempts of N are
+#                                     still here (paused, or a fact unread)
+#     new                             no attempt of N left — a new attempt
+#                                     may be made (autoflow-records new)
+# These are facts. What the session does with them — a new attempt the
+# operator asked for (`new`), a claim, a dirty tree, an unread fact — is its
+# judgment (docs/units/preparation.md > Modes).
 #
 # Exit codes:
 #   0   every fact was read
@@ -260,7 +269,7 @@ while [ "$i" -lt "${#A_KEY[@]}" ]; do
     gone)  ow="gone ${A_OWNER[$i]:-(no checkout recorded)}" ;;
   esac
   case "${A_STATE[$i]}" in
-    none) sd="none (criterion review, not started)" ;;
+    none) sd="none (no state file yet — its criterion review stage, or ready to start)" ;;
     unreadable) sd="unreadable (${A_DIR[$i]}/issue-${A_ISSUE[$i]}.json)" ;;
     file) sd="active=${A_ACTIVE[$i]} phase=${A_PHASE[$i]} mode=$(jq -r '.mode // "unset"' "${A_DIR[$i]}/issue-${A_ISSUE[$i]}.json") cycle=${A_CYCLE[$i]}" ;;
   esac
@@ -316,7 +325,7 @@ kind_of() {
   case "${A_STATE[$i]}" in
     unreadable) echo unreadable; return ;;
     none)
-      case "${CRIT[$i]:-}" in READY) echo start ;; NOT-READY) echo not-ready ;; *) echo unread ;; esac
+      case "${CRIT[$i]:-}" in READY) echo start ;; NOT-READY) echo criterion-review ;; *) echo unread ;; esac
       return ;;
   esac
   if [ "${A_ACTIVE[$i]}" = true ]; then echo resume; return; fi
@@ -374,26 +383,36 @@ elif [ -n "$branch_slot" ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
   kd="$(kind_of "$branch_slot")"
   case "$kd" in
     start) emit_entry "start ${A_KEY[$branch_slot]}" "$branch_slot" ;;
-    not-ready) emit_entry "not-ready ${A_KEY[$branch_slot]} — no [criterion-ready] entry for the current issue body; run the attempt's criterion review on this branch" "$branch_slot" ;;
+    criterion-review) emit_entry "criterion-review ${A_KEY[$branch_slot]} — no [criterion-ready] entry for the current issue body; the attempt's criterion review stage runs on this branch" "$branch_slot" ;;
     review-response) emit_entry "review-response ${A_KEY[$branch_slot]}" "$branch_slot" ;;
     paused) emit_entry "paused ${A_KEY[$branch_slot]} — report its pending decision" "$branch_slot" ;;
     resume) emit_entry "resume ${A_KEY[$branch_slot]}" "$branch_slot" ;;
     *) emit_entry "stop unreadable ${A_KEY[$branch_slot]} — a fact of it could not be read" "$branch_slot" ;;
   esac
 else
-  cands=(); i=0
+  # `new` only when no attempt of N is left: one still here is named, and a new
+  # attempt beside it is the operator's explicit request (preparation.md > Modes).
+  cands=(); left=(); i=0
   while [ "$i" -lt "${#A_KEY[@]}" ]; do
     if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_OWN[$i]}" = this ]; then
-      case "$(kind_of "$i")" in start|review-response) cands+=("$i") ;; esac
+      case "$(kind_of "$i")" in
+        start|criterion-review|review-response) cands+=("$i") ;;
+        cleared) ;;
+        *) left+=("$i") ;;
+      esac
     fi
     i=$((i + 1))
   done
-  if [ "${#cands[@]}" -eq 1 ]; then
+  if [ "${#cands[@]}" -eq 1 ] && [ "$(kind_of "${cands[0]}")" = criterion-review ]; then
+    emit_entry "criterion-review ${A_KEY[${cands[0]}]} — no [criterion-ready] entry for the current issue body; its dev branch is checked out and the attempt's criterion review stage runs on it" "${cands[0]}"
+  elif [ "${#cands[@]}" -eq 1 ]; then
     emit_entry "$(kind_of "${cands[0]}") ${A_KEY[${cands[0]}]}" "${cands[0]}"
   elif [ "${#cands[@]}" -ge 2 ]; then
     emit_entry "stop candidates $(for s in "${cands[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— check one attempt's dev branch out to name it"
+  elif [ "${#left[@]}" -ge 1 ]; then
+    emit_entry "none-to-enter $(for s in "${left[@]}"; do printf '%s:%s ' "${A_KEY[$s]}" "$(kind_of "$s")"; done)— attempts of #$ISSUE still in this checkout, none ready to start, in a criterion review stage or with an open pull request"
   else
-    emit_entry "new — NOT READY: a new attempt of issue #$ISSUE begins with its criterion review (/autoflow:criterion-review $ISSUE), which creates it"
+    emit_entry "new — no attempt of issue #$ISSUE is left in this checkout"
   fi
 fi
 

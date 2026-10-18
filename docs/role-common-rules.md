@@ -36,7 +36,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch within an **attempt** — a review-response cycle continues on the attempt's existing dev branch. A new attempt of the same issue gets its own dev branch only from its criterion review (`autoflow-records new`), even while an earlier attempt's PR is still open, and never from a role. Whether another attempt or another issue may start is **not** gated on a prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag, per checkout).
+- No new branch within an **attempt** — a review-response cycle continues on the attempt's existing dev branch. A new attempt of the same issue gets its own dev branch only when the cycle creates it, before its criterion review stage (`autoflow-records new` — beside an earlier attempt still here, on the operator's explicit request), even while an earlier attempt's PR is still open, and never from a role. Whether another attempt or another issue may start is **not** gated on a prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag, per checkout).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 

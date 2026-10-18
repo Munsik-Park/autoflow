@@ -1,6 +1,6 @@
 ---
 name: autoflow-criterion-tracer
-description: AutoFlow criterion review — stage 2: from the causes and required behaviors stage 1 confirmed, judges how far each cause reaches beyond the reported points and whether each required behavior conflicts with the rules the code already has, assuming no fix. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH once per review, after stage 1's record is written.
+description: AutoFlow criterion review stage (U1, CRITERION-REVIEW) — stage 2: from the causes and required behaviors stage 1 confirmed, judges how far each cause reaches beyond the reported points and whether each required behavior conflicts with the rules the code already has, assuming no fix. The subagent_type IS the role declaration the gate hook reads — never score-gated. Spawn FRESH once per review, after stage 1's record is written.
 tools: Read, Glob, Grep, Bash, Write
 effort: high
 ---

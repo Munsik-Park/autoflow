@@ -1122,7 +1122,8 @@ spawn_policy_advisory_check || true
 
 # ── Section 2: Activity check — this checkout's attempt state ──
 # No state file of this checkout's attempts means no attempt of this checkout
-# has started — let the call through (pre-PREFLIGHT, or a criterion review).
+# has passed PREFLIGHT — let the call through (before PREFLIGHT, or an
+# attempt's criterion review stage, whose state file comes after it).
 # The Section 1 denies above already ran unconditionally.
 #
 # Two conditions come first (issue #466), each failing closed only on the

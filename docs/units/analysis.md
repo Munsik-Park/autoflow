@@ -112,8 +112,8 @@ The rules below are the ones other documents cite; everything else about the wor
   never edits the list; only an `[ac-decision]` ledger entry does
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
-  code and policy outside the cycle, and the review's settled decisions were recorded in a
-  `[criterion-ready]` entry before PREFLIGHT admitted the cycle
+  code and policy in the attempt's criterion review stage, and the review's settled decisions were
+  recorded in a `[criterion-ready]` entry before PREFLIGHT wrote the state file
   ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
   not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
   commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it
@@ -265,8 +265,8 @@ analysis report before it feeds a routing decision, a blocker, or a user escalat
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
-  unchanged … refer to that earlier tool_result"), and the dedup ledger is not reset on
-  compaction. The `Read` PostToolUse hook (`<autoflow-root>/hooks/check-read-dedup.sh`) flags this
+  unchanged … refer to that earlier tool_result"), and the dedup ledger is not reset on a
+  rewind (or a compaction). The `Read` PostToolUse hook (`<autoflow-root>/hooks/check-read-dedup.sh`) flags this
   at runtime — these rules are the procedure it points to.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is

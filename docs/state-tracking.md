@@ -11,7 +11,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 **Companion artifact**: `<attempt-dir>/issue-{N}-ledger.md` — the attempt's append-only decision ledger ([Decision Ledger](core.md#decision-ledger)). The hook reads it **advisorily only** and never denies a tool call on what it finds; the ledger is not a gate input — no gate verdict, retry cap or transition reads it.
 
-**Creation**: by the orchestrator, at PREFLIGHT completion — the attempt's record directory and dev branch already exist, made by its criterion review (`autoflow-records new`; [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) > *When and by whom*).
+**Creation**: by the orchestrator, at PREFLIGHT completion, after the attempt's criterion review stage — the attempt's record directory and dev branch already exist, made when the cycle created the attempt (`autoflow-records new`; [`<autoflow-root>/docs/units/preparation.md`](units/preparation.md) > *The criterion review stage*).
 
 ```json
 {
@@ -32,7 +32,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 }
 ```
 
-**`branch` field**: the attempt's dev branch, named once when its criterion review creates the attempt (`dev/YYYY-MM-DD-HHMMSS-issue-N`) and kept unchanged for the life of the state file — a review-response continues on it, and the record directory is named from it. The hook admits it as a string and does not read it.
+**`branch` field**: the attempt's dev branch, named once when the cycle creates the attempt (`dev/YYYY-MM-DD-HHMMSS-issue-N`) and kept unchanged for the life of the state file — a review-response continues on it, and the record directory is named from it. The hook admits it as a string and does not read it.
 
 **`cycle` field**: starts at `1` on Creation. It is incremented on review-response entry; what that resets is `<autoflow-root>/docs/units/preparation.md` > *Review-response setup*. The hook gates read from the current `phases`; the durable cycle record lives in the GitHub PR/issue thread and commit log.
 

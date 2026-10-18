@@ -104,13 +104,16 @@ repository's `.claude/settings.json`.
 
 Then, in your project:
 
-- **Begin an attempt** at an issue with `/autoflow:criterion-review <issue>`:
-  it creates the attempt — its dev branch, checked out, and its record
-  directory — and reviews the acceptance criteria
-  ([`docs/criterion-review.md`](docs/criterion-review.md)). Then **start its
-  cycle** with `/autoflow:cycle <issue>`. Several attempts at one issue — in
-  this checkout, other worktrees or other clones — run side by side; each is
-  the checkout's that began it.
+- **Run an issue** with `/autoflow:cycle <issue>`: with no attempt of the
+  issue left in this checkout, it creates one — its dev branch, checked out,
+  and its record directory — and its first stage reviews the acceptance
+  criteria ([`docs/criterion-review.md`](docs/criterion-review.md)) before
+  the cycle goes on to DIAGNOSE. With an attempt of the issue still here (an
+  open PR, a pause, a review not finished), it enters or reports that one;
+  `/autoflow:cycle <issue> new` asks for a new attempt beside it.
+  `/autoflow:criterion-review <issue>` runs the review stage alone. Several
+  attempts at one issue — in this checkout, other worktrees or other clones —
+  run side by side; each is the checkout's that began it.
 - **Nothing to ignore**: every record — an attempt's state, ledger, reports and
   cycle-layer store, issue drafts — is under the record root,
   `<record-root>/<repo-key>/<stamp>-issue-<N>/` per attempt (`autoflow-records
@@ -171,7 +174,7 @@ claude-autoflow/
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
-├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md)
+├── skills/                            # /autoflow:cycle and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md)
 ├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root, an attempt's record directory, a new attempt
 │
 ├── .github/
@@ -206,7 +209,7 @@ claude-autoflow/
 [`docs/core.md`](docs/core.md) is the operating manual: the AutoFlow lifecycle
 and rules, agent roles and permissions, evaluation criteria, and the Git
 workflow. It reaches a session through the body of `/autoflow:cycle` (and
-`/autoflow:criterion-review`), and a subagent through its agent definition; each
+`/autoflow:criterion-review`, the cycle's criterion review stage alone), and a subagent through its agent definition; each
 unit's document is read on entering the unit.
 
 ### 2. Multi-Agent Separation

@@ -108,8 +108,9 @@ the record to the issue's number; it belongs to the issue, not to any one attemp
 
 `--dry-run` runs every check and creates nothing, leaving the draft in place.
 
-Filing is not readiness: a filed issue enters its first cycle only once its acceptance criteria
-are reviewed and the review's `[criterion-ready]` entry is on record ([`criterion-review.md`](criterion-review.md)).
+Filing is not readiness: a filed issue reaches DIAGNOSE only once its attempt's criterion review
+stage has reviewed its acceptance criteria and recorded the `[criterion-ready]` entry
+([`criterion-review.md`](criterion-review.md)).
 
 ## Exit codes
 

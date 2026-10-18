@@ -2,8 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# Criterion readiness — the fact PREFLIGHT reads before a new-issue cycle
-# (issue #430; docs/criterion-review.md)
+# Criterion readiness — the exit condition of an attempt's criterion review
+# stage, read by PREFLIGHT before the state file (issues #430, #465;
+# docs/criterion-review.md)
 # =============================================================================
 # Reads and reports (ADR-0025 D8). It changes nothing: no ledger entry, no
 # file, no issue edit. Whether an issue's acceptance criteria are right is not
@@ -12,8 +13,9 @@
 # record of the decisions settled under the policy the operator set — is on
 # record for the issue body as it stands now.
 #
-# Readiness belongs to one attempt (issue #466): each attempt starts with its
-# own criterion review, and its entry is read from its own record directory —
+# Readiness belongs to one attempt (issue #466): each attempt's cycle starts
+# with its own criterion review stage, and its entry is read from its own
+# record directory —
 # never from another attempt's, of this checkout or another. The attempt is the
 # one of the dev branch named with --branch, by default the checked-out branch:
 # `<record-root>/<repo-key>/<stamp>-issue-<N>/` (scripts/lib/records.sh).
@@ -101,11 +103,11 @@ if ! af_record_root "$TOP"; then
   exit "$AF_RECORD_ROOT_EXIT"
 fi
 [ -n "$BRANCH" ] || BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" || BRANCH=""
-KEYA="$(af_attempt_key "$BRANCH")" || not_ready "'${BRANCH:-(detached HEAD)}' is not an attempt's dev branch — a new attempt begins with its criterion review"
+KEYA="$(af_attempt_key "$BRANCH")" || not_ready "'${BRANCH:-(detached HEAD)}' is not an attempt's dev branch — a new attempt is created by /autoflow:cycle $ISSUE, whose criterion review stage records the entry"
 [ "$(af_attempt_issue "$KEYA")" = "$ISSUE" ] || not_ready "'$BRANCH' is an attempt of issue #$(af_attempt_issue "$KEYA"), not #$ISSUE"
 DIR="$AF_RECORD_ROOT/$(autoflow_repo_key "$ROOT")/$KEYA"
 LEDGER="$DIR/issue-$ISSUE-ledger.md"
-[ -d "$DIR" ] || not_ready "no attempt record at $DIR — a new attempt begins with its criterion review"
+[ -d "$DIR" ] || not_ready "no attempt record at $DIR — a new attempt is created by /autoflow:cycle $ISSUE, whose criterion review stage records the entry"
 [ -f "$DIR/issue-$ISSUE.json" ] && not_ready "the attempt $KEYA has started ($DIR/issue-$ISSUE.json) — an attempt takes its [criterion-ready] entry before its state file, and a criterion change inside a cycle is an [ac-decision]"
 
 [ -f "$LEDGER" ] || not_ready "no ledger ($LEDGER), so no [criterion-ready] entry"
@@ -144,7 +146,7 @@ recp="$DIR/$rec"
 printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$' || not_ready "entry $id: '- Issue body sha256:' is not a sha256 ('$sha')"
 
 now="$(body_hash)" || { echo "[$TAG] issue #$ISSUE: body lookup failed (gh issue view)" >&2; exit 3; }
-[ "$now" = "$sha" ] || not_ready "entry $id records body sha256=$sha, the issue body now is sha256=$now — the issue changed since the entry; the criterion review records a new entry for the edited body"
+[ "$now" = "$sha" ] || not_ready "entry $id records body sha256=$sha, the issue body now is sha256=$now — the issue changed since the entry; the attempt's criterion review stage records a new entry for the edited body"
 
 echo "$TAG: issue #$ISSUE READY — attempt $KEYA, entry $id, record $rec, body sha256=$sha"
 exit 0

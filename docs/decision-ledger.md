@@ -15,7 +15,7 @@ allocation — are [`core.md`](core.md) > Decision Ledger.
 
 ## Entry identifier
 
-A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/delivery.md`](units/delivery.md) > *Routing* > Attempt cap). An entry written before the issue's first cycle — the criterion-readiness confirmation — carries `cycle 0`. Record entries (`preflight-plugin`, `preflight-local-checks`, `preflight-review-config` — [`units/preparation.md`](units/preparation.md)) are level-3 headings and carry no identifier.
+A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its HANDOFF marker in the same grammar: `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/delivery.md`](units/delivery.md) > *Routing* > Attempt cap). An entry written before the attempt's state file — in its criterion review stage, the criterion-readiness confirmation included — carries `cycle 0`. Record entries (`preflight-plugin`, `preflight-local-checks`, `preflight-review-config` — [`units/preparation.md`](units/preparation.md)) are level-3 headings and carry no identifier.
 
 | Writer | Namespace |
 |---|---|
@@ -122,9 +122,9 @@ entry). The standing entries decide only when they agree: all `accepted` → the
 `rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
 `conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
 
-**Criterion-readiness confirmations** (`[criterion-ready]`). Before an attempt's cycle starts,
-the attempt's own review checks the issue's acceptance criteria outside the cycle and the decisions the review settles
-are recorded ([`criterion-review.md`](criterion-review.md) > *Authority*). The review session
+**Criterion-readiness confirmations** (`[criterion-ready]`). In the first stage of an attempt's
+cycle, before its state file, the attempt's own review checks the issue's acceptance criteria and
+the decisions the review settles are recorded ([`criterion-review.md`](criterion-review.md) > *Authority*). The review session
 judges and records its dispositions, a point it cannot settle is decided by the advisor as at any
 decision point — the answer is itself the decision and does not wait on the operator's review —
 and the operator overrides either when they choose. Once every decision is settled, the review
@@ -142,7 +142,8 @@ none. `<autoflow-root>/scripts/preflight/criterion-ready.sh
 status` reads the **last** entry carrying the marker in the attempt's own ledger — never another
 attempt's — and counts it only when it is an `O` entry
 under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
-the body is confirmed by a new entry, never by editing this one. PREFLIGHT reads that status on
-the attempt's start ([`units/preparation.md`](units/preparation.md) > Stop conditions > *Criterion
-readiness*); nothing inside a cycle reads the entry, and a criterion change inside a cycle stays an
-`[ac-decision]`.
+the body is confirmed by a new entry, never by editing this one. The entry is the criterion review
+stage's exit, and PREFLIGHT reads that status on the attempt's start
+([`units/preparation.md`](units/preparation.md) > *The criterion review stage*, Stop conditions >
+*Criterion readiness*); nothing after the state file reads the entry, and a criterion change from
+then on stays an `[ac-decision]`.
