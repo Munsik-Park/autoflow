@@ -5,7 +5,8 @@
 Accepted (operator decisions 2026-10-18, issue #465 > 운영자 결정: the criterion review is a stage
 of the AutoFlow cycle, not a separate operation, and its records belong to the attempt; operator
 decision 2026-10-19: `/autoflow:criterion-review` is kept for a review by itself; operator decision
-2026-10-19, PR #475: the script reports facts and the session judges the way on (D9); the criteria as
+2026-10-19, PR #475: the script reports facts and the session judges the way on, and AutoFlow does
+not consider compaction (D9); the criteria as
 settled by the attempt's own criterion review, entry O1). Supersedes ADR-0029 D3 (the criterion
 review creates the attempt) and, in D4, the `not-ready` and `new` entries and "`/autoflow:cycle
 <N>` never creates an attempt (A6)". Amends ADR-0027 D2's command list: `/autoflow:cycle` takes
@@ -105,13 +106,15 @@ advisor, where the orchestrator is not confident, is a fresh spawn
 **D9 — The script reports facts; the way on is the session's judgment** (operator decision
 2026-10-19, PR #475: "규칙이 규칙을 다시 만든 상황입니다 … 규칙으로 상태를 true, false라고 규정하면서
 그것을 지키기 위한 코드와 그것이 유지되기 위한 코드를 계속 생성하고 있어요"). Whether a `new` in the
-arguments is a request still to carry out or one the conversation already carried out (a
-re-invocation after a compaction), what to do with a fact that could not be read, with a `claim:`
+arguments is a request still to carry out or one the conversation already carried out, what to do with a fact that could not be read, with a `claim:`
 line or with a dirty tree, is judged by the session and recorded with its grounds in the attempt's
 ledger (Rule Scope, principle 2). Earlier revisions of this PR fixed them as script verdicts — a
 `--new` flag with a "spent" rule, `stop unreadable`, `paused` / `stop paused`, `stop dirty-tree`
 and a suppressed `claim:` line; each verdict needed a further rule for its own gap, and none binds
-authority, so they are removed.
+authority, so they are removed. The "spent" rule was put in for a re-invocation after a
+compaction; AutoFlow requires idle compaction off and does not consider compaction — auto
+compaction cannot be defended against — so no verdict, state or check is kept for it (operator
+decision 2026-10-19).
 
 ## Alternatives Considered
 
@@ -138,8 +141,8 @@ authority, so they are removed.
 
 ### Negative
 
-- The cycle session carries the review's stage 1 context into DIAGNOSE and on; a compaction there
-  is likelier, and a session that ends inside the stage re-enters it from `criterion-review`.
+- The cycle session carries the review's stage 1 context into DIAGNOSE and on, and a session that
+  ends inside the stage re-enters it from `criterion-review`.
 - Two sessions in one checkout can switch a stage's branch away (D7); the stage resumes from its
   records.
 

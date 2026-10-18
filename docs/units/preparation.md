@@ -182,8 +182,7 @@ attempt it enters or creates (an `O` entry under `orchestrator decision`), or in
 stops (Rule Scope, principle 2 — [`core.md`](../core.md)):
 
 - **A `new` in the arguments.** Whether it is a request still to carry out, or one this conversation
-  already carried out — an attempt it created, re-invoked with the same arguments after a
-  compaction — and how far that attempt has come, is the session's to judge from the attempts
+  already carried out — an attempt it created — and how far that attempt has come, is the session's to judge from the attempts
   `cycle-status.sh` reports and from what the conversation holds. A request still to carry out creates
   the attempt whatever entry is printed beside it, under the conditions `autoflow-records new` applies.
 - **A fact that could not be read** (exit `3`: `pr: lookup failed`, an unreadable state file, a
@@ -193,8 +192,7 @@ stops (Rule Scope, principle 2 — [`core.md`](../core.md)):
   ask the user about the tree (a dirty tree is never resolved without the user — *Cautions*), or
   report.
 
-After a compaction, the same request re-enters the active attempt (`resume`), or the attempt whose
-criterion review stage is under way (`criterion-review`).
+After a compaction, the same request re-enters the active attempt (`resume`).
 
 ## The criterion review stage
 
@@ -226,8 +224,8 @@ its exit.
   `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue {N}` reports `READY`; then
   PREFLIGHT continues at the stop conditions on that attempt. While a decision waits on a
   harness-level block, the entry is not written and the session reports it and stops.
-- **Re-entry.** The stage writes no state file, so a session that ends in the middle of it, or is
-  compacted, re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
+- **Re-entry.** The stage writes no state file, so a session that ends in the middle of it
+  re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
   the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
   own judgment, recorded under the review record's `## Session decisions`.
 - **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt)
