@@ -2,22 +2,41 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Elastic-2.0
 # =============================================================================
-# PREFLIGHT external-reviewer availability report (issue #979, D5; #411)
+# PREFLIGHT external-reviewer availability report (issue #979, D5; #411; #463)
 # =============================================================================
-# Prints the external reviewers named in .claude/autoflow.local.json
-# (`.review.reviewers`, or the earlier `.review.backend`; none when both are
-# absent) as one `reviewers: <names|none>` line on stdout — the readout HANDOFF
-# runs them from — and reports whether each one has its CLI on PATH. The built-in Claude review needs no CLI and is
-# not checked here.
+# Resolves the external reviewers through the shared resolver
+# (scripts/review/lib/review-config.sh) — the target's
+# .claude/autoflow.local.json at its repository root when it has `.review`,
+# else the operator's ~/.autoflow/config.json, else none — and prints the
+# readout on stdout:
+#
+#   reviewers: <names|none>          the readout HANDOFF runs them from
+#   source: local <path> | user <path> | none
+#   user-config: absent [<path>] | ok <path> | WARNING <path> — <error> |
+#                UNREADABLE <path> — <error>
+#
+# then reports whether each reviewer has its CLI on PATH. The built-in Claude
+# review needs no CLI and is not checked here. The readout is the same from any
+# working directory inside the target.
 #
 #   exit 0   → every configured external reviewer's CLI is present, or none is
 #              configured.
 #   exit 1   → a configured reviewer's CLI is absent; a reason on stderr names
 #              it and the two remedies (install the CLI, or drop the reviewer
-#              from .claude/autoflow.local.json). Advisory: HANDOFF runs the
+#              from the file that configured it). Advisory: HANDOFF runs the
 #              built-in review alone and the aggregated comment records the
 #              missing reviewer (docs/units/delivery.md > Reviewer review).
-#   exit 2   → the review configuration cannot be read as configured.
+#   exit 2   → the target's .claude/autoflow.local.json cannot be read as
+#              configured (fail-closed).
+#   exit 6   → the user file is the source and cannot be read as configured:
+#              nothing in it applies, no reviewer is checked, and the fixed
+#              marker line `user-config: UNREADABLE <path> — <error>` is on
+#              stdout. The orchestrator asks the operator whether to proceed
+#              without external review. Distinct from 0–4 in both modes.
+#
+# An unreadable user file while the target's `.review` decides is a warning
+# only (`user-config: WARNING …`): the readout and the exit code are the
+# target's.
 #
 # The per-cycle PREFLIGHT invocation (no `--probe`) is presence-only: a
 # side-effect-free command whose exit encodes codex auth state does not exist,
@@ -31,12 +50,13 @@
 # PREFLIGHT and no hook consumes it. Its exit-code contract extends the
 # presence 0/1/2: 0=authenticated (or none configured), 1=CLI absent
 # (short-circuit, reuses the presence exit), 2=usage/config error,
-# 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-failed.
+# 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-failed,
+# 6=user file unreadable (as above).
 #
 # Model / effort: each reviewer's `.review.<name>.model` and `.effort` are
 # resolved by the shared scripts/review/lib/review-config.sh — the same
-# resolver the live wrapper uses — and the --probe round-trip passes them
-# exactly as the HANDOFF review will.
+# resolver, from the same file, the live wrapper uses — and the --probe
+# round-trip passes them exactly as the HANDOFF review will.
 #
 # Usage: scripts/preflight/check-review-backend.sh [--probe]
 # =============================================================================
@@ -70,6 +90,14 @@ done
 resolve_review_config check-review-backend
 # The readout HANDOFF reads for which external reviewers to run.
 echo "reviewers: ${REVIEW_REVIEWERS:-none}"
+review_readout
+if [ "$REVIEW_USER_STATE" = unreadable ]; then
+  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no external reviewer runs. Fix the file and run again to apply it, or proceed without external review — the operator's choice." >&2
+  exit "$REVIEW_USER_UNREADABLE_EXIT"
+fi
+if [ "$REVIEW_USER_STATE" = warning ]; then
+  echo "[check-review-backend] warning: ${REVIEW_USER_CFG_PATH} cannot be read as configured (its error is on the user-config: readout line); not applied — ${REVIEW_CFG_PATH} decides." >&2
+fi
 
 # --------------------------------------------------------------------------
 # --probe helpers (issue #979 cycle 9). Only reached when PROBE=1 AND the CLI
@@ -166,7 +194,7 @@ for name in $REVIEW_REVIEWERS; do
   if ! command -v "$name" >/dev/null 2>&1; then
     echo "[check-review-backend] external reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
     echo "[check-review-backend] remedy 1 — install the ${name} CLI (see docs/reviewer-backend.md)." >&2
-    echo "[check-review-backend] remedy 2 — drop '${name}' from .review.reviewers in .claude/autoflow.local.json." >&2
+    echo "[check-review-backend] remedy 2 — drop '${name}' from .review.reviewers in ${REVIEW_CFG_PATH}." >&2
     echo "[check-review-backend] until then HANDOFF runs the built-in review without it, and the aggregated review comment records the omission." >&2
     missing=1
     continue

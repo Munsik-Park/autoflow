@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (operator decisions 2026-10-02, issue #411).
+Accepted (operator decisions 2026-10-02, issue #411). D1's source of the external reviewers and
+D5's stop on an unreadable configuration amended by ADR-0028 (operator decisions 2026-10-18, issue
+#463).
 
 ## Context
 
@@ -36,6 +38,9 @@ artifacts — and by each external reviewer the target configures (`.claude/auto
 external reviewer is another vendor's model; the same model is not run twice under two settings,
 so the `claude` backend (`claude -p` as an isolated subprocess) is removed. The earlier
 `.review.backend: "codex"` reads as `["codex"]`; no configuration means the built-in review alone.
+*(Amended by ADR-0028, issue #463: the external reviewers come from the target's `.review` when
+it has one, else from the operator's `~/.autoflow/config.json`; neither means the built-in review
+alone.)*
 
 **D2 — Records, not comments.** A reviewer writes its review to a record under `.autoflow/`,
 archived with the issue's other files. No reviewer posts to the pull request or changes a label,
@@ -56,6 +61,9 @@ merge-order clearance remains the operator's.
 **D5 — Unavailability.** An external reviewer whose CLI is absent, or whose run fails, does not
 hold the round: the aggregation runs on the records that exist and names the missing reviewer.
 PREFLIGHT reports an absent CLI without stopping; an unreadable review configuration still stops it.
+*(Amended by ADR-0028, issue #463: an unreadable target file still stops it; an unreadable
+operator file that is the source is reported and the operator is asked whether to proceed without
+external review.)*
 
 **D6 — Every round, every PR.** Every round runs every reviewer on every pull request whose head
 advanced. Models: the built-in review `opus` (`spawn-policy.json` key `handoff-review`), the

@@ -24,7 +24,8 @@ plugin root. Its components are `<autoflow-root>/agents/`, `<autoflow-root>/hook
 `<autoflow-root>/skills/` and `<autoflow-root>/bin/`; `<autoflow-root>/docs/` and
 `<autoflow-root>/scripts/` are the files its roles read and run by path. Nothing is
 written into a target's tree by the tool: the target holds only the files it
-owns (R3, *Target-owned files* below).
+owns (R3, *Target-owned files* below). The one file the tool writes is outside
+every target, under the operator's `$HOME` (*Operator-level file* below).
 
 ---
 
@@ -88,9 +89,25 @@ owns (R3, *Target-owned files* below).
 | Path in the target | Content |
 |---|---|
 | `.autoflow/` | per-issue state, ledger and analysis artifacts, and the cycle-layer store (gitignored); the hook and the scripts resolve it from the target, never from the plugin root |
-| `.claude/autoflow.local.json` | the target's declarations — external reviewers, local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example`; absent means no external reviewer, no local check, no checklist and no suite plane |
+| `.claude/autoflow.local.json` | the target's declarations — external reviewers, local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example` (which declares no external reviewer); absent means no local check, no checklist and no suite plane, and the external reviewers of the operator-level file (*Operator-level file* below) |
 | `.claude/autoflow/spawn-policy.json` | optional: the target's own spawn policy (*Spawn policy* below) |
 | the project's information and rule files | R3 |
+
+### Operator-level file
+
+| Path | Content |
+|---|---|
+| `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the external reviewers (`{ "review": { … } }`, the target file's shape and parser), used when the target's `.claude/autoflow.local.json` has no `.review` ([`reviewer-backend.md`](reviewer-backend.md) > *Config location*) |
+
+It is neither target-owned nor shipped. The plugin's SessionStart hook
+(`<autoflow-root>/hooks/ensure-user-config.sh`, wired in
+`<autoflow-root>/hooks/hooks.json`) runs at every session start in every project
+the plugin is enabled in and writes outside the target's tree: when the file is
+absent it creates it with `{ "review": { "reviewers": [] } }` and tells the
+operator where it is and what it holds; when it exists — valid or not — it
+leaves it unchanged and says nothing. Concurrent session starts create it once
+and never overwrite it. Its location is defined once, in
+`<autoflow-root>/scripts/lib/user-config.sh` ([ADR-0028](records/adr/0028-user-level-reviewer-config.md)).
 
 ### Spawn policy
 
@@ -124,6 +141,7 @@ policy governs no row for (`policy_unmapped_agent_types`).
 | `CLAUDE_PROJECT_DIR` | Claude Code (the project root) | the hook resolves the target's `.autoflow/` from it; Claude Code runs from the target's root |
 | `CLAUDE_PLUGIN_ROOT` | the plugin loader | substituted in `<autoflow-root>/hooks/hooks.json`, the agent definitions and the command bodies, and set in the hook's environment; absent from a Bash command's environment, where `autoflow-root` (`<autoflow-root>/bin/autoflow-root`, on the Bash `PATH`) prints the root; it never resolves `.autoflow` |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | not provisioned | AutoFlow neither requires nor reads it |
+| `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook and the review resolver; with `HOME` unset or empty there is no such file |
 
 **Runtime prerequisite**: Claude Code **v2.1.277+** — the release that removed the
 blocking `TaskOutput` tool, whose removal *Wait discipline* relies on in place of

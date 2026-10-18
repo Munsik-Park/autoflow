@@ -64,10 +64,13 @@ WORK="$(cd "$WORK" && pwd -P)"
 trap 'rm -rf "$WORK"' EXIT
 
 # Every leg runs with the harness variables cleared, so the developer's own
-# session cannot steer a resolution; each leg sets what it tests.
+# session cannot steer a resolution; each leg sets what it tests. HOME is an
+# empty directory, so the operator's ~/.autoflow/config.json (the user-level
+# external-reviewer file, docs/reviewer-backend.md > Config location) is never
+# read.
 run_clean() { env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PROJECT_DIR -u AUTOFLOW_SPAWN_POLICY \
-  CLAUDE_CONFIG_DIR="$WORK/empty-config" "$@"; }
-mkdir -p "$WORK/empty-config"
+  -u REVIEW_CONFIG_PATH CLAUDE_CONFIG_DIR="$WORK/empty-config" HOME="$WORK/empty-home" "$@"; }
+mkdir -p "$WORK/empty-config" "$WORK/empty-home"
 
 git_init() {
   ( cd "$1" && git init -q \

@@ -109,11 +109,21 @@ Then, in your project:
 - **Ignore the working state**: `.gitignore` excludes `.autoflow/`
   (`.autoflow/*`), which holds the per-issue directories
   `.autoflow/{repo-key}-issue-{N}/`.
+- **Choose your external reviewers once, for every project**, in
+  `~/.autoflow/config.json`. AutoFlow's SessionStart hook creates it on the
+  first session start in any project where the plugin is enabled — only when it
+  is absent, outside your project's tree — with
+  `{ "review": { "reviewers": [] } }` (external review off) and tells you so;
+  set `"reviewers": ["codex"]` there to run codex beside the built-in Claude
+  review at HANDOFF ([`docs/reviewer-backend.md`](docs/reviewer-backend.md) >
+  *Config location*). A broken file is reported, and you are asked whether to
+  go on without external review.
 - **Declare what your project needs** in `.claude/autoflow.local.json` — the
   file is yours, and absent means none of the following
   ([`.claude/autoflow.local.json.example`](.claude/autoflow.local.json.example)):
-  - `review.reviewers` — external reviewers run beside the built-in Claude
-    review at HANDOFF (`["codex"]`; [`docs/reviewer-backend.md`](docs/reviewer-backend.md));
+  - `review` — only to override your `~/.autoflow/config.json` for this
+    repository (`"reviewers": []` for none); a `.review` here decides, and a
+    broken user file is then only a warning;
   - `preflight.local_checks[]` — your own per-clone readiness steps, run at
     PREFLIGHT ([`docs/units/preparation.md`](docs/units/preparation.md) > *Stop conditions*);
   - `audit.security_checklist` — the repository-relative path of your security
@@ -150,7 +160,7 @@ claude-autoflow/
 │
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
-├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, hooks.json
+├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
 ├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md)
 ├── bin/                               # autoflow-root — prints the plugin root
 │
