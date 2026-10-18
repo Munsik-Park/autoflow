@@ -38,7 +38,8 @@
 #     S3  outside a git repository, with no --root: usage exit 2
 #
 #   W   codex review wrapper prompt
-#     W1  the prompt names the plugin root's .codex/review.md by absolute path
+#     W1  the prompt names the plugin root's .codex/review.md by absolute path,
+#         and the record lands at --out, outside the target's tree, leaving it clean
 #     W2  a plugin root without .codex/review.md: exit 2, codex not started
 # =============================================================================
 
@@ -91,13 +92,24 @@ make_plugin_root() {
   cp "$REPO_ROOT/.claude/autoflow/spawn-policy.json" "$d/.claude/autoflow/spawn-policy.json"
 }
 
-# make_target <dir> — a git repository with a defective ledger, so the hook's
-# ledger advisory has something to report whenever its helper runs.
+# The record root of every leg: HOME's default, $WORK/empty-home/.autoflow
+# (scripts/lib/records.sh, issue #466).
+RECORD_ROOT="$WORK/empty-home/.autoflow"
+# shellcheck source=../../scripts/lib/records.sh
+. "$REPO_ROOT/scripts/lib/records.sh"
+
+# make_target <dir> — a git repository with one attempt whose ledger is
+# defective, so the hook's ledger advisory has something to report whenever its
+# helper runs. The attempt's record directory is under the record root and
+# names <dir> as its checkout.
 make_target() {
-  local d="$1"
-  mkdir -p "$d/.autoflow/o__r-issue-1"
+  local d="$1" a
+  mkdir -p "$d"
   git_init "$d"
-  printf '# ledger\n\n## no identifier here\n' > "$d/.autoflow/o__r-issue-1/issue-1-ledger.md"
+  a="$RECORD_ROOT/$(autoflow_repo_key "$d")/2026-01-01-000000-issue-1"
+  mkdir -p "$a"
+  printf '%s\n' "$d" > "$a/checkout"
+  printf '# ledger\n\n## no identifier here\n' > "$a/issue-1-ledger.md"
 }
 
 # target_policy <dir> — the target's own policy: the default with every
@@ -133,7 +145,7 @@ else
   failc "H1" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h1.err")"
 fi
 
-rm -f "$DECOY_MARK" "$T/.autoflow/.ledger-check-cache"
+rm -f "$DECOY_MARK" "$RECORD_ROOT/.ledger-check-cache"
 bash_payload ls | run_clean CLAUDE_PROJECT_DIR="$T" bash "$PLUGIN/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h2.err"; rc=$?
 if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && grep -q 'decision-ledger identifier defect' "$WORK/h2.err"; then
   pass "H2: without CLAUDE_PLUGIN_ROOT the hook at <root>/hooks/ finds the helper beside it"
@@ -146,7 +158,7 @@ fi
 BARE="$WORK/bare-root"
 mkdir -p "$BARE/hooks"
 cp "$HOOK_SRC" "$BARE/hooks/check-autoflow-gate.sh"
-rm -f "$DECOY_MARK" "$T/.autoflow/.ledger-check-cache"
+rm -f "$DECOY_MARK" "$RECORD_ROOT/.ledger-check-cache"
 bash_payload ls | run_clean CLAUDE_PLUGIN_ROOT="$BARE" CLAUDE_PROJECT_DIR="$T" \
   bash "$BARE/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h3.err"; rc=$?
 if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && ! grep -q 'decision-ledger identifier defect' "$WORK/h3.err"; then
@@ -157,9 +169,9 @@ fi
 
 bash_payload 'gh issue create --title x' | run_clean CLAUDE_PLUGIN_ROOT="$PLUGIN" CLAUDE_PROJECT_DIR="$T" \
   bash "$PLUGIN/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h4.err"; rc=$?
-if [ "$rc" -eq 2 ] && grep -qF "then run: $PLUGIN/scripts/issue/create-issue.sh --draft .autoflow/<name>.md" "$WORK/h4.err" \
+if [ "$rc" -eq 2 ] && grep -qF "then run: $PLUGIN/scripts/issue/create-issue.sh --draft \"\$(autoflow-records drafts)/<name>.md\"" "$WORK/h4.err" \
    && grep -qF "per $PLUGIN/docs/issue-proposal.md," "$WORK/h4.err"; then
-  pass "H4: the deny names the plugin root's script and document by absolute path (the target path stays relative)"
+  pass "H4: the deny names the plugin root's script and document by absolute path (the draft path through autoflow-records)"
 else
   failc "H4" "hook" "rc=$rc stderr=$(head -c 400 "$WORK/h4.err")"
 fi
@@ -256,26 +268,30 @@ printf 'OPEN\tdev/test\n'
 GH
 cat > "$STUB/codex" <<'CODEX'
 #!/usr/bin/env bash
-# The last argument is the prompt; record it and leave the review record.
+# The last argument is the prompt; record it and write the review to the
+# scratch file the prompt names, relative to the repository root (the cwd).
 for _a in "$@"; do _last="$_a"; done
 printf '%s' "$_last" > "$CODEX_PROMPT_CAPTURE"
-printf 'review\n' > "$CODEX_RECORD_OUT"
+_f=$(printf '%s' "$_last" | sed -n 's/.* to the file \([^ ]*\) (relative to the repository root).*/\1/p')
+[ -n "$_f" ] && printf 'review\n' > "$_f"
 CODEX
 chmod +x "$STUB/gh" "$STUB/codex"
 
-# run_wrapper <wrapper> <target> <capture> — rc of the wrapper run in <target>.
+# run_wrapper <wrapper> <target> <capture> — rc of the wrapper run in <target>;
+# the record goes to <capture>.rec/out.md, outside the target's tree.
 run_wrapper() {
-  rm -f "$3"
-  (cd "$2" && run_clean PATH="$STUB:$PATH" CODEX_PROMPT_CAPTURE="$3" CODEX_RECORD_OUT="$2/rec/out.md" \
-    bash "$1" --pr 7 --out rec/out.md >/dev/null 2>"$3.err")
+  rm -rf "$3" "$3.rec"
+  (cd "$2" && run_clean PATH="$STUB:$PATH" CODEX_PROMPT_CAPTURE="$3" \
+    bash "$1" --pr 7 --out "$3.rec/out.md" >/dev/null 2>"$3.err")
 }
 
 TW="$WORK/target-w"
 git_init "$(mkdir -p "$TW" && echo "$TW")"
 run_wrapper "$PLUGIN/scripts/review/codex-review-pr.sh" "$TW" "$WORK/w1.prompt"; rc=$?
 if [ "$rc" -eq 0 ] && grep -qF "the review convention at $PLUGIN/.codex/review.md." "$WORK/w1.prompt" \
-   && grep -qF "in the Output Format of $PLUGIN/.codex/review.md," "$WORK/w1.prompt"; then
-  pass "W1: the prompt names the plugin root's .codex/review.md by absolute path"
+   && grep -qF "in the Output Format of $PLUGIN/.codex/review.md," "$WORK/w1.prompt" \
+   && [ -s "$WORK/w1.prompt.rec/out.md" ] && [ -z "$(git -C "$TW" status --porcelain)" ]; then
+  pass "W1: the prompt names the plugin root's .codex/review.md by absolute path; the record lands outside the tree, nothing stays in it"
 else
   failc "W1" "wrapper" "rc=$rc prompt=$(head -c 400 "$WORK/w1.prompt" 2>/dev/null) err=$(head -c 200 "$WORK/w1.prompt.err")"
 fi

@@ -10,14 +10,14 @@ The repository root is the plugin root (ADR-0027 D1): `.claude-plugin/`, `agents
 
 ## Development Commands
 
-- **Test**: a change's functional verification is a one-shot run of cycle-layer assets under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, each invoked by its path (`docs/submodule-common-rules.md` > Verification and Tools > *Local verification*). The committed checks are the deployment-level ones (`packaging`, `manifest`), each run directly by its path — the list is the `run:` steps of `.github/workflows/contract-suites.yml`, `plugin-package.yml` and `e2e-dummy-target.yml`.
+- **Test**: a change's functional verification is a one-shot run of cycle-layer assets under `<attempt-dir>/issue-{N}-local/`, each invoked by its path (`docs/submodule-common-rules.md` > Verification and Tools > *Local verification*). The committed checks are the deployment-level ones (`packaging`, `manifest`), each run directly by its path — the list is the `run:` steps of `.github/workflows/contract-suites.yml`, `plugin-package.yml` and `e2e-dummy-target.yml`.
 - **Command bodies**: `skills/cycle/SKILL.md` and `skills/criterion-review/SKILL.md` are generated from `docs/core.md` by `scripts/skills/gen-skill-bodies.sh` and committed. Edit the core, then regenerate; `tests/plugin/verify-skill-bodies.sh` checks that the committed bodies equal the generator's output, the leading-part budget and the `<autoflow-root>/…` path closure.
 
 ## Writing AutoFlow Documents
 
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract, and **`[DENY]`** a prohibited action; the tags carry the weight, so no extra emphasis is stacked on them, and a `[MUST]` applies exactly to the scope it names (`docs/core.md` > Instruction Conventions).
 - A rule and the device that enforces it change in the same change (`docs/core.md` > Rule Scope, principle 4).
-- An AutoFlow path in a document, an agent definition or a command body is written `<autoflow-root>/docs/…` or `<autoflow-root>/scripts/…`; a target path stays a bare relative path (`.autoflow/…`, `.claude/autoflow.local.json`). Links between AutoFlow documents stay file-relative (ADR-0027 D3).
+- An AutoFlow path in a document, an agent definition or a command body is written `<autoflow-root>/docs/…` or `<autoflow-root>/scripts/…`; a target path stays a bare relative path (`.claude/autoflow.local.json`), and a record path is written `<attempt-dir>/…` — the attempt's record directory under the record root, which `autoflow-records dir` prints. Links between AutoFlow documents stay file-relative (ADR-0027 D3).
 - The core's leading part — above its `core:leading-end` marker — is what a compacted session keeps re-attached; it holds the rules that must hold after a compaction and stays within the budget the skill-body check enforces.
 
 ## AutoFlow Core

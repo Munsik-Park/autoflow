@@ -26,7 +26,7 @@ These documents are the operating source of truth.
 | [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
 | [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |
-| [Decision Ledger](decision-ledger.md) | The per-issue decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
+| [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through command bodies and agent definitions, target-identity separation, the packaging and PREFLIGHT checks, and the target's own spawn policy. |

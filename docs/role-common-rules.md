@@ -36,7 +36,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch for the **same issue** while that issue's own PR is still open — a review-response cycle continues on that issue's existing dev branch. Whether a *different* issue may start is **not** gated on the prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag).
+- No new branch within an **attempt** — a review-response cycle continues on the attempt's existing dev branch. A new attempt of the same issue gets its own dev branch only from its criterion review (`autoflow-records new`), even while an earlier attempt's PR is still open, and never from a role. Whether another attempt or another issue may start is **not** gated on a prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag, per checkout).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 
@@ -65,7 +65,7 @@ git status                  # any uncommitted work?
 
 1. Read the `Next:` line in the most recent commit and continue from there.
 2. Read the assignment in the spawn prompt — it carries the task and the
-   `.autoflow/*` paths. There is no mailbox to poll: the prompt is delivered
+   `<attempt-dir>/*` paths. There is no mailbox to poll: the prompt is delivered
    once, at spawn.
 
 ---
@@ -128,7 +128,7 @@ Implement → the comment check (<autoflow-root>/docs/units/build.md > What the 
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
-body to `.autoflow/*` and return an anchor plus a one-line summary):
+body to `<attempt-dir>/*` and return an anchor plus a one-line summary):
 
 - Files changed.
 - Test results (pass/fail).
@@ -147,7 +147,7 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 | Action | Method | Note |
 |--------|--------|------|
 | Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
-| Report to orchestrator | the spawn's return value | completion, escalation — body to `.autoflow/*`, return an anchor + one-line summary |
+| Report to orchestrator | the spawn's return value | completion, escalation — body to `<attempt-dir>/*`, return an anchor + one-line summary |
 | Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
 | Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
@@ -162,7 +162,7 @@ The hand-back carries exactly what the final text carries in the other modes —
 
 | Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `.autoflow/*` and report an anchor + one-line summary |
+| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `<attempt-dir>/*` and report an anchor + one-line summary |
 
 A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
 

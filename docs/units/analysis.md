@@ -51,9 +51,9 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   prompt states the goal, the cycle's `mode` and
   the report's path, and names the inputs by path: the issue (new-issue) or the review comment /
   thread PREFLIGHT identified (review-response), and the decision ledger
-  (`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md`). In a new-issue cycle it also names the criterion review record
+  (`<attempt-dir>/issue-{N}-ledger.md`). In a new-issue cycle it also names the criterion review record
   the ledger's last `[criterion-ready]` entry points at (*Criterion review record* below). In a review-response cycle it also names every artifact the
-  previous cycle left (`.autoflow/{repo-key}-issue-{N}/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
+  previous cycle left (`<attempt-dir>/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
   (*Re-entry* below).
@@ -160,7 +160,7 @@ The rules below are the ones other documents cite; everything else about the wor
 
 ## Analysis report
 
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-analysis.md`. The unit writes it whole on its first run and brings it up to
+`<attempt-dir>/issue-{N}-analysis.md`. The unit writes it whole on its first run and brings it up to
 date on a re-entry. Every section below is present; a section with nothing to record says `none`.
 
 | Section | Holds | Read by |
@@ -256,7 +256,7 @@ table changes only by an `[ac-decision]` entry, which the orchestrator applies.
 
 A re-entry passes through GATE:HYPOTHESIS again on its re-score
 ([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Re-entry re-score*). The unit reads and writes no
-`.autoflow/{repo-key}-issue-{N}/issue-{N}.json` state file, so the counter above is the orchestrator's own accounting.
+`<attempt-dir>/issue-{N}.json` state file, so the counter above is the orchestrator's own accounting.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 

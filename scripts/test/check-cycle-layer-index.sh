@@ -6,16 +6,17 @@
 # entered the merged tree.
 # =============================================================================
 # A `cycle`-layer asset — a `delivery-check`, a default `automated` row's test,
-# a default `manual` checklist — lives under the single declared prefix
-# `.autoflow/<repo-key>-issue-{N}/issue-{N}-local/` (issue #423), is executed once, and is archived with the
-# issue's other artifacts. It never enters the merged tree (ADR-0024 D2).
+# a default `manual` checklist — lives in the attempt's cycle-layer store
+# `<attempt-dir>/issue-{N}-local/` under the record root, outside every
+# checkout's tree (issue #466), is executed once, and stays with the attempt's
+# other records. It never enters the merged tree (ADR-0024 D2).
 #
-# THE SUBJECT IS THE INDEX, NOT THE WORKTREE. `.gitignore` already keeps the
-# prefix out of the default add path, so a worktree predicate re-checks what the
-# ignore rule does. What it cannot witness is the two DISAGREEING — a path put
-# into the index over the ignore rule (`git add -f`, an ignore rule edited three
-# cycles from now, a merge that carries one in) — and that disagreement is the
-# whole defect, visible only after merge where no per-PR relation sees it.
+# THE SUBJECT IS THE INDEX, NOT THE WORKTREE. The store is outside the tree, so
+# the one way an asset reaches the index is a path under the prefix the store
+# had inside the tree before the record root (issues #423 to #465) —
+# `.autoflow/<repo-key>-issue-{N}/issue-{N}-local/` — put into the index (`git
+# add -f` over an ignore rule, a merge that carries one in). That is the whole
+# defect, visible only after merge where no per-PR relation sees it.
 # `git ls-files` reads the index, so a tracked path is found whether or not it
 # is still on disk, and an on-disk path that was never added is not a finding.
 #
@@ -29,9 +30,9 @@
 # check exists to catch. `-z` emits raw NUL-terminated paths with no quoting at
 # all, so the match is over the path itself, for every byte a path may carry.
 #
-# THE SCOPE IS THE DECLARED PREFIX, not `.autoflow/` as a whole: this repository
+# THE SCOPE IS THE FORMER PREFIX, not `.autoflow/` as a whole: this repository
 # legitimately tracks `.autoflow/.gitkeep`, and the ledger and the state file
-# are cycle-spanning artifacts of the store, not cycle-layer assets.
+# are cycle-spanning artifacts, not cycle-layer assets.
 #
 # Usage:
 #   bash scripts/test/check-cycle-layer-index.sh [--root <dir>]
@@ -54,9 +55,9 @@ DEFAULT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || DEFAULT_ROOT=""
 # shellcheck source=scripts/test/suite-manifest.sh
 . "$SCRIPT_DIR/suite-manifest.sh"
 
-# The prefix, as one literal and one pattern derived from it. Both are here
-# rather than in two callers: the declared prefix is ADR-0024 D2's, and a second
-# spelling of it is a second declaration.
+# The former in-tree prefix, as one literal and one pattern derived from it.
+# Both are here rather than in two callers: a second spelling of it is a second
+# declaration.
 CYCLE_LAYER_PREFIX='.autoflow/<repo-key>-issue-{N}/issue-{N}-local/'
 CYCLE_LAYER_RE='^\.autoflow/[^/]+-issue-[0-9]+/issue-[0-9]+-local/'
 
@@ -103,6 +104,6 @@ fi
 
 echo "check-cycle-layer-index: $TRACKED_COUNT cycle-layer asset(s) tracked under $CYCLE_LAYER_PREFIX in $TOP"
 printf '%s' "$TRACKED" | sed 's/^/  /'
-echo "  A cycle-layer asset is uncommitted by rule (ADR-0024 D2): it is executed once and archived with the issue's other .autoflow artifacts."
-echo "  Remove it from the index ('git rm --cached <path>'), and check that .gitignore still excludes the prefix — the two disagreeing is what this predicate exists to catch."
+echo "  A cycle-layer asset is uncommitted by rule (ADR-0024 D2): it is executed once from the attempt's record directory under the record root, outside the tree."
+echo "  Remove it from the index ('git rm --cached <path>'); an in-tree record of a cycle in progress moves to the record root with scripts/migrate/migrate-in-tree-records.sh."
 exit 1

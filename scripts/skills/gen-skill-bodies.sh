@@ -71,7 +71,7 @@ bullet() { awk -v p="$1" 'index($0, p) == 1 { print; exit }' "$CORE"; }
 need() { [ -n "$2" ] || { echo "gen-skill-bodies: docs/core.md has no $1" >&2; exit 1; }; }
 
 ROOT_DECL='AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
-An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.autoflow/…`, `.claude/autoflow.local.json`, the target'"'"'s own files) is the target'"'"'s. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.'
+An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target'"'"'s own files) is the target'"'"'s, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.'
 GEN_NOTE='<!-- Generated from docs/core.md by scripts/skills/gen-skill-bodies.sh — edit the core, then regenerate. -->'
 
 gen_cycle() {
@@ -112,15 +112,16 @@ gen_criterion_review() {
 name: criterion-review
 description: >-
   Review an issue's acceptance criteria against the target's code and policy,
-  outside any AutoFlow cycle, before its first new-issue cycle. Use only when
-  the operator asks for the criterion review (/autoflow:criterion-review <N>).
+  outside any AutoFlow cycle, as the first step of an attempt — the review
+  creates the attempt. Use only when the operator asks for the criterion review
+  (/autoflow:criterion-review <N>).
 argument-hint: "<issue-number>"
 ---
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** — the criterion review of issue `$ARGUMENTS`, outside any cycle. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** — the criterion review of issue `$ARGUMENTS`, outside any cycle: the review of the attempt on the checked-out dev branch when it is this checkout's attempt of the issue with no state file, otherwise of a new attempt it creates first (`autoflow-records new --issue $ARGUMENTS`). Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 EOF
   {

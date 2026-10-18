@@ -59,16 +59,33 @@
 #                                     open re-entry — a recommendation attempt
 #                                     not yet re-scored clean; issue #275)
 #   - Bash(gh pr create)            → the same two conditions
+#   - (no jq) → the state-independent denies above, read from the raw input;
+#     and, a dev branch checked out → push / PR creation / a spawn other than
+#                                     research or evaluation DENIED: neither the
+#                                     input nor this checkout's state can be read
+#                                     (Section 0, issue #466)
+#   - (record root undetermined or unusable, a dev branch checked out) → the
+#                                     same calls DENIED with the user file's path
+#                                     and error (Section 2, issue #466)
+#   - (a state file left in the checkout's own .autoflow/ before issue #466) →
+#                                     the score-gated calls DENIED until it is
+#                                     moved to the record root (Section 2)
 #   - Bash(git commit)              → while the latest GATE:QUALITY record carries
 #                                     remedy_class "doc": the doc re-entry's sweep
 #                                     record issue-N-remedy-sweep.md (beside the
 #                                     state file) must
 #                                     exist with non-empty `## Command` and
 #                                     `## Output` sections (issue #140, Gate 5)
+#
+# Which state gates a call: the state files of THIS checkout's attempts — the
+# attempt record directories under the record root whose `checkout` file names
+# the session's checkout (CLAUDE_PROJECT_DIR; scripts/lib/records.sh). Another
+# checkout's attempt — of the same issue, another issue or another repository —
+# never gates this session, and one attempt is active at a time per checkout.
 
 set -e
 
-AUTOFLOW_DIR="${CLAUDE_PROJECT_DIR:-.}/.autoflow"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-.}"
 INPUT=$(cat)
 
 # ── AutoFlow paths: helper lookup and the paths a message names ──
@@ -106,6 +123,92 @@ af_helper() {
   return 0
 }
 
+# `git` may carry global options (-c key=value, -C <path>) between the binary
+# and the subcommand: `git -c protocol.version=2 push origin main`. Match zero
+# or more such option tokens so push detection is not bypassed (issue #13).
+# Scope: -c/-C interposition that arises in NORMAL operation. Adversarial
+# wrappers (subshell/backtick/command-substitution) stay out of P1's threat
+# model and are NOT covered here (docs/gate-matching-standard.md > P1). Defined
+# at global scope (before the Bash guard and the is_score_gated_surface
+# definition) so all three consumers — the P2 default-branch deny, Gate 3, and
+# is_score_gated_surface (called on the Agent path too) — reference a set value.
+GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
+GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
+
+# ── The session's checkout and branch (issue #466) ──
+# A session with no AutoFlow dev branch checked out can have no attempt in
+# progress, so what the record root and the input are read for is nothing a
+# gate decides there. Any `dev/…-issue-<N>` name counts, the pre-#433 form too.
+# A detached HEAD is read through an interrupted rebase or `git am`, whose
+# head-name file still names the branch being rebuilt — a push of `HEAD:<dev
+# branch>` from the middle of one is a dev-branch session's push.
+SESSION_BRANCH=$(git -C "$PROJECT_DIR" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+if [ -z "$SESSION_BRANCH" ]; then
+  for _hn in rebase-merge/head-name rebase-apply/head-name; do
+    _hf=$(git -C "$PROJECT_DIR" rev-parse --git-path "$_hn" 2>/dev/null || true)
+    case "$_hf" in /*) ;; ?*) _hf="$PROJECT_DIR/$_hf" ;; esac
+    if [ -n "$_hf" ] && [ -f "$_hf" ]; then
+      IFS= read -r SESSION_BRANCH < "$_hf" || true
+      SESSION_BRANCH=${SESSION_BRANCH#refs/heads/}
+      break
+    fi
+  done
+fi
+DEV_SESSION=0
+if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev/.+-issue-[0-9]+$'; then DEV_SESSION=1; fi
+
+# ── Section 0: no jq (issue #466) ──
+# The input, the user file and every state file are JSON, read with jq. With
+# no jq none of them can be read, and the first jq read below would end the
+# hook under `set -e` with exit 127, which PreToolUse does not treat as a block.
+# So this section runs first: in a dev-branch session the calls a gate decides
+# are refused on a jq-free reading of the raw input — the tool name and the
+# `subagent_type` value as JSON keys, `git push` / `gh pr create` anywhere in
+# the text (over-inclusive: an escaped mention matches too, the fail-closed
+# direction). Reads, writes (the repair of the user file among them) and
+# research / evaluation spawns pass. Outside a dev-branch session nothing here
+# applies, and the hook reads nothing it could gate on.
+if ! command -v jq >/dev/null 2>&1; then
+  # The state-independent denies of Sections 1 and 1b hold with no jq too, read
+  # the same over-inclusive way: a merge, an issue filing, a push naming the
+  # default branch, the merge-order label's removal, a backgrounded suite run,
+  # a spawn with no `model`.
+  _raw_def=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+  _raw_def="${_raw_def:-main}"
+  _raw_why=""
+  if printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge\b'; then _raw_why="'gh pr merge' — AutoFlow does not merge"
+  elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
+       || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
+  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?${_raw_def}\b|:[[:space:]]*${_raw_def}\b)"; then _raw_why="a push to ${_raw_def}"
+  elif printf '%s' "$INPUT" | grep -qE 'remove-label[[:space:]=]+blocked-by-subrepo|labels/blocked-by-subrepo'; then _raw_why="a change naming the 'blocked-by-subrepo' label"
+  elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
+  elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
+  fi
+  if [ -n "$_raw_why" ]; then
+    echo "BLOCKED: jq is not installed, and this call reads as ${_raw_why} — a deny that holds in every state ($(af_path docs/state-tracking.md) > Hook gates)." >&2
+    exit 2
+  fi
+  [ "$DEV_SESSION" = 1 ] || exit 0
+  _raw_tool=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' | head -1 | sed -E 's/.*"([A-Za-z_]+)"$/\1/')
+  _raw_deny=0
+  case "$_raw_tool" in
+    Bash)
+      if printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}|gh[[:space:]]+pr[[:space:]]+create\b"; then _raw_deny=1; fi ;;
+    Agent)
+      _raw_type=$(printf '%s' "$INPUT" | grep -oE '"subagent_type"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*"([^"]*)"$/\1/')
+      case "$_raw_type" in
+        Explore|Plan|claude-code-guide|autoflow-evaluator|*:autoflow-evaluator) ;;
+        *) _raw_deny=1 ;;
+      esac ;;
+  esac
+  if [ "$_raw_deny" = 1 ]; then
+    echo "BLOCKED: jq is not installed, so the AutoFlow user file \$HOME/.autoflow/config.json and this checkout's attempt state cannot be read — and the dev branch $SESSION_BRANCH is checked out." >&2
+    echo "Push, pull-request creation and spawns other than research and evaluation are refused until jq is installed; the next call reads them anew ($(af_path docs/state-tracking.md) > Hook gates)." >&2
+    exit 2
+  fi
+  exit 0
+fi
+
 # ── Hook target detection ──
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
@@ -125,17 +228,6 @@ CMD_BOUNDARY='(^|[;&|]|&&|\|\|)[[:space:]]*'
 #   2. delete single- and double-quoted substrings (inline --body "...").
 SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 
-# `git` may carry global options (-c key=value, -C <path>) between the binary
-# and the subcommand: `git -c protocol.version=2 push origin main`. Match zero
-# or more such option tokens so push detection is not bypassed (issue #13).
-# Scope: -c/-C interposition that arises in NORMAL operation. Adversarial
-# wrappers (subshell/backtick/command-substitution) stay out of P1's threat
-# model and are NOT covered here (docs/gate-matching-standard.md > P1). Defined
-# at global scope (before the Bash guard and the is_score_gated_surface
-# definition) so all three consumers — the P2 default-branch deny, Gate 3, and
-# is_score_gated_surface (called on the Agent path too) — reference a set value.
-GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
-GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
 
 # ── Caller identity ──
 # The hook input's `agent_type` names the sub-agent that made the call; the
@@ -144,6 +236,7 @@ GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b
 # to hook events"). Section 1e (ledger authorship) and the unit-caller class
 # below read it.
 CALLER_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || true)
+
 
 # ── _fold_continuations (issue #134 c2) ────────────────────────────────────
 # Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
@@ -385,7 +478,7 @@ $_shb_buf"; fi
 
 # ── Section 1: Unconditional blocks (state-independent — P2) ──
 # AutoFlow never merges and never pushes to the default branch through the
-# agent's tools. Enforced regardless of any .autoflow state so that a
+# agent's tools. Enforced regardless of any AutoFlow state so that a
 # terminal phase setting active:false (or a removed state file) cannot
 # disable the prohibition. Merging is performed by external review.
 
@@ -510,9 +603,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # `gh pr edit` / `gh issue edit --remove-label blocked-by-subrepo` (a PR's
   # labels are issue labels) and the `gh api … -X DELETE …/labels/
   # blocked-by-subrepo` REST form — while (b) NOT firing on unrelated label
-  # edits such as HANDOFF's `gh issue edit … --remove-label status:in-progress`
-  # or the aggregator's `--remove-label blocked-by-review`, and (c) leaving
-  # other labels removable. Residual (accepted; shared by every
+  # edits such as the aggregator's `--remove-label blocked-by-review`, and (c)
+  # leaving other labels removable. Residual (accepted; shared by every
   # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
   # stripped by SCAN and slips — the threat model is the naive self-clear, and
   # the bare form is what callers write.
@@ -543,8 +635,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # obligation to review before filing was prose only, so an agent could assert
   # it had checked for duplicates and file anyway — the assertion and the act
   # had no mechanical relation. Filing now goes through
-  # scripts/issue/create-issue.sh, which derives the issue from a draft in
-  # .autoflow/ and RE-RUNS the duplicate search itself. That wrapper carries no
+  # scripts/issue/create-issue.sh, which derives the issue from a draft in the
+  # repository's draft directory under the record root (`autoflow-records
+  # drafts`) and RE-RUNS the duplicate search itself. That wrapper carries no
   # `gh issue create` token in its own invocation string, so this deny does not
   # block it; the operator's permission prompt on the wrapper is layer three.
   # State-independent (P2), like every Section-1 deny: no cycle need be active
@@ -575,7 +668,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   done <<< "$_SEGMENTS"
   if [ "$_issue_create_deny" = 1 ]; then
     echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/issue-proposal.md))." >&2
-    echo "Write a draft to .autoflow/<name>.md per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft .autoflow/<name>.md" >&2
+    echo "Write a draft to \"\$(autoflow-records drafts)/<name>.md\" per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft \"\$(autoflow-records drafts)/<name>.md\"" >&2
     echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
     exit 2
   fi
@@ -750,7 +843,7 @@ resolve_spawn_role() {
   #     the prefix on a warm wake 57 s after the previous turn and 100% on a
   #     cold wake past the cache TTL; a fresh
   #     direct spawn per phase pays for its prefix once and carries continuity
-  #     through .autoflow/* instead;
+  #     through the attempt's records instead;
   #   - no offsetting benefit: the C7 pilot found the direct spawn's VERIFY
   #     detection EQUAL_OR_BETTER than the named baseline (ADR-0021);
   #   - consistency: one delivery path (the return value) and one declaration
@@ -828,6 +921,50 @@ is_score_gated_surface() {
   fi
 }
 
+# ── This checkout's attempts under the record root (issue #466) ──
+# The record root comes from the operator's user file through the library the
+# scripts use (scripts/lib/records.sh) — the AutoFlow tree's own copy, never the
+# target's. RECORD_ROOT stays empty when it is undetermined or unusable; Section
+# 2 decides what that means for the call. OWN_DIRS lists, one per line, the
+# record directories whose `checkout` file names this session's checkout and
+# that carry no `completed` mark.
+RECORD_ROOT=""
+RECORD_ROOT_MARKER=""
+OWN_DIRS=""
+_records_lib="$(af_helper scripts/lib/records.sh)"
+PROJECT_TOP=""
+if [ -n "$_records_lib" ] && . "$_records_lib" 2>/dev/null; then
+  PROJECT_TOP=$(af_checkout_top "$PROJECT_DIR" 2>/dev/null || true)
+  if [ -n "$PROJECT_TOP" ] && af_record_root "$PROJECT_TOP"; then
+    RECORD_ROOT="$AF_RECORD_ROOT"
+  elif [ -n "$PROJECT_TOP" ]; then
+    RECORD_ROOT_MARKER=$(af_record_root_marker)
+  else
+    RECORD_ROOT_MARKER="record-root: UNDETERMINED — $PROJECT_DIR is not a git checkout"
+  fi
+else
+  RECORD_ROOT_MARKER="record-root: UNDETERMINED — $(af_path scripts/lib/records.sh) cannot be loaded"
+fi
+# A directory under the root that cannot be listed hides whatever attempt it
+# holds; in a dev-branch session that is a state that cannot be found.
+RECORD_ROOT_UNREADABLE=""
+if [ -n "$RECORD_ROOT" ]; then
+  for _kd in "$RECORD_ROOT"/*/ "$RECORD_ROOT"/*/*-issue-*/; do
+    [ -d "$_kd" ] || continue
+    if [ ! -r "$_kd" ] || [ ! -x "$_kd" ]; then RECORD_ROOT_UNREADABLE="${RECORD_ROOT_UNREADABLE:+$RECORD_ROOT_UNREADABLE }${_kd%/}"; fi
+  done
+  for _ck in "$RECORD_ROOT"/*/*-issue-*/checkout; do
+    [ -f "$_ck" ] || continue
+    _od="${_ck%/checkout}"
+    [ -e "$_od/completed" ] && continue
+    _owner=""
+    IFS= read -r _owner < "$_ck" || true
+    [ "$_owner" = "$PROJECT_TOP" ] || continue
+    OWN_DIRS="${OWN_DIRS}${_od}
+"
+  done
+fi
+
 # ── Section 1c: standing decision-ledger identifier advisory (NON-GATING) ──
 # docs/core.md > Decision Ledger requires each settled-decision entry to carry a
 # uniquely allocated identifier. This step surfaces a violation early; it does
@@ -856,46 +993,54 @@ ledger_advisory_check() {
 
   # Content-hash cache: re-check a ledger only when its bytes changed since the
   # last observation, so an unchanged defective ledger does not repeat the same
-  # warning on every tool call of a session. Keyed by path, scoped to this
-  # project's .autoflow (gitignored scratch), and named outside the issue
-  # directories so state-file discovery never picks it up.
-  _cache="$AUTOFLOW_DIR/.ledger-check-cache"
-  for _ledger in "$AUTOFLOW_DIR"/*-issue-*/issue-*-ledger.md; do
-    [ -f "$_ledger" ] || continue
-    _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
-    [ -n "$_hash" ] || continue
-    _prev=""
-    if [ -f "$_cache" ]; then
-      # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
-      # spaces, so both fields are read by fixed offset rather than by
-      # whitespace field splitting (which would never match such a path and
-      # would re-warn on every call for an unchanged ledger).
-      _prev=$(awk -v p="$_ledger" \
-        'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
-        "$_cache" 2>/dev/null)
-    fi
-    [ "$_prev" = "$_hash" ] && continue
+  # warning on every tool call of a session. Keyed by path, kept at the record
+  # root — never in the target's tree (issue #466) — and named outside the
+  # attempt directories so state-file discovery never picks it up. The ledgers
+  # checked are this checkout's attempts' (OWN_DIRS).
+  [ -n "$RECORD_ROOT" ] || return 0
+  _cache="$RECORD_ROOT/.ledger-check-cache"
+  local _od
+  while IFS= read -r _od; do
+    [ -n "$_od" ] || continue
+    for _ledger in "$_od"/issue-*-ledger.md; do
+      [ -f "$_ledger" ] || continue
+      _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
+      [ -n "$_hash" ] || continue
+      _prev=""
+      if [ -f "$_cache" ]; then
+        # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
+        # spaces, so both fields are read by fixed offset rather than by
+        # whitespace field splitting (which would never match such a path and
+        # would re-warn on every call for an unchanged ledger).
+        _prev=$(awk -v p="$_ledger" \
+          'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
+          "$_cache" 2>/dev/null)
+      fi
+      [ "$_prev" = "$_hash" ] && continue
 
-    _out=$(bash "$_helper" check "$_ledger" 2>&1 >/dev/null)
-    if [ -n "$_out" ]; then
-      echo "WARNING: decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):" >&2
-      # Bounded: the helper already sanitises and truncates each heading it
-      # echoes; this caps how many defect lines one warning can emit.
-      printf '%s\n' "$_out" | head -20 >&2
-      echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next ($(af_path docs/core.md) > Decision Ledger)." >&2
-      LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
-$(printf '%s\n' "$_out" | head -20)
-A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
-"
-    fi
+      _out=$(bash "$_helper" check "$_ledger" 2>&1 >/dev/null)
+      if [ -n "$_out" ]; then
+        echo "WARNING: decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):" >&2
+        # Bounded: the helper already sanitises and truncates each heading it
+        # echoes; this caps how many defect lines one warning can emit.
+        printf '%s\n' "$_out" | head -20 >&2
+        echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next ($(af_path docs/core.md) > Decision Ledger)." >&2
+        LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
+  $(printf '%s\n' "$_out" | head -20)
+  A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
+  "
+      fi
 
-    # Drop this ledger's prior row by the same fixed-offset path comparison
-    # (a substring match would mis-handle paths containing spaces), then
-    # append the fresh one.
-    { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
-      printf '%s  %s\n' "$_hash" "$_ledger"
-    } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
-  done
+      # Drop this ledger's prior row by the same fixed-offset path comparison
+      # (a substring match would mis-handle paths containing spaces), then
+      # append the fresh one.
+      { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
+        printf '%s  %s\n' "$_hash" "$_ledger"
+      } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
+    done
+  done <<EOF_OWN_DIRS
+$OWN_DIRS
+EOF_OWN_DIRS
   return 0
 }
 # Model-visible delivery (issue #422). Stderr of a PreToolUse hook that exits 0
@@ -904,8 +1049,8 @@ A defect cannot be removed from an append-only ledger; what you do about it is y
 # hooks to return `additionalContext` to the model"; the minimum runtime is
 # 2.1.277). The writer no longer runs `check` itself, so this warning is the
 # only signal of a defect. It reaches whichever actor makes the next hooked call
-# after the ledger changes — once per ledger content, project-wide (the cache
-# above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
+# after the ledger changes — once per ledger content, across the record root
+# (the cache above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
 # (exit 2) already carries stderr to the model — and nothing else in this hook
 # writes stdout, so the JSON object is the whole of it.
 # shellcheck disable=SC2329  # invoked by the EXIT trap below
@@ -975,9 +1120,47 @@ spawn_policy_advisory_check() {
 }
 spawn_policy_advisory_check || true
 
-# ── Section 2: Activity check — locate the active issue state file ──
-# No state file means AutoFlow has not started — let the call through
-# (pre-PREFLIGHT). The Section 1 denies above already ran unconditionally.
+# ── Section 2: Activity check — this checkout's attempt state ──
+# No state file of this checkout's attempts means no attempt of this checkout
+# has started — let the call through (pre-PREFLIGHT, or a criterion review).
+# The Section 1 denies above already ran unconditionally.
+#
+# Two conditions come first (issue #466), each failing closed only on the
+# score-gated surface, so reads, the writes that repair the cause and research /
+# evaluation spawns stay open:
+#   - a state file in the checkout's own .autoflow/ — a cycle recorded before the
+#     record root moved out of the tree, in progress or waiting — is never
+#     passed over: it is moved to the record root first
+#     (scripts/migrate/migrate-in-tree-records.sh);
+#   - in a dev-branch session, a record root that is undetermined or unusable
+#     leaves this checkout's state unfindable, so the call is refused with the
+#     user file's path and error. A session with no dev branch checked out can
+#     have no attempt in progress and is not refused.
+_legacy=""
+for _lsf in "${PROJECT_TOP:-$PROJECT_DIR}"/.autoflow/*-issue-*/issue-*.json; do
+  [ -f "$_lsf" ] || continue
+  _lb=${_lsf##*/}; _ln=${_lb#issue-}; _ln=${_ln%.json}
+  case "$_ln" in ''|*[!0-9]*) continue ;; esac
+  _ldir=${_lsf%/*}; _ldir=${_ldir##*/}
+  case "$_ldir" in *-issue-"$_ln") ;; *) continue ;; esac
+  _legacy="${_legacy:+$_legacy }$_lsf"
+done
+if [ -n "$_legacy" ] && is_score_gated_surface; then
+  echo "BLOCKED: AutoFlow state recorded inside the checkout's tree, before the record root (issue #466): $_legacy" >&2
+  echo "Move it to the record root with $(af_path scripts/migrate/migrate-in-tree-records.sh) before score-gated work — the cycle continues from there ($(af_path docs/state-tracking.md) > Record location)." >&2
+  exit 2
+fi
+if [ -n "$RECORD_ROOT_UNREADABLE" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then
+  echo "BLOCKED: a directory under the AutoFlow record root cannot be read, so this checkout's attempt state may be in it: $RECORD_ROOT_UNREADABLE — and the dev branch $SESSION_BRANCH is checked out." >&2
+  echo "Restore its read and search permission; the next call reads it anew ($(af_path docs/state-tracking.md) > Record location)." >&2
+  exit 2
+fi
+if [ -z "$RECORD_ROOT" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then
+  echo "BLOCKED: the AutoFlow record root is not usable, so this checkout's attempt state cannot be found — and the dev branch $SESSION_BRANCH is checked out." >&2
+  echo "$RECORD_ROOT_MARKER" >&2
+  echo "Fix the file (or the directory) it names; the next call reads it anew ($(af_path docs/state-tracking.md) > Record location)." >&2
+  exit 2
+fi
 #
 # Discovery is JSON-semantic (jq), not a textual grep: a state file is "active"
 # iff `.active == true` as JSON, regardless of serialization whitespace. A prior
@@ -985,7 +1168,7 @@ spawn_policy_advisory_check || true
 # but compact (`{"active":true}`) or reformatted (`"active" : true`) state file
 # was silently not found — leaving STATE_FILE empty and bypassing every score
 # gate (issue #241). jq decides by value; the loop keeps the first active file
-# (one issue runs at a time).
+# (one attempt runs at a time in a checkout).
 #
 # Parse-validity and `.active` are decided in a SINGLE jq read per file, not two:
 # a `jq -e '.active == true'` returns non-zero for both a parse error AND
@@ -1003,13 +1186,13 @@ STATE_JSON=""
 MALFORMED_STATE=""
 ACTIVE_COUNT=0
 ACTIVE_FILES=""
-if [ -d "$AUTOFLOW_DIR" ]; then
-  # AUTOFLOW-ISSUE-DIR (issue #423): an issue's files live in its own directory
-  # .autoflow/<repo-key>-issue-<N>/, so the state file is
-  # .autoflow/<repo-key>-issue-<N>/issue-<N>.json. Every such file counts,
-  # whatever the key — the hook computes no repository key — so the PR Wait
-  # Rule holds across every issue directory in this .autoflow/.
-  for _sf in "$AUTOFLOW_DIR"/*-issue-*/issue-*.json; do
+while IFS= read -r _od; do
+  [ -n "$_od" ] || continue
+  # AUTOFLOW-ATTEMPT-DIR (issues #423, #466): an attempt's files live in its own
+  # directory <record-root>/<repo-key>/<stamp>-issue-<N>/, so its state file is
+  # <that directory>/issue-<N>.json. Only this checkout's attempts are read
+  # (OWN_DIRS), so the PR Wait Rule holds per checkout.
+  for _sf in "$_od"/issue-*.json; do
     [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
     # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
     # (docs/state-tracking.md > AutoFlow State Tracking). Any other JSON in an issue directory
@@ -1066,7 +1249,9 @@ if [ -d "$AUTOFLOW_DIR" ]; then
       MALFORMED_STATE="$_sf"    # parse error / unreadable → corrupt; cannot trust its active flag
     fi
   done
-fi
+done <<EOF_OWN_DIRS
+$OWN_DIRS
+EOF_OWN_DIRS
 
 # Fail closed on corrupt state: no readable active file, but a malformed state
 # file exists whose active flag we cannot determine. The state file gates BOTH
@@ -1078,14 +1263,14 @@ fi
 if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
   if is_score_gated_surface; then
     echo "BLOCKED: malformed AutoFlow state file: $MALFORMED_STATE" >&2
-    echo "A .autoflow/<repo-key>-issue-<N>/issue-<N>.json state file is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
+    echo "An attempt's state file <record-root>/<repo-key>/<stamp>-issue-<N>/issue-<N>.json is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
     echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
     exit 2
   fi
 fi
 
-# Fail closed on multiple active state files: one issue runs at a time
-# (docs/core.md > PR Wait Rule). When two or more state files are simultaneously
+# Fail closed on multiple active state files of this checkout: one attempt runs
+# at a time in a checkout (docs/core.md > PR Wait Rule). When two or more state files are simultaneously
 # active, the first-active-wins discovery above would decide every score gate by
 # whichever file sorts first in the glob — regardless of which issue the pushed
 # branch / spawn actually targets (issue #843). Shares `is_score_gated_surface`
@@ -1097,7 +1282,7 @@ fi
 # gate.
 if [ "$ACTIVE_COUNT" -ge 2 ]; then
   if is_score_gated_surface; then
-    echo "BLOCKED: multiple active AutoFlow state files — one issue runs at a time ($(af_path docs/core.md) > PR Wait Rule)." >&2
+    echo "BLOCKED: multiple active AutoFlow state files in this checkout — one attempt runs at a time in a checkout ($(af_path docs/core.md) > PR Wait Rule)." >&2
     echo "Active: $ACTIVE_FILES" >&2
     echo "Deactivate all but the in-flight cycle's state file before score-gated work." >&2
     exit 2

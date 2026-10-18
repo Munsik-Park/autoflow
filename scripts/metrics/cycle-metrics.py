@@ -26,18 +26,21 @@ Two steps, run together by default:
            preserved copy can stand in for an expired transcript); with no
            covering source it is left as it is and reported.
 
-  derive   $ROOT/sessions/*.json + $ROOT/labels.tsv + the .autoflow archive
+  derive   $ROOT/sessions/*.json + $ROOT/labels.tsv + the attempt records
            -> $ROOT/issues.tsv and $ROOT/issues.json, REGENERATED on every run,
            so a fix to the attribution logic recomputes every past issue.
 
-$ROOT is ${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/_metrics.
+$ROOT is <record-root>/_metrics, the record root being the one every AutoFlow
+script reads (`bin/autoflow-records root`; scripts/lib/records.sh, issue #466) —
+no option or environment variable sends the store, or the records it joins,
+anywhere else.
 
 What a session record holds is aggregate only — per agent: role (the declared
 `subagent_type`),
 model, the spawn's short `description` label, phase-key, call count, cache
 read / write / output, peak context, start / end, per-wake figures; for the
 orchestrator: one row per API call (timestamp, context, cache read / write,
-output, re-write flag); the `.autoflow/<repo-key>-issue-{N}/` reference runs; operator
+output, re-write flag); the issue-record reference runs; operator
 prompt timestamps. No transcript text, tool output or prompt body is stored.
 
 Phase-key recovery. Every spawn is preceded (a `[MUST]`) by a
@@ -53,7 +56,7 @@ sub-agents take `<workflow>/<site>` (`workflow-site`). Each agent records the
 method that decided it, or null, and the run prints the recovery rate.
 
 Usage:
-  cycle-metrics.py [--projects-root DIR]... [--root DIR] [--archive-root DIR]
+  cycle-metrics.py [--projects-root DIR]...
                    [--settle-hours H] [--now ISO] [--session ID]...
                    [--policy FILE] [--no-collect] [--no-derive] [--gh]
 
@@ -77,8 +80,9 @@ from transcript_stats import (  # noqa: E402
 SCHEMA = 2            # 2: an agent's role is the orchestrator's declared subagent_type, not the meta file's agentType
 PK_RE = re.compile(r'spawn-policy\.sh["\']?\s+(?:model|effort)\s+([A-Za-z0-9][A-Za-z0-9_-]*)')
 PK_LOOP_RE = re.compile(r'\bfor\s+\w+\s+in\s+([^;\n]+?)\s*;\s*do\b')
-# `.autoflow/<repo-key>-issue-{N}/` (issue #423) or the flat `.autoflow/issue-{N}` of earlier transcripts
-ISSUE_RE = re.compile(r'\.autoflow/(?:[A-Za-z0-9._-]+-)?issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
+# an attempt directory `<record-root>/<repo-key>/<stamp>-issue-{N}/` (issue #466), or, in earlier
+# transcripts, `.autoflow/<repo-key>-issue-{N}/` (issue #423) or the flat `.autoflow/issue-{N}`
+ISSUE_RE = re.compile(r'(?:\.autoflow/(?:[A-Za-z0-9._-]+-)?|/\d{4}-\d{2}-\d{2}-\d{6}-)issue-(\d+)(?=[-./\s"\'`)\\]|$)')   # not a truncated preview (`issue-5…`)
 WF_ISSUE_RE = re.compile(r'''["']?issue["']?\s*[:=]\s*["']?#?(\d+)''')
 SWITCH_REFS = 3       # consecutive references that move the session to another issue
 TAIL_S = 1800         # a segment reaches this far past its last reference, no further
@@ -447,7 +451,7 @@ def collect_session(main, policy_keys):
                 else:
                     refs.append([n, ts, ts, 1])
                 fp = inp.get('file_path') or ''
-                if name == 'Write' and re.search(r'\.autoflow/(?:[^/]+-issue-%d/)?issue-%d\.json$' % (n, n), fp):
+                if name == 'Write' and re.search(r'(?:\.autoflow/(?:[^/]+-issue-%d/)?|/\d{4}-\d{2}-\d{2}-\d{6}-issue-%d/)issue-%d\.json$' % (n, n, n), fp):
                     state_writes.append([ts, n])
 
     prompts = []
@@ -725,18 +729,15 @@ def read_labels(path):
     return rows
 
 
-def find_artifacts(archive_root, repo, issue, cwds):
-    """The directory holding issue-{N}.json: the archive copy, else a live .autoflow."""
-    hits = []
-    for pat in ('*__%s' % repo, repo):
-        hits += glob.glob(os.path.join(archive_root, pat, 'issue-%s-*' % issue, 'issue-%s.json' % issue))
-    if hits:
-        return os.path.dirname(sorted(hits)[-1]), 'archive'
-    for cwd in cwds:
-        for pat in ('*__%s-issue-%s' % (repo, issue), '%s-issue-%s' % (repo, issue)):
-            live = glob.glob(os.path.join(cwd, '.autoflow', pat, 'issue-%s.json' % issue))
-            if live:
-                return os.path.dirname(sorted(live)[-1]), 'live'
+def find_artifacts(record_root, repo, issue):
+    """The directory holding issue-{N}.json under the record root: the latest attempt's
+    `<repo-key>/<stamp>-issue-{N}/` (issue #466), else a pre-#466 archive `<repo-key>/issue-{N}-<stamp>/`."""
+    for pattern, where in (('*-issue-%s' % issue, 'attempt'), ('issue-%s-*' % issue, 'archive')):
+        hits = []
+        for pat in ('*__%s' % repo, repo):
+            hits += glob.glob(os.path.join(record_root, pat, pattern, 'issue-%s.json' % issue))
+        if hits:
+            return os.path.dirname(sorted(hits)[-1]), where
     return None, None
 
 
@@ -938,9 +939,9 @@ def derive(args):
         it['segments'].sort(key=lambda g: g['start'])
         it['note'] = '; '.join(dict.fromkeys(n for _, n in sorted(it.pop('notes'))))   # in session order
         del it['labelled']
-        # The .autoflow artifacts are the AutoFlow arm's. Another arm of the same issue has none of its
+        # The issue's records are the AutoFlow arm's. Another arm of the same issue has none of its
         # own, and borrowing these would put arm A's scores and rounds on arm B's row.
-        adir, where = (find_artifacts(args.archive_root, it['repo'], it['issue'], it['cwd'])
+        adir, where = (find_artifacts(args.record_root, it['repo'], it['issue'])
                        if it['arm'] in ('', 'A') else (None, None))
         it['outcome'] = outcome(adir, it['issue'])
         it['outcome']['artifacts'] = where
@@ -987,7 +988,7 @@ def derive(args):
             'phase_keys_recovered': sum(1 for a in top if a['phase_key']),
             'units': dict(sorted(units.items())),
         }
-        # A session that only read or wrote an issue's .autoflow files three times — drafting the issue,
+        # A session that only read or wrote an issue's record files three times — drafting the issue,
         # analysing it afterwards — becomes a row like any other, all orchestrator and no outcome. It
         # is not a cycle: no state file (no `cycle` value) and no AutoFlow role spawn. A row tied to
         # its issue by labels.tsv is the other arm of a comparison; it has no state by construction
@@ -1044,15 +1045,27 @@ def derive(args):
     return len(rows), unattributed
 
 
+def record_root(here):
+    """The record root, read through bin/autoflow-records (scripts/lib/records.sh). An undetermined
+    or unusable root stops the run with the helper's marker line: nothing is written."""
+    try:
+        p = subprocess.run([os.path.join(here, '..', '..', 'bin', 'autoflow-records'), 'root'],
+                           capture_output=True, text=True)
+    except OSError as e:
+        print('cycle-metrics: cannot run bin/autoflow-records (%s)' % e, file=sys.stderr)
+        sys.exit(7)
+    if p.returncode != 0:
+        sys.stderr.write(p.stderr)
+        sys.exit(p.returncode)
+    return p.stdout.strip()
+
+
 def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
-    archive = os.environ.get('AUTOFLOW_ARCHIVE_ROOT') or os.path.join(os.path.expanduser('~'), '.autoflow')
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--projects-root', action='append',
                     help='transcript root (repeatable; first hit of a session id wins). '
                          'Default: ~/.claude/projects')
-    ap.add_argument('--archive-root', default=archive, help='the .autoflow archive root (outcome join)')
-    ap.add_argument('--root', help='metrics store. Default: <archive-root>/_metrics')
     ap.add_argument('--settle-hours', type=float, default=12.0,
                     help='a session whose last record is younger than this is not finalized')
     ap.add_argument('--now', help='clock override (ISO 8601), for tests')
@@ -1063,7 +1076,8 @@ def main(argv=None):
     ap.add_argument('--gh', action='store_true', help='query each linked PR\'s state with the gh CLI (network)')
     args = ap.parse_args(argv)
     args.projects_root = args.projects_root or [os.path.join(os.path.expanduser('~'), '.claude', 'projects')]
-    args.root = args.root or os.path.join(args.archive_root, '_metrics')
+    args.record_root = record_root(here)
+    args.root = os.path.join(args.record_root, '_metrics')
     now = parse_ts(args.now) if args.now else dt.datetime.now(dt.timezone.utc)
     if now is None:
         ap.error('--now is not ISO 8601')

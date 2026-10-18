@@ -18,13 +18,16 @@
 # whether a disposition is correct (that is the operator's job at layer three);
 # it refuses when the draft disposes of nothing the wrapper found.
 #
-# The draft must sit directly inside the derived `.autoflow/`. On a successful
-# create the draft is renamed to `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md`,
-# binding the record to the number GitHub actually assigned rather than to a
-# guess, inside the issue's own directory (issue #423). <repo-key> is the
-# repository the issue was filed in — the --repo value when one is named, the
-# current origin otherwise — so a record for another repository's issue never
-# shares a name with this repository's issue of the same number.
+# The draft must sit directly inside this repository's draft directory under
+# the record root, `<record-root>/<repo-key>/drafts/` (`autoflow-records
+# drafts`; scripts/lib/records.sh — outside every checkout's tree, issue #466).
+# On a successful create the draft is renamed to
+# `<record-root>/<repo-key>/proposals/issue-<N>-proposal.md`, binding the record
+# to the number GitHub actually assigned rather than to a guess. In the
+# proposal's name <repo-key> is the repository the issue was filed in — the
+# --repo value when one is named, the current origin otherwise — so a record
+# for another repository's issue never shares a name with this repository's
+# issue of the same number.
 #
 # Usage:
 #   scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
@@ -35,12 +38,13 @@
 #
 # Exit codes:
 #   0   created, or --dry-run with every check passed
-#   64  usage / missing argument / draft not directly inside the derived
-#       `.autoflow` (including that directory being absent)
+#   64  usage / missing argument / draft not directly inside the draft
+#       directory (including that directory being absent)
 #   65  refusal — missing section, a level-2 heading outside the four sections,
 #       no grounding anchor, no derivable query term, an undispositioned
 #       candidate, or a query at its page limit
 #   70  gh reported success but its output could not be bound to a number
+#   7   the record root is undetermined or unusable (the marker line says why)
 #   *   gh's own non-zero exit, propagated
 
 set -euo pipefail
@@ -60,7 +64,7 @@ usage() {
   cat >&2 <<'EOF'
 usage: scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
 
-  --draft <path>  proposal draft directly inside the repository's .autoflow/
+  --draft <path>  proposal draft directly inside "$(autoflow-records drafts)"
   --repo <o/n>    target repository; defaults to the current repository's origin
   --dry-run       run every check and print the plan; create nothing
 
@@ -101,32 +105,35 @@ fi
 GH_REPO_ARGS=""
 [ -n "$REPO" ] && GH_REPO_ARGS="--repo $REPO"
 
-# ── Repository and .autoflow/ preconditions ─────────────────────────────────
+# ── Repository and draft-directory preconditions ────────────────────────────
 if ! ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-  echo "refuse: not inside a Git repository — the .autoflow/ directory is derived from the repository root" >&2
+  echo "refuse: not inside a Git repository — the draft directory is derived from the repository's origin" >&2
   exit 64
 fi
 # Both sides of the containment test are compared as PHYSICAL paths. On macOS
 # the repository root routinely resolves through a symlinked ancestor
 # (/var -> /private/var), so a textual prefix test rejects a draft that really
-# does sit inside .autoflow/.
+# does sit inside the draft directory.
 if ! ROOT_PHYS="$(cd -P "$ROOT" 2>/dev/null && pwd)"; then
   echo "refuse: repository root '$ROOT' cannot be resolved" >&2
   exit 64
 fi
-AUTOFLOW_DIR="$ROOT_PHYS/.autoflow"
-# The issue directory's key (issue #423) is derived after the create, but the
-# library is loaded here so a missing one refuses before anything is filed.
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$(dirname "$0")/../lib/issue-dir.sh" || { echo "refuse: scripts/lib/issue-dir.sh cannot be loaded" >&2; exit 64; }
+# shellcheck source=scripts/lib/records.sh
+. "$(dirname "$0")/../lib/records.sh" || { echo "refuse: scripts/lib/records.sh cannot be loaded" >&2; exit 64; }
+if ! af_record_root "$ROOT_PHYS"; then
+  af_record_root_marker >&2
+  exit "$AF_RECORD_ROOT_EXIT"
+fi
+if ! AUTOFLOW_DIR="$(cd -P "$AF_RECORD_ROOT/$(autoflow_repo_key "$ROOT")/drafts" 2>/dev/null && pwd)"; then
+  AUTOFLOW_DIR="$AF_RECORD_ROOT/$(autoflow_repo_key "$ROOT")/drafts"
+fi
 
 # The directory's absence is diagnosed separately from a misplaced draft
-# (feature design §5): a target that has never run PREFLIGHT arrives here with no
-# such directory, and "your draft is elsewhere" would not tell that caller that
+# (feature design §5): "your draft is elsewhere" would not tell a caller that
 # nothing is elsewhere. The wrapper does not create the directory — creating it
-# would not make the draft appear.
+# would not make the draft appear; `autoflow-records drafts` does.
 if [ ! -d "$AUTOFLOW_DIR" ]; then
-  echo "refuse: no .autoflow/ directory at $AUTOFLOW_DIR — write the draft into that directory and re-run; the wrapper does not create it" >&2
+  echo "refuse: no draft directory at $AUTOFLOW_DIR — create it with autoflow-records drafts, write the draft into it and re-run" >&2
   exit 64
 fi
 
@@ -137,9 +144,9 @@ fi
 # Symlink resolution (ledger E14 implementation note 4, left to the implementer
 # against the constraint's intent): a symlinked draft is REFUSED, not resolved.
 # The constraint exists so step 6's rename lands the draft's own bytes in the
-# issue's directory, which the archive moves whole; renaming a link moves the
-# link, leaving the content outside every cycle's archival set — which satisfies the check while defeating what it
-# is for. Refusing is the reading that preserves the intent.
+# proposal record; renaming a link moves the link, leaving the content wherever
+# its target is — which satisfies the check while defeating what it is for.
+# Refusing is the reading that preserves the intent.
 if [ -L "$DRAFT" ]; then
   echo "refuse: draft is a symlink: $DRAFT — place the draft itself directly inside $AUTOFLOW_DIR" >&2
   exit 64
@@ -149,7 +156,7 @@ if ! DRAFT_DIR="$(cd -P "$(dirname "$DRAFT")" 2>/dev/null && pwd)"; then
   exit 64
 fi
 if [ "$DRAFT_DIR" != "$AUTOFLOW_DIR" ]; then
-  echo "refuse: draft must sit directly inside $AUTOFLOW_DIR, but it resolved to $DRAFT_DIR — the wrapper moves the draft into the issue's directory from .autoflow/ itself" >&2
+  echo "refuse: draft must sit directly inside $AUTOFLOW_DIR, but it resolved to $DRAFT_DIR — the wrapper moves the draft into its proposal record from there itself" >&2
   exit 64
 fi
 DRAFT_PATH="$DRAFT_DIR/$(basename "$DRAFT")"
@@ -431,7 +438,7 @@ case "$NUMBER" in
 esac
 
 if [ -n "$REPO" ]; then KEY="$(derive_repo_key "$REPO" "")"; else KEY="$(autoflow_repo_key "$ROOT")"; fi
-RECORD_DIR="$AUTOFLOW_DIR/$KEY-issue-${NUMBER}"
+RECORD_DIR="$AF_RECORD_ROOT/$KEY/proposals"
 RECORD="$RECORD_DIR/issue-${NUMBER}-proposal.md"
 if ! mkdir -p "$RECORD_DIR" || ! mv "$DRAFT_PATH" "$RECORD"; then
   echo "warn: issue #$NUMBER was created but $DRAFT_PATH could not be renamed to $RECORD" >&2

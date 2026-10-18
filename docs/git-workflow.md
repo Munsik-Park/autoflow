@@ -53,20 +53,27 @@ git status                       # must report nothing to commit, working tree c
 
 # 2. Synced with remote
 git fetch origin
-git log HEAD..origin/main --oneline   # must be empty (or handled)
+# An attempt's start: its dev branch dev/<date>-<time>-issue-<N>, made at origin/main by its
+# criterion review (autoflow-records new) and with no commit of its own yet, is checked out and
+# fast-forwarded to the remote default branch's latest commit
+git switch dev/<date>-<time>-issue-<N>
+git merge --ff-only origin/main
+# A review-response: the dev branch matches its remote branch
+git log HEAD..origin/dev/<date>-<time>-issue-<N> --oneline   # must be empty (or handled)
 # In a project with sub-repos, each submodule is at the commit the host's pointer names
 # after the host is synced (the orchestrator's work item; nothing checks it).
-
-# 3. Branch is from the latest main (a new issue; an AutoFlow cycle's dev branch is dev/<date>-<time>-issue-<N>)
-git checkout -b <branch> main
 ```
+
+Nothing here checks out or updates the local `main`: a worktree whose `main` is checked out in
+another worktree cannot (`git checkout main` and `git fetch origin main:main` both refuse there),
+and a checkout on any other branch needs no more than `origin/main`.
 
 If any check fails:
 
 - Uncommitted changes → `git stash`, `git commit`, or discard with the user's
   approval (PREFLIGHT).
-- Remote has new commits ahead → `git pull --rebase` and re-run.
-- Wrong base → re-branch from latest main.
+- Remote has new commits ahead of a review-response branch → `git pull --rebase` and re-run.
+- A dev branch that does not fast-forward → stop and report; it is not reset.
 
 If the working tree cannot be made clean, **stop** and report. PREFLIGHT does
 not advance to DIAGNOSE on a dirty tree.
@@ -136,54 +143,49 @@ keeps for the host's pointer, and its cautions, are [`units/delivery.md`](units/
 
 ## Post-Merge Cleanup
 
-Performed at PREFLIGHT of the next cycle once the prior PR is observed merged
+Performed at PREFLIGHT of the next cycle once an attempt's PR is observed merged
 or closed (or by the live session if it observes the decision first). Apply it
-to **every** resolved cycle of this checkout — one whose state file is in this
-checkout's `.autoflow/` — found during prior-cycle resolution, including ones
-from earlier cycles; `<branch>` is the one its state file names in `branch`
-(`cycle-status.sh` reports it `record=state-file`). Any other dev branch of the
-issue (`record=none`) is another checkout's cycle: it is reported and not
-deleted, locally or on the remote; a `record=unconfirmed` branch is reported to
-the user ([`units/preparation.md`](units/preparation.md) > *What is asked*):
+to **every** resolved attempt of this checkout — one whose record directory's
+`checkout` file names this checkout — that `cycle-status.sh` reports on a
+`cleanup:` line; `<branch>` is its dev branch. An attempt of another checkout
+still there (`owner=other`), an attempt whose checkout is gone (`owner=gone`)
+until a checkout takes it over, and a dev branch with no attempt record
+(`record=none`) are reported and not touched, locally or on the remote
+([`units/preparation.md`](units/preparation.md) > *What is asked*):
 
 ```bash
-git checkout main
-git pull origin main                # with sub-repos: each submodule follows the host's pointer
-git branch -d <branch>             # local branch
-git push origin --delete <branch>  # remote branch (if not auto-deleted)
-<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>  # delete the resolved issue's issue-<N>-local/disposable/, then archive its .autoflow/<repo-key>-issue-<N>/ directory to $AUTOFLOW_ARCHIVE_ROOT/<repo-key>/ (accepts multiple Ns)
+git switch --detach origin/<default> # only when <branch> is the checked-out branch
+git branch -D <branch>               # the local dev branch
+<autoflow-root>/scripts/cleanup/cleanup-issue.sh <branch>  # delete its issue-<N>-local/disposable/, then mark the attempt completed (accepts several branches)
 ```
 
-The remote-branch deletion is a push: the hook admits it only while no cycle is
-active, so it comes before the next cycle's state file is created
-([`units/preparation.md`](units/preparation.md) > *What is asked*).
+**Nothing on the remote is changed.** The remote dev branch and the pull request are left as
+they are — they are the record the attempt left for whoever reads the attempts together, and
+deleting a remote branch is a push. Cleanup reads the pull request's state and changes no label,
+comment or state on it. `git branch -D` is used because the PR's merge (a squash, a rebase) or its
+closing leaves the branch unmerged into any local branch; the observed merged or closed PR is the
+ground, and the remote branch keeps the commits.
 
-**Delete the reserved path, archive the rest.** Cleanup first deletes the resolved issue's reserved
-path `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
+**Delete the reserved path, mark the rest.** Cleanup deletes the attempt's reserved path
+`<attempt-dir>/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *How a test is
-run is the target's practice*) — and then **archives** (moves) its issue directory
-`.autoflow/{repo-key}-issue-{N}/` — management files (state JSON, decision ledger, design docs,
-reports, proposal record) **and the rest of its cycle-layer store `issue-{N}-local/`** (the
-uncommitted `automated` / `delivery-check` / `manual` assets of that cycle) — to
-`$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-{N}-<stamp>/` at cleanup via
-`<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>` (pass one or more `N`). `<stamp>` is the `<date>-<time>` of
-the dev branch the state file names in `branch`, so each cycle archives under its own name; a state
-file that names none falls back to the archive date, and a name already taken gets a `-2`, `-3`, …
-suffix. Nothing outside the reserved path is
-deleted: whatever lies outside it is archived, whatever its name or size. The report line states the
-deletion apart from the archived count. A deletion that fails leaves that issue in place, with
-nothing archived, and exits non-zero; re-run cleanup once the path is removable. A store that is
-itself a symbolic link is archived as the link, and nothing under its target is deleted.
+run is the target's practice*) — and then writes the mark `<attempt-dir>/completed`. Nothing is
+moved or archived: the record directory is under the record root, outside every checkout's tree,
+from the start, and everything outside the reserved path stays in it — the management files (state
+JSON, decision ledger, criterion review, design docs, reports) **and the rest of its cycle-layer
+store `issue-{N}-local/`**. A completed attempt is no longer listed as an attempt and is never
+entered again. A deletion that fails leaves that attempt unmarked and exits non-zero; re-run
+cleanup once the path is removable. A store that is itself a symbolic link keeps its target
+untouched.
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
-path and archives only the resolved issue's directory, matched by its **exact name**
-`.autoflow/<repo-key>-issue-<N>/` (NOT a `*-issue-<N>*` glob, so neither `issue-<N>3` nor another
-repository's issue `<N>` is taken) — with a digits-only `N` guard and one scoped `mv` of that
-directory to `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/issue-<N>-<stamp>/` (default `~/.autoflow`;
-repo-key = `<org>__<repo>` derived from `origin`, the same key the live directory carries —
-`<autoflow-root>/scripts/lib/issue-dir.sh`), moved less its store's reserved path. Its one deletion is that
-reserved path, `issue-<N>-local/disposable`, removed without following a symbolic link. Allow-list the wrapper
-(`Bash(./scripts/cleanup/cleanup-issue.sh:*)`).
+path and takes only an attempt's dev branch, checked against the shape
+`dev/YYYY-MM-DD-HHMMSS-issue-<N>` before it becomes the record directory's name
+`<record-root>/<repo-key>/<YYYY-MM-DD-HHMMSS>-issue-<N>/` (repo-key = `<org>__<repo>` derived from
+`origin` — `<autoflow-root>/scripts/lib/records.sh`), and it refuses an attempt whose `checkout` file
+names another checkout. Its one deletion is that reserved path, `issue-<N>-local/disposable`, removed
+without following a symbolic link. Allow-list the wrapper
+by its absolute path — `Bash(<the AutoFlow root>/scripts/cleanup/cleanup-issue.sh:*)`, the root as `autoflow-root` prints it.
 
 ---
 

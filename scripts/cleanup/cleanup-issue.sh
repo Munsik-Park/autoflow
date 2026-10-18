@@ -3,269 +3,119 @@
 # SPDX-License-Identifier: Elastic-2.0
 # scripts/cleanup/cleanup-issue.sh
 #
-# AutoFlow Post-Merge Cleanup helper — ARCHIVES (moves) a resolved issue's
-# directory `.autoflow/<repo-key>-issue-<N>/` (issue #423) — its state JSON,
-# decision ledger, design docs, phase/eval reports, proposal record and its
-# cycle-layer store `issue-<N>-local/` (the cycle's uncommitted `automated` /
-# `delivery-check` / `manual` assets — ADR-0024 D2) — out of the repo tree into
-# an external, repo-identity-keyed store
-# `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/<repo-key>/issue-<N>-<stamp>/`,
-# `<stamp>` being the `<date>-<time>` of the dev branch the state file records
-# in `branch` (issue #433), or the archive date for a state file that records
-# none.
-# It DELETES exactly one path, the store's reserved top-level entry
-# `issue-<N>-local/disposable` (reproducible output), before the move; nothing
-# else is deleted. Run
-# at PREFLIGHT prior-cycle resolution once the issue's PR is observed merged or
-# closed (see docs/git-workflow.md > Post-Merge Cleanup). The live `.autoflow/`
-# location, `.gitignore`, and the hook gate are untouched — only the resolved
-# issue's directory migrates out at the cycle's mutation-freeze point.
+# AutoFlow Post-Merge Cleanup helper — MARKS a resolved attempt COMPLETED in its
+# record directory `<record-root>/<repo-key>/<stamp>-issue-<N>/` (issues #423,
+# #466; scripts/lib/records.sh). The records stay where they are: the record
+# root is outside every checkout's tree from the start, so nothing is moved,
+# copied or archived. It DELETES exactly one path, the cycle-layer store's
+# reserved top-level entry `issue-<N>-local/disposable` (reproducible output —
+# ADR-0024 D2), and then writes the mark `completed`; nothing else is deleted.
+# It touches no git ref, no remote and no pull request: the local dev branch is
+# the orchestrator's step, and the remote branch and the pull request are left
+# as they are (docs/git-workflow.md > Post-Merge Cleanup).
 #
-# WHY A SCRIPT (not a bare `rm`): the cleanup is invoked by PATH
-# (`scripts/cleanup/cleanup-issue.sh <N>`), so the Bash command carries no `rm`
-# token. Claude Code permission precedence is deny > allow, so an `rm`
-# allow-exception (e.g. `Bash(rm -f .autoflow/issue-*)`) CANNOT override a broad
-# `rm` deny (e.g. `Bash(rm:*)`) — the deny always wins. A non-`rm` wrapper is
-# never matched by an rm deny, so this lets a broad rm deny coexist with
-# AutoFlow cleanup. Internally the terminal action is a scoped `mv`, confined to
-# `.autoflow/` (one directory, matched by its exact name); the one internal
-# `rm` removes only the reserved path above, and a permission rule matches the
-# invoked command, not it.
+# Run at PREFLIGHT prior-attempt resolution once the attempt's PR is observed
+# merged or closed. Only THIS checkout's attempt is marked — the one whose
+# `checkout` file names this checkout: an attempt whose checkout is gone is
+# left as it is until another checkout takes it over (`autoflow-records claim`),
+# and another live checkout's attempt is never touched (issue #466 AC4).
 #
-# NUMBER BOUNDARY: the issue's directory is matched by its exact name
-# `<repo-key>-issue-<N>` (never a `*-issue-<N>*` glob), so `12` never takes
-# `123`/`120`, and another repository's issue of the same number — a different
-# <repo-key> — is never taken. The digits-only guard on N additionally blocks
-# globs / path traversal / slashes.
+# WHY A SCRIPT (not a bare `rm`): the cleanup is invoked by PATH, so the Bash
+# command carries no `rm` token. Claude Code permission precedence is deny >
+# allow, so an `rm` allow-exception CANNOT override a broad `rm` deny (e.g.
+# `Bash(rm:*)`) — the deny always wins. A non-`rm` wrapper is never matched by
+# an rm deny, so this lets a broad rm deny coexist with AutoFlow cleanup. The
+# one internal `rm` removes only the reserved path above, and a permission rule
+# matches the invoked command, not it.
 #
-# REPO-KEY: `--print-repo-key [<url>|--no-origin]` prints the derived archive
-# key (`<org>__<repo>` from the origin URL, or a path-encoding fallback) and
-# exits 0. It is a bounded introspection query, parsed ABOVE the `.autoflow/`
-# existence gate so it answers whether or not that directory exists. It is NOT
-# CWD-independent, and the distinction matters to every caller: the root comes
-# from a bare `git rev-parse --show-toplevel` with no `-C`, so the subcommand
-# answers for the repository containing the CURRENT WORKING DIRECTORY. A caller
-# asking about some other repository must invoke it with its cwd inside that
-# repository — the cwd is a term of the call, not an incidental.
-#
-# ARCHIVE-ROOT GATE: `--check-archive-root` runs the in-repo refusal below and
-# exits 0 when the archive root resolves outside the repo tree, 65 when it does
-# not. Same hoisting, same CWD contract. It exists so the Green-tree register's
-# shared store — which lives under that same `$AUTOFLOW_ARCHIVE_ROOT` — reaches
-# THIS guard rather than carrying a copy of it: one root with two consumers has
-# nothing for two implementations to agree about, and a second copy could only
-# disagree.
-#
-# ON ACCEPTANCE THE GATE PRINTS THE ACCEPTED ARCHIVE ROOT on stdout: the
-# absolute, symlink-preserving form of the value it just validated, anchored on
-# the same $PWD its own resolution is anchored on. The guard is then the single
-# site that answers "which directory is the archive root", so a relative value
-# has no second anchor to be re-resolved against in whichever process consumes
-# it. On refusal it prints nothing and exits 65 before any print, so the
-# refusal path's stdout stays empty.
+# BRANCH BOUNDARY: an attempt is named by its dev branch, whose shape
+# `dev/YYYY-MM-DD-HHMMSS-issue-<N>` is checked before it is turned into its
+# record directory's name — so no glob, slash or `..` reaches a path, and
+# another repository's attempt (a different <repo-key>) is never taken.
 #
 # Allow-list (so it never prompts even when rm is denied):
-#   "Bash(./scripts/cleanup/cleanup-issue.sh:*)"   (or the no-`./` form you invoke)
+#   "Bash(<autoflow-root>/scripts/cleanup/cleanup-issue.sh:*)"
+#
+# Exit codes:
+#   0   every named attempt marked (or already marked)
+#   1   an attempt not marked — not this checkout's, no record, or the reserved
+#       path could not be deleted; the line says which
+#   7   the record root is undetermined or unusable (the marker line says why)
+#   64  usage
 #
 # Usage:
-#   scripts/cleanup/cleanup-issue.sh <issue-number> [<issue-number> ...]
-#   scripts/cleanup/cleanup-issue.sh --print-repo-key [<url>|--no-origin]
-#   scripts/cleanup/cleanup-issue.sh --check-archive-root   (prints the accepted absolute archive root)
-set -euo pipefail
+#   scripts/cleanup/cleanup-issue.sh <dev branch> [<dev branch> ...]
+set -uo pipefail
 
-# derive_repo_key and the issue-directory layout live in the shared library
-# (issue #423): the archive key and the live issue directory are one key.
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$(dirname "$0")/../lib/issue-dir.sh"
-
-# absolute_path <path> — absolutize against $PWD WITHOUT touching symlinks or
-# `..`: a path already beginning with `/` is returned verbatim, anything else is
-# prefixed with `$PWD/`. Pure string work — it never stats, resolves or creates
-# anything, so it answers for a root that does not exist on disk.
-#
-# It is the case block `physical_path` used to open with, lifted to its own
-# definition so the guard's two derived forms — the physical one it JUDGES and
-# the symlink-preserving one it ANSWERS with — share one definition of what a
-# relative archive root is relative to. Two derivations, one anchor.
-absolute_path() {
-  case "$1" in
-    /*) printf '%s' "$1" ;;
-    *)  printf '%s' "$PWD/$1" ;;
-  esac
-}
-
-# physical_path <path> — canonicalize to the PHYSICAL absolute path, resolving
-# symlinks portably (POSIX `cd -P` + `pwd`; macOS has no `realpath -m`
-# guarantee). A relative path is absolutized against $PWD first (ledger E12,
-# now via `absolute_path`); a not-yet-existing tail is re-appended after
-# resolving the nearest existing directory ancestor, so a fresh archive root
-# canonicalizes too.
-physical_path() {
-  p="$(absolute_path "$1")"; tail=""
-  while [ ! -d "$p" ] && [ "$p" != "/" ]; do
-    tail="/${p##*/}$tail"
-    p="${p%/*}"
-    [ -z "$p" ] && p="/"
-  done
-  p="$(cd -P "$p" 2>/dev/null && pwd)" || return 1
-  [ "$p" = "/" ] && p=""
-  printf '%s' "${p}${tail}"
-}
-
-# gate_archive_root <repo root> — the boundary guard (AC-3 hardening): refuse an
-# archive root INSIDE the repo tree, since archiving into the tree would break
-# repo-tree non-interference. The compare is over the PHYSICAL resolution of
-# BOTH sides, not the textual prefix, so neither a relative value (GATE:PLAN
-# finding, ledger E12) nor a symlink at an outside-tree path whose target
-# resolves inside the tree (AUDIT r1, ledger E15) can bypass the refuse. Fail
-# closed (exit 65) if resolution is impossible.
-#
-# ONE FUNCTION, TWO CALLERS, hoisted above the `.autoflow/` existence gate: the
-# archival path below and the `--check-archive-root` query. It sets
-# $ARCHIVE_ROOT as a side effect, which the archival path then uses as the
-# destination prefix — the guarded value and the used value are the same
-# variable by construction, not by agreement.
-gate_archive_root() {
-  ARCHIVE_ROOT="${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}"
-  ROOT_PHYS="$(cd -P "$1" && pwd)"
-  if ! ARCHIVE_ROOT_PHYS="$(physical_path "$ARCHIVE_ROOT")"; then
-    echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) cannot be resolved" >&2
-    exit 65
-  fi
-  case "${ARCHIVE_ROOT_PHYS%/}/" in
-    "$ROOT_PHYS"/*)
-      echo "refuse: AUTOFLOW_ARCHIVE_ROOT ($ARCHIVE_ROOT) is inside the repo tree" >&2
-      exit 65
-      ;;
-  esac
-}
-
-# Introspection subcommands — hoisted ABOVE the existence gate and the digits
-# loop (a leading `--` is never mistaken for an issue number). Both resolve
-# their root from the CWD; see the ARCHIVE-ROOT GATE / REPO-KEY notes above.
-#
-# `--check-archive-root` prints the ABSOLUTE, SYMLINK-PRESERVING form of the
-# accepted root (computed here, not as a gate_archive_root side effect — the
-# archival path never reads it, so computing it unconditionally on every gate
-# call would be wasted work on the common path). Symlink-preserving rather
-# than physical is deliberate — the guard JUDGES the physical resolution, but
-# the answer it hands out preserves the operator's own spelling, so an
-# absolute $AUTOFLOW_ARCHIVE_ROOT comes back byte-identical to what was passed
-# in. The trailing slash is stripped here, at the guard's own boundary, so
-# every consumer of this stdout gets a normalized value — not only the one
-# consumer that happens to strip it again downstream.
-if [ "${1:-}" = "--check-archive-root" ]; then
-  ROOT="$(git rev-parse --show-toplevel)"
-  gate_archive_root "$ROOT"
-  ARCHIVE_ROOT_ABS="$(absolute_path "$ARCHIVE_ROOT")"
-  printf '%s\n' "${ARCHIVE_ROOT_ABS%/}"
-  exit 0
-fi
-
-if [ "${1:-}" = "--print-repo-key" ]; then
-  ROOT="$(git rev-parse --show-toplevel)"
-  case "${2:-}" in
-    '')          url="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)" ;;  # live remote
-    --no-origin) url="" ;;                                                             # force fallback
-    *)           url="$2" ;;                                                           # literal URL
-  esac
-  printf '%s\n' "$(derive_repo_key "$url" "$ROOT")"
-  exit 0
-fi
+# shellcheck source=scripts/lib/records.sh
+. "$(dirname "$0")/../lib/records.sh"
 
 if [ "$#" -eq 0 ]; then
-  echo "usage: $0 <issue-number> [<issue-number> ...]" >&2
+  echo "usage: $0 <dev branch> [<dev branch> ...]" >&2
   exit 64
 fi
 
-ROOT="$(git rev-parse --show-toplevel)"
-AUTOFLOW_DIR="$ROOT/.autoflow"
-
-if [ ! -d "$AUTOFLOW_DIR" ]; then
-  echo "no .autoflow/ directory at $ROOT — nothing to archive"
-  exit 0
+TOP="$(af_checkout_top .)" || { echo "refuse: not inside a git checkout" >&2; exit 64; }
+if ! af_record_root "$TOP" || ! af_record_root_ensure; then
+  af_record_root_marker >&2
+  exit "$AF_RECORD_ROOT_EXIT"
 fi
-
-# The SAME guard the `--check-archive-root` query runs — called, never
-# re-typed. It sets $ARCHIVE_ROOT, used as the destination prefix below.
-gate_archive_root "$ROOT"
-
-KEY="$(autoflow_repo_key "$ROOT")"
-DATE="$(date +%F)"
+KEY="$(autoflow_repo_key "$TOP")"
+NOW="$(date +%FT%T%z)"
 
 status=0
-for N in "$@"; do
-  # Guard: issue number must be digits only — blocks globs, path traversal, slashes.
-  case "$N" in
-    '' | *[!0-9]*)
-      echo "refuse: issue number must be digits only, got '$N'" >&2
-      status=64
-      continue
-      ;;
-  esac
-
-  issue_dir="$(autoflow_issue_dir "$ROOT" "$N" "$KEY")"
-  if [ ! -d "$issue_dir" ]; then
-    echo "issue #${N}: no ${issue_dir#"$ROOT"/}/ directory — nothing to archive"
+for B in "$@"; do
+  if ! A="$(af_attempt_key "$B")"; then
+    echo "refuse: '$B' is not an attempt's dev branch (dev/YYYY-MM-DD-HHMMSS-issue-N)" >&2
+    status=64
     continue
   fi
-  local_store="$issue_dir/issue-${N}-local"
+  N="$(af_attempt_issue "$A")"
+  d="$AF_RECORD_ROOT/$KEY/$A"
+  if [ ! -d "$d" ]; then
+    echo "attempt $A: no record directory $d — nothing to mark" >&2
+    status=1
+    continue
+  fi
+  owner=""
+  [ -f "$d/checkout" ] && { IFS= read -r owner < "$d/checkout" || true; }
+  if [ "$owner" != "$TOP" ]; then
+    echo "attempt $A: belongs to the checkout ${owner:-(none recorded)}, not this one ($TOP) — not marked; a checkout that is gone is taken over first (autoflow-records claim)" >&2
+    status=1
+    continue
+  fi
+  if [ -e "$d/completed" ]; then
+    echo "attempt $A: already marked completed"
+    continue
+  fi
 
-  # The reserved path is deleted before the archive dir is allocated: a failed
-  # deletion then leaves the issue wholly in place, and its re-run lands in one
-  # archive dir rather than a `-2` sibling. `-e` alone misses a dangling link.
-  # `rm -r` removes a link at or under the operand without following it, as long
-  # as the operand carries no trailing slash. A store that is itself a link
-  # moves as the link and carries nothing from its target, so nothing is
-  # deleted there.
-  reserved_note=""
+  # The reserved path is deleted before the mark is written: a failed deletion
+  # then leaves the attempt unmarked, and its re-run starts from the same state.
+  # `-e` alone misses a dangling link. `rm -r` removes a link at or under the
+  # operand without following it, as long as the operand carries no trailing
+  # slash. A store that is itself a link keeps its target untouched.
+  local_store="$d/issue-${N}-local"
+  note=""
   if [ -L "$local_store" ]; then
-    reserved_note="skipped deleting issue-${N}-local/disposable (the store is a symbolic link); "
+    note="skipped deleting issue-${N}-local/disposable (the store is a symbolic link); "
   elif [ -d "$local_store" ]; then
     reserved="$local_store/disposable"
     if [ -e "$reserved" ] || [ -L "$reserved" ]; then
       if ! rm -rf "$reserved"; then
-        echo "issue #${N}: could not delete issue-${N}-local/disposable — nothing archived for this issue" >&2
+        echo "attempt $A: could not delete issue-${N}-local/disposable — not marked" >&2
         status=1
         continue
       fi
-      reserved_note="deleted issue-${N}-local/disposable; "
+      note="deleted issue-${N}-local/disposable; "
     fi
   fi
 
-  # The archive takes the cycle's name — the date and time of the dev branch its
-  # state file records (issue #433) — so each run of an issue, in this checkout
-  # or another one on this machine, archives under its own name. A state file
-  # that records no branch, or none at all, falls back to the archive date.
-  stamp=""
-  if [ -f "$issue_dir/issue-${N}.json" ] && command -v jq >/dev/null 2>&1; then
-    stamp="$(jq -r '.branch // empty' "$issue_dir/issue-${N}.json" 2>/dev/null \
-      | sed -nE "s#^dev/([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6})-issue-${N}\$#\1#p")"
+  if ! printf 'completed: %s\nbranch: %s\ncheckout: %s\n' "$NOW" "$B" "$TOP" > "$d/completed"; then
+    echo "attempt $A: could not write $d/completed" >&2
+    status=1
+    continue
   fi
-
-  # Non-destructive archive move: a `-2`, `-3`, … conflict suffix rather than
-  # overwriting an archive of the same name (the date fallback's re-opened and
-  # re-closed issue; a guard only for a recorded name). A fresh
-  # `$dest` never exists, so the move is a rename of the whole directory, not a
-  # merge: `mv` = atomic within a filesystem, copy+unlink across filesystems;
-  # byte content is preserved either way.
-  base="$ARCHIVE_ROOT/$KEY/issue-${N}-${stamp:-$DATE}"
-  dest="$base"; s=2
-  while [ -e "$dest" ]; do dest="${base}-${s}"; s=$((s + 1)); done
-  mkdir -p "${dest%/*}"
-  mv "$issue_dir" "$dest"
-
-  # The archived file count is reported so the line is checkable against the
-  # archive; `grep -c` exits 1 on 0, so the count is taken as data, not a
-  # status. A failed enumeration is kept distinct from 0: it is reported as
-  # `?` on stderr, never as a count (PR #233 review, Medium).
-  if file_list="$(find "$dest" -type f 2>/dev/null)"; then
-    count="$(printf '%s\n' "$file_list" | grep -c . || true)"
-  else
-    echo "issue #${N}: warning — could not enumerate ${dest} after the move" >&2
-    count="?"
-  fi
-  echo "issue #${N}: ${reserved_note}archived ${count} file(s) → ${dest}"
+  echo "attempt $A: ${note}marked completed — $d"
 done
 
 exit "$status"

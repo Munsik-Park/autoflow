@@ -1,9 +1,12 @@
-# Criterion Review — Before a New-Issue Cycle
+# Criterion Review — The First Step of an Attempt
 
 An issue's acceptance criteria are reviewed against the target's code and policy **outside the
-cycle**, before the cycle commits to them. The review session settles them under the policy the
-operator set (*Authority* below) and records the settled decisions in a `[criterion-ready]` ledger
-entry; PREFLIGHT starts a `new-issue` cycle only on that record
+cycle**, before the cycle commits to them, by each attempt for itself: an attempt — one run of the
+issue, in one checkout — begins with its own criterion review and stays independent of every other
+attempt from that review to its pull request. The review session settles the criteria under the
+policy the operator set (*Authority* below) and records the settled decisions in a
+`[criterion-ready]` entry in the attempt's ledger; PREFLIGHT starts that attempt's cycle only on
+that record
 ([U1 Preparation](units/preparation.md) > Stop conditions > *Criterion readiness*). This is the
 Definition of Ready of backlog refinement: a criterion that presumes a fact that does not hold, that
 conflicts with a policy already in force, or that leaves a term undefined is found while it is
@@ -17,24 +20,30 @@ The review makes that premise hold more often; it does not change it.
 
 ## When and by whom
 
-- **When.** Any time after the issue is filed and before its first `new-issue` cycle — and again
-  after any edit to the issue body, since the `[criterion-ready]` entry is bound to the body it
-  records (*Confirmation* below). Filing an issue ([`issue-proposal.md`](issue-proposal.md)) does
+- **When.** Any time after the issue is filed, as the first step of each attempt — before that
+  attempt's cycle starts — and again, on that attempt's dev branch, after any edit to the issue body
+  before the attempt starts, since the `[criterion-ready]` entry is bound to the body it records
+  (*Confirmation* below). Filing an issue ([`issue-proposal.md`](issue-proposal.md)) does
   not make it ready.
-- **After an earlier cycle is cleared, never before.** An issue taken up again after its earlier
-  cycle's pull request was merged or closed still has that cycle's directory
-  `.autoflow/{repo-key}-issue-{N}/` until it is archived, and PREFLIGHT archives it — ledger
-  included — *before* it reads criterion readiness
-  ([U1 Preparation](units/preparation.md) > *What is asked*). A `[criterion-ready]` entry written
-  into that directory is therefore archived with it, and PREFLIGHT stops `NOT READY`. The order is: (1) clear
-  the earlier cycle — the Post-Merge Cleanup ([`git-workflow.md`](git-workflow.md) > Post-Merge
-  Cleanup, `<autoflow-root>/scripts/cleanup/cleanup-issue.sh <N>` for the directory), or one PREFLIGHT run, which
-  clears it and then stops at criterion readiness; (2) run the review, which records its
-  `[criterion-ready]` entry into the fresh directory; (3) run PREFLIGHT. `criterion-ready.sh status`
-  reports `NOT READY` while the directory still holds an earlier cycle's state file, so an entry
-  written too early is caught when it is checked.
+- **The review makes its attempt.** The review of issue N in a checkout is the review of an attempt
+  not yet started when the checked-out branch is this checkout's attempt of N with no state file —
+  a re-review after a body edit, a review left unfinished — and adds its new entry to that
+  attempt's ledger. Otherwise it creates a new attempt first, before it writes anything:
+  `autoflow-records new --issue N` — on a clean tree, with no active attempt in this checkout — fetches
+  `origin`, makes the attempt's record directory under the record root with this checkout as its
+  owner, and checks out a new dev branch `dev/<date>-<time>-issue-<N>` at the remote default
+  branch's latest commit, local only and with no commit of its own until the attempt's state file
+  is written. The attempt's key is that branch's name, and every record of the review — the review
+  record, the stage 2 and in-depth files, the advisor records, the ledger with its
+  `[criterion-ready]` entry — is in that directory, as the cycle's records later are. That request
+  is the operator's explicit request for a new attempt, even while an attempt of N with an open
+  pull request, or a paused one, is still in this checkout; `/autoflow:cycle <N>` never creates one
+  ([U1 Preparation](units/preparation.md) > *Modes*). An attempt that already has a state file
+  takes no `[criterion-ready]` entry: a criterion change inside its cycle is an `[ac-decision]`.
+  An attempt begun and then left is reported by PREFLIGHT like any other until the operator runs
+  it or leaves it (its branch and records stay, as a paused attempt's do).
 - **Reviewer.** The session the operator asks for the review, working with no AutoFlow cycle active
-  for the issue. The review is that session's own work, and it writes no state file. What it reads and how — which code, documents and materials, the order, how far it
+  in its checkout. The review is that session's own work, and it writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's
   `## Inputs` with what it read and why, and what it left out and why (Rule Scope, principle 2 —
   [`core.md`](core.md)). The session carries stage 1 itself, the screening included; stage 2,
@@ -174,7 +183,7 @@ How the change will be made is not yet set, and stage 2 assumes no fix: an effec
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
 cycle*). Each finding states whether stage 1 already recorded it (`stage 1`) or stage 2 found it
 (`new`), and carries its grounds as the review items' findings do. It writes
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review-stage-2.md` and returns that path and a
+`<attempt-dir>/issue-{N}-criterion-review-stage-2.md` and returns that path and a
 one-line summary.
 
 ## In-depth analysis and reconciliation
@@ -182,14 +191,14 @@ one-line summary.
 **In-depth analysis.** For each criterion with an in-depth target, a fresh context examines each
 target case: an `autoflow-criterion-analyzer` spawn the review session makes, which carries none of
 the session's conversation. The session hands it one target file,
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review-target-<criterion>.md`, holding only the
+`<attempt-dir>/issue-{N}-criterion-review-target-<criterion>.md`, holding only the
 issue body, the criterion's text, the target cases, each case's code locations (`path:line`) and
 the commit they were read at — no verdict, grounds or conclusion. The verdict rests on the code
 that decides whether and how the required behavior occurs and the condition applied there, never
 on the point where it shows alone. Where the behavior occurs only under a condition, the analysis
 checks whether a situation that does not meet the condition actually arises — from which input,
 state or usage flow; where one does, the behavior does not hold in that situation. It writes
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review-in-depth-<criterion>.md` — per case the
+`<attempt-dir>/issue-{N}-criterion-review-in-depth-<criterion>.md` — per case the
 verdict, the deciding code and condition, and the grounds — and returns that path and a one-line
 summary.
 
@@ -214,8 +223,8 @@ delivery as "return … as your report".
 
 ## Review record
 
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review.md`, written by the reviewer in the
-issue's directory (the one the proposal record already lives in). Every section is present; a
+`<attempt-dir>/issue-{N}-criterion-review.md`, written by the reviewer in the
+attempt's record directory (`autoflow-records dir` on its dev branch). Every section is present; a
 section with nothing to record says `none`.
 
 | Section | Holds |
@@ -272,8 +281,8 @@ issue body as those decisions left it, and the review record is the evidence the
 
 The confirmation — the `[criterion-ready]` entry — is the record of the decisions made under the
 policy the operator set (*Authority* above). The review session writes it once every decision is
-settled, as a decision-ledger entry in the issue's ledger
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` — an `O<n>` entry under the authority
+settled, as a decision-ledger entry in the attempt's ledger
+`<attempt-dir>/issue-{N}-ledger.md` — an `O<n>` entry under the authority
 `operator decision`, which the gate hook admits from the main session only
 ([`state-tracking.md`](state-tracking.md) > Hook gates; grammar: [`decision-ledger.md`](decision-ledger.md) >
 Decision-point entries > *Criterion-readiness confirmations*):
@@ -281,7 +290,7 @@ Decision-point entries > *Criterion-readiness confirmations*):
 ```markdown
 ## O<n> — criteria settled for a cycle (cycle 0, CRITERION-REVIEW) [criterion-ready]
 - Decision: the acceptance criteria of #N, as the issue body now states them, are settled for a cycle
-- Record: .autoflow/<repo-key>-issue-<N>/issue-<N>-criterion-review.md
+- Record: issue-<N>-criterion-review.md
 - Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
 - Grounds: the decisions recorded — the dispositions, the advisor answers (their A entries), any operator decision, the session decisions — and, when the body differs from the one ## Inputs names, the re-run judgment under ## Session decisions
 - Authority: operator decision
@@ -289,13 +298,17 @@ Decision-point entries > *Criterion-readiness confirmations*):
 
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger). `cycle 0` marks an
-entry written before the issue's first cycle.
+entry written before the attempt's first cycle. `- Record:` names a file in the attempt's record
+directory, by its name alone: a path to another attempt's record is not read.
 
-**The confirmation is bound to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
-reads the last `[criterion-ready]` entry and reports `READY` only when it is an `O` entry under
-`operator decision`, its record exists, and its `- Issue body sha256:` equals the sha256 of the
-issue body read from GitHub now. Any edit to the body after the entry leaves the issue not ready
-until a new entry records the edited body, written as the first one is: once the decisions are
+**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
+reads the last `[criterion-ready]` entry in the ledger of the attempt on the checked-out dev branch
+(`--branch` names another) — never another attempt's — and reports `READY` only when the attempt
+has no state file yet, the entry is an `O` entry under `operator decision`, its record exists, and
+its `- Issue body sha256:` equals the sha256 of the issue body read from GitHub now. Any edit to the
+body after the entry leaves the attempt not ready until its own review runs again and a new entry
+in its ledger records the edited body — another attempt's entry, of this checkout or another, never
+stands in for it — written as the first one is: once the decisions are
 settled — an operator override included — with no operator confirmation asked. When the body an
 entry records differs from the body the record read (the sha256 under `## Inputs`) — an edit after
 an entry, or a body edited before the first entry to apply the decisions — whether the review is run
@@ -322,20 +335,20 @@ the same form.
 
 ## What reads it
 
-- **PREFLIGHT** — in `new-issue` mode only, a fail-closed stop condition before the state file and
-  the dev branch are created: it reads the fact the script reports and never judges the review's
+- **PREFLIGHT** — on an attempt's start only, a fail-closed stop condition before the state file is
+  created: it reads the fact the script reports for that attempt and never judges the review's
   content ([U1 Preparation](units/preparation.md) > Stop conditions > *Criterion readiness*). A
   `review-response`, a resume or a paused cycle does not run it.
-- **DIAGNOSE** — the review record is one of the U2 unit's inputs in a `new-issue` cycle
+- **DIAGNOSE** — the attempt's review record is one of the U2 unit's inputs in a `new-issue` cycle
   ([U2 Analysis](units/analysis.md) > *Criterion review record*).
 
 ## Issues filed before this procedure
 
 No issue is exempt by its filing date, and no bulk back-fill is run: an issue filed without a
-`[criterion-ready]` entry is reviewed on its turn, when it is next taken up for a `new-issue`
-cycle, and the review records the entry once its decisions are settled. PREFLIGHT stops on it and reports the review as the next step. An issue that already has a
+`[criterion-ready]` entry is reviewed on its turn, when an attempt of it is next begun, and the review records the entry once its decisions are settled. PREFLIGHT stops on it and reports the review as the next step. An issue that already has a
 state file — a cycle active, paused, or waiting on external review — is not affected, because those
-modes do not run the check. An issue taken up again in `new-issue` mode after an earlier cycle is
-reviewed again, once that cycle is cleared: the archive moves its ledger, and with it any earlier
-`[criterion-ready]` entry, out of the issue's directory (*When and by whom* > *After an earlier cycle is
-cleared, never before*).
+modes do not run the check. An issue taken up again after an earlier attempt is reviewed again by
+the new attempt, whatever the earlier one left: every attempt begins with its own review (*When and
+by whom* > *The review makes its attempt*). A `[criterion-ready]` entry a target recorded inside its
+tree before the record root (`.autoflow/<repo-key>-issue-<N>/`) belongs to no attempt and is not
+read: such an issue's PREFLIGHT stops `NOT READY` until a new attempt's review records its own.

@@ -9,7 +9,7 @@
 ## Design / ADR
 
 <!-- Name the documents this PR used as decision basis, reachable from this PR.
-     Do NOT link .autoflow/*. -->
+     Do NOT link <attempt-dir>/* — the attempt's records are outside the tree. -->
 
 - Design note: <path > section, or N/A>
 - ADR: <path, or "ADR not required: <one-line reason>">
@@ -71,7 +71,7 @@ If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/
 
 - Issue: <!-- #N or N/A -->
 - Phase: `awaiting-external-review`
-- Evaluation summary: _link to `.autoflow/<repo-key>-issue-N/issue-N.json` or paste GATE:QUALITY summary line_
+- Evaluation summary: _paste the GATE:QUALITY summary line (from `<attempt-dir>/issue-N.json`, outside the tree)_
 
 ## Testing
 

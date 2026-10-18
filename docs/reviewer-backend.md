@@ -26,7 +26,7 @@ runtime.
 ```
 Contract: reviewer
   Output : one review record per reviewer, PR and round —
-           .autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
+           <attempt-dir>/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
            in the <autoflow-root>/.codex/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
@@ -130,7 +130,11 @@ is never changed, broken or not. Concurrent session starts create it once: the
 content is written to a temporary file and published with a hard link, which
 fails when the file exists, so a file another session created is never
 overwritten, only the creating session notifies, and no reader sees a partial
-file. The same file holds the operator's other AutoFlow values.
+file. The same file holds the operator's other AutoFlow values — the record root,
+`record_root` ([`state-tracking.md`](state-tracking.md) > *Record location*). Each key is read and
+validated by its own reader: an error in `.review` does not touch the record root, and an error in
+`record_root` does not touch the reviewers; a file that is not valid JSON, or no `jq`, leaves both
+unreadable.
 
 ## Model and effort
 

@@ -82,7 +82,7 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 
 - Choose tests based on changed surface.
 - This repository commits only deployment-level checks (`packaging`, `manifest`).
-  Any other change is verified by a one-shot run under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/`, recorded in the
+  Any other change is verified by a one-shot run under `<attempt-dir>/issue-{N}-local/`, recorded in the
   PR body: a change to AutoFlow's own rules (a rule document, a rule and its device) is
   settled there, by the external reviewer and by the gates; a change to what the plugin delivers
   (a hook, a shipped script, a workflow) is checked there too, and its behavior across targets

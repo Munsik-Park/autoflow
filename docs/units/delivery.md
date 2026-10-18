@@ -49,7 +49,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | HANDOFF (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`<autoflow-root>/docs/units/delivery.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
 | HANDOFF → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/delivery.md` > *End*) |
 | HANDOFF → HANDOFF (retry) | environment / transient error or push rejection → internal retry (max 2) |
-| HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`<autoflow-root>/docs/units/delivery.md` > *CI-failure re-entry*) |
+| HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `<attempt-dir>/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`<autoflow-root>/docs/units/delivery.md` > *CI-failure re-entry*) |
 | HANDOFF → user | HANDOFF internal retry exhausted (2×) |
 
 ## Push and pull request
@@ -114,7 +114,7 @@ criterion.
   the target runs them ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification
   and Tools).
 - **Result owed**: one line per check — its command and the summary line read from its log, the
-  log kept under `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/` — or the no-op line below. A check that was not run
+  log kept under `<attempt-dir>/issue-{N}-local/` — or the no-op line below. A check that was not run
   is `not-run`, never `passed`.
 - **Failure**: INTEGRATE FAIL → BUILD — fixed `impl` class: a BUILD unit re-run with the failing
   check fixes it, and the cycle runs forward through AUDIT to INTEGRATE again ([U4 Build and verify](build.md) >
@@ -202,7 +202,7 @@ A CI failure (exit `12`) re-enters by `remedy_class` through `<autoflow-root>/sc
 does not read the failure log itself (Cost Control): an anonymous direct subagent —
 `subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
 check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-ci-failure.md` with the failing check, the first failing assertion or error,
+`<attempt-dir>/issue-{N}-ci-failure.md` with the failing check, the first failing assertion or error,
 **one `remedy_class`** (`doc` / `test` / `impl` / `design` / `operator`) and the grounds for it —
 the class of change that clears the failure, `design` when clearing it would discard or change a
 decision the design settled — and returns the class plus a one-line summary.
@@ -245,7 +245,10 @@ bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owne
 
 The wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs codex
 over the PR with `<autoflow-root>/.codex/review.md` (its model and effort per *Model and effort* there, from
-the same file the readout names); codex writes its review to the record and nothing else.
+the same file the readout names); codex writes its review and nothing else. `<record>` is the review
+record's absolute path below: codex's sandbox writes only inside the working tree, so it writes a
+scratch file at the repository root, which the wrapper moves to the record and removes on every
+exit — nothing stays in the target's tree.
 
 **An unreadable operator file.** When the operator's `~/.autoflow/config.json` is the source and
 cannot be read as configured, `check-review-backend.sh` exits `6` and the wrapper starts no codex
@@ -257,7 +260,7 @@ Stopping pauses the round until the operator has fixed the file; the step then r
 it anew.
 
 Each review lands in a **review record**,
-`.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
+`<attempt-dir>/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
 reviewer's name (`claude` for the built-in review, `codex`), `<k>` the PR's review round from `1`.
 
 `review-start-check.sh` confirms an external run began with a signal scoped to its own PR — a
@@ -308,13 +311,13 @@ it leaves behind is fixed:
 - **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
   a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
   grounds it does not hold; a reviewer unavailable for the round named with the reason. Its body is kept as
-  `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
+  `<attempt-dir>/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
 - **The findings file** (below).
 - **`blocked-by-review` taken off when the round is clean** — no `Medium`+ finding holds.
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `.autoflow/{repo-key}-issue-{N}/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `<autoflow-root>/scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
+- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `<attempt-dir>/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `<autoflow-root>/scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/.codex/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` and `blocked-by-review` label rest on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. What keeps a host PR from merging ahead of its sub-repo PR is `blocked-by-subrepo`, not the host PR's review label ([`external-review-sequencing.md`](../external-review-sequencing.md) > *Review gate and merge-order gate*).
 - **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 
@@ -382,7 +385,7 @@ A `Medium`+ verdict does not end the cycle. Route by `bash <autoflow-root>/scrip
 
 The `ARCHITECT` route is the one whose depth is judged. It re-enters within the cycle, as the cycle's other `design` re-entries do ([U3 Design](design.md) > *Re-entry*). **Where it starts, and what it re-derives and re-scores, is the orchestrator's judgment** ([`core.md`](../core.md) > Rule Scope, principle 2), recorded with its grounds in this attempt's `[review-autofix]` ledger entry before the routed work starts. While the attempt is open, `design` is recorded as `phases.gate_quality.remedy_class` ([`core.md`](../core.md) > AutoFlow State Tracking > *Remedy class recording*), so the change is not pushed before GATE:QUALITY re-scores it. The other routes are **thin**: one BUILD unit re-run or one doc commit, execution verification, a delta recorded in the ledger, and the next review round — no DIAGNOSE, no ARCHITECT, no GATE:PLAN, no fresh evaluator re-read. **Every independent check is retained on every route** — the next review round judges the fix, CI still gates, and the attempt cap below applies unchanged.
 
-Every route is recorded in `.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged start with its grounds. The advisor criteria below take precedence over any route.
+Every route is recorded in `<attempt-dir>/issue-{N}-ledger.md` with a `review-autofix` marker — a level-2 heading of the form `## O<n> — <title> (cycle <C>, HANDOFF) [review-autofix]` ([`decision-ledger.md`](../decision-ledger.md) > *Entry identifier*) — and the entry names the routed class and, on the `ARCHITECT` route, the judged start with its grounds. The advisor criteria below take precedence over any route.
 
 - **Put to the advisor** (a request written situation-first per [`core.md`](../core.md) > Execution Principles > Human-decision presentation — [`role-contracts.md`](../role-contracts.md) > Advisor; the cycle does not pause) when the attempt hits **any** of: (a) the fix needs a contract or acceptance-criterion change — a finding that shows a criterion defective included — that the orchestrator cannot settle on the finding's grounds ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), (b) the fix direction is ambiguous, (c) the finding repeats the previous attempt's complaint and its grounds do not settle the re-entry (*A repeated complaint* above). The advisor's `A` entry selects re-entry. A rebutted finding kept while the two sides still disagree reaches the advisor by the orchestrator's judgment (*Whether a finding holds* above), not by a criterion here.
 - **Attempt cap = 7.** The count is the number of auto-resolution attempts not yet checked with the user: the `[review-autofix]` entries in the ledger after the last entry whose heading ends in `[reentry-decision]`, or all of them when there is none. `review-gate.sh` prints it (`attempts: <k> of 7`) and exits `11` when a `Medium`+ verdict meets 7 on record: the orchestrator stops auto-resolving and pauses for the user (`active:false`, `phase:"awaiting-user"`). A gate's recommendation attempt carries its own marker, `[gate-autofix]`, on its own window ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*), and a `[rebuttal]` round is not an attempt, so neither is counted here. The user approving continuation at that pause is the **re-entry decision**: the orchestrator records it as an `O` entry under `operator decision` whose heading ends in `[reentry-decision]` and sets the cycle active again; the entry resets the window — the next auto-entry starts a fresh budget of 7. Nothing else resets it.
@@ -395,19 +398,17 @@ each of them and the Low findings are triaged — and CI is green, the orchestra
 cycle off:
 
 - the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in
-  it changed;
-- the issue no longer carries `status:in-progress`.
+  it changed.
 
 Cautions:
 
 - The hand-off is not made while a pull request of the cycle has a `Medium`+ verdict.
-- A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`); the issue
-  keeps `status:in-progress` through it.
+- A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`).
 
 Report: "PR #N open (draft) — aggregated review posted — handed to external review." with
 each PR's URL and head commit. AutoFlow ends; the session may terminate.
 
-The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle (or in the live session if it observes the decision before terminating) — dev-branch deletion plus archival (move to the external `$AUTOFLOW_ARCHIVE_ROOT/<repo-key>/` store) of the resolved issue's directory `.autoflow/{repo-key}-issue-{N}/`; see [U1 Preparation](preparation.md) > *What is asked*.
+The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle in this checkout (or in the live session if it observes the decision before terminating) — the local dev branch's deletion and the attempt's completed mark; its records stay in `<attempt-dir>/`, and its remote branch and pull request are left as they are; see [U1 Preparation](preparation.md) > *What is asked*.
 
 ## Failure and retry
 

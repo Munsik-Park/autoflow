@@ -1,0 +1,161 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# autoflow-records — where AutoFlow's records are (issue #466). The plugin's
+# bin/ is on the Bash PATH of the main session and of every subagent (ADR-0027
+# > Context, M1), so every document, agent definition and script names a record
+# path through this command or the library it wraps (scripts/lib/records.sh).
+#
+#   autoflow-records root
+#       the record root, created when absent
+#   autoflow-records dir [--branch <dev branch>]
+#       the attempt's record directory of <dev branch> (default: the checked-out
+#       branch) in this checkout's repository
+#   autoflow-records new --issue <N>
+#       a new attempt of issue N in this checkout — the criterion review's first
+#       step: on a clean tree with no active attempt of this checkout, fetches
+#       origin, creates the record directory with this checkout as its owner,
+#       and switches to a new dev branch `dev/<stamp>-issue-<N>` at the remote
+#       default branch's latest commit. Prints `attempt:`, `branch:`, `dir:`.
+#   autoflow-records claim
+#       takes the attempt of the checked-out dev branch over for this checkout —
+#       only when the checkout it belongs to is gone
+#   autoflow-records drafts
+#       the issue-draft directory of this checkout's repository, created when
+#       absent
+#
+# Exit codes:
+#   0   printed / done
+#   1   refused — the line says why; nothing was changed
+#   7   the record root is undetermined or unusable — the fixed marker line
+#       `record-root: UNDETERMINED <config> — <error>` or
+#       `record-root: UNUSABLE <root> — <error>` is printed on stderr; nothing
+#       is written, and the next run reads the user file anew
+#   64  usage
+
+set -u
+TAG="autoflow-records"
+SELF_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+# shellcheck source=../scripts/lib/records.sh
+. "$SELF_DIR/../scripts/lib/records.sh" || { echo "[$TAG] cannot load scripts/lib/records.sh" >&2; exit 64; }
+
+usage() {
+  echo "Usage: $TAG {root | dir [--branch B] | new --issue N | claim | drafts}" >&2
+  exit 64
+}
+refuse() { echo "[$TAG] $1" >&2; exit 1; }
+
+SUB="${1:-}"
+[ "$#" -gt 0 ] && shift
+BRANCH=""
+ISSUE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --branch) [ $# -ge 2 ] || usage; BRANCH="$2"; shift 2 ;;
+    --issue)  [ $# -ge 2 ] || usage; ISSUE="${2#\#}"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+case "$SUB" in root|dir|new|claim|drafts) ;; -h|--help) echo "Usage: $TAG {root | dir [--branch B] | new --issue N | claim | drafts}"; exit 0 ;; *) usage ;; esac
+
+# `root` answers outside a checkout too (the metrics run from any directory);
+# inside one, a root in its tree is unusable.
+TOP="$(af_checkout_top .)" || TOP=""
+[ -n "$TOP" ] || [ "$SUB" = root ] || refuse "not inside a git checkout"
+if ! af_record_root "$TOP" || ! af_record_root_ensure; then
+  af_record_root_marker >&2
+  exit "$AF_RECORD_ROOT_EXIT"
+fi
+R="$AF_RECORD_ROOT"
+KEY="$(autoflow_repo_key "$TOP")"
+
+if [ "$SUB" = root ]; then
+  printf '%s\n' "$R"
+  exit 0
+fi
+
+if [ "$SUB" = drafts ]; then
+  d="$R/$KEY/drafts"
+  mkdir -p "$d" 2>/dev/null || { AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$d cannot be created"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"; }
+  printf '%s\n' "$d"
+  exit 0
+fi
+
+# write_owner <dir> — the checkout file, published whole by a rename.
+write_owner() {
+  printf '%s\n' "$TOP" > "$1/.checkout.tmp" 2>/dev/null && mv -f "$1/.checkout.tmp" "$1/checkout" 2>/dev/null
+}
+
+if [ "$SUB" = new ]; then
+  case "$ISSUE" in ''|*[!0-9]*) usage ;; esac
+  command -v jq >/dev/null 2>&1 || refuse "jq is not installed — this checkout's state files cannot be read"
+  for sf in "$R"/*/*-issue-*/issue-*.json; do
+    [ -f "$sf" ] || continue
+    d="${sf%/*}"
+    [ -f "$d/checkout" ] || continue
+    IFS= read -r owner < "$d/checkout" || owner=""
+    [ "$owner" = "$TOP" ] || continue
+    if [ "$(jq -r '.active // false' "$sf" 2>/dev/null)" = true ]; then
+      refuse "this checkout's attempt ${d##*/} is active — one attempt runs at a time in a checkout; finish or pause it first"
+    fi
+  done
+  [ -z "$(git -C "$TOP" status --porcelain 2>/dev/null)" ] || refuse "the working tree has uncommitted changes or untracked files — a new attempt starts on a clean tree"
+  git -C "$TOP" fetch --quiet origin 2>/dev/null || refuse "git fetch origin failed — the attempt starts at the remote default branch's latest commit"
+  DEFAULT="$(git -C "$TOP" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" || DEFAULT="origin/main"
+  DEFAULT="${DEFAULT#origin/}"
+  git -C "$TOP" rev-parse --verify --quiet "refs/remotes/origin/$DEFAULT" >/dev/null || refuse "no remote-tracking ref origin/$DEFAULT"
+  mkdir -p "$R/$KEY" 2>/dev/null || { AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$R/$KEY cannot be created"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"; }
+  # The name is the creation time to the second. Two attempts begun in the same
+  # second — in two checkouts sharing the record root — meet at the directory,
+  # whose `mkdir` (no -p) succeeds for one of them only; the other takes the
+  # next second's name.
+  tries=0
+  while :; do
+    B="dev/$(date +%Y-%m-%d-%H%M%S)-issue-$ISSUE"
+    A="$(af_attempt_key "$B")"
+    D="$R/$KEY/$A"
+    if ! git -C "$TOP" show-ref --quiet "refs/heads/$B" && ! git -C "$TOP" show-ref --quiet "refs/remotes/origin/$B" \
+       && mkdir "$D" 2>/dev/null; then
+      break
+    fi
+    tries=$((tries + 1))
+    [ "$tries" -lt 5 ] || refuse "no free attempt name after $tries tries ($B)"
+    sleep 1
+  done
+  if ! write_owner "$D"; then
+    rm -rf "$D"
+    AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$D/checkout cannot be written"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"
+  fi
+  if ! git -C "$TOP" switch --quiet --no-track -c "$B" "origin/$DEFAULT" 2>/dev/null; then
+    rm -f "$D/checkout"; rmdir "$D" 2>/dev/null
+    refuse "git switch -c $B origin/$DEFAULT failed — no attempt was created"
+  fi
+  printf 'attempt: %s\nbranch: %s\ndir: %s\n' "$A" "$B" "$D"
+  exit 0
+fi
+
+# dir / claim — claim takes over only the checked-out branch's attempt
+[ "$SUB" = claim ] && [ -n "$BRANCH" ] && usage
+[ -n "$BRANCH" ] || BRANCH="$(git -C "$TOP" symbolic-ref --quiet --short HEAD 2>/dev/null)" || refuse "no branch is checked out (detached HEAD) — name one with --branch"
+A="$(af_attempt_key "$BRANCH")" || refuse "'$BRANCH' is not an attempt's dev branch (dev/YYYY-MM-DD-HHMMSS-issue-N)"
+D="$R/$KEY/$A"
+[ -d "$D" ] || refuse "no attempt record at $D — '$BRANCH' is not an attempt of this record root"
+
+if [ "$SUB" = dir ]; then
+  printf '%s\n' "$D"
+  exit 0
+fi
+
+# claim
+owner=""
+[ -f "$D/checkout" ] && { IFS= read -r owner < "$D/checkout" || owner=""; }
+if [ "$owner" = "$TOP" ]; then
+  echo "attempt $A already belongs to this checkout ($TOP)"
+  exit 0
+fi
+if af_checkout_live "$owner" "$KEY"; then
+  refuse "attempt $A belongs to the checkout $owner, which is still there — it is entered from that checkout"
+fi
+write_owner "$D" || { AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$D/checkout cannot be written"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"; }
+echo "attempt $A taken over by this checkout ($TOP); its checkout ${owner:-(none recorded)} is gone"
+exit 0

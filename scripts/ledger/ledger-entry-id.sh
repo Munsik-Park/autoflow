@@ -4,7 +4,7 @@
 # =============================================================================
 # Decision-ledger entry identifier: allocation (`next`) and detection (`check`)
 # =============================================================================
-# The decision ledger (.autoflow/{repo-key}-issue-{N}/issue-{N}-ledger.md, docs/core.md > Decision
+# The decision ledger (<attempt-dir>/issue-{N}-ledger.md, the attempt's record directory — docs/core.md > Decision
 # Ledger) is append-only and written by writers that cannot see each
 # other's in-flight state — the orchestrator and the advisor.
 # Without an issuance protocol each writer picks the "next" serial from its
