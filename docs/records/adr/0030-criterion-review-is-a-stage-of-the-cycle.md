@@ -114,7 +114,7 @@ and a suppressed `claim:` line; each verdict needed a further rule for its own g
 authority, so they are removed. The "spent" rule was put in for a re-invocation after a
 compaction; AutoFlow requires idle compaction off and does not consider compaction — auto
 compaction cannot be defended against — so no verdict, state or check is kept for it (operator
-decision 2026-10-19).
+decision 2026-10-19; ADR-0031).
 
 ## Alternatives Considered
 

@@ -15,13 +15,8 @@
 #     G1  the committed bodies equal scripts/skills/gen-skill-bodies.sh output
 #     G2  a body edited by hand is caught (--check exits 1 on a scratch copy)
 #
-#   B   body budget and order
-#     B1  /autoflow:cycle: the first body line is the re-invocation rule, and
-#         the leading part (after the frontmatter, up to the core's
-#         `core:leading-end` marker) is at most 18,000 bytes — the 5,000-token
-#         compaction re-attach cap
-#     B2  /autoflow:criterion-review: the whole body is at most 18,000 bytes
-#     B3  both bodies and every agent definition declare the root through
+#   B   root declaration
+#     B1  both bodies and every agent definition declare the root through
 #         ${CLAUDE_PLUGIN_ROOT}
 #
 #   C   path closure
@@ -45,7 +40,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GEN="$REPO_ROOT/scripts/skills/gen-skill-bodies.sh"
-BUDGET=18000
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -84,9 +78,6 @@ docs/security-checklist.md|scripts/gate/security-checklist.sh'
 ALLOW_FENCE='docs/git-workflow.md|docs/55-update-api-reference
 docs/pr-body-guide.md|scripts/test/check-suite-manifest.sh
 docs/pr-body-guide.md|docs/retry.md'
-
-# body_after_frontmatter <file> — the lines after the closing frontmatter ---.
-body_after_frontmatter() { awk 'n < 2 && /^---$/ { n++; next } n >= 2' "$1"; }
 
 # scope_files <root> — the documents C1/C2 read, relative to <root>.
 scope_files() {
@@ -167,49 +158,17 @@ else
   failc "G2" "unexpected diagnostic: $(head -c 300 "$WORK/g2.err")"
 fi
 
-# ── B: body budget and order ─────────────────────────────────────────────────
-echo "== B: body budget and order =="
+# ── B: root declaration ──────────────────────────────────────────────────────
+echo "== B: root declaration =="
 CYCLE="$REPO_ROOT/skills/cycle/SKILL.md"
 CRIT="$REPO_ROOT/skills/criterion-review/SKILL.md"
-if [ -f "$CYCLE" ]; then
-  first=$(body_after_frontmatter "$CYCLE" | grep -m1 -v '^[[:space:]]*$')
-  # Read to end of input rather than exit at the marker: an early exit closes
-  # the pipe on the upstream awk, whose SIGPIPE fails the pipeline under pipefail.
-  lead=$(body_after_frontmatter "$CYCLE" | awk '/^<!-- core:leading-end/ { found = 1 } !found { print } END { if (!found) exit 3 }')
-  lrc=$?
-  lbytes=$(printf '%s\n' "$lead" | LC_ALL=C wc -c | tr -d ' ')
-  case "$first" in
-    *compacted*'/autoflow:cycle $ARGUMENTS'*'before any other action'*)
-      pass "B1: the cycle body's first line is the re-invocation rule" ;;
-    *) failc "B1" "first body line is not the re-invocation rule: ${first:0:200}" ;;
-  esac
-  if [ "$lrc" -ne 0 ]; then
-    failc "B1" "the cycle body carries no core:leading-end marker"
-  elif [ "$lbytes" -le "$BUDGET" ]; then
-    pass "B1: the cycle body's leading part is $lbytes B (<= $BUDGET)"
-  else
-    failc "B1" "the cycle body's leading part is $lbytes B (> $BUDGET) — move a section past the core's core:leading-end marker"
-  fi
-else
-  failc "B1" "skills/cycle/SKILL.md missing"
-fi
-if [ -f "$CRIT" ]; then
-  cbytes=$(body_after_frontmatter "$CRIT" | LC_ALL=C wc -c | tr -d ' ')
-  if [ "$cbytes" -le "$BUDGET" ]; then
-    pass "B2: the criterion-review body is $cbytes B (<= $BUDGET), wholly within the re-attach cap"
-  else
-    failc "B2" "the criterion-review body is $cbytes B (> $BUDGET)"
-  fi
-else
-  failc "B2" "skills/criterion-review/SKILL.md missing"
-fi
 DECL='AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}'
 nodecl=""
 for f in "$CYCLE" "$CRIT" "$REPO_ROOT"/agents/*.md; do
   [ -f "$f" ] && grep -qxF "$DECL" "$f" || nodecl="$nodecl ${f#"$REPO_ROOT"/}"
 done
-[ -z "$nodecl" ] && pass "B3: both bodies and every agent definition declare the root through \${CLAUDE_PLUGIN_ROOT}" \
-  || failc "B3" "no root declaration line in:$nodecl"
+[ -z "$nodecl" ] && pass "B1: both bodies and every agent definition declare the root through \${CLAUDE_PLUGIN_ROOT}" \
+  || failc "B1" "no root declaration line in:$nodecl"
 
 # ── C: path closure ──────────────────────────────────────────────────────────
 echo "== C: <autoflow-root>/… paths resolve; no bare AutoFlow path =="

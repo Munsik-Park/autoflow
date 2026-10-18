@@ -11,8 +11,7 @@
 #
 #   skills/cycle/SKILL.md            /autoflow:cycle <N> [new] [unit=U1…U6] — the
 #                                    command header, then the whole core in its
-#                                    own order (the leading part, up to the
-#                                    `core:leading-end` marker, first)
+#                                    own order
 #   skills/criterion-review/SKILL.md /autoflow:criterion-review <N> [new] —
 #                                    U1's criterion review stage alone; the
 #                                    command header, then the core sections the
@@ -24,7 +23,7 @@
 #
 # The plugin installs without a build step, so the generated bodies are
 # committed; tests/plugin/verify-skill-bodies.sh runs `--check` (regen-clean),
-# the leading-part budget and the `<autoflow-root>/…` path closure.
+# the root declaration and the `<autoflow-root>/…` path closure.
 #
 #   gen-skill-bodies.sh            write both bodies
 #   gen-skill-bodies.sh --check    exit 0 when the committed bodies equal the
@@ -39,7 +38,6 @@ export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORE="$ROOT/docs/core.md"
-MARKER='<!-- core:leading-end'
 
 MODE=write
 case "${1:-}" in
@@ -55,12 +53,12 @@ strip_links() { sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g'; }
 # core_body — the core from its first `## ` heading to the end.
 core_body() { awk 'f || /^## / { f = 1; print }' "$CORE"; }
 
-# section <heading> — one `## ` section of the leading part, heading included,
-# without its trailing blank lines; empty when the heading is absent.
+# section <heading> — one `## ` section of the core, heading included, without
+# its trailing blank lines; empty when the heading is absent.
 section() {
-  awk -v h="$1" -v m="$MARKER" '
+  awk -v h="$1" '
     $0 == h { on = 1; print; next }
-    on && (/^## / || index($0, m) == 1) { exit }
+    on && /^## / { exit }
     on { print }' "$CORE" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
 }
 
@@ -83,12 +81,9 @@ description: >-
   Run an AutoFlow cycle on an issue — PREFLIGHT, with the attempt's criterion
   review stage, to HANDOFF, or one functional unit with unit=U1…U6; `new` asks
   for a new attempt of the issue. Use only when the operator starts or resumes
-  an AutoFlow cycle (/autoflow:cycle <N> [new] [unit=Uk]), and again after a
-  compaction.
+  an AutoFlow cycle (/autoflow:cycle <N> [new] [unit=Uk]).
 argument-hint: "<issue-number> [new] [unit=U1…U6]"
 ---
-
-**After a compaction** — if this conversation was compacted after this command was invoked, invoke `/autoflow:cycle $ARGUMENTS` again, with the same arguments, before any other action, then re-read the current unit's document.
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"

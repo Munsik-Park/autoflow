@@ -192,8 +192,6 @@ stops (Rule Scope, principle 2 — [`core.md`](../core.md)):
   ask the user about the tree (a dirty tree is never resolved without the user — *Cautions*), or
   report.
 
-After a compaction, the same request re-enters the active attempt (`resume`).
-
 ## The criterion review stage
 
 CRITERION-REVIEW is the first stage of an attempt's cycle, inside PREFLIGHT: after the entry

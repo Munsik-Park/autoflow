@@ -265,8 +265,8 @@ analysis report before it feeds a routing decision, a blocker, or a user escalat
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
-  unchanged … refer to that earlier tool_result"), and the dedup ledger is not reset on
-  compaction. The `Read` PostToolUse hook (`<autoflow-root>/hooks/check-read-dedup.sh`) flags this
+  unchanged … refer to that earlier tool_result"), and the dedup ledger is not reset on a
+  rewind (or a compaction). The `Read` PostToolUse hook (`<autoflow-root>/hooks/check-read-dedup.sh`) flags this
   at runtime — these rules are the procedure it points to.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is

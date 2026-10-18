@@ -73,9 +73,8 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 - **[MUST]** The plugin package is the repository's tracked tree at the released
   version. CI checks that every component resolves inside it; that every
   `<autoflow-root>/…` reference in a document, an agent definition or a command
-  body resolves inside it; that the generated command bodies equal their
-  generator's output; and that each command body's leading section fits the
-  compaction re-attach budget.
+  body resolves inside it; and that the generated command bodies equal their
+  generator's output.
 - **[MUST]** A failed **target check** is a fail-closed PREFLIGHT stop, in the
   same class as the Git-clean hard stop: the target's own spawn policy against
   the loaded agent definitions and the plugin's default, and the suite-plane
