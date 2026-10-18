@@ -112,13 +112,14 @@ The rules below are the ones other documents cite; everything else about the wor
   never edits the list; only an `[ac-decision]` ledger entry does
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
-  code and policy outside the cycle and confirmed by the operator before PREFLIGHT admitted the
-  cycle ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
+  code and policy outside the cycle, and the review's settled decisions were recorded in a
+  `[criterion-ready]` entry before PREFLIGHT admitted the cycle
+  ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
   not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
   commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it
   cites — is checked at the cycle's base, and a difference from the record is recorded with its
   grounds. The record changes nothing about how the criteria are taken: the `## Acceptance criteria`
-  table restates the issue's criteria as the confirmed body states them, the analysis does not run
+  table restates the issue's criteria as the body that entry records states them, the analysis does not run
   the review again (issue #291: DIAGNOSE takes the criteria as written), and a defect it observes as
   a fact is still raised as a decision point on the in-cycle path
   ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be

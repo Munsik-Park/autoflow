@@ -43,7 +43,7 @@ grounds, with the file it came from. Return the record's path and a
 one-line summary as your report.
 
 You do not edit the issue, any criterion, `## Inputs` beyond the model and
-effort you ran on, or `## Operator decisions`. What you read, in what order and
+effort you ran on, `## Operator decisions` or `## Session decisions`. What you read, in what order and
 with which tool, is your own.
 
 Run every Bash command in the **foreground** (`<autoflow-root>/docs/role-common-rules.md` > Bash

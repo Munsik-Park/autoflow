@@ -35,7 +35,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **PREFLIGHT cannot be skipped.** If PREFLIGHT's completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the blocking condition first and report.
 
-**A new issue's criteria are confirmed before its cycle.** Outside the cycle, the issue's acceptance criteria are reviewed against the target's code and policy and the operator confirms them; PREFLIGHT reads only that the confirmation is on record for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
+**A new issue's criteria are settled before its cycle.** Outside the cycle, the issue's acceptance criteria are reviewed against the target's code and policy, and the review session records its settled decisions in a `[criterion-ready]` entry; PREFLIGHT reads only that the entry is on record for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
 
 ### Flow Control
 

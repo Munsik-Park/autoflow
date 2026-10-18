@@ -7,11 +7,12 @@
 # =============================================================================
 # Reads and reports (ADR-0025 D8). It changes nothing: no ledger entry, no
 # file, no issue edit. Whether an issue's acceptance criteria are right is not
-# judged here — that is the criterion review's and the operator's
-# (docs/criterion-review.md). This script reads only whether the operator's
-# confirmation is on record for the issue body as it stands now.
+# judged here — that is the criterion review's (docs/criterion-review.md).
+# This script reads only whether the review's [criterion-ready] entry — the
+# record of the decisions settled under the policy the operator set — is on
+# record for the issue body as it stands now.
 #
-# The confirmation is the LAST level-2 ledger entry whose heading ends in the
+# The entry read is the LAST level-2 ledger entry whose heading ends in the
 # marker `[criterion-ready]`, in the issue's ledger
 # `.autoflow/<repo-key>-issue-<N>/issue-<N>-ledger.md`. It counts only when:
 #   - its identifier is in the `O` namespace and its `- Authority:` line reads
@@ -19,19 +20,19 @@
 #     only — docs/state-tracking.md > Hook gates);
 #   - its `- Record:` line names a review record that exists (repo-relative);
 #   - its `- Issue body sha256:` line equals the sha256 of the issue body read
-#     from GitHub now, so an issue edited after the confirmation is not ready.
+#     from GitHub now, so an issue edited after the entry is not ready.
 # and only while the issue directory holds no earlier cycle's state file, which
-# PREFLIGHT would archive — with the confirmation — before reading readiness.
+# PREFLIGHT would archive — with the entry — before reading readiness.
 #
 # Subcommands:
 #   hash   --issue N   print the sha256 of the issue body as it stands now —
-#                      the value a confirmation entry records
+#                      the value a [criterion-ready] entry records
 #   status --issue N   READY / NOT READY, with the reason
 #
 # Exit codes:
 #   0   hash printed | READY
-#   1   NOT READY — no confirmation, a malformed one, a missing record, an
-#       issue body changed since the confirmation, or an earlier cycle's state
+#   1   NOT READY — no [criterion-ready] entry, a malformed one, a missing
+#       record, an issue body changed since the entry, or an earlier cycle's state
 #       file still in the directory; the line says which
 #   3   a fact could not be read — the issue body lookup failed
 #   64  usage
@@ -85,11 +86,11 @@ fi
 not_ready() { echo "$TAG: issue #$ISSUE NOT READY — $1"; exit 1; }
 
 # PREFLIGHT archives an earlier cycle's directory before it reads readiness, so
-# a confirmation sitting beside that cycle's state file would go with it
+# an entry sitting beside that cycle's state file would go with it
 # (docs/criterion-review.md > When and by whom).
-[ -f "$DIR/issue-$ISSUE.json" ] && not_ready "the issue directory still holds an earlier cycle's state file ($DIR/issue-$ISSUE.json); PREFLIGHT archives it, and any confirmation beside it, before reading readiness — clear that cycle first, then review and confirm"
+[ -f "$DIR/issue-$ISSUE.json" ] && not_ready "the issue directory still holds an earlier cycle's state file ($DIR/issue-$ISSUE.json); PREFLIGHT archives it, and any [criterion-ready] entry beside it, before reading readiness — clear that cycle first, then run the criterion review, which records the entry"
 
-[ -f "$LEDGER" ] || not_ready "no ledger ($LEDGER), so no [criterion-ready] confirmation"
+[ -f "$LEDGER" ] || not_ready "no ledger ($LEDGER), so no [criterion-ready] entry"
 
 # The last [criterion-ready] entry: its heading line and the lines up to the
 # next level-2 heading, tab-separated as id, authority, record, sha256.
@@ -116,14 +117,14 @@ EOF
 trim() { local s="$1"; s="${s#"${s%%[![:space:]]*}"}"; printf '%s' "${s%"${s##*[![:space:]]}"}"; }
 auth="$(trim "${auth:-}")"; rec="$(trim "${rec:-}")"; rec="${rec#\`}"; rec="${rec%\`}"; sha="$(trim "${sha:-}")"
 
-[[ "$id" =~ ^O[0-9]+$ ]] || not_ready "entry $id is not an O entry (O<digits>) — the confirmation is the operator's"
+[[ "$id" =~ ^O[0-9]+$ ]] || not_ready "entry $id is not an O entry (O<digits>) — a [criterion-ready] entry is an O entry under 'operator decision'"
 [ "$auth" = "operator decision" ] || not_ready "entry $id: '- Authority:' is '$auth', not 'operator decision'"
 [ -n "$rec" ] || not_ready "entry $id: no '- Record:' line"
 [ -f "$rec" ] || not_ready "entry $id: review record '$rec' does not exist"
 printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$' || not_ready "entry $id: '- Issue body sha256:' is not a sha256 ('$sha')"
 
 now="$(body_hash)" || { echo "[$TAG] issue #$ISSUE: body lookup failed (gh issue view)" >&2; exit 3; }
-[ "$now" = "$sha" ] || not_ready "entry $id confirmed body sha256=$sha, the issue body now is sha256=$now — the issue changed since the confirmation"
+[ "$now" = "$sha" ] || not_ready "entry $id records body sha256=$sha, the issue body now is sha256=$now — the issue changed since the entry; the criterion review records a new entry for the edited body"
 
 echo "$TAG: issue #$ISSUE READY — entry $id, record $rec, body sha256=$sha"
 exit 0

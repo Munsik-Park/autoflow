@@ -103,10 +103,10 @@ flowchart TD
 The same diagram in plain text, for environments without mermaid rendering:
 
 ```
-criterion review (outside the cycle; the operator confirms — criterion-review.md)
+criterion review (outside the cycle; the session records its settled decisions as [criterion-ready] — criterion-review.md)
     │
     ▼
-PREFLIGHT (new issue: reads the confirmation)
+PREFLIGHT (new issue: reads the [criterion-ready] entry)
     │
     ▼
 DIAGNOSE
