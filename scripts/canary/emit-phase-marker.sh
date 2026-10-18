@@ -5,9 +5,10 @@
 #
 # Issue #35 — per-phase-transition marker emitter.
 # Serializes ONE JSON record per phase transition (feature design §4.2) and
-# APPENDS it (append-only, never truncates) to the per-issue, gitignored file
-# .autoflow/<repo-key>-issue-<N>/issue-<N>-phases.jsonl (issue #423). Prints a repo-relative path:line anchor on
-# stdout; the record body is never printed.
+# APPENDS it (append-only, never truncates) to the attempt's file
+# issue-<N>-phases.jsonl in the record directory of the dev branch checked out
+# in the current checkout (`autoflow-records dir`; issues #423, #466). Prints
+# an absolute path:line anchor on stdout; the record body is never printed.
 #
 # Out of scope (issue #35): wiring this emitter into any phase transition. It is
 # a standalone CLI only.
@@ -82,13 +83,11 @@ LINE="$(jq -c -n \
   --arg phase "$PHASE" --arg event "$EVENT" --arg ts "$TS" \
   '{schema_version:$sv, issue:$issue, cycle:$cycle, phase:$phase, event:$event, ts:$ts}')"
 
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$SCRIPT_DIR/../lib/issue-dir.sh"
-REL=".autoflow/$(autoflow_repo_key "$REPO_ROOT")-issue-${ISSUE}/issue-${ISSUE}-phases.jsonl"
-TARGET="$REPO_ROOT/$REL"
+DIR="$("$REPO_ROOT/bin/autoflow-records" dir)" || exit $?
+case "$(basename "$DIR")" in *-issue-"$ISSUE") ;; *) die "the checked-out dev branch is not an attempt of issue #$ISSUE ($DIR)" ;; esac
+TARGET="$DIR/issue-${ISSUE}-phases.jsonl"
 
 # Append-only write (never a truncating redirect).
-mkdir -p "$(dirname "$TARGET")"
 printf '%s\n' "$LINE" >> "$TARGET"
 
-echo "$REL:$(wc -l < "$TARGET" | tr -d ' ')"
+echo "$TARGET:$(wc -l < "$TARGET" | tr -d ' ')"

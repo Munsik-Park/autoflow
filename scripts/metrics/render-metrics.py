@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Elastic-2.0
 """AutoFlow cycle metrics — static HTML view (issue #268).
 
-Reads $ROOT/issues.json (written by cycle-metrics.py) and writes ONE
+Reads <record-root>/_metrics/issues.json (written by cycle-metrics.py) and writes ONE
 self-contained HTML file: inline CSS, inline JS, inline data, no external
 resource of any kind, so it opens without a network. Only aggregate values go
 in — the same fields the session records hold, minus the working-directory
@@ -24,7 +24,7 @@ Idle stretches longer than 30 minutes are folded on the time axis, so a cycle
 that waited a week on a reviewer still shows its working hours.
 
 Usage:
-  render-metrics.py [--root DIR] [--out FILE]
+  render-metrics.py [--out FILE]
 
 Only the standard library is used.
 """
@@ -95,7 +95,7 @@ border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,
 <h1>AutoFlow cycle metrics</h1>
 <p class="sub" id="sub"></p>
 <div class="card"><h2>Issues</h2><div class="scroll" style="max-height:420px"><table id="tbl"></table></div>
-<p class="note">A <span class="nc">non-cycle</span> row is a session that referenced an issue's <code>.autoflow</code> files without running a cycle (no AutoFlow role spawn, and no state file dated within a day of it) — a draft, a post-hoc analysis. Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
+<p class="note">A <span class="nc">non-cycle</span> row is a session that referenced an issue's record files without running a cycle (no AutoFlow role spawn, and no state file dated within a day of it) — a draft, a post-hoc analysis. Click a row for the issue view below. Click a header to sort. Tokens = input + cache read + cache write + output, orchestrator and agents together.</p></div>
 <p class="note" style="margin:0 0 10px"><label><input type="checkbox" id="ncToggle"> include non-cycle rows in the two charts below</label>
 <span id="ncCount"></span></p>
 <div class="grid2">
@@ -218,7 +218,7 @@ function show(key){const iss=I.find(i=>i.key===key);if(!iss)return;current=key;d
   ['review-autofix',o.review_autofix],['reviewer rounds',o.reviewer_rounds],['CI fail rounds',o.ci_fail_rounds],['CI logs undetermined',o.ci_undetermined],
   ['operator prompts',iss.operator_prompts_known?iss.operator_prompts:null],['operator min',iss.operator_minutes||null]];
  $('tiles').innerHTML=tiles.map(([l,v])=>`<div class="tile"><b>${esc(v==null?'–':v)}</b><span>${esc(l)}</span></div>`).join('');
- $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from '+o.artifacts+' .autoflow':'no .autoflow artifacts found',
+ $('iNote').textContent=[iss.sessions+' session(s)',o.artifacts?'outcome from the '+o.artifacts+' records':'no records found',
   o.state_phase,(iss.prs||[]).map(p=>p+(iss.pr_states[p]?' '+iss.pr_states[p]:'')).join(', '),iss.note].filter(Boolean).join(' · ');
  drawTimeline(iss);drawCtx(iss);drawCost(iss)}
 
@@ -282,11 +282,23 @@ if(I.length)show(I.some(i=>i.key===asked)?asked:[...(charted().length?charted():
 
 
 def main(argv=None):
-    archive = os.environ.get('AUTOFLOW_ARCHIVE_ROOT') or os.path.join(os.path.expanduser('~'), '.autoflow')
+    import subprocess
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('--root', default=os.path.join(archive, '_metrics'))
-    ap.add_argument('--out', help='Default: <root>/cycle-metrics.html')
+    ap.add_argument('--out', help='Default: <record-root>/_metrics/cycle-metrics.html')
     args = ap.parse_args(argv)
+    # The store is <record-root>/_metrics, the record root read through bin/autoflow-records
+    # (scripts/lib/records.sh, issue #466) like every AutoFlow script's.
+    here = os.path.dirname(os.path.abspath(__file__))
+    try:
+        p = subprocess.run([os.path.join(here, '..', '..', 'bin', 'autoflow-records'), 'root'],
+                           capture_output=True, text=True)
+    except OSError as e:
+        print('render-metrics: cannot run bin/autoflow-records (%s)' % e, file=sys.stderr)
+        return 7
+    if p.returncode != 0:
+        sys.stderr.write(p.stderr)
+        return p.returncode
+    args.root = os.path.join(p.stdout.strip(), '_metrics')
     src = os.path.join(args.root, 'issues.json')
     try:
         with open(src, encoding='utf-8') as f:

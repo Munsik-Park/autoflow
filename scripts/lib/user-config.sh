@@ -9,9 +9,12 @@
 #
 #   $HOME/.autoflow/config.json
 #
-# It holds the operator's own values — today the external reviewers
+# It holds the operator's own values — the external reviewers
 # (`{ "review": { … } }`, the same shape and parser as a target's
-# `.claude/autoflow.local.json`; scripts/review/lib/review-config.sh). The
+# `.claude/autoflow.local.json`; scripts/review/lib/review-config.sh) and the
+# record root (`"record_root": "<absolute path>"`, default $HOME/.autoflow;
+# scripts/lib/records.sh, issue #466). Each key is read, and validated, by its
+# own reader: an error in one leaves the other as it is. The
 # SessionStart hook (hooks/ensure-user-config.sh) creates it once, with the
 # default below, when it is absent, and never changes an existing file. $HOME
 # alone decides where it is, so a check that sets HOME runs apart from the

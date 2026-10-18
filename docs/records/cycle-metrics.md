@@ -12,7 +12,7 @@ here reaches a target.
 The raw material is the Claude Code transcript, and the harness deletes it. The retention is the
 `cleanupPeriodDays` setting ("how many days Claude Code keeps transcripts before deleting them",
 Claude Code settings reference); it is not set on the operator's machine, and the oldest transcript
-found there on 2026-09-17 was 29 days old. The `.autoflow` archive does not hold transcripts. A
+found there on 2026-09-17 was 29 days old. The record root does not hold transcripts. A
 session that expires before it is collected is lost, so the collector runs **at least weekly**.
 
 It calls no model and needs no Claude session: it is two standard-library Python scripts.
@@ -24,7 +24,7 @@ python3 scripts/metrics/cycle-metrics.py      # collect new sessions, then regen
 python3 scripts/metrics/render-metrics.py     # write cycle-metrics.html
 ```
 
-Everything is written under `${AUTOFLOW_ARCHIVE_ROOT:-$HOME/.autoflow}/_metrics/` and nowhere else —
+Everything is written under `<record-root>/_metrics/` — the record root every AutoFlow script reads, `bin/autoflow-records root` (`~/.autoflow` by default, `record_root` in `~/.autoflow/config.json`; issue #466), with no option or environment variable that sends the store or the records it joins elsewhere — and nowhere else; an undetermined or unusable record root stops both scripts with its marker line (exit `7`) —
 no file in this repository or in a target repository is created or changed.
 
 | Path | Written | Content |
@@ -104,7 +104,7 @@ the target's code.
   start / end, and the same figures per wake for a resumed agent;
 - the orchestrator's calls, one row each: timestamp, context, cache read, cache write, output, and
   whether the call re-wrote its whole prefix;
-- the `.autoflow/issue-{N}` reference runs, operator prompt timestamps, linked PRs, the working
+- the issue-record reference runs (a path into an attempt's record directory `<stamp>-issue-{N}/`, or in earlier transcripts `.autoflow/…issue-{N}`), operator prompt timestamps, linked PRs, the working
   directory, git branches.
 
 The method is ADR-0017 > Notes > C8, from the one implementation both tools share
@@ -119,7 +119,7 @@ spawn's description label decides among them. Each agent records which method de
 (`readout+description`, `description`, `readout`, `agent-type`, `workflow-site`) or none, and every
 run prints the rate. On the first backfill it was 771 of 863 AutoFlow-role spawns (89.3%). A spawn
 the policy has no row for — a PR-body draft, a VERIFY step run by the Test AI — has no key to
-recover and stays `none`. When `.autoflow/issue-{N}-phases.jsonl` exists (the issue #35 emitter; wired
+recover and stays `none`. When the attempt's `issue-{N}-phases.jsonl` exists (the issue #35 emitter; wired
 into no phase today) its markers are joined as `phase_marker`.
 
 **Functional units (ADR-0025).** Each issue's agents are charged to a unit at derive time, so a
@@ -136,7 +136,7 @@ unit. Orchestrator calls are not charged to a unit.
 `issues.tsv` is rebuilt from `sessions/` on every run, so a correction to the rules below recomputes
 every past issue.
 
-- A session moves to an issue at **three consecutive** `.autoflow/issue-{N}` references; a single
+- A session moves to an issue at **three consecutive** issue-record references; a single
   look at another issue's file (PREFLIGHT reading a prior cycle's state) moves nothing. One issue is
   `active` at a time (PR Wait Rule), so the segments do not overlap.
 - A segment opens at the operator prompt that led to its first reference and closes 30 minutes past
@@ -149,8 +149,7 @@ every past issue.
 - A segment's boundary with the next segment is exclusive; the session's own last record is
   included in its last segment.
 - Outcome columns belong to the arm that produced them: they are read for the AutoFlow arm only, and
-  another arm's row leaves them empty rather than borrowing them. They come from the issue's `.autoflow` artifacts — the archive copy, else the live
-  directory: `cycle`, gate averages, ARCHITECT turns and rounds (per transcript file, `### Brief` blocks + 1 where it holds a turn, summed over the cycles' transcripts), the number
+  another arm's row leaves them empty rather than borrowing them. They come from the issue's records under the record root — the latest attempt's record directory, else a pre-#466 archive copy: `cycle`, gate averages, ARCHITECT turns and rounds (per transcript file, `### Brief` blocks + 1 where it holds a turn, summed over the cycles' transcripts), the number
   of GATE:PLAN / AUDIT / GATE:QUALITY evaluation reports, `[review-autofix]` ledger headings,
   reviewer rounds (aggregated comment bodies — `issue-{N}-local/review/comment-*.md`, or a top-level `review-comment-*` file before issue #411), CI rounds (`issue-{N}-local/handoff-ci-*.log`). A CI
   round is judged by the `exit=<n>` line in its log, never by its position — a later log is often a
@@ -158,7 +157,7 @@ every past issue.
   (`confirm-ci-green.sh`: not mergeable, no check published, no verdict) is counted apart as
   `ci_other_rounds`, and a log with no exit line is `ci_undetermined` and counted as nothing else.
 - **A number is a count; an empty cell is "not recorded".** The artifacts the outcome columns are
-  counted from were introduced over time, so an older archive holds none of them, and a 0 there
+  counted from were introduced over time, so an older record holds none of them, and a 0 there
   would read as "no rounds" when nothing was recorded. Each metric is a number only where at least
   one of *its own* source artifacts exists, and is otherwise `null` in `issues.json`, empty in
   `issues.tsv` and "–" in the page:
@@ -176,7 +175,7 @@ every past issue.
   how many it left out. On the first run of this rule, of 48 cycle rows: ARCHITECT 39 empty (the
   relay transcript first appears 2026-09-05), reviewer rounds 47, CI 48, GATE:PLAN / AUDIT /
   GATE:QUALITY reports 23 / 13 / 24, ledger-backed columns 4.
-- **`kind`.** A session that references an issue's `.autoflow` files three times becomes a row
+- **`kind`.** A session that references an issue's record files three times becomes a row
   whether or not it ran a cycle — drafting the issue, analysing a finished cycle. Such a row is all
   orchestrator and carries no outcome, and in the share-over-time chart it reads as a 100% point
   that hides the real cycles' 11–36%. A row is `cycle` when any one of these holds, recorded as
@@ -206,7 +205,7 @@ every past issue.
 session-id	arm	issue	operator_minutes	note
 ```
 
-A session run without AutoFlow leaves no state file and no `.autoflow` reference, so this row is the
+A session run without AutoFlow leaves no state file and no issue-record reference, so this row is the
 only thing that ties it to an issue: the whole session is attributed to the labelled issue. The two
 arms of one issue are two rows (`repo#N` and `repo#N@B`). Operator prompt counts and wall time are
 derived from the transcript for both arms; `operator_minutes` is the operator's own figure for the

@@ -25,7 +25,7 @@ pushes one branch, HANDOFF opens one PR).
 AutoFlow structures every code change through a defined lifecycle:
 
 ```
-PREFLIGHT       Preparation (U1)  — prior-cycle resolution, Git clean check, sync, branch and state creation
+PREFLIGHT       Preparation (U1)  — prior-attempt resolution, Git clean check, sync, entry, state creation
 DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
@@ -87,7 +87,8 @@ flowchart LR
 
 AutoFlow is a **versioned tool your own dev project consumes**, delivered by a
 Claude Code plugin alone: your project is the repository Claude Code runs in, and
-AutoFlow writes no file into it beyond its own working state under `.autoflow/`.
+AutoFlow writes no file into it: its records live under a record root outside
+every project's tree (`~/.autoflow` by default).
 
 Install the plugin once per machine, at user scope:
 
@@ -103,12 +104,21 @@ repository's `.claude/settings.json`.
 
 Then, in your project:
 
-- **Start a cycle** with `/autoflow:cycle <issue>`; review a new issue's
-  acceptance criteria before its first cycle with
-  `/autoflow:criterion-review <issue>` ([`docs/criterion-review.md`](docs/criterion-review.md)).
-- **Ignore the working state**: `.gitignore` excludes `.autoflow/`
-  (`.autoflow/*`), which holds the per-issue directories
-  `.autoflow/{repo-key}-issue-{N}/`.
+- **Begin an attempt** at an issue with `/autoflow:criterion-review <issue>`:
+  it creates the attempt — its dev branch, checked out, and its record
+  directory — and reviews the acceptance criteria
+  ([`docs/criterion-review.md`](docs/criterion-review.md)). Then **start its
+  cycle** with `/autoflow:cycle <issue>`. Several attempts at one issue — in
+  this checkout, other worktrees or other clones — run side by side; each is
+  the checkout's that began it.
+- **Nothing to ignore**: every record — an attempt's state, ledger, reports and
+  cycle-layer store, issue drafts — is under the record root,
+  `<record-root>/<repo-key>/<stamp>-issue-<N>/` per attempt (`autoflow-records
+  dir` prints it). Set `"record_root": "<absolute path>"` in
+  `~/.autoflow/config.json` to move it; the file stays where it is. A project
+  whose records are still in its own `.autoflow/` from an earlier release moves
+  them with `scripts/migrate/migrate-in-tree-records.sh`
+  ([`docs/state-tracking.md`](docs/state-tracking.md) > *Record location*).
 - **Choose your external reviewers once, for every project**, in
   `~/.autoflow/config.json`. AutoFlow's SessionStart hook creates it on the
   first session start in any project where the plugin is enabled — only when it
@@ -162,7 +172,7 @@ claude-autoflow/
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
 ├── skills/                            # /autoflow:cycle and /autoflow:criterion-review (generated from docs/core.md)
-├── bin/                               # autoflow-root — prints the plugin root
+├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root, an attempt's record directory, a new attempt
 │
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
@@ -216,7 +226,8 @@ project.
 
 ### 4. Hook Enforcement
 
-`check-autoflow-gate.sh` reads `.autoflow/{repo-key}-issue-{N}/issue-{N}.json` to prevent Agent
+`check-autoflow-gate.sh` reads the state files of the session checkout's
+attempts, `<attempt-dir>/issue-{N}.json`, to prevent Agent
 spawns, `git push`, and `gh pr create` from running before the corresponding
 gate has passed. The hook computes verdicts directly from raw `scores` — it
 never trusts an AI-supplied `pass` field.

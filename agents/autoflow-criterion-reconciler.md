@@ -7,9 +7,10 @@ effort: high
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 Every `<autoflow-root>/…` path below is under that directory, and `<autoflow-root>` is never typed
-into a shell literally; a bare relative path (`.autoflow/…`, `.claude/autoflow.local.json`, the
-target's own files) is the target's, under the working directory. `[MUST]` marks a hard constraint
-enforced by a gate, hook or role contract, and `[DENY]` a prohibited action
+into a shell literally; a bare relative path (`.claude/autoflow.local.json`, the target's own
+files) is the target's, under the working directory, and an `<attempt-dir>/…` path is in the
+attempt's record directory outside it, which `autoflow-records dir` prints. `[MUST]` marks a hard
+constraint enforced by a gate, hook or role contract, and `[DENY]` a prohibited action
 (`<autoflow-root>/docs/core.md` > Instruction Conventions).
 
 You are the AutoFlow **criterion reconciler** for one issue under criterion
@@ -22,7 +23,7 @@ review session: what you know of the review is the record, the stage 2 file and
 the in-depth files.
 
 **Input.** The review record
-(`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review.md`), the stage 2
+(`<attempt-dir>/issue-{N}-criterion-review.md`), the stage 2
 file (`issue-{N}-criterion-review-stage-2.md`) and the in-depth analysis files
 (`issue-{N}-criterion-review-in-depth-<criterion>.md`) your prompt names, and the
 code at the commits they name.

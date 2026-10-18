@@ -6,9 +6,16 @@
 # =============================================================================
 # Reads and reports. It changes nothing: no fetch, no checkout, no branch or
 # file is created, moved or deleted, no state file is written, and nothing is
-# sent to GitHub but reads. What is done with a fact — which cycle is cleared,
-# which mode the requested issue takes, where an interrupted cycle resumes —
-# is the orchestrator's (docs/units/preparation.md).
+# sent to GitHub but reads. What is done with a fact — which attempt is
+# cleared, how an interrupted attempt resumes — is the orchestrator's
+# (docs/units/preparation.md); which attempt the requested issue enters, and
+# how, follows from the facts alone and is printed as the `entry:` line.
+#
+# Records live under the record root (scripts/lib/records.sh, issue #466): an
+# attempt — one run of an issue — has its directory
+# `<record-root>/<repo-key>/<stamp>-issue-<N>/`, keyed by its dev branch
+# `dev/<stamp>-issue-<N>`, and belongs to the checkout its `checkout` file
+# names.
 #
 # Reported:
 #   - the working tree: the checked-out branch and its dirty paths
@@ -17,29 +24,50 @@
 #     name and version its .claude-plugin/plugin.json names, and, when that
 #     root is a git work tree of its own, its HEAD and whether it is dirty: the
 #     plugin record PREFLIGHT writes to the ledger (ADR-0027 D4)
-#   - per state file `.autoflow/<repo-key>-issue-<N>/issue-<N>.json` (issue
-#     #423) — every one the gate hook counts: `active`, `phase`, `mode`,
-#     `cycle`; for this repository's own key, every dev branch carrying the
-#     issue's number (`dev/<date>-<time>-issue-<N>`) and the one the state
-#     file's `branch` names, each with its side, its pull request and its
-#     `record` (issue #433)
-#   - with --issue N: for a state file of that issue, each gate's recorded
-#     scores (count, min, avg), `verdict` and `remedy_class`, the artifacts in
-#     its directory, the ledger's last attempt markers and the last local-checks record
-#     of the current cycle; without a state file, any dev branch that already
-#     carries the issue's number, reported `record=none`
+#   - the record root and this checkout
+#   - a state file left in the checkout's own `.autoflow/` (before #466)
+#   - per attempt of this repository not yet marked completed: its owner
+#     (`this`, `other <path>` — a checkout still there — or `gone <path>`),
+#     its state (`active`, `phase`, `mode`, `cycle`, or `none` — a criterion
+#     review not yet started as a cycle), its dev branch with each side and,
+#     for a state file that is not active, its pull request
+#   - `cleanup:` per attempt of this checkout whose pull request is merged or
+#     closed — the Post-Merge Cleanup it is owed
+#   - with --issue N: `criterion:` for each attempt of N with no state file
+#     this checkout could start; each dev branch carrying N's number with no
+#     attempt record (`record=none`, issue #433); for the attempt the entry
+#     names, each gate's recorded scores (count, min, avg), `verdict` and
+#     `remedy_class`, the artifacts in its directory, the ledger's last attempt
+#     markers and the last local-checks record of the current cycle; and the
+#     `entry:` line
 #
-# A branch's record ties it to this checkout's cycle by name: `state-file` for
-# the branch the issue's state file names in `branch`, `none` for any other —
-# another checkout's cycle of the same issue, or no state file here — and
-# `unconfirmed` for every branch of a state file that names none (one written
-# before the field), which no name ties to it.
+# The entry (issue #466 AC3), evaluated in order:
+#   stop in-tree-records   a state file is still in the checkout's .autoflow/
+#   hold <key>             another issue's attempt of this checkout is active
+#   stop multiple-active   this checkout has two or more active attempts
+#   resume <key>           this checkout's attempt of N is active
+#   on the checked-out branch, when it is an attempt of N — taken over first
+#   (`claim <key>`) when its checkout is gone:
+#     stop other-checkout <key>   its checkout is still there
+#     start <key>                 no state file, criterion READY
+#     not-ready <key>             no state file, criterion NOT READY
+#     review-response <key>       not active, an open pull request
+#     paused <key>                not active, awaiting-user or no open PR
+#   otherwise, among this checkout's attempts of N (cleared ones aside):
+#     start / review-response <key>   exactly one is ready to start or has an
+#                                     open pull request
+#     stop candidates <key> …         two or more — check one's dev branch out
+#     new                             none — a new attempt begins with its
+#                                     criterion review, which creates it
 #
 # Exit codes:
 #   0   every fact was read
 #   3   a fact could not be read — a `gh` lookup failed, a state file is not
 #       JSON, or the AutoFlow root's plugin.json could not be read; the line
 #       that reports it says which
+#   7   the record root is undetermined or unusable — the marker line
+#       `record-root: UNDETERMINED …` / `record-root: UNUSABLE …` says why;
+#       no attempt is read and no entry is printed
 #   64  usage
 #
 # Usage: scripts/preflight/cycle-status.sh [--issue N]
@@ -63,22 +91,11 @@ esac
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
 cd "$ROOT" || exit 64
-AF=".autoflow"
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$SELF_DIR/../lib/issue-dir.sh"
+# shellcheck source=scripts/lib/records.sh
+. "$SELF_DIR/../lib/records.sh"
+TOP="$(af_checkout_top "$ROOT")"
 KEY="$(autoflow_repo_key "$ROOT")"
 incomplete=0
-
-# The issue-scoped dev branch is named `dev/<date>-<time>-issue-<N>` (before
-# issue #433, `dev/<date>-issue-<N>`); both the local and the origin refs are
-# read, so a branch that exists on one side only is still found.
-branches_of() {
-  {
-    git for-each-ref --format='%(refname:lstrip=2)' "refs/heads/dev/*-issue-$1"
-    git for-each-ref --format='%(refname:lstrip=3)' "refs/remotes/origin/dev/*-issue-$1"
-  } | sort -u
-}
-side() { if git show-ref --verify --quiet "$1"; then echo yes; else echo no; fi; }
 
 # "<number> <STATE> <url>" of the branch's pull request (an open one when there
 # is one, otherwise the most recently updated), or empty.
@@ -87,30 +104,7 @@ pr_of() {
   out="$(gh pr list --head "$1" --state all --limit 30 --json number,state,url,updatedAt 2>/dev/null)" || return 1
   printf '%s' "$out" | jq -r 'sort_by(.updatedAt) | ((map(select(.state == "OPEN")) | last) // last) | if . == null then "" else "\(.number) \(.state) \(.url)" end'
 }
-
-# The recorded branch is listed even when it is gone on both sides: its pull
-# request is still looked up by its name.
-report_branches() {  # <issue> <state file: yes|no> <recorded branch, or empty>
-  local n="$1" st="$2" rb="$3" list b rec line
-  list="$( { branches_of "$n"; [ -n "$rb" ] && printf '%s\n' "$rb"; } | sort -u | grep .)"
-  if [ -z "$list" ]; then
-    echo "  branch: none"; echo "  pr: not looked up (no dev branch to look it up by)"; return
-  fi
-  while IFS= read -r b; do
-    if [ "$st" = no ]; then rec=none
-    elif [ -z "$rb" ]; then rec=unconfirmed
-    elif [ "$b" = "$rb" ]; then rec=state-file
-    else rec=none; fi
-    echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b")) record=$rec"
-    if line="$(pr_of "$b")"; then
-      if [ -n "$line" ]; then echo "    pr: #${line%% *} ${line#* }"; else echo "    pr: none"; fi
-    else
-      echo "    pr: lookup failed"; incomplete=1
-    fi
-  done <<EOF_LIST
-$list
-EOF_LIST
-}
+side() { if git show-ref --verify --quiet "$1"; then echo yes; else echo no; fi; }
 
 # The result line of the last `### preflight-local-checks | cycle: <C>` record.
 last_local_checks() {
@@ -121,8 +115,8 @@ last_local_checks() {
     END { print (last == "" ? "none" : last) }' "$1"
 }
 
-report_detail() {  # <issue> <cycle> — what a resume is judged from
-  local n="$1" d="$AF/$KEY-issue-$1" f m
+report_detail() {  # <attempt dir> <issue> <cycle> — what a resume is judged from
+  local d="$1" n="$2" f m
   local led="$d/issue-$n-ledger.md"
   echo "  gates:"
   jq -r '
@@ -146,20 +140,23 @@ report_detail() {  # <issue> <cycle> — what a resume is judged from
     for m in gate-autofix rebuttal review-autofix reentry-decision; do
       grep -n -E "^## .*\[$m\][[:space:]]*$" "$led" | tail -1 | sed 's/^/    /'
     done
-    echo "  last local-checks record (cycle $2): $(last_local_checks "$led" "$2")"
+    echo "  last local-checks record (cycle $3): $(last_local_checks "$led" "$3")"
   else
     echo "  ledger: none"
   fi
 }
 
 dirty="$(git status --porcelain)"
-echo "working tree: branch $(git rev-parse --abbrev-ref HEAD), $(printf '%s' "$dirty" | grep -c . || true) dirty path(s)"
+BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" || BRANCH=""
+echo "working tree: branch ${BRANCH:-(detached HEAD)}, $(printf '%s' "$dirty" | grep -c . || true) dirty path(s)"
 [ -n "$dirty" ] && printf '%s\n' "$dirty" | sed 's/^/  /'
 
 DEFAULT="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" || DEFAULT="origin/main"
 DEFAULT="${DEFAULT#origin/}"
 if git show-ref --verify --quiet "refs/heads/$DEFAULT" && git show-ref --verify --quiet "refs/remotes/origin/$DEFAULT"; then
   echo "default branch: $DEFAULT at $(git rev-parse --short "$DEFAULT"), origin/$DEFAULT at $(git rev-parse --short "origin/$DEFAULT") as of the last fetch — ahead $(git rev-list --count "origin/$DEFAULT..$DEFAULT"), behind $(git rev-list --count "$DEFAULT..origin/$DEFAULT")"
+elif git show-ref --verify --quiet "refs/remotes/origin/$DEFAULT"; then
+  echo "default branch: $DEFAULT — no local branch; origin/$DEFAULT at $(git rev-parse --short "origin/$DEFAULT") as of the last fetch"
 else
   echo "default branch: $DEFAULT — no local branch or no remote-tracking ref"
 fi
@@ -184,38 +181,228 @@ else
   echo "  git: not a git work tree"
 fi
 
-own_seen=0
-found=0
-for f in "$AF"/*-issue-*/issue-*.json; do
+if ! af_record_root "$TOP"; then
+  af_record_root_marker
+  exit "$AF_RECORD_ROOT_EXIT"
+fi
+R="$AF_RECORD_ROOT"
+echo "record root: $R"
+echo "checkout: $TOP (repository key $KEY)"
+
+# A state file in the checkout's own .autoflow/ is a cycle recorded before the
+# record root (issue #466): it is moved to the record root before anything else.
+legacy=""
+for f in .autoflow/*-issue-*/issue-*.json; do
   [ -f "$f" ] || continue
   n="${f##*/issue-}"; n="${n%.json}"
   case "$n" in ''|*[!0-9]*) continue ;; esac
   dn="${f%/*}"; dn="${dn##*/}"
   case "$dn" in *-issue-"$n") ;; *) continue ;; esac
-  found=1
-  # A state file under another repository's key is counted by the gate hook
-  # too, so it is reported; its branches and pull request are that
-  # repository's, which this one's lookups would not find.
-  if [ "${dn%-issue-"$n"}" != "$KEY" ]; then
-    echo "issue #$n ($dn): active=$(jq -r '.active // false' "$f" 2>/dev/null || echo unreadable) — another repository's key"
-    continue
-  fi
-  if ! jq -e . "$f" >/dev/null 2>&1; then
-    echo "issue #$n: state file unreadable ($f)"; incomplete=1
-    [ "$n" = "$ISSUE" ] && own_seen=1
-    continue
-  fi
-  cycle="$(jq -r '.cycle // 1' "$f")"
-  echo "issue #$n: active=$(jq -r '.active // false' "$f") phase=$(jq -r '.phase // "unset"' "$f") mode=$(jq -r '.mode // "unset"' "$f") cycle=$cycle"
-  report_branches "$n" yes "$(jq -r '.branch // empty' "$f")"
-  if [ "$n" = "$ISSUE" ]; then own_seen=1; report_detail "$n" "$cycle"; fi
+  legacy="${legacy:+$legacy }$f"
 done
-[ "$found" -eq 0 ] && echo "state files: none"
+if [ -n "$legacy" ]; then echo "in-tree state files: $legacy"; else echo "in-tree state files: none"; fi
 
-if [ -n "$ISSUE" ] && [ "$own_seen" -eq 0 ]; then
-  echo "issue #$ISSUE: no state file"
-  report_branches "$ISSUE" no ""
+# ── Attempts of this repository ──
+# Parallel arrays, one slot per attempt not marked completed.
+A_KEY=(); A_ISSUE=(); A_DIR=(); A_OWN=(); A_OWNER=(); A_STATE=(); A_ACTIVE=(); A_PHASE=(); A_CYCLE=(); A_PR=()
+completed=0
+for d in "$R/$KEY"/*-issue-*; do
+  [ -d "$d" ] || continue
+  k="${d##*/}"
+  af_attempt_key "dev/$k" >/dev/null || continue
+  if [ -e "$d/completed" ]; then completed=$((completed + 1)); continue; fi
+  n="$(af_attempt_issue "$k")"
+  owner=""
+  [ -f "$d/checkout" ] && { IFS= read -r owner < "$d/checkout" || true; }
+  if [ "$owner" = "$TOP" ]; then own=this
+  elif af_checkout_live "$owner" "$KEY"; then own=other
+  else own=gone; fi
+  st=none; act=""; ph=""; cy=""
+  if [ -f "$d/issue-$n.json" ]; then
+    if jq -e . "$d/issue-$n.json" >/dev/null 2>&1; then
+      st=file
+      act="$(jq -r '.active // false' "$d/issue-$n.json")"
+      ph="$(jq -r '.phase // "unset"' "$d/issue-$n.json")"
+      cy="$(jq -r '.cycle // 1' "$d/issue-$n.json")"
+    else
+      st=unreadable; incomplete=1
+    fi
+  fi
+  A_KEY+=("$k"); A_ISSUE+=("$n"); A_DIR+=("$d"); A_OWN+=("$own"); A_OWNER+=("$owner")
+  A_STATE+=("$st"); A_ACTIVE+=("$act"); A_PHASE+=("$ph"); A_CYCLE+=("$cy"); A_PR+=("")
+done
+
+# The pull request of an attempt whose state file is not active — looked up for
+# this checkout's attempts (cleanup) and for every attempt of the requested
+# issue (its entry).
+i=0
+while [ "$i" -lt "${#A_KEY[@]}" ]; do
+  if [ "${A_STATE[$i]}" = file ] && [ "${A_ACTIVE[$i]}" != true ] \
+     && { [ "${A_OWN[$i]}" = this ] || [ "${A_ISSUE[$i]}" = "$ISSUE" ]; }; then
+    if line="$(pr_of "dev/${A_KEY[$i]}")"; then
+      A_PR[$i]="${line:-none}"
+    else
+      A_PR[$i]="lookup-failed"; incomplete=1
+    fi
+  fi
+  i=$((i + 1))
+done
+
+pr_state() { local p="${A_PR[$1]}"; case "$p" in ''|none|lookup-failed) printf '%s' "$p" ;; *) p="${p#* }"; printf '%s' "${p%% *}" ;; esac; }
+
+i=0
+[ "${#A_KEY[@]}" -eq 0 ] && echo "attempts: none"
+while [ "$i" -lt "${#A_KEY[@]}" ]; do
+  k="${A_KEY[$i]}"; b="dev/$k"
+  case "${A_OWN[$i]}" in
+    this)  ow="this" ;;
+    other) ow="other ${A_OWNER[$i]}" ;;
+    gone)  ow="gone ${A_OWNER[$i]:-(no checkout recorded)}" ;;
+  esac
+  case "${A_STATE[$i]}" in
+    none) sd="none (criterion review, not started)" ;;
+    unreadable) sd="unreadable (${A_DIR[$i]}/issue-${A_ISSUE[$i]}.json)" ;;
+    file) sd="active=${A_ACTIVE[$i]} phase=${A_PHASE[$i]} mode=$(jq -r '.mode // "unset"' "${A_DIR[$i]}/issue-${A_ISSUE[$i]}.json") cycle=${A_CYCLE[$i]}" ;;
+  esac
+  echo "attempt $k (issue #${A_ISSUE[$i]}): owner=$ow state=$sd"
+  echo "  dir: ${A_DIR[$i]}"
+  echo "  branch: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b"))"
+  case "${A_PR[$i]}" in
+    '') ;;
+    none) echo "    pr: none" ;;
+    lookup-failed) echo "    pr: lookup failed" ;;
+    *) echo "    pr: #${A_PR[$i]}" ;;
+  esac
+  i=$((i + 1))
+done
+[ "$completed" -gt 0 ] && echo "completed attempts: $completed"
+
+# Post-Merge Cleanup owed: this checkout's attempts whose pull request is merged
+# or closed. An attempt whose checkout is gone is not cleared from here — it is
+# taken over first (issue #466 AC4).
+CLEARED=" "
+i=0
+while [ "$i" -lt "${#A_KEY[@]}" ]; do
+  if [ "${A_OWN[$i]}" = this ]; then
+    case "$(pr_state "$i")" in
+      MERGED|CLOSED) echo "cleanup: ${A_KEY[$i]} branch dev/${A_KEY[$i]} (pr #${A_PR[$i]%% *} $(pr_state "$i"))"; CLEARED="$CLEARED${A_KEY[$i]} " ;;
+    esac
+  fi
+  i=$((i + 1))
+done
+
+[ -n "$ISSUE" ] || { [ "$incomplete" -eq 0 ] || exit 3; exit 0; }
+
+# ── The requested issue ──
+# A dev branch carrying the issue's number with no attempt record is not an
+# attempt: reported, never deleted (issue #433).
+{
+  git for-each-ref --format='%(refname:lstrip=2)' "refs/heads/dev/*-issue-$ISSUE"
+  git for-each-ref --format='%(refname:lstrip=3)' "refs/remotes/origin/dev/*-issue-$ISSUE"
+} | sort -u | while IFS= read -r b; do
+  [ -n "$b" ] || continue
+  k="$(af_attempt_key "$b")" && [ -d "$R/$KEY/$k" ] && continue
+  echo "dev branch with no attempt record: $b (local=$(side "refs/heads/$b") origin=$(side "refs/remotes/origin/$b")) record=none"
+done
+
+entry=""
+entry_slot=""
+claim=""
+emit_entry() { entry="$1"; entry_slot="${2:-}"; }
+
+# kind_of <slot> — how an attempt of N would be entered, cleared ones aside.
+kind_of() {
+  local i="$1"
+  case "${A_STATE[$i]}" in
+    unreadable) echo unreadable; return ;;
+    none)
+      case "${CRIT[$i]:-}" in READY) echo start ;; NOT-READY) echo not-ready ;; *) echo unread ;; esac
+      return ;;
+  esac
+  if [ "${A_ACTIVE[$i]}" = true ]; then echo resume; return; fi
+  case "$(pr_state "$i")" in
+    MERGED|CLOSED) echo cleared; return ;;
+    lookup-failed) echo unread; return ;;
+  esac
+  if [ "${A_PHASE[$i]}" != awaiting-user ] && [ "$(pr_state "$i")" = OPEN ]; then echo review-response; else echo paused; fi
+}
+
+active_own=(); i=0
+while [ "$i" -lt "${#A_KEY[@]}" ]; do
+  [ "${A_OWN[$i]}" = this ] && [ "${A_ACTIVE[$i]}" = true ] && active_own+=("$i")
+  i=$((i + 1))
+done
+
+branch_slot=""
+if k="$(af_attempt_key "$BRANCH")"; then
+  i=0
+  while [ "$i" -lt "${#A_KEY[@]}" ]; do
+    [ "${A_KEY[$i]}" = "$k" ] && [ "${A_ISSUE[$i]}" = "$ISSUE" ] && branch_slot="$i"
+    i=$((i + 1))
+  done
 fi
+
+# Criterion readiness of every attempt of N with no state file that this
+# checkout could start — its own, or the one on the checked-out branch.
+CRIT=()
+i=0
+while [ "$i" -lt "${#A_KEY[@]}" ]; do
+  if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_STATE[$i]}" = none ] && { [ "${A_OWN[$i]}" = this ] || [ "$i" = "$branch_slot" ]; }; then
+    out="$(bash "$SELF_DIR/criterion-ready.sh" status --issue "$ISSUE" --branch "dev/${A_KEY[$i]}" 2>&1)"
+    case "$?" in
+      0) CRIT[$i]=READY ;;
+      1) CRIT[$i]=NOT-READY ;;
+      *) CRIT[$i]=UNREAD; incomplete=1 ;;
+    esac
+    echo "criterion: ${A_KEY[$i]} — $(printf '%s' "$out" | tail -1)"
+  fi
+  i=$((i + 1))
+done
+
+if [ -n "$legacy" ]; then
+  emit_entry "stop in-tree-records — move them to the record root first ($AF_ROOT/scripts/migrate/migrate-in-tree-records.sh)"
+elif [ "${#active_own[@]}" -ge 2 ]; then
+  emit_entry "stop multiple-active — this checkout has $(for s in "${active_own[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)active; one attempt runs at a time in a checkout"
+elif [ "${#active_own[@]}" -eq 1 ] && [ "${A_ISSUE[${active_own[0]}]}" != "$ISSUE" ]; then
+  emit_entry "hold ${A_KEY[${active_own[0]}]} — issue #${A_ISSUE[${active_own[0]}]}'s attempt is active in this checkout (PR Wait Rule)" "${active_own[0]}"
+elif [ "${#active_own[@]}" -eq 1 ]; then
+  emit_entry "resume ${A_KEY[${active_own[0]}]}" "${active_own[0]}"
+elif [ -n "$branch_slot" ] && [ "${A_OWN[$branch_slot]}" = other ]; then
+  emit_entry "stop other-checkout ${A_KEY[$branch_slot]} — it belongs to ${A_OWNER[$branch_slot]}, which is still there; it is entered from that checkout" "$branch_slot"
+elif [ -n "$branch_slot" ] && [ "$(kind_of "$branch_slot")" != cleared ]; then
+  [ "${A_OWN[$branch_slot]}" = gone ] && claim="${A_KEY[$branch_slot]}"
+  kd="$(kind_of "$branch_slot")"
+  case "$kd" in
+    start) emit_entry "start ${A_KEY[$branch_slot]}" "$branch_slot" ;;
+    not-ready) emit_entry "not-ready ${A_KEY[$branch_slot]} — no [criterion-ready] entry for the current issue body; run the attempt's criterion review on this branch" "$branch_slot" ;;
+    review-response) emit_entry "review-response ${A_KEY[$branch_slot]}" "$branch_slot" ;;
+    paused) emit_entry "paused ${A_KEY[$branch_slot]} — report its pending decision" "$branch_slot" ;;
+    resume) emit_entry "resume ${A_KEY[$branch_slot]}" "$branch_slot" ;;
+    *) emit_entry "stop unreadable ${A_KEY[$branch_slot]} — a fact of it could not be read" "$branch_slot" ;;
+  esac
+else
+  cands=(); i=0
+  while [ "$i" -lt "${#A_KEY[@]}" ]; do
+    if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_OWN[$i]}" = this ]; then
+      case "$(kind_of "$i")" in start|review-response) cands+=("$i") ;; esac
+    fi
+    i=$((i + 1))
+  done
+  if [ "${#cands[@]}" -eq 1 ]; then
+    emit_entry "$(kind_of "${cands[0]}") ${A_KEY[${cands[0]}]}" "${cands[0]}"
+  elif [ "${#cands[@]}" -ge 2 ]; then
+    emit_entry "stop candidates $(for s in "${cands[@]}"; do printf '%s ' "${A_KEY[$s]}"; done)— check one attempt's dev branch out to name it"
+  else
+    emit_entry "new — NOT READY: a new attempt of issue #$ISSUE begins with its criterion review (/autoflow:criterion-review $ISSUE), which creates it"
+  fi
+fi
+
+if [ -n "$entry_slot" ] && [ "${A_STATE[$entry_slot]}" = file ]; then
+  echo "detail: ${A_KEY[$entry_slot]}"
+  report_detail "${A_DIR[$entry_slot]}" "${A_ISSUE[$entry_slot]}" "${A_CYCLE[$entry_slot]}"
+fi
+[ -n "$claim" ] && echo "claim: $claim — its checkout is gone; this checkout takes it over (autoflow-records claim) before entering"
+echo "entry: $entry"
 
 [ "$incomplete" -eq 0 ] || exit 3
 exit 0

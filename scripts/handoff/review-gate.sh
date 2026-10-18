@@ -40,10 +40,11 @@
 # found does not hold — is a record, not a finding: it is counted in neither
 # the findings nor the Medium+ total.
 #   3   the repository could not be resolved (`gh repo view`, without --repo)
+#   7   the record root is undetermined or unusable (the marker line says why)
 #   64  usage
 #
 # Usage: scripts/handoff/review-gate.sh --issue <N> --pr <P> [--repo <owner/name>]
-#                                       [--findings <file>] [--ledger <file>]
+#                                       [--findings <file>] [--ledger <file>] [--branch <dev branch>]
 
 set -uo pipefail
 
@@ -54,7 +55,8 @@ PR=""
 REPO=""
 FINDINGS=""
 LEDGER=""
-usage() { echo "Usage: $0 --issue <N> --pr <P> [--repo <owner/name>] [--findings <file>] [--ledger <file>]"; }
+BRANCH=""
+usage() { echo "Usage: $0 --issue <N> --pr <P> [--repo <owner/name>] [--findings <file>] [--ledger <file>] [--branch <dev branch>]"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --issue) [ $# -ge 2 ] || { usage >&2; exit 64; }; ISSUE="${2#\#}"; shift 2 ;;
@@ -62,6 +64,7 @@ while [ $# -gt 0 ]; do
     --repo) [ $# -ge 2 ] || { usage >&2; exit 64; }; REPO="$2"; shift 2 ;;
     --findings) [ $# -ge 2 ] || { usage >&2; exit 64; }; FINDINGS="$2"; shift 2 ;;
     --ledger) [ $# -ge 2 ] || { usage >&2; exit 64; }; LEDGER="$2"; shift 2 ;;
+    --branch) [ $# -ge 2 ] || { usage >&2; exit 64; }; BRANCH="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "[$TAG] unknown argument: $1" >&2; usage >&2; exit 64 ;;
   esac
@@ -72,12 +75,21 @@ case "$PR" in ''|*[!0-9]*) usage >&2; exit 64 ;; esac
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
 cd "$ROOT" || exit 64
-# The issue's directory is keyed by this checkout's origin (issue #423), the key
-# cycle-status and cleanup use, while --repo names the pull request's
-# repository, a sub-repo's included.
-# shellcheck source=scripts/lib/issue-dir.sh
-. "$SELF_DIR/../lib/issue-dir.sh"
-ISSUE_DIR=".autoflow/$(autoflow_repo_key "$ROOT")-issue-$ISSUE"
+# The attempt's record directory is keyed by this checkout's origin and the
+# attempt's dev branch (issues #423, #466) — the checked-out branch unless
+# --branch names it — while --repo names the pull request's repository, a
+# sub-repo's included.
+# shellcheck source=scripts/lib/records.sh
+. "$SELF_DIR/../lib/records.sh"
+if [ -z "$FINDINGS" ] || [ -z "$LEDGER" ]; then
+  if ! af_record_root "$(af_checkout_top "$ROOT")"; then
+    af_record_root_marker
+    exit "$AF_RECORD_ROOT_EXIT"
+  fi
+  [ -n "$BRANCH" ] || BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" || BRANCH=""
+  ATTEMPT="$(af_attempt_key "$BRANCH")" || { echo "[$TAG] '${BRANCH:-(detached HEAD)}' is not an attempt's dev branch — name it with --branch" >&2; exit 64; }
+  ISSUE_DIR="$AF_RECORD_ROOT/$(autoflow_repo_key "$ROOT")/$ATTEMPT"
+fi
 if [ -z "$REPO" ]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" || { echo "[$TAG] cannot resolve the repository (gh repo view)" >&2; exit 3; }
 fi

@@ -25,7 +25,7 @@ The items below are grouped under AUDIT's five rubric items. A rubric item with 
 
 ### 3. Data Exposure Prevention
 
-- [ ] `.autoflow/*-issue-*/issue-*.json` is gitignored and treated as working data; AI evaluation output that quotes user input is not pushed to public mirrors.
+- [ ] `<attempt-dir>/issue-{N}.json` — an attempt's state, under the record root outside every checkout's tree, never committed — is treated as working data; AI evaluation output that quotes user input is not pushed to public mirrors.
 
 ---
 

@@ -7,9 +7,10 @@ effort: high
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 Every `<autoflow-root>/…` path below is under that directory, and `<autoflow-root>` is never typed
-into a shell literally; a bare relative path (`.autoflow/…`, `.claude/autoflow.local.json`, the
-target's own files) is the target's, under the working directory. `[MUST]` marks a hard constraint
-enforced by a gate, hook or role contract, and `[DENY]` a prohibited action
+into a shell literally; a bare relative path (`.claude/autoflow.local.json`, the target's own
+files) is the target's, under the working directory, and an `<attempt-dir>/…` path is in the
+attempt's record directory outside it, which `autoflow-records dir` prints. `[MUST]` marks a hard
+constraint enforced by a gate, hook or role contract, and `[DENY]` a prohibited action
 (`<autoflow-root>/docs/core.md` > Instruction Conventions).
 
 You are the AutoFlow **criterion tracer** for one issue under criterion review.
@@ -23,7 +24,7 @@ the issue body and the stage 1 record — your starting point, not your
 conclusion.
 
 **Input.** The issue body and the stage 1 review record
-(`.autoflow/{repo-key}-issue-{N}/issue-{N}-criterion-review.md`) your prompt
+(`<attempt-dir>/issue-{N}-criterion-review.md`) your prompt
 names, and the code at the commits the record names.
 
 **Judgment.** Starting from each cause the record confirms in the code and the
@@ -39,7 +40,7 @@ behavior each criterion requires:
 How the change will be made is not yet set: assume no fix, and leave out any
 effect that would follow only from a particular approach.
 
-**Output.** One file, in Korean, at the `.autoflow/` path your prompt names
+**Output.** One file, in Korean, at the `<attempt-dir>/` path your prompt names
 (`issue-{N}-criterion-review-stage-2.md`): each finding by question, marked
 `stage 1` (the record already has it) or `new`, with its grounds (a commit SHA
 with `path:line`). Return that path and a one-line summary as your report.

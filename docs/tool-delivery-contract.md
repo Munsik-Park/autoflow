@@ -88,7 +88,6 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 | Path in the target | Content |
 |---|---|
-| `.autoflow/` | per-issue state, ledger and analysis artifacts, and the cycle-layer store (gitignored); the hook and the scripts resolve it from the target, never from the plugin root |
 | `.claude/autoflow.local.json` | the target's declarations — external reviewers, local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example` (which declares no external reviewer); absent means no local check, no checklist and no suite plane, and the external reviewers of the operator-level file (*Operator-level file* below) |
 | `.claude/autoflow/spawn-policy.json` | optional: the target's own spawn policy (*Spawn policy* below) |
 | the project's information and rule files | R3 |
@@ -97,7 +96,8 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 | Path | Content |
 |---|---|
-| `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the external reviewers (`{ "review": { … } }`, the target file's shape and parser), used when the target's `.claude/autoflow.local.json` has no `.review` ([`reviewer-backend.md`](reviewer-backend.md) > *Config location*) |
+| `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the external reviewers (`{ "review": { … } }`, the target file's shape and parser), used when the target's `.claude/autoflow.local.json` has no `.review` ([`reviewer-backend.md`](reviewer-backend.md) > *Config location*), and the record root (`"record_root": "<absolute path>"`, default `$HOME/.autoflow`) |
+| the record root (`$HOME/.autoflow` by default) | every file AutoFlow writes: each attempt's record directory `<repo-key>/<stamp>-issue-<N>/` — state, ledger, criterion review, reports, review records and the cycle-layer store — the issue drafts `<repo-key>/drafts/` and proposal records `<repo-key>/proposals/`, `_metrics/` and the hook's `.ledger-check-cache`; outside every checkout's tree, so a target needs no ignore rule for AutoFlow, and the hook and the scripts resolve it through `<autoflow-root>/scripts/lib/records.sh` (`autoflow-records`, on the Bash `PATH`), never from the plugin root or the target ([`state-tracking.md`](state-tracking.md) > *Record location*) |
 
 It is neither target-owned nor shipped. The plugin's SessionStart hook
 (`<autoflow-root>/hooks/ensure-user-config.sh`, wired in
@@ -138,10 +138,10 @@ policy governs no row for (`policy_unmapped_agent_types`).
 
 | Variable | Provisioned by | Contract |
 |---|---|---|
-| `CLAUDE_PROJECT_DIR` | Claude Code (the project root) | the hook resolves the target's `.autoflow/` from it; Claude Code runs from the target's root |
-| `CLAUDE_PLUGIN_ROOT` | the plugin loader | substituted in `<autoflow-root>/hooks/hooks.json`, the agent definitions and the command bodies, and set in the hook's environment; absent from a Bash command's environment, where `autoflow-root` (`<autoflow-root>/bin/autoflow-root`, on the Bash `PATH`) prints the root; it never resolves `.autoflow` |
+| `CLAUDE_PROJECT_DIR` | Claude Code (the project root) | the hook takes the session's checkout from it — whose attempts' state files gate the session, and whose working tree a record root may not be inside; Claude Code runs from the target's root |
+| `CLAUDE_PLUGIN_ROOT` | the plugin loader | substituted in `<autoflow-root>/hooks/hooks.json`, the agent definitions and the command bodies, and set in the hook's environment; absent from a Bash command's environment, where `autoflow-root` (`<autoflow-root>/bin/autoflow-root`, on the Bash `PATH`) prints the root; it never resolves a record path |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | not provisioned | AutoFlow neither requires nor reads it |
-| `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook and the review resolver; with `HOME` unset or empty there is no such file |
+| `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook, the review resolver and the record root, and the default record root `$HOME/.autoflow`; with `HOME` unset or empty there is no such file, and the record root is undetermined |
 
 **Runtime prerequisite**: Claude Code **v2.1.277+** — the release that removed the
 blocking `TaskOutput` tool, whose removal *Wait discipline* relies on in place of

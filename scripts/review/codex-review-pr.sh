@@ -35,6 +35,13 @@
 # sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh
 # command); omit `--repo` to review the host PR (the current repository).
 #
+# The record file is an absolute path outside the checkout's tree — the
+# attempt's record directory (`autoflow-records dir`; issue #466). codex's
+# workspace-write sandbox writes only inside the working directory, so codex
+# writes the review to a scratch file at the repository root, which this
+# wrapper moves to the record file once codex exits and removes on every exit:
+# nothing it or codex writes stays in the target's tree.
+#
 # Usage: scripts/review/codex-review-pr.sh --pr <number> --out <record file>
 #                                          [--repo <owner/name>] [--expected-head <branch>]
 set -euo pipefail
@@ -91,17 +98,27 @@ if [[ ! -f "$REVIEW_GUIDE" ]]; then
 fi
 
 cd "$(git rev-parse --show-toplevel)"
+TOP="$(pwd -P)"
 
-# The record lands inside the working directory codex's workspace-write sandbox
-# may write to.
+# The record is outside the tree; codex writes a scratch file inside it.
 case "$OUT" in
-  /*|*..*)
-    echo "[codex-review] --out takes a path relative to the repository root, without '..': $OUT" >&2
+  /*) ;;
+  *)
+    echo "[codex-review] --out takes an absolute path outside the checkout's tree (the attempt's record directory): $OUT" >&2
     exit 2
     ;;
 esac
-mkdir -p "$(dirname "$OUT")"
+mkdir -p "$(dirname "$OUT")" || { echo "[codex-review] cannot create $(dirname "$OUT")" >&2; exit 2; }
+case "$(cd -P "$(dirname "$OUT")" && pwd)/" in
+  "$TOP"/*)
+    echo "[codex-review] --out is inside the checkout's tree ($TOP): $OUT — the record goes to the attempt's record directory" >&2
+    exit 2
+    ;;
+esac
 rm -f "$OUT"
+SCRATCH=".autoflow-codex-review-${PR}-$$.md"
+rm -f "$SCRATCH"
+trap 'rm -f "$TOP/$SCRATCH"' EXIT
 
 # Model / effort resolution: a present-but-unreadable target file, an empty
 # model or effort, or an effort outside codex's vocabulary fails closed here
@@ -152,7 +169,7 @@ fi
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow AGENTS.md and the review convention at ${REVIEW_GUIDE}.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format of ${REVIEW_GUIDE}, to the file ${OUT} (relative to the repository root). ${SENTINEL}"
+PROMPT="Review pull request #${PR}. Follow AGENTS.md and the review convention at ${REVIEW_GUIDE}.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format of ${REVIEW_GUIDE}, to the file ${SCRATCH} (relative to the repository root). ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.
@@ -178,8 +195,12 @@ else
 fi
 
 # The record is the review's output: a run that left no record failed.
-if [[ "$codex_rc" -eq 0 && ! -s "$OUT" ]]; then
-  echo "[codex-review] codex exited 0 but left no review record at ${OUT}." >&2
+if [[ "$codex_rc" -eq 0 && ! -s "$SCRATCH" ]]; then
+  echo "[codex-review] codex exited 0 but left no review at ${SCRATCH}." >&2
+  codex_rc=5
+fi
+if [[ "$codex_rc" -eq 0 ]] && ! mv -f "$SCRATCH" "$OUT"; then
+  echo "[codex-review] the review could not be moved to ${OUT}." >&2
   codex_rc=5
 fi
 

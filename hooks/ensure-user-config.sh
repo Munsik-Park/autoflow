@@ -8,7 +8,9 @@
 #   (scripts/lib/user-config.sh), when it is absent, with the default
 #     { "review": { "reviewers": [] } }
 #   — external review off until the operator sets `reviewers` there
-#   (docs/reviewer-backend.md > Config location) — and, only when it created
+#   (docs/reviewer-backend.md > Config location), and no `record_root`, so the
+#   record root is the default $HOME/.autoflow (scripts/lib/records.sh) — and,
+#   only when it created
 #   the file, tells the operator where it is and what it holds
 #   (`systemMessage`). An existing file is never changed, read or validated,
 #   broken or not.

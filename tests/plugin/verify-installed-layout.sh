@@ -70,9 +70,22 @@ DEDUP="$ROOT/hooks/check-read-dedup.sh"
 # run_hook <target> <hook> — the hook as the harness runs it: CLAUDE_PLUGIN_ROOT
 # the installed copy, CLAUDE_PROJECT_DIR and the working directory the target,
 # the developer's own session variables cleared.
+# HOME is a scratch directory, so the record root (its default, HOME/.autoflow —
+# scripts/lib/records.sh) and the user file are the test's own, never the
+# operator's.
+TEST_HOME="$WORK/home"
+mkdir -p "$TEST_HOME"
 run_hook() {
-  (cd "$1" && env -u AUTOFLOW_SPAWN_POLICY \
+  (cd "$1" && env -u AUTOFLOW_SPAWN_POLICY HOME="$TEST_HOME" \
     CLAUDE_CONFIG_DIR="$CFG" CLAUDE_PLUGIN_ROOT="$ROOT" CLAUDE_PROJECT_DIR="$1" bash "$2")
+}
+# attempt_dir <checkout> <key> — make an attempt's record directory owned by
+# <checkout> under the test's record root, and print it.
+# shellcheck source=../../scripts/lib/records.sh
+. "$ROOT/scripts/lib/records.sh"
+attempt_dir() {
+  local _a="$TEST_HOME/.autoflow/$(autoflow_repo_key "$1")/$2"
+  mkdir -p "$_a" && printf '%s\n' "$1" > "$_a/checkout" && printf '%s' "$_a"
 }
 
 git_init() {
@@ -139,8 +152,8 @@ echo "== I: the hook's advisories find their helpers through the plugin root =="
 
 T="$WORK/target"
 git_init "$T"
-mkdir -p "$T/.autoflow/o__r-issue-1"
-printf '# ledger\n\n## no identifier here\n' > "$T/.autoflow/o__r-issue-1/issue-1-ledger.md"
+A1="$(attempt_dir "$T" 2026-01-01-000000-issue-1)"
+printf '# ledger\n\n## no identifier here\n' > "$A1/issue-1-ledger.md"
 mkdir -p "$T/.claude/autoflow"
 jq '.phases |= with_entries(if .value.agent_type == "autoflow-evaluator" then .value.model = "haiku" else . end)' \
   "$ROOT/.claude/autoflow/spawn-policy.json" > "$T/.claude/autoflow/spawn-policy.json"
@@ -204,13 +217,13 @@ fi
 # flight, so it runs in its own target with an active state file.
 TA="$WORK/target-active"
 git_init "$TA"
-mkdir -p "$TA/.autoflow/o__r-issue-2"
+A2="$(attempt_dir "$TA" 2026-10-17-000000-issue-2)"
 jq -n '{active:true, issue:"#2", title:"t", date:"2026-10-17", branch:"dev/2026-10-17-000000-issue-2",
         cycle:1, mode:"new-issue", phase:"in-progress",
         phases:{gate_hypothesis:{evaluator:"", scores:{}, verdict:"pending"},
                 gate_plan:{evaluator:"", scores:{}}, audit:{evaluator:"", scores:{}},
-                gate_quality:{evaluator:"", scores:{}}}}' > "$TA/.autoflow/o__r-issue-2/issue-2.json"
-LEDGER="$T/.autoflow/o__r-issue-1/issue-1-ledger.md"
+                gate_quality:{evaluator:"", scores:{}}}}' > "$A2/issue-2.json"
+LEDGER="$A1/issue-1-ledger.md"
 r2=""; msgs=""
 deny_case() {  # <name> <target> <payload> <expected stderr fragment>
   local _err="$WORK/r2-$1.err" _rc

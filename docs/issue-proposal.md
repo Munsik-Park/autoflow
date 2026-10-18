@@ -29,7 +29,9 @@ neither `"Bash(scripts/issue/create-issue.sh:*)"` nor a broad `Bash(scripts/*)` 
 
 ## Draft grammar
 
-Write the draft **directly inside** `.autoflow/`, at its top level.
+Write the draft **directly inside** the repository's draft directory under the record root,
+`<record-root>/<repo-key>/drafts/` — the path `autoflow-records drafts` prints (and creates) —
+outside the target's tree.
 
 Four required level-2 sections, in **any order** — each runs from its own
 heading to the next level-2 heading or to end of file:
@@ -66,19 +68,19 @@ it.
 
 ## The two names of the artifact
 
-| Stage | Path | Archived by cleanup? |
-|-------|------|---------------------------------------|
-| Before creation (draft) | `.autoflow/issue-proposal-<slug>.md` | **no** |
-| After creation | `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md` | **yes**, with issue `<N>`'s cycle |
+| Stage | Path |
+|-------|------|
+| Before creation (draft) | `<record-root>/<repo-key>/drafts/issue-proposal-<slug>.md` |
+| After creation | `<record-root>/<repo-key>/proposals/issue-<N>-proposal.md` |
 
-An unfiled draft outlives any other issue's cleanup, and only its author abandons
-it. Once the issue exists the artifact belongs to a cycle, and the wrapper's
-rename moves it into the issue's directory, which cleanup archives whole.
+Both are under the record root, outside every checkout's tree, and no cleanup touches either. An
+unfiled draft stays until its author abandons it. Once the issue exists, the wrapper's rename binds
+the record to the issue's number; it belongs to the issue, not to any one attempt of it.
 
 ## What the wrapper does
 
 1. Refuses unless the draft is a regular file directly inside the repository's
-   `.autoflow/`. The directory being **absent** is diagnosed separately from a
+   draft directory. The directory being **absent** is diagnosed separately from a
    misplaced draft, with a different message. The wrapper does not create the
    directory. A draft that is itself a symlink is refused rather than resolved.
 2. Refuses a draft missing any required element, or carrying a level-2 heading
@@ -98,7 +100,7 @@ rename moves it into the issue's directory, which cleanup archives whole.
 7. Refuses if any returned issue number is not already dispositioned in the
    draft, listing the undispositioned numbers.
 8. On success — and only then — renames the draft to
-   `.autoflow/<repo-key>-issue-<N>/issue-<N>-proposal.md`, with `<N>` parsed from the URL `gh`
+   `<record-root>/<repo-key>/proposals/issue-<N>-proposal.md`, with `<N>` parsed from the URL `gh`
    returned and `<repo-key>` the repository the issue was filed in — the `--repo` value when one is
    named, the current origin otherwise — so a record for another repository's issue never shares a
    name with this repository's issue of the same number. A URL with no parsable trailing number is a failed bind: the draft
@@ -114,7 +116,8 @@ are reviewed and the review's `[criterion-ready]` entry is on record ([`criterio
 | Code | Meaning |
 |------|---------|
 | `0` | created, or `--dry-run` passed every check |
-| `64` | usage, or the draft is not directly inside the derived `.autoflow` (including that directory being absent) |
+| `64` | usage, or the draft is not directly inside the draft directory (including that directory being absent) |
+| `7` | the record root is undetermined or unusable (its marker line says why) |
 | `65` | refusal — missing section, a level-2 heading outside the four sections, no grounding anchor, no derivable term, an undispositioned candidate, or a query at its page limit |
 | `70` | the issue was created but its number could not be bound |
 | other | `gh`'s own exit, propagated |
