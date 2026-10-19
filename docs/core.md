@@ -1,6 +1,6 @@
 # AutoFlow Core
 
-<!-- The source of the /autoflow:cycle and /autoflow:criterion-review command bodies: scripts/skills/gen-skill-bodies.sh generates skills/cycle/SKILL.md and skills/criterion-review/SKILL.md from this file (ADR-0027 D2). Edit this file, then regenerate. -->
+<!-- The source of the /autoflow:cycle, /autoflow:cycle-u1 … /autoflow:cycle-u6 and /autoflow:criterion-review command bodies: scripts/skills/gen-skill-bodies.sh generates skills/*/SKILL.md from this file (ADR-0027 D2, ADR-0032), a unit's body by the classification scripts/skills/core-units.tsv. Edit this file — and the classification, for a part added or one whose units change — then regenerate. -->
 
 ## Instruction Conventions
 
@@ -81,7 +81,7 @@ U6 Delivery            DELIVER         — the orchestrator's own `git push`, a 
 **Flow Control** — the transitions, grouped by the unit they leave. Each group's unit document is the home of the
 procedure a row names; the row keeps the condition and the destination.
 
-Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in an on-demand **unit document**, not in this core file. This file retains only what every unit needs to *route*: the cross-unit invariants, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are [`<autoflow-root>/docs/state-tracking.md`](state-tracking.md)).
+Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in an on-demand **unit document**, not in this core file. This file retains what crosses a unit's boundary: the cross-unit invariants and authority rules, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are [`<autoflow-root>/docs/state-tracking.md`](state-tracking.md)). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and a session that runs the whole cycle receives all of it.
 
 The rubric of every gate — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the unit's: it lives in [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > *Gate rubrics*, and the unit document routes the gate's result.
 

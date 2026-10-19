@@ -4,19 +4,31 @@
 # =============================================================================
 # Test: the command bodies and the AutoFlow path notation (issue #454 PR-3)
 # =============================================================================
-# The rules reach a main session through the bodies of /autoflow:cycle and
-# /autoflow:criterion-review, generated from docs/core.md (ADR-0027 D2), and an
-# AutoFlow path is written `<autoflow-root>/…` wherever a role reads it
-# (ADR-0027 D3). Plain bash + awk/sed/grep/cmp (no bats, no node/npm).
+# The rules reach a main session through the command bodies — /autoflow:cycle,
+# /autoflow:cycle-u1 … cycle-u6 and /autoflow:criterion-review — generated from
+# docs/core.md (ADR-0027 D2, ADR-0032), and an AutoFlow path is written
+# `<autoflow-root>/…` wherever a role reads it (ADR-0027 D3). The bodies are the
+# ones `gen-skill-bodies.sh --list` names. Plain bash + awk/sed/grep/cmp (no
+# bats, no node/npm).
 #
 # Legs (category: packaging):
 #
 #   G   regen-clean
 #     G1  the committed bodies equal scripts/skills/gen-skill-bodies.sh output
 #     G2  a body edited by hand is caught (--check exits 1 on a scratch copy)
+#     G3  the classification (scripts/skills/core-units.tsv) is complete: a
+#         scratch core with a new section, or a new block in a split section,
+#         and a scratch entry that matches nothing each fail the generation
+#     G4  every skills/*/SKILL.md is a generated body
+#
+#   K   composition
+#     K1  each unit body's core part equals the core's parts classified for
+#         that unit (`gen-skill-bodies.sh --core Uk`); a body missing a line
+#         is caught
+#     K2  the /autoflow:cycle body's core part is the whole core
 #
 #   B   root declaration
-#     B1  both bodies and every agent definition declare the root through
+#     B1  every body and every agent definition declare the root through
 #         ${CLAUDE_PLUGIN_ROOT}
 #
 #   C   path closure
@@ -31,8 +43,7 @@
 #         `<autoflow-root>/…` path is flagged by both legs
 #
 # Scope: docs/**/*.md except docs/records/ (records are read, not rewritten —
-# docs/development-guideline.md), agents/*.md, skills/cycle/SKILL.md and
-# skills/criterion-review/SKILL.md.
+# docs/development-guideline.md), agents/*.md and every generated body.
 # =============================================================================
 
 set -uo pipefail
@@ -40,6 +51,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GEN="$REPO_ROOT/scripts/skills/gen-skill-bodies.sh"
+BODIES="$(bash "$GEN" --list)"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -56,11 +68,10 @@ trap 'rm -rf "$WORK"' EXIT
 # host repository's own scope (the core's Cross-Project Boundary Rules, carried
 # into the cycle body generated from it), the target's decision records and
 # ADR directory, the rule documents a change to this repository edits, and
-# this repository's own security checklist items.
+# this repository's own security checklist items. A body generated from the
+# core takes the core's entries.
 ALLOW_SPANS='docs/core.md|scripts/
 docs/core.md|docs/
-skills/cycle/SKILL.md|scripts/
-skills/cycle/SKILL.md|docs/
 docs/units/build.md|scripts/
 docs/git-workflow.md|docs/<issue>-<desc>
 docs/development-guideline.md|docs/
@@ -84,7 +95,7 @@ scope_files() {
   ( cd "$1" && {
       find docs -name '*.md' -not -path 'docs/records/*' | LC_ALL=C sort
       ls agents/*.md 2>/dev/null
-      for _s in skills/cycle/SKILL.md skills/criterion-review/SKILL.md; do [ -f "$_s" ] && echo "$_s"; done
+      for _s in $BODIES; do [ -f "$_s" ] && echo "$_s"; done
     } )
 }
 
@@ -120,8 +131,15 @@ bare_paths() {
     }' "$1/$2"
 }
 
-# allowed <file> <span> <list>
-allowed() { printf '%s\n' "$3" | grep -qxF "$1|$2"; }
+# allowed <file> <span> <list> — a generated body also takes docs/core.md's
+allowed() {
+  printf '%s\n' "$3" | grep -qxF "$1|$2" && return 0
+  printf '%s\n' "$BODIES" | grep -qxF "$1" && printf '%s\n' "$3" | grep -qxF "docs/core.md|$2"
+}
+
+# core_part <body> — a body's core part: its first `## ` line to the end, less
+# the closing blank line and generation note.
+core_part() { awk 'f || /^## / { f = 1; print }' "$1" | sed -e '$d' | sed -e '$d'; }
 
 # unresolved_roots <root> <file> — every `<autoflow-root>/…` path in <file>
 # that matches nothing under <root>.
@@ -144,30 +162,82 @@ else
   failc "G1" "$out"
 fi
 
+# scratch <dir> — a copy of the generator, its classification, the core and
+# the committed bodies.
+scratch() {
+  mkdir -p "$1/scripts" "$1/docs"
+  cp -R "$REPO_ROOT/scripts/skills" "$1/scripts/"
+  cp "$REPO_ROOT/docs/core.md" "$1/docs/core.md"
+  cp -R "$REPO_ROOT/skills" "$1/"
+}
+
 SCR="$WORK/regen"
-mkdir -p "$SCR/scripts/skills" "$SCR/docs" "$SCR/skills"
-cp "$GEN" "$SCR/scripts/skills/"
-cp "$REPO_ROOT/docs/core.md" "$SCR/docs/core.md"
-cp -R "$REPO_ROOT/skills/cycle" "$REPO_ROOT/skills/criterion-review" "$SCR/skills/"
-printf 'hand edit\n' >> "$SCR/skills/cycle/SKILL.md"
+scratch "$SCR"
+printf 'hand edit\n' >> "$SCR/skills/cycle-u3/SKILL.md"
 if bash "$SCR/scripts/skills/gen-skill-bodies.sh" --check >/dev/null 2>"$WORK/g2.err"; then
   failc "G2" "--check accepted a hand-edited body"
-elif grep -q 'skills/cycle/SKILL.md differs' "$WORK/g2.err"; then
-  pass "G2: a hand-edited body is caught (--check exit 1, naming skills/cycle/SKILL.md)"
+elif grep -q 'skills/cycle-u3/SKILL.md differs' "$WORK/g2.err"; then
+  pass "G2: a hand-edited body is caught (--check exit 1, naming skills/cycle-u3/SKILL.md)"
 else
   failc "G2" "unexpected diagnostic: $(head -c 300 "$WORK/g2.err")"
 fi
 
+# g3 <name> <expected diagnostic> — the scratch copy <name> fails the generation
+# with that diagnostic.
+g3=""
+g3() {
+  if bash "$WORK/$1/scripts/skills/gen-skill-bodies.sh" --check >/dev/null 2>"$WORK/$1.err"; then
+    g3="$g3 $1:accepted"
+  elif ! grep -qF "$2" "$WORK/$1.err"; then
+    g3="$g3 $1:'$(head -c 200 "$WORK/$1.err")'"
+  fi
+}
+scratch "$WORK/g3a"; printf '\n## New Section\n\nA rule.\n' >> "$WORK/g3a/docs/core.md"
+g3 g3a 'heading "## New Section": no entry'
+scratch "$WORK/g3b"
+awk '{ print } /^AutoFlow does not classify/ { print ""; print "A new paragraph." }' "$REPO_ROOT/docs/core.md" > "$WORK/g3b/docs/core.md"
+g3 g3b 'line "A new paragraph.": no entry in the split section "## Project Information"'
+scratch "$WORK/g3c"; printf '## Cost Control\tA vanished bullet\tU6\n' >> "$WORK/g3c/scripts/skills/core-units.tsv"
+g3 g3c 'A vanished bullet": matches nothing'
+[ -z "$g3" ] && pass "G3: an unclassified section, an unclassified block in a split section and an entry matching nothing each fail the generation" \
+  || failc "G3" "$g3"
+
+stray=""
+for f in "$REPO_ROOT"/skills/*/SKILL.md; do
+  printf '%s\n' "$BODIES" | grep -qxF "${f#"$REPO_ROOT"/}" || stray="$stray ${f#"$REPO_ROOT"/}"
+done
+[ -z "$stray" ] && pass "G4: every skills/*/SKILL.md is one of the $(printf '%s\n' "$BODIES" | wc -l | tr -d ' ') generated bodies" \
+  || failc "G4" "not generated:$stray"
+
+# ── K: composition ───────────────────────────────────────────────────────────
+echo "== K: each body's core part follows the classification =="
+k1=""
+for k in U1 U2 U3 U4 U5 U6; do
+  b="$REPO_ROOT/skills/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md"
+  bash "$GEN" --core "$k" > "$WORK/k1.want" || { k1="$k1 $k:generator"; continue; }
+  core_part "$b" > "$WORK/k1.got"
+  cmp -s "$WORK/k1.want" "$WORK/k1.got" || k1="$k1 $k"
+done
+sed '/^\*\*Regressions\*\*/d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1.cut"
+bash "$GEN" --core U4 | cmp -s - <(core_part "$WORK/k1.cut") && k1="$k1 specimen-accepted"
+[ -z "$k1" ] && pass "K1: each unit body's core part equals its classified parts of the core; a body missing a line is caught" \
+  || failc "K1" "differs:$k1"
+
+awk 'f || /^## / { f = 1; print }' "$REPO_ROOT/docs/core.md" | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' > "$WORK/k2.want"
+if core_part "$REPO_ROOT/skills/cycle/SKILL.md" | cmp -s "$WORK/k2.want" -; then
+  pass "K2: the /autoflow:cycle body carries the whole core"
+else
+  failc "K2" "the /autoflow:cycle body's core part differs from the core"
+fi
+
 # ── B: root declaration ──────────────────────────────────────────────────────
 echo "== B: root declaration =="
-CYCLE="$REPO_ROOT/skills/cycle/SKILL.md"
-CRIT="$REPO_ROOT/skills/criterion-review/SKILL.md"
 DECL='AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}'
 nodecl=""
-for f in "$CYCLE" "$CRIT" "$REPO_ROOT"/agents/*.md; do
+for f in $(printf '%s\n' "$BODIES" | sed "s|^|$REPO_ROOT/|") "$REPO_ROOT"/agents/*.md; do
   [ -f "$f" ] && grep -qxF "$DECL" "$f" || nodecl="$nodecl ${f#"$REPO_ROOT"/}"
 done
-[ -z "$nodecl" ] && pass "B1: both bodies and every agent definition declare the root through \${CLAUDE_PLUGIN_ROOT}" \
+[ -z "$nodecl" ] && pass "B1: every body and every agent definition declare the root through \${CLAUDE_PLUGIN_ROOT}" \
   || failc "B1" "no root declaration line in:$nodecl"
 
 # ── C: path closure ──────────────────────────────────────────────────────────

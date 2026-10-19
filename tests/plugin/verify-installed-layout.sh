@@ -37,7 +37,7 @@
 #     R4  every agent definition, with ${CLAUDE_PLUGIN_ROOT} substituted as the
 #         harness substitutes it in an agent body, declares the installed root
 #         and every `<autoflow-root>/…` path and `> Section` it cites resolves
-#         there; the two command bodies' paths resolve there as well
+#         there; every generated command body's paths resolve there as well
 #     R5  `autoflow-root` (bin/) prints the installed root
 # =============================================================================
 
@@ -267,7 +267,7 @@ for _a in "$ROOT"/agents/*.md; do
   printf '%s\n' "$body" | grep -qxF "AutoFlow root (\`<autoflow-root>\`): $ROOT" || r4="$r4 nodecl:${_a##*/}"
   r4="$r4$(check_citations "${_a##*/}" "$(printf '%s' "$body" | tr '\n' ' ' | sed -E 's/ +/ /g' | sed "s|<autoflow-root>/|$ROOT/|g")" | tr '\n' ' ')"
 done
-for _s in cycle criterion-review; do
+for _s in $(bash "$ROOT/scripts/skills/gen-skill-bodies.sh" --list | sed -e 's|^skills/||' -e 's|/SKILL.md$||'); do
   body=$(sed "s|<autoflow-root>/|$ROOT/|g" "$ROOT/skills/$_s/SKILL.md")
   r4="$r4$(printf '%s' "$body" | grep -oE "$ROOT/[^] \`'\"),;|]*" | sed 's/[.:]*$//' | sort -u \
     | while IFS= read -r _p; do

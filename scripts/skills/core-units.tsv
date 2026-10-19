@@ -1,0 +1,113 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Elastic-2.0
+# core-units.tsv — which unit sessions use each part of docs/core.md (issue #464, ADR-0032)
+#
+# The input of scripts/skills/gen-skill-bodies.sh for the unit command bodies
+# skills/cycle-u1 … skills/cycle-u6: a unit's body carries, from the core, the
+# parts whose entry names that unit or `all`. The grounds of each entry are in
+# the pull request that sets it. A line with no tab is a comment; an entry's
+# columns are tab-separated:
+#
+#   scope    a heading path: each step a heading's leading text, steps joined
+#            by " > " ("## Development Lifecycle > ### Unit references")
+#   prefix   empty: the whole heading section. Otherwise every block of the
+#            scope whose first line starts with it — a paragraph, a bullet, a
+#            table row, a line of a fenced block (with its indented lines)
+#   units    `all`, unit names (U1 … U6, space-separated), or `split`: the
+#            section is classified by part, and every block in it needs an
+#            entry of its own
+#
+# The generator fails on a part of the core no entry classifies, a block two
+# entries match, and an entry that matches nothing.
+## Instruction Conventions		all
+## Rule Scope		all
+## Development Lifecycle		split
+## Development Lifecycle	**PREFLIGHT cannot be skipped.**	U1 U2
+## Development Lifecycle	**An attempt's criteria are settled before DIAGNOSE.**	U1 U2
+## Development Lifecycle > ### Flow Control		split
+## Development Lifecycle > ### Flow Control	Each unit's rows are	all
+## Development Lifecycle > ### Flow Control > #### Any unit		split
+## Development Lifecycle > ### Flow Control > #### Any unit	| Transition |	all
+## Development Lifecycle > ### Flow Control > #### Any unit	|------|	all
+## Development Lifecycle > ### Flow Control > #### Any unit	| BUILD / gate recommendation	U2 U3 U4 U5 U6
+## Development Lifecycle > ### Flow Control > #### Any unit	| any phase	all
+## Development Lifecycle > ### Flow Control > #### Any unit	| GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY (PASS	U2 U3 U4 U5
+## Development Lifecycle > ### Flow Control > #### Any unit	**Regressions**	U2 U3 U4 U5 U6
+## Development Lifecycle > ### Flow Control > #### Any unit	**Human escalation**	all
+## Development Lifecycle > ### Flow Control > #### Any unit	**Advisor at a decision point**	all
+## Development Lifecycle > ### Flow Control > #### Any unit	**Push and PR creation**	U6
+## Development Lifecycle > ### Unit Document Loading Contract		split
+## Development Lifecycle > ### Unit Document Loading Contract	**[MUST]** On entering a phase	all
+## Development Lifecycle > ### Unit Document Loading Contract	|	all
+## Development Lifecycle > ### Unit Document Loading Contract	What each phase does	all
+## Development Lifecycle > ### Unit Document Loading Contract	The gate **PASS thresholds**	U2 U3 U4 U5 U6
+## Development Lifecycle > ### Unit Document Loading Contract	When the user files an issue	all
+## Development Lifecycle > ### Unit Document Loading Contract	Six functional units carry the phases	all
+## Development Lifecycle > ### Unit Document Loading Contract	```	all
+## Development Lifecycle > ### Unit Document Loading Contract	U1 Preparation	U1
+## Development Lifecycle > ### Unit Document Loading Contract	U2 Analysis	U2
+## Development Lifecycle > ### Unit Document Loading Contract	U3 Design	U3
+## Development Lifecycle > ### Unit Document Loading Contract	U4 Build and verify	U4
+## Development Lifecycle > ### Unit Document Loading Contract	U5 Completion eval.	U5
+## Development Lifecycle > ### Unit Document Loading Contract	U6 Delivery	U6
+## Development Lifecycle > ### Unit Document Loading Contract	**Flow Control** — the transitions	all
+## Development Lifecycle > ### Unit Document Loading Contract	Each unit's body	all
+## Development Lifecycle > ### Unit Document Loading Contract	The rubric of every gate	U2 U3 U4 U5
+## Development Lifecycle > ### Unit Document Loading Contract	The evaluation contract	U2 U3 U4 U5
+## Development Lifecycle > ### Unit references		split
+## Development Lifecycle > ### Unit references	| Unit |	U1 U2 U3 U4 U6
+## Development Lifecycle > ### Unit references	|------|	U1 U2 U3 U4 U6
+## Development Lifecycle > ### Unit references	| U1 Preparation |	U1
+## Development Lifecycle > ### Unit references	| U2 Analysis |	U2
+## Development Lifecycle > ### Unit references	| U3 Design |	U3
+## Development Lifecycle > ### Unit references	| U4 Build and verify |	U4
+## Development Lifecycle > ### Unit references	| U6 Delivery |	U6
+## Cost Control		all
+## Decision Ledger		all
+## Execution Principles		all
+## Spawn Model		split
+## Spawn Model	AutoFlow role spawns and every other subagent spawn	all
+## Spawn Model	The per-phase assignment itself	all
+## Spawn Model	**`.claude/autoflow/spawn-policy.json`**	all
+## Spawn Model	```	all
+## Spawn Model	bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh	all
+## Spawn Model	**[MUST]** Every `Agent` spawn declares the `model` parameter	all
+## Spawn Model	**[MUST]** The value a spawn declares	all
+## Spawn Model	**[MUST] Spawn role declaration**	all
+## Spawn Model	**[MUST] A unit agent's spawns inherit its gate class**	U2 U3 U4
+## Spawn Model	**[MUST]** Every role is an **anonymous direct spawn**	all
+## Spawn Model	**[MUST]** A lower-tier gate's PASS	all
+## Context Injection		split
+## Context Injection	**[MUST]** Subagent document injection	all
+## Context Injection	Each unit spawn's documents line	U2 U3 U4 U5
+## Communication		all
+## Cross-Project Boundary Rules		all
+## Project Information		split
+## Project Information	AutoFlow does not classify	all
+## Project Information	A project whose information names sub-repos	U6
+## Team Structure		split
+## Team Structure	각 역할의 상세 계약은	all
+## Team Structure > ### AI Orchestrator		all
+## Team Structure > ### Evaluation AI		U2 U3 U4 U5
+## Team Structure > ### Build unit (U4)		U4
+## Team Structure > ### Advisor		all
+## Team Structure > ### Functional-unit agents		U2 U3 U4
+## AutoFlow State Tracking		split
+## AutoFlow State Tracking	Every record of an attempt	all
+## AutoFlow State Tracking	The state file's naming	all
+## AutoFlow State Tracking	**`verdict` rule**	U1 U2 U3
+## AutoFlow State Tracking	|	U1 U2 U3
+## AutoFlow State Tracking	The hook's state-file validator admits	U1 U2 U3
+## AutoFlow State Tracking	**Score recording**	U2 U3 U4 U5
+## AutoFlow State Tracking	<!-- SCORE-SHAPE-EXAMPLE -->	U2 U3 U4 U5
+## AutoFlow State Tracking	```	U2 U3 U4 U5
+## AutoFlow State Tracking	{ "decision_grounds"	U2 U3 U4 U5
+## AutoFlow State Tracking	This object is the value	U2 U3 U4 U5
+## AutoFlow State Tracking	**Remedy class recording**	U2 U3 U4 U5 U6
+## Evaluation System		U2 U3 U4 U5
+## Git Workflow — Rules		split
+## Git Workflow — Rules	> **Procedural details	all
+## Git Workflow — Rules > ### PR Wait Rule		U1 U6
+## Git Workflow — Rules > ### Commit Rules		U2 U3 U4 U5 U6
+## Git Workflow — Rules > ### Commit Ownership		U2 U3 U4 U5 U6
+## Reference Documents		all

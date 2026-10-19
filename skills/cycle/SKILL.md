@@ -1,17 +1,17 @@
 ---
 name: cycle
 description: >-
-  Run an AutoFlow cycle on an issue — PREFLIGHT, with the attempt's criterion
-  review stage, to HANDOFF, or one functional unit with unit=U1…U6; `new` asks
-  for a new attempt of the issue. Use only when the operator starts or resumes
-  an AutoFlow cycle (/autoflow:cycle <N> [new] [unit=Uk]).
-argument-hint: "<issue-number> [new] [unit=U1…U6]"
+  Run an AutoFlow cycle on an issue in one session — PREFLIGHT, with the
+  attempt's criterion review stage, to HANDOFF; `new` asks for a new attempt of
+  the issue (one unit alone is /autoflow:cycle-u1 … cycle-u6). Use only when the
+  operator starts or resumes an AutoFlow cycle (/autoflow:cycle <N> [new]).
+argument-hint: "<issue-number> [new]"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. `<N> unit=Uk` runs unit Uk only: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at Uk's entry (otherwise report the situation and stop), run Uk from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u6`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
 
 ## Instruction Conventions
 
@@ -92,7 +92,7 @@ U6 Delivery            DELIVER         — the orchestrator's own `git push`, a 
 **Flow Control** — the transitions, grouped by the unit they leave. Each group's unit document is the home of the
 procedure a row names; the row keeps the condition and the destination.
 
-Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in an on-demand **unit document**, not in this core file. This file retains only what every unit needs to *route*: the cross-unit invariants, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are `<autoflow-root>/docs/state-tracking.md`).
+Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in an on-demand **unit document**, not in this core file. This file retains what crosses a unit's boundary: the cross-unit invariants and authority rules, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are `<autoflow-root>/docs/state-tracking.md`). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and a session that runs the whole cycle receives all of it.
 
 The rubric of every gate — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the unit's: it lives in `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics*, and the unit document routes the gate's result.
 

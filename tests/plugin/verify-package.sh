@@ -113,11 +113,13 @@ else
 fi
 
 # ── AC1a/AC1b: the command skills ────────────────────────────────────────
-# /autoflow:cycle and /autoflow:criterion-review carry the rules a main
-# session runs by (ADR-0027 D2); their bodies are generated and checked by
+# The command bodies carry the rules a main session runs by (ADR-0027 D2,
+# ADR-0032); they are the bodies the generator lists, generated and checked by
 # tests/plugin/verify-skill-bodies.sh.
-echo "== AC1a/AC1b: command skills cycle and criterion-review =="
-for _cmd in cycle criterion-review; do
+_cmds=$(bash "$PLUGIN_DIR/scripts/skills/gen-skill-bodies.sh" --list | sed -e 's|^skills/||' -e 's|/SKILL.md$||')
+echo "== AC1a/AC1b: command skills $(echo $_cmds) =="
+[ -n "$_cmds" ] || failc "AC1b" "gen-skill-bodies.sh --list names no body"
+for _cmd in $_cmds; do
   _md="$PLUGIN_DIR/skills/$_cmd/SKILL.md"
   if [ -f "$_md" ]; then
     _nm=$(awk '/^---$/{n++; next} n==1 && /^name:/{print; exit}' "$_md" | sed -E 's/^name:[[:space:]]*//')

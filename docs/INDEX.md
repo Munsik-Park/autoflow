@@ -22,7 +22,7 @@ These documents are the operating source of truth.
 
 | Document | Role |
 | --- | --- |
-| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle` and `/autoflow:criterion-review` (the criterion review stage alone) command bodies (ADR-0027 D2). |
+| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u6` (one unit, the parts of the core it uses) and `/autoflow:criterion-review` (the criterion review stage alone) command bodies (ADR-0027 D2, ADR-0032). |
 | [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
 | [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |

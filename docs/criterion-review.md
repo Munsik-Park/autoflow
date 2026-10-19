@@ -44,8 +44,8 @@ The review makes that premise hold more often; it does not change it.
   inside its cycle is an `[ac-decision]`. An attempt begun and then left is reported by PREFLIGHT
   like any other until the operator runs it or leaves it (its branch and records stay, as a paused
   attempt's do).
-- **Reviewer.** The session that runs the stage: the `/autoflow:cycle <N>` session — with
-  `unit=U1`, the U1 session — or a `/autoflow:criterion-review <N>` session, which runs this stage
+- **Reviewer.** The session that runs the stage: the `/autoflow:cycle <N>` session — or the U1
+  session, `/autoflow:cycle-u1 <N>` — or a `/autoflow:criterion-review <N>` session, which runs this stage
   alone and ends at its exit; no other attempt of its checkout is active. The review is that
   session's own work, and the stage writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's

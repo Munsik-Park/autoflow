@@ -226,7 +226,7 @@ its exit.
   re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
   the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
   own judgment, recorded under the review record's `## Session decisions`.
-- **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt)
+- **One unit per session.** `/autoflow:cycle-u1 <N>` (`<N> new` for a new attempt)
   runs U1 — this stage included — from its entry (`new`, `criterion-review`,
   `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and every stop above is reported the same
   way.
