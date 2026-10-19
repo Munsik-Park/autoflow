@@ -15,7 +15,8 @@
 #            table row, a line of a fenced block (with its indented lines)
 #   units    `all`, unit names (U1 … U6, space-separated), or `split`: the
 #            section is classified by part, and every block in it needs an
-#            entry of its own
+#            entry that matches it — a prefix entry matches every block of
+#            its scope that starts with the prefix (`|`: every table row)
 #
 # The generator fails on a part of the core no entry classifies, a block two
 # entries match, and an entry that matches nothing.

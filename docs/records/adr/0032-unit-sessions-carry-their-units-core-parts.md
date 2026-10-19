@@ -69,7 +69,9 @@ state rules — and not "only what every unit needs": not every part binds every
 ### Positive
 
 - A unit session's first request no longer carries the core parts its unit does not use, and a
-  part added to the core cannot reach the bodies without a classification.
+  new `## ` section, or a new block of a split section that no entry matches, fails the generation
+  instead of reaching the bodies unclassified; a new block an existing prefix entry matches (a
+  table row under a `|` entry) takes that entry's units.
 
 ### Negative
 
