@@ -9,7 +9,8 @@ decision 2026-10-19: `/autoflow:criterion-review` is kept for a review by itself
 not consider compaction (D9); the criteria as
 settled by the attempt's own criterion review, entry O1). Supersedes ADR-0029 D3 (the criterion
 review creates the attempt) and, in D4, the `not-ready` and `new` entries and "`/autoflow:cycle
-<N>` never creates an attempt (A6)". Amends ADR-0027 D2's command list: `/autoflow:cycle` takes
+<N>` never creates an attempt (A6)". Its item 3's `unit=U1…U6` argument retired by ADR-0032 (issue #464): a unit session is
+`/autoflow:cycle-u1` … `/autoflow:cycle-u6`. Amends ADR-0027 D2's command list: `/autoflow:cycle` takes
 `new`, and `/autoflow:criterion-review <N>` runs the cycle's criterion review stage alone instead
 of starting a review outside a cycle.
 

@@ -13,7 +13,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt) — unit U1, Preparation (PREFLIGHT, CRITERION-REVIEW), of issue #N's cycle alone: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at U1's entry (otherwise report the situation and stop), run U1 from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
-**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U1 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Flow Control > Any unit: BUILD / gate recommendation, GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY, Regressions, Push and PR creation; Development Lifecycle > Unit Document Loading Contract: The gate PASS thresholds, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery; Spawn Model: A unit agent's spawns inherit its gate class; Context Injection: Each unit spawn's documents line; Project Information: A project whose information names sub-repos; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: Score recording, This object is the value, Remedy class recording; Evaluation System; Git Workflow — Rules: Commit Rules, Commit Ownership.
+**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U1 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Flow Control > Any unit: BUILD / gate recommendation, GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY, Regressions, Push and PR creation; Development Lifecycle > Unit Document Loading Contract: The gate PASS thresholds, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery; Spawn Model: A unit agent's spawns inherit its gate class; Context Injection: Each unit spawn's documents line; Project Information: A project whose information names sub-repos; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: Score recording, This object is the value, Remedy class recording; Evaluation System; Git Workflow — Rules: Commit Ownership.
 
 ## Instruction Conventions
 
@@ -50,6 +50,7 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 
 **Human escalation**: a gate's own regression cap exhausted without a pass (each gate's cap is the "max N×" on the Regressions line above, which fixes the escalation timing — this is **per-gate**, not a cross-gate running total); GATE:HYPOTHESIS has no count cap — the recorded judgment that its PASS is not reachable is its escalation. HANDOFF internal retry exhausted → human. A harness-level block → human.
 **Advisor at a decision point** (ADR-0025 D7): every Flow Control row that routes to the advisor — the rows above and each unit document's `## Transitions` rows — is a decision point — a fresh `autoflow-advisor` answers, its answer is recorded as an `A` ledger entry and applied, and the cycle continues without pausing. The operator stops the forward path only at a harness-level block — a permission denial, a tool, credential or material the environment does not provide, or what using a tool it has lacks (a review-infrastructure failure the reviewer re-run does not clear is one); PREFLIGHT's fail-closed readiness stop is an independent check, not a decision point. An operator override of a recorded decision is an `O` entry under `operator decision`. Procedure and independence: `<autoflow-root>/docs/role-contracts.md` > Advisor.
+**Phase scripts** (ADR-0025 D8): a script AutoFlow ships for a phase reads and reports; it changes nothing in git, on GitHub or in the cycle's state — every such change is the orchestrator's own.
 
 ### Unit Document Loading Contract
 
@@ -206,6 +207,23 @@ The hook's state-file validator admits exactly these values, an empty or absent 
 ### PR Wait Rule
 
 **[MUST]** Use the `active` flag as the single start signal, per checkout: begin a new cycle once every **other** attempt of this checkout reads `active:false`. One attempt runs at a time in a checkout — when another of its attempts reads `active:true`, finish or resolve that cycle first, then start the next; another checkout's attempts, of the same issue or any other, neither hold nor are held. The hook applies the same signal to this checkout's attempts only: it admits `git push` / `gh pr create` while every one of their state files reads `active:false`, and fails closed on two or more active. The readiness check and the requested issue's mode selection are `<autoflow-root>/docs/units/preparation.md` > *PR Wait Rule* and *Modes*.
+
+### Commit Rules
+
+```
+<type>(#<issue>): <description>
+
+Next: <next action>
+```
+
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
+
+Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
+
+- No direct commits to main — always branch + PR.
+- No `feat`/`fix` commit while tests fail → use `wip`.
+- `git status` before every commit.
+- **[MUST]** Before committing, the committing role — every role that commits, the orchestrator included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (identifying the chains, execution trust boundary, scoping, outcome vocabulary, evidence anchor): `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on the staged surface*.
 
 ## Reference Documents
 

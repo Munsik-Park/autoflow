@@ -12,8 +12,8 @@
 # packaging:
 #   AC1e   declared components (agents/, hooks/hooks.json, skills/, bin/)
 #          resolve; bin/autoflow-root is executable
-#   AC1a/AC1b  the command skills cycle and criterion-review: SKILL.md present
-#          with its frontmatter name
+#   AC1a/AC1b  every command skill `gen-skill-bodies.sh --list` names: SKILL.md
+#          present with its frontmatter name
 #   AC1f   every packaged SKILL.md frontmatter parses (POSIX defect-class
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored

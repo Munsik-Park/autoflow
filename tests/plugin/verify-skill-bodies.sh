@@ -22,9 +22,9 @@
 #     G4  every skills/*/SKILL.md is a generated body
 #
 #   K   composition
-#     K1  each unit body's core part equals the core's parts classified for
-#         that unit (`gen-skill-bodies.sh --core Uk`); a body missing a line
-#         is caught
+#     K1  each unit body carries the parts the classification gives its unit
+#         and no other, read from the classification and the core apart from
+#         the generator's block parser; a body missing a line is caught
 #     K2  the /autoflow:cycle body's core part is the whole core
 #
 #   B   root declaration
@@ -211,17 +211,44 @@ done
 
 # ── K: composition ───────────────────────────────────────────────────────────
 echo "== K: each body's core part follows the classification =="
-k1=""
-for k in U1 U2 U3 U4 U5 U6; do
-  b="$REPO_ROOT/skills/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md"
-  bash "$GEN" --core "$k" > "$WORK/k1.want" || { k1="$k1 $k:generator"; continue; }
-  core_part "$b" > "$WORK/k1.got"
-  cmp -s "$WORK/k1.want" "$WORK/k1.got" || k1="$k1 $k"
-done
-sed '/^\*\*Regressions\*\*/d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1.cut"
-bash "$GEN" --core U4 | cmp -s - <(core_part "$WORK/k1.cut") && k1="$k1 specimen-accepted"
-[ -z "$k1" ] && pass "K1: each unit body's core part equals its classified parts of the core; a body missing a line is caught" \
-  || failc "K1" "differs:$k1"
+# k1 <skills-dir> — read without the generator's parser: for each entry of the
+# classification whose key (its prefix, or its section's heading) starts exactly
+# one line of the core, and that line occurs once in the core, the line is in
+# the bodies of the units the entry names and in no other unit body. Prints each
+# "Uk:<key>" that disagrees; the last line is the number of entries read.
+k1() {
+  local scope pfx units key line n=0 k b want got
+  sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' "$REPO_ROOT/docs/core.md" | awk 'f || /^## / { f = 1; print }' > "$WORK/k1.core"
+  while IFS="$(printf '\t')" read -r scope pfx units; do
+    [ -n "$units" ] && [ "$units" != split ] || continue
+    key="$pfx"; [ -n "$key" ] || key="${scope##* > }"
+    [ "$(awk -v p="$key" 'index($0, p) == 1' "$WORK/k1.core" | wc -l)" -eq 1 ] || continue
+    line="$(awk -v p="$key" 'index($0, p) == 1' "$WORK/k1.core")"
+    [ "$(grep -cxF -- "$line" "$WORK/k1.core")" -eq 1 ] || continue
+    n=$((n + 1))
+    for k in U1 U2 U3 U4 U5 U6; do
+      b="$1/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md"
+      case " $units " in *" all "*|*" $k "*) want=1 ;; *) want=0 ;; esac
+      grep -qxF -- "$line" "$b" && got=1 || got=0
+      [ "$want" = "$got" ] || echo "$k:$key"
+    done
+  done < <(grep "$(printf '\t')" "$REPO_ROOT/scripts/skills/core-units.tsv")
+  echo "$n"
+}
+k1 "$REPO_ROOT/skills" > "$WORK/k1.out"
+k1n=$(tail -1 "$WORK/k1.out"); k1bad=$(sed '$d' "$WORK/k1.out" | tr '\n' ' ')
+cp -R "$REPO_ROOT/skills" "$WORK/k1skills"
+sed '/^\*\*Regressions\*\*/d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1skills/cycle-u4/SKILL.md"
+k1spec=$(k1 "$WORK/k1skills" | sed '$d' | tr '\n' ' ')
+if [ "$k1n" -lt 40 ]; then
+  failc "K1" "only $k1n classification entries read (vacuous)"
+elif [ -n "$k1bad" ]; then
+  failc "K1" "a unit body disagrees with the classification: $k1bad"
+elif [ "$k1spec" != "U4:**Regressions** " ]; then
+  failc "K1" "a U4 body without its Regressions line was read as '$k1spec'"
+else
+  pass "K1: by $k1n classification entries read apart from the generator, each unit body carries exactly its units' parts; a body missing a line is caught"
+fi
 
 awk 'f || /^## / { f = 1; print }' "$REPO_ROOT/docs/core.md" | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' > "$WORK/k2.want"
 if core_part "$REPO_ROOT/skills/cycle/SKILL.md" | cmp -s "$WORK/k2.want" -; then

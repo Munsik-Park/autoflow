@@ -35,6 +35,7 @@
 ## Development Lifecycle > ### Flow Control > #### Any unit	**Regressions**	U2 U3 U4 U5 U6
 ## Development Lifecycle > ### Flow Control > #### Any unit	**Human escalation**	all
 ## Development Lifecycle > ### Flow Control > #### Any unit	**Advisor at a decision point**	all
+## Development Lifecycle > ### Flow Control > #### Any unit	**Phase scripts**	all
 ## Development Lifecycle > ### Flow Control > #### Any unit	**Push and PR creation**	U6
 ## Development Lifecycle > ### Unit Document Loading Contract		split
 ## Development Lifecycle > ### Unit Document Loading Contract	**[MUST]** On entering a phase	all
@@ -108,6 +109,6 @@
 ## Git Workflow — Rules		split
 ## Git Workflow — Rules	> **Procedural details	all
 ## Git Workflow — Rules > ### PR Wait Rule		U1 U6
-## Git Workflow — Rules > ### Commit Rules		U2 U3 U4 U5 U6
+## Git Workflow — Rules > ### Commit Rules		U1 U2 U3 U4 U5 U6
 ## Git Workflow — Rules > ### Commit Ownership		U2 U3 U4 U5 U6
 ## Reference Documents		all

@@ -5,8 +5,8 @@
 Accepted (issue #464: the operator set the per-unit session as the default operation and left the
 method — per-unit commands, an argument choosing the body, how the parts are generated — to the
 working AI, with the grounds in the pull request). Amends ADR-0027 D2 *Commands* and *The core*,
-reverses ADR-0027 > Alternatives > *Per-unit commands*, and amends
-`docs/tool-delivery-contract.md` R2.
+reverses ADR-0027 > Alternatives > *Per-unit commands*, retires the `unit=U1…U6` argument ADR-0030
+kept (its Decision item 3 and *Positive*), and amends `docs/tool-delivery-contract.md` R2.
 
 ## Context
 
