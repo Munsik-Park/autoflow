@@ -1,8 +1,8 @@
 ---
 name: cycle-u3
 description: >-
-  Run unit U3 (Design — ARCHITECT, GATE:PLAN) of an AutoFlow cycle alone, in a
-  session of its own, with the parts of the core U3 uses. Use only when the
+  Run unit U3 (Design — ARCHITECT, GATE:PLAN) of an AutoFlow cycle alone, in
+  a session of its own, with the parts of the core U3 uses. Use only when the
   operator starts a U3 session (/autoflow:cycle-u3 <N>).
 argument-hint: "<issue-number>"
 ---

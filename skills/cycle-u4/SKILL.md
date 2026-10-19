@@ -1,9 +1,9 @@
 ---
 name: cycle-u4
 description: >-
-  Run unit U4 (Build and verify — BUILD, AUDIT) of an AutoFlow cycle alone, in
-  a session of its own, with the parts of the core U4 uses. Use only when the
-  operator starts a U4 session (/autoflow:cycle-u4 <N>).
+  Run unit U4 (Build and verify — BUILD, AUDIT) of an AutoFlow cycle alone,
+  in a session of its own, with the parts of the core U4 uses. Use only when
+  the operator starts a U4 session (/autoflow:cycle-u4 <N>).
 argument-hint: "<issue-number>"
 ---
 

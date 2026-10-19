@@ -2,8 +2,8 @@
 name: cycle-u2
 description: >-
   Run unit U2 (Analysis — DIAGNOSE, GATE:HYPOTHESIS) of an AutoFlow cycle
-  alone, in a session of its own, with the parts of the core U2 uses. Use
-  only when the operator starts a U2 session (/autoflow:cycle-u2 <N>).
+  alone, in a session of its own, with the parts of the core U2 uses. Use only
+  when the operator starts a U2 session (/autoflow:cycle-u2 <N>).
 argument-hint: "<issue-number>"
 ---
 

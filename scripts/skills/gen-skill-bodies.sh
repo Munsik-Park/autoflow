@@ -303,6 +303,12 @@ EOF
   printf '\n%s\n' "$GEN_NOTE"
 }
 
+# wrap76 — words onto lines of at most 76 bytes, each indented two spaces (fold
+# breaks differently in BSD and GNU).
+wrap76() {
+  awk '{ for (i = 1; i <= NF; i++) { if (l != "" && length(l) + 1 + length($i) > 76) { print "  " l; l = "" } l = (l == "" ? $i : l " " $i) } } END { if (l != "") print "  " l }'
+}
+
 gen_unit() {
   local k="$1" lk name phases new hint out
   lk="$(printf '%s' "$k" | tr 'U' 'u')"
@@ -313,7 +319,7 @@ gen_unit() {
   [ "$k" = U1 ] && { new=" [new]"; hint="<issue-number> [new]"; }
   printf -- '---\nname: cycle-%s\ndescription: >-\n' "$lk"
   printf 'Run unit %s (%s — %s) of an AutoFlow cycle alone, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s <N>%s).\n' \
-    "$k" "$name" "$phases" "$k" "$k" "$lk" "$new" | fold -s -w 76 | sed -e 's/ *$//' -e 's/^/  /'
+    "$k" "$name" "$phases" "$k" "$k" "$lk" "$new" | wrap76
   printf 'argument-hint: "%s"\n---\n\n' "$hint"
   printf '%s\n\n' "$ROOT_DECL"
   if [ "$k" = U1 ]; then

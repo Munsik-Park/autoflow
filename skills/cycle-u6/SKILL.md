@@ -2,8 +2,8 @@
 name: cycle-u6
 description: >-
   Run unit U6 (Delivery — DELIVER, INTEGRATE, HANDOFF) of an AutoFlow cycle
-  alone, in a session of its own, with the parts of the core U6 uses. Use
-  only when the operator starts a U6 session (/autoflow:cycle-u6 <N>).
+  alone, in a session of its own, with the parts of the core U6 uses. Use only
+  when the operator starts a U6 session (/autoflow:cycle-u6 <N>).
 argument-hint: "<issue-number>"
 ---
 

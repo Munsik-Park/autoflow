@@ -2,8 +2,8 @@
 name: cycle-u5
 description: >-
   Run unit U5 (Completion evaluation — GATE:QUALITY) of an AutoFlow cycle
-  alone, in a session of its own, with the parts of the core U5 uses. Use
-  only when the operator starts a U5 session (/autoflow:cycle-u5 <N>).
+  alone, in a session of its own, with the parts of the core U5 uses. Use only
+  when the operator starts a U5 session (/autoflow:cycle-u5 <N>).
 argument-hint: "<issue-number>"
 ---
 

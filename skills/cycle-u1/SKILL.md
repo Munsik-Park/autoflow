@@ -1,9 +1,10 @@
 ---
 name: cycle-u1
 description: >-
-  Run unit U1 (Preparation — PREFLIGHT, CRITERION-REVIEW) of an AutoFlow cycle
-  alone, in a session of its own, with the parts of the core U1 uses. Use
-  only when the operator starts a U1 session (/autoflow:cycle-u1 <N> [new]).
+  Run unit U1 (Preparation — PREFLIGHT, CRITERION-REVIEW) of an AutoFlow
+  cycle alone, in a session of its own, with the parts of the core U1 uses.
+  Use only when the operator starts a U1 session (/autoflow:cycle-u1 <N>
+  [new]).
 argument-hint: "<issue-number> [new]"
 ---
 
