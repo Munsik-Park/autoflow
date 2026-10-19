@@ -22,7 +22,7 @@ The review makes that premise hold more often; it does not change it.
 ## When and by whom
 
 - **When.** As the first stage of each attempt's cycle, inside PREFLIGHT before the attempt's state
-  file — `/autoflow:cycle <N>` enters it on the entries `new` and `criterion-review` — and again, on
+  file — `/autoflow:cycle <N>`, or the U1 session `/autoflow:cycle-u1 <N>`, enters it on the entries `new` and `criterion-review` — and again, on
   that attempt's dev branch, after any edit to the issue body before the state file, since the
   `[criterion-ready]` entry is bound to the body it records (*Confirmation* below). Filing an issue
   ([`issue-proposal.md`](issue-proposal.md)) does not make it ready.
@@ -39,13 +39,13 @@ The review makes that premise hold more often; it does not change it.
   `[criterion-ready]` entry — is in that directory, as the cycle's later records are. While an
   attempt of N with an open pull request, a paused one, or one whose review is unfinished is still
   in this checkout, the entry is that attempt's, and a new attempt is made only on the operator's
-  explicit request (`/autoflow:cycle <N> new`; [U1 Preparation](units/preparation.md) > *Modes*).
+  explicit request (`/autoflow:cycle <N> new` or `/autoflow:cycle-u1 <N> new`; [U1 Preparation](units/preparation.md) > *Modes*).
   An attempt that already has a state file takes no `[criterion-ready]` entry: a criterion change
   inside its cycle is an `[ac-decision]`. An attempt begun and then left is reported by PREFLIGHT
   like any other until the operator runs it or leaves it (its branch and records stay, as a paused
   attempt's do).
-- **Reviewer.** The session that runs the stage: the `/autoflow:cycle <N>` session — with
-  `unit=U1`, the U1 session — or a `/autoflow:criterion-review <N>` session, which runs this stage
+- **Reviewer.** The session that runs the stage: the `/autoflow:cycle <N>` session — or the U1
+  session, `/autoflow:cycle-u1 <N>` — or a `/autoflow:criterion-review <N>` session, which runs this stage
   alone and ends at its exit; no other attempt of its checkout is active. The review is that
   session's own work, and the stage writes no state file. What it reads and how — which code, documents and materials, the order, how far it
   follows a cause or an effect, which tool checks a fact — is its own, recorded under the record's

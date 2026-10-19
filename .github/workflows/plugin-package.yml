@@ -8,8 +8,9 @@
 #     hooks.json wiring under ${CLAUDE_PLUGIN_ROOT}, one invocation of the
 #     packaged gate hook, one copy of each component and structure conformance;
 #   - tests/plugin/verify-skill-bodies.sh: the generated command bodies equal
-#     their generator's output, the root declaration, and the
-#     <autoflow-root>/… path closure (ADR-0027 D2, D3);
+#     their generator's output, the core's classification is complete and each
+#     unit body follows it, the root declaration, and the <autoflow-root>/…
+#     path closure (ADR-0027 D2, D3, ADR-0032);
 #   - tests/plugin/verify-installed-layout.sh: the package copied the way an
 #     install lays it out, run against an unstamped target — the hook finds its
 #     helpers and every rule citation resolves at the installed location.

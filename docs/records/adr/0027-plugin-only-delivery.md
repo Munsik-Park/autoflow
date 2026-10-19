@@ -10,7 +10,9 @@ implemented by issue #454 PR-4, released together as plugin version 0.3.0. D2's 
 amended by ADR-0030 (issue #465): `/autoflow:cycle <N> [new] [unit=U1…U6]`, and
 `/autoflow:criterion-review <N>` runs the cycle's criterion review stage alone. D2's compaction
 bullets (the leading part within 18,000 bytes, the re-invocation first line) and the R1 budget
-check amendment superseded by ADR-0031 (PR #475): AutoFlow does not consider compaction.
+check amendment superseded by ADR-0031 (PR #475): AutoFlow does not consider compaction. D2's
+*Commands* and *The core* amended, and Alternatives > *Per-unit commands* reversed, by ADR-0032
+(issue #464): `/autoflow:cycle-u1` … `/autoflow:cycle-u6` run one unit with the core parts it uses.
 
 ## Context
 
@@ -102,6 +104,10 @@ attempt's cycle (CRITERION-REVIEW, inside U1); `/autoflow:cycle <N> [new] [unit=
 `new` being the request for a new attempt, and `/autoflow:criterion-review <N> [new]` runs that
 stage alone.
 
+*Amending note (issue #464).* ADR-0032: `/autoflow:cycle <N> [new]` runs the whole cycle in one
+session; a unit runs alone through its own command, `/autoflow:cycle-u1 <N> [new]` …
+`/autoflow:cycle-u6 <N>`, and the `unit=` argument is retired.
+
 **The core**
 
 - The body of both commands is generated from one source, `docs/core.md`, the cross-unit
@@ -115,6 +121,10 @@ stage alone.
 *Superseding note (2026-10-19).* ADR-0031: the two compaction bullets above are superseded —
 AutoFlow requires idle compaction off and keeps no device for compaction; the bodies have no
 leading part, no size limit and no re-invocation line.
+
+*Amending note (issue #464).* ADR-0032: every command body is generated from the core; the
+whole-cycle body carries all of it, and a unit's body the parts its unit uses, by the
+classification `scripts/skills/core-units.tsv`.
 
 **Other homes**
 
@@ -302,7 +312,8 @@ Rejected:
 
 **Per-unit commands.**
 
-Rejected:
+Rejected (reversed by ADR-0032 — with a session per unit, each session invokes one command, and
+ADR-0031 removed the compaction grounds):
 
 - Unit documents (5–10k tokens) exceed the 5,000-token re-attach cap, so moving them into
   command bodies gains no compaction survival.

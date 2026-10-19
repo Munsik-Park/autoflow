@@ -79,7 +79,7 @@ brings about the following.
   its branch is not deleted on either side. An attempt whose checkout is gone (`owner=gone` — a
   removed worktree or clone; its records stay under the record root, its dev branch in the clone
   and, once pushed, on the remote) is reported the same way until a checkout takes it over: the one
-  that checks its dev branch out and runs `/autoflow:cycle <N>` (`claim:` line; `autoflow-records
+  that checks its dev branch out and runs `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` (`claim:` line; `autoflow-records
   claim`). From then on it is that checkout's, its cleanup included. A worktree deleted without
   `git worktree remove` keeps holding its branch in the clone until `git worktree prune`; until then
   git refuses that branch's checkout, and the takeover waits.
@@ -172,7 +172,7 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle may create the attempt and run its criterion review stage (*The criterion review stage*) |
 
 **A new attempt is the operator's request.** It is created only on the `new` entry or on the operator's explicit request
-— `/autoflow:cycle <N> new` (or `/autoflow:criterion-review <N> new`). With an attempt of N still in
+— `/autoflow:cycle <N> new`, `/autoflow:cycle-u1 <N> new` or `/autoflow:criterion-review <N> new`. With an attempt of N still in
 this checkout — an open PR, a paused one, one whose criterion review is not finished — no new
 attempt is made without that request.
 
@@ -198,7 +198,7 @@ CRITERION-REVIEW is the first stage of an attempt's cycle, inside PREFLIGHT: aft
 `cycle-status.sh` prints and the conditions before it — no state file left in the tree, no other
 attempt of this checkout active (*PR Wait Rule*), the record root determined and usable — and
 before the stop conditions and the state file. It runs on the entries `new` and
-`criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` started; no other command or session is
+`criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` started; no other command or session is
 needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
 its exit.
 
@@ -226,7 +226,7 @@ its exit.
   re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
   the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
   own judgment, recorded under the review record's `## Session decisions`.
-- **One unit per session.** `/autoflow:cycle <N> unit=U1` (`<N> new unit=U1` for a new attempt)
+- **One unit per session.** `/autoflow:cycle-u1 <N>` (`<N> new` for a new attempt)
   runs U1 — this stage included — from its entry (`new`, `criterion-review`,
   `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and every stop above is reported the same
   way.
