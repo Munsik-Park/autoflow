@@ -8,10 +8,11 @@
 # which the prompt names by its absolute path, with the lenses file
 # `.review.claude.lenses` names when there is one. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with read-only
-# tools and the gh / git reads the review needs; every other tool is denied
-# without a prompt (`--permission-mode dontAsk`), and the reviewed repository's
-# own settings, whose permission rules would add tools in a trusted checkout,
-# are not loaded (`--setting-sources user`). Its final message is the
+# tools and the gh / git reads the review needs, beside what the operator's own
+# settings allow; every other tool is denied without a prompt
+# (`--permission-mode dontAsk`), and the reviewed repository's own settings and
+# CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
+# not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
 # and changes no label — the aggregation of every review of the PR posts the
 # one comment.
