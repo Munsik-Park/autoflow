@@ -99,7 +99,9 @@ wrapper's completion marker:
 A reviewer that is unavailable for a round — its CLI absent (PREFLIGHT reports it), its run failing
 twice, or the operator's choice to proceed past an unreadable operator file — does not hold the
 round: the aggregation runs on the reviews that exist, and its comment names the reviewer that is
-missing and why.
+missing and why. A round in which no configured reviewer left a record, other than by that choice of
+the operator's, does not go on: it is a review-infrastructure failure, put to the operator
+([`core.md`](../core.md) > Flow Control > *Advisor at a decision point*).
 
 Cautions:
 
@@ -123,9 +125,8 @@ review records or the comment body itself (Cost Control). An anonymous direct su
 the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
 reviewer unavailable for the round with the reason, the decision ledger, and, for a PR whose repository has
 submodules, their paths (its `.gitmodules`) — the locations outside that review's target. It also
-reads the reviews of the target's side from the pull request itself (`gh pr view <N> --json
-reviews,comments`, `gh api repos/<owner>/<name>/pulls/<N>/comments`) — every review there that
-AutoFlow did not post — and names each one's author as its source.
+reads the reviews of the target's side from the pull request itself and names each one's author as
+its source.
 
 Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
 severity the reviews disagree on, and weighs each finding (*Whether a finding holds*) is its own; what

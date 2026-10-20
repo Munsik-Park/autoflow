@@ -61,8 +61,8 @@ raising report or recommendation carries, and puts it to the **advisor** only wh
 do not settle it or it is not confident ([`role-contracts.md`](role-contracts.md) > Advisor >
 *Decision points and harness-level blocks*); the **operator** may override. The change stands only
 as the entries below ([`core.md`](core.md) > Rule Scope, principle 1); choosing how a
-criterion is *verified* is the design's, provided the row states its reason, which the external
-reviewer then judges at HANDOFF (the three-tier guard — [`units/design.md`](units/design.md) >
+criterion is *verified* is the design's, provided the row states its reason, which the
+reviewers then judge at REVIEW (the three-tier guard — [`units/design.md`](units/design.md) >
 *Report routing*). A content change reaches the orchestrator from wherever it surfaces: the ARCHITECT design
 unit's `## Decision requests` section, before GATE:PLAN; a problem the BUILD unit meets and raises in
 its report; or a gate recommendation that records a criterion defect, or whose

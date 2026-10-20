@@ -39,8 +39,9 @@ Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
 
 - `.review.<reviewer>.rules` — another rule file in place of
-  `<autoflow-root>/docs/review/review-<reviewer>.md`. A wrapper whose rule file is absent stops
-  (exit `2`) before the reviewer starts.
+  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt names that file alone, so it carries
+  or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
+  stops (exit `2`) before the reviewer starts.
 - `.review.<reviewer>.lenses` — a file of further review lenses (the defect
   axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt names
   beside the rule file. Absent from a repository, it is left out of that

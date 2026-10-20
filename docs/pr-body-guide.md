@@ -57,7 +57,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 - 운영자 주도 PR(AutoFlow cycle 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
   verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design unit이 검증
-  방법의 축소를 결정하고, external reviewer가 그 reason의 타당성을 판단하며,
+  방법의 축소를 결정하고, REVIEW의 reviewer가 그 reason의 타당성을 판단하며,
   criterion의 **내용**이 바뀔 때만 orchestrator가 1차 판단하고, 근거로 정할 수 없으면 advisor가 판단한다
   ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](units/design.md) >
   Output artifacts > *Test necessity* 와 *Report routing*.
