@@ -275,7 +275,7 @@ for _s in $(bash "$ROOT/scripts/skills/gen-skill-bodies.sh" --list | sed -e 's|^
         compgen -G "${_g%/}" >/dev/null || printf ' %s:missing:%s' "$_s" "${_p#"$ROOT"/}"
       done)"
 done
-if [ "$nagents" -lt 10 ]; then
+if [ "$nagents" -lt 9 ]; then
   failc "R4" "only $nagents agent definitions in the installed copy"
 elif [ -z "$(printf '%s' "$r4" | tr -d ' ')" ]; then
   pass "R4: $nagents agent definitions declare the installed root and their citations resolve there; so do the command bodies' paths"

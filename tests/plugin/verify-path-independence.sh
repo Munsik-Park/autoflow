@@ -38,9 +38,11 @@
 #     S3  outside a git repository, with no --root: usage exit 2
 #
 #   W   codex review wrapper prompt
-#     W1  the prompt names the plugin root's .codex/review.md by absolute path,
-#         and the record lands at --out, outside the target's tree, leaving it clean
-#     W2  a plugin root without .codex/review.md: exit 2, codex not started
+#     W1  the prompt names the plugin root's docs/review/review-codex.md by
+#         absolute path, and the record lands at --out, outside the target's
+#         tree, leaving it clean
+#     W2  a plugin root without docs/review/review-codex.md: exit 2, codex not
+#         started
 # =============================================================================
 
 set -uo pipefail
@@ -66,11 +68,10 @@ trap 'rm -rf "$WORK"' EXIT
 
 # Every leg runs with the harness variables cleared, so the developer's own
 # session cannot steer a resolution; each leg sets what it tests. HOME is an
-# empty directory, so the operator's ~/.autoflow/config.json (the user-level
-# external-reviewer file, docs/reviewer-backend.md > Config location) is never
-# read.
+# empty directory, so the operator's ~/.autoflow/config.json (the reviewer
+# file, docs/reviewer-backend.md > Config location) is never read.
 run_clean() { env -u CLAUDE_PLUGIN_ROOT -u CLAUDE_PROJECT_DIR -u AUTOFLOW_SPAWN_POLICY \
-  -u REVIEW_CONFIG_PATH CLAUDE_CONFIG_DIR="$WORK/empty-config" HOME="$WORK/empty-home" "$@"; }
+  CLAUDE_CONFIG_DIR="$WORK/empty-config" HOME="$WORK/empty-home" "$@"; }
 mkdir -p "$WORK/empty-config" "$WORK/empty-home"
 
 git_init() {
@@ -79,16 +80,14 @@ git_init() {
 }
 
 # make_plugin_root <dir> — an AutoFlow tree laid out as a plugin root: hooks/,
-# agents/, scripts/, docs/, .codex/ and the default spawn policy, apart from
-# any target.
+# agents/, scripts/, docs/ and the default spawn policy, apart from any target.
 make_plugin_root() {
   local d="$1"
-  mkdir -p "$d/hooks" "$d/agents" "$d/.claude/autoflow" "$d/.codex"
+  mkdir -p "$d/hooks" "$d/agents" "$d/.claude/autoflow"
   cp "$HOOK_SRC" "$d/hooks/check-autoflow-gate.sh"
   cp "$REPO_ROOT"/agents/autoflow-*.md "$d/agents/"
   cp -R "$REPO_ROOT/scripts" "$d/scripts"
   cp -R "$REPO_ROOT/docs" "$d/docs"
-  cp "$REPO_ROOT/.codex/review.md" "$d/.codex/review.md"
   cp "$REPO_ROOT/.claude/autoflow/spawn-policy.json" "$d/.claude/autoflow/spawn-policy.json"
 }
 
@@ -288,10 +287,10 @@ run_wrapper() {
 TW="$WORK/target-w"
 git_init "$(mkdir -p "$TW" && echo "$TW")"
 run_wrapper "$PLUGIN/scripts/review/codex-review-pr.sh" "$TW" "$WORK/w1.prompt"; rc=$?
-if [ "$rc" -eq 0 ] && grep -qF "the review convention at $PLUGIN/.codex/review.md." "$WORK/w1.prompt" \
-   && grep -qF "in the Output Format of $PLUGIN/.codex/review.md," "$WORK/w1.prompt" \
+if [ "$rc" -eq 0 ] && grep -qF "the review rules at $PLUGIN/docs/review/review-codex.md;" "$WORK/w1.prompt" \
+   && grep -qF "<autoflow-root> in them is $PLUGIN." "$WORK/w1.prompt" \
    && [ -s "$WORK/w1.prompt.rec/out.md" ] && [ -z "$(git -C "$TW" status --porcelain)" ]; then
-  pass "W1: the prompt names the plugin root's .codex/review.md by absolute path; the record lands outside the tree, nothing stays in it"
+  pass "W1: the prompt names the plugin root's docs/review/review-codex.md by absolute path; the record lands outside the tree, nothing stays in it"
 else
   failc "W1" "wrapper" "rc=$rc prompt=$(head -c 400 "$WORK/w1.prompt" 2>/dev/null) err=$(head -c 200 "$WORK/w1.prompt.err")"
 fi
@@ -301,7 +300,7 @@ mkdir -p "$NOGUIDE"
 cp -R "$REPO_ROOT/scripts" "$NOGUIDE/scripts"
 run_wrapper "$NOGUIDE/scripts/review/codex-review-pr.sh" "$TW" "$WORK/w2.prompt"; rc=$?
 if [ "$rc" -eq 2 ] && [ ! -e "$WORK/w2.prompt" ] && grep -q 'review convention is missing' "$WORK/w2.prompt.err"; then
-  pass "W2: a tree without .codex/review.md exits 2 and never starts codex"
+  pass "W2: a tree without docs/review/review-codex.md exits 2 and never starts codex"
 else
   failc "W2" "wrapper" "rc=$rc started=$([ -e "$WORK/w2.prompt" ] && echo yes || echo no)"
 fi

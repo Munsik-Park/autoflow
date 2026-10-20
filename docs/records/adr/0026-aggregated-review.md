@@ -4,7 +4,8 @@
 
 Accepted (operator decisions 2026-10-02, issue #411). D1's source of the external reviewers and
 D5's stop on an unreadable configuration amended by ADR-0028 (operator decisions 2026-10-18, issue
-#463).
+#463). D1's built-in review spawn replaced by script reviewers, and D4's label retired, by ADR-0033
+(issue #485).
 
 ## Context
 

@@ -5,7 +5,9 @@
 Accepted (operator decisions 2026-10-18, issue #463 > 운영자 결정, and the criterion review's
 operator overrides O1 and O2). Amends ADR-0026 D1 ("each external reviewer the target configures")
 and D5 ("an unreadable review configuration still stops it"), and
-`docs/tool-delivery-contract.md` > *Target-owned files*.
+`docs/tool-delivery-contract.md` > *Target-owned files*. D2's target source and D4's "external review
+off" default amended by ADR-0033 (issue #485): the operator file alone names the reviewers, and the
+default reviewers run when it names none.
 
 ## Context
 

@@ -101,7 +101,7 @@ brings about the following.
 - **A new attempt is created, and an attempt with no state file passes its criterion review
   stage** (*The criterion review stage*), before the stop conditions.
 - **The stop conditions pass** (*Stop conditions*): the target check, a readable reviewer
-  configuration (or the operator's choice to proceed without external review when the operator
+  configuration (or the operator's choice to proceed without those reviewers when the operator
   file is unreadable), the target-declared local checks, and — for an attempt's start — criterion
   readiness.
 - **The plugin record is written.** On a start and on review-response entry, before the state
@@ -281,7 +281,7 @@ orchestrator's judgment over those facts**, recorded with its grounds in the led
   on the route its last `[gate-autofix]` entry names and not past the gate; or a failed gate's FAIL
   route.
 - A `[rebuttal]` entry with no verdict entry of that gate after it resumes at that gate's re-score
-  ([U6 Delivery](delivery.md) > *Whether a finding holds*).
+  ([U7 Review](review.md) > *Whether a finding holds*).
 - An artifact the next phase consumes that is absent is not written by the orchestrator: the phase
   that produces it runs again.
 
@@ -291,15 +291,15 @@ Each is a fail-closed hard stop, run by the orchestrator before the state file i
 
 **Target check.** PREFLIGHT runs `bash <autoflow-root>/scripts/preflight/target-check.sh` from the target; a non-zero exit stops the cycle. It runs from the AutoFlow root the session loads — the agent definitions, the readout, the selector and the default spawn policy beside it — and reads the target's files as data, executing none of them. **D6** — when the target keeps its own `.claude/autoflow/spawn-policy.json`, which overrides the plugin's default: `<autoflow-root>/scripts/spawn-policy/spawn-policy.sh check` over it against the loaded agent definitions, and its row set against the default `<autoflow-root>/.claude/autoflow/spawn-policy.json` — a `phases` / `workflow_sites` row the default carries and the target's copy lacks, or a `phases` row whose `agent_type` differs, is named. Model values and `workflow_sites` effort are the target's own and are never findings; a target with no policy of its own passes, its readouts answered by the default. **D7** — on a target that opted into AutoFlow's suite plane (`.claude/autoflow.local.json` > `tests.suite_plane: true`, resolved through `<autoflow-root>/scripts/test/suite-manifest.sh`): every executable spec under the target's `tests/**` declares the usable `# ci-subject:` header the selector requires (the selector's own `--check-headers` stage). A target that has not opted in passes without the selector being consulted, and a declaration file that is present but unreadable is a FAIL. Remedies: D6 → edit the target's policy — set each named row to the loaded definition's values and add each missing row from the default — or delete it to take the default; D7 → back-fill each named suite's header per [U4 Build and verify](build.md) > Header contract > *Adopting the contract over existing suites*, or repair the unreadable `.claude/autoflow.local.json`. The AutoFlow version is not a stop condition: a newer release reaches the operator through Claude Code's plugin update.
 
-**Reviewer configuration.** PREFLIGHT runs `<autoflow-root>/scripts/preflight/check-review-backend.sh`, which resolves the external reviewers HANDOFF runs beside the built-in review — from the target's `.claude/autoflow.local.json` at its repository root when it has `.review`, else from the operator's `~/.autoflow/config.json`, else none ([`reviewer-backend.md`](../reviewer-backend.md) > *Config location*) — prints the `reviewers:`, `source:` and `user-config:` readout lines, and probes each reviewer's CLI presence-only (`command -v`; auth is not probed). Exit `2` — the target file cannot be read as configured — stops the cycle until it is fixed. Exit `1` — a configured reviewer's CLI absent — does not: HANDOFF runs the built-in review without that reviewer and names it on the aggregated comment. Exit `6` with the marker line `user-config: UNREADABLE <path> — <error>` — the operator file is the source (`source: user <path>`) and cannot be read as configured, so nothing in it applies — is put to the operator, situation-first, with the path and the error: proceed without external review (the cycle continues and HANDOFF runs the built-in review alone), or stop (no state file is written; the operator fixes the file and PREFLIGHT runs again, reading it anew). A `user-config: WARNING …` line — a broken operator file while the target's `.review` decides — changes nothing and asks nothing. On exit `0`, `1` and `6` — on `6` once the operator has answered — the orchestrator appends the result to the issue's ledger as a record entry, `<C>` being the cycle the state file will carry, each line copied from the readout:
+**Reviewer configuration.** PREFLIGHT runs `<autoflow-root>/scripts/preflight/check-review-backend.sh`, which resolves the reviewers REVIEW runs — from the operator's `~/.autoflow/config.json`, and the default reviewers when it names none ([`reviewer-backend.md`](../reviewer-backend.md) > *Config location*) — prints the `reviewers:`, `source:` and `user-config:` readout lines, and probes each reviewer's CLI presence-only (`command -v`; auth is not probed). Exit `1` — a configured reviewer's CLI absent — does not stop the cycle: REVIEW runs the other reviewers without it and names it on the aggregated comment. Exit `6` with the marker line `user-config: UNREADABLE <path> — <error>` — the operator file cannot be read as configured, so nothing in it applies — is put to the operator, situation-first, with the path and the error: proceed without those reviewers (the cycle continues and REVIEW runs on the reviews of the target's side alone), or stop (no state file is written; the operator fixes the file and PREFLIGHT runs again, reading it anew). On exit `0`, `1` and `6` — on `6` once the operator has answered — the orchestrator appends the result to the issue's ledger as a record entry, `<C>` being the cycle the state file will carry, each line copied from the readout:
 
 ```
 ### preflight-review-config | cycle: <C>
 - reviewers: <names|none>
-- source: local <path> | user <path> | none
-- user-config: absent [<path>] | ok <path> | WARNING <path> — <error> | UNREADABLE <path> — <error>
+- source: user <path> | none
+- user-config: absent [<path>] | ok <path> | UNREADABLE <path> — <error>
 - exit: 0 | 1 | 6
-- operator: proceed without external review | stop
+- operator: proceed without those reviewers | stop
 ```
 
 The `operator:` line is written only on exit `6`. See [`reviewer-backend.md`](../reviewer-backend.md) > *Availability*.

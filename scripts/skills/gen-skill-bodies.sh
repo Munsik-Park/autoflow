@@ -13,8 +13,9 @@
 #                                    in one session; the command header, then
 #                                    the whole core in its own order
 #   skills/cycle-u1/SKILL.md …       /autoflow:cycle-u1 <N> [new] …
-#   skills/cycle-u6/SKILL.md         /autoflow:cycle-u6 <N> — one unit alone
-#                                    (issue #464, ADR-0032); the command header,
+#   skills/cycle-u7/SKILL.md         /autoflow:cycle-u7 [<N>] — one unit alone
+#                                    (issue #464, ADR-0032; U7, its issue number
+#                                    optional, ADR-0033); the command header,
 #                                    then the parts of the core the unit uses,
 #                                    in the core's order, by the classification
 #                                    scripts/skills/core-units.tsv
@@ -57,8 +58,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORE="$ROOT/docs/core.md"
 MAP="$ROOT/scripts/skills/core-units.tsv"
-UNITS="U1 U2 U3 U4 U5 U6"
-BODIES="cycle cycle-u1 cycle-u2 cycle-u3 cycle-u4 cycle-u5 cycle-u6 criterion-review"
+UNITS="U1 U2 U3 U4 U5 U6 U7"
+BODIES="cycle cycle-u1 cycle-u2 cycle-u3 cycle-u4 cycle-u5 cycle-u6 cycle-u7 criterion-review"
 
 MODE=write
 case "${1:-}" in
@@ -66,7 +67,7 @@ case "${1:-}" in
   --check) MODE=check ;;
   --list) for _s in $BODIES; do echo "skills/$_s/SKILL.md"; done; exit 0 ;;
   --core) MODE=core
-          case " $UNITS " in *" ${2:-none} "*) ;; *) echo "usage: gen-skill-bodies.sh --core U1…U6" >&2; exit 2 ;; esac ;;
+          case " $UNITS " in *" ${2:-none} "*) ;; *) echo "usage: gen-skill-bodies.sh --core U1…U7" >&2; exit 2 ;; esac ;;
   *) echo "usage: gen-skill-bodies.sh [--check | --list | --core Uk]" >&2; exit 2 ;;
 esac
 [ -f "$CORE" ] || { echo "gen-skill-bodies: $CORE not found" >&2; exit 2; }
@@ -123,7 +124,7 @@ classify() {
       n++; sc[n] = $1; px[n] = $2; un[n] = $3
       m[n] = split($1, tmp, " > ")
       for (j = 1; j <= m[n]; j++) st[n, j] = tmp[j]
-      if (un[n] != "all" && un[n] != "split" && un[n] !~ /^U[1-6]( U[1-6])*$/) bad("\"" $0 "\": units \"" un[n] "\"")
+      if (un[n] != "all" && un[n] != "split" && un[n] !~ /^U[1-7]( U[1-7])*$/) bad("\"" $0 "\": units \"" un[n] "\"")
       if (px[n] != "" && un[n] == "split") bad("\"" $0 "\": a prefix entry is never split")
       next
     }
@@ -242,7 +243,7 @@ left_out() {
 # 2 its phases.
 unit_field() {
   awk -v k="$1" -v c="$2" -F '|' '
-    index($2, " " k " ") == 1 { f = (c == 1) ? $2 : $3; sub(/^ U[1-6] /, "", f); sub(/^ +/, "", f); sub(/ +$/, "", f); print f; exit }' "$CORE"
+    index($2, " " k " ") == 1 { f = (c == 1) ? $2 : $3; sub(/^ U[1-7] /, "", f); sub(/^ +/, "", f); sub(/ +$/, "", f); print f; exit }' "$CORE"
 }
 
 gen_cycle() {
@@ -251,8 +252,8 @@ gen_cycle() {
 name: cycle
 description: >-
   Run an AutoFlow cycle on an issue in one session — PREFLIGHT, with the
-  attempt's criterion review stage, to HANDOFF; `new` asks for a new attempt of
-  the issue (one unit alone is /autoflow:cycle-u1 … cycle-u6). Use only when the
+  attempt's criterion review stage, to REVIEW; `new` asks for a new attempt of
+  the issue (one unit alone is /autoflow:cycle-u1 … cycle-u7). Use only when the
   operator starts or resumes an AutoFlow cycle (/autoflow:cycle <N> [new]).
 argument-hint: "<issue-number> [new]"
 ---
@@ -260,7 +261,7 @@ argument-hint: "<issue-number> [new]"
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to HANDOFF; `new` requests a new attempt. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u6`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
 
 EOF
   core_body | strip_links
@@ -315,20 +316,26 @@ gen_unit() {
   name="$(unit_field "$k" 1)";   need "unit table row for $k" "$name"
   phases="$(unit_field "$k" 2)"; need "unit table phases for $k" "$phases"
   out="$(left_out "$k")"
-  new=""; hint="<issue-number>"
-  [ "$k" = U1 ] && { new=" [new]"; hint="<issue-number> [new]"; }
+  new=" <N>"; hint="<issue-number>"
+  [ "$k" = U1 ] && { new=" <N> [new]"; hint="<issue-number> [new]"; }
+  [ "$k" = U7 ] && { new=" [<N>]"; hint="[<issue-number>]"; }
   printf -- '---\nname: cycle-%s\ndescription: >-\n' "$lk"
-  printf 'Run unit %s (%s — %s) of an AutoFlow cycle alone, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s <N>%s).\n' \
+  printf 'Run unit %s (%s — %s) of an AutoFlow cycle alone, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s%s).\n' \
     "$k" "$name" "$phases" "$k" "$k" "$lk" "$new" | wrap76
   printf 'argument-hint: "%s"\n---\n\n' "$hint"
   printf '%s\n\n' "$ROOT_DECL"
-  if [ "$k" = U1 ]; then
-    printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt)'
+  if [ "$k" = U7 ]; then
+    printf '**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit %s, %s (%s), of a cycle alone: read where the cycle stands from the current state — `bash <autoflow-root>/scripts/preflight/cycle-status.sh`, with `--issue <N>` when given — run %s from there to its exit transition, and end the session with the report the invoking prompt asks for.\n\n' \
+      "$k" "$name" "$phases" "$k"
   else
-    printf '**Scope** (`$ARGUMENTS`: `<N>`)'
+    if [ "$k" = U1 ]; then
+      printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt)'
+    else
+      printf '**Scope** (`$ARGUMENTS`: `<N>`)'
+    fi
+    printf ' — unit %s, %s (%s), of issue #N'"'"'s cycle alone: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at %s'"'"'s entry (otherwise report the situation and stop), run %s from its entry to its exit transition, and end the session with the report the invoking prompt asks for.\n\n' \
+      "$k" "$name" "$phases" "$k" "$k"
   fi
-  printf ' — unit %s, %s (%s), of issue #N'"'"'s cycle alone: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at %s'"'"'s entry (otherwise report the situation and stop), run %s from its entry to its exit transition, and end the session with the report the invoking prompt asks for.\n\n' \
-    "$k" "$name" "$phases" "$k" "$k"
   printf '**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that %s uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: %s.\n\n' \
     "$k" "${out:-none}"
   unit_core "$k" < "$TMP/core.tagged" | strip_links

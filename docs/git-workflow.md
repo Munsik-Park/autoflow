@@ -132,9 +132,9 @@ Closes #<issue-number>
 ### Merge Sequencing (external review)
 
 A host PR with no sub-repo dependency is promoted and merged by the external reviewer directly. A
-host PR that depends on a sub-repo PR carries `blocked-by-subrepo` and merges after it: the sub-repo
-PR merges, the host is reconciled to its merge commit, the operator confirms the host pointer equals
-that merge commit and removes the label, and the host PR is then promoted and merged. The rule AutoFlow
+host PR that depends on a sub-repo PR merges after it: the sub-repo PR merges, the host is reconciled
+to its merge commit, the operator confirms the host pointer equals that merge commit, and the host PR
+is then promoted and merged. AutoFlow reports this order at the end of a cycle. The rule AutoFlow
 keeps for the host's pointer, and its cautions, are [`units/delivery.md`](units/delivery.md) >
 *Multi-repo delivery*; the reviewer- and operator-facing guide is
 [`external-review-sequencing.md`](external-review-sequencing.md).

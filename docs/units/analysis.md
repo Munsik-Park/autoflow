@@ -38,7 +38,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | DIAGNOSE (prerequisite) → orchestrator / advisor | `mode=new-issue` only. The analysis report's `## Decision points` records that a planning/design/ADR prerequisite is clearly required first → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident: proceed → GATE:HYPOTHESIS (after a U2 re-run where the analysis stopped at the prerequisite); the prerequisite comes first → the cycle ends with the analysis report (`active:false`, `phase:"awaiting-user"`) — a new issue is filed only on the operator's request; when in doubt, no prerequisite is recorded (`<autoflow-root>/docs/units/analysis.md` > *Report routing*) |
 | DIAGNOSE → GATE:HYPOTHESIS | the U2 unit returned, its analysis report carries every required section, and it records no prerequisite (`<autoflow-root>/docs/units/analysis.md` > Unit spawn) |
 | GATE:HYPOTHESIS (PASS, `no change needed`) → close / reply / rebuttal | the report concludes the as-is already satisfies the request or nothing is left to do → how the cycle answers it (an already-resolved issue closed, an open PR replied on, a reviewer finding rebutted) is the orchestrator's judgment over the situation, recorded in the ledger (`<autoflow-root>/docs/units/analysis.md` > *Verification — GATE:HYPOTHESIS*) |
-| review-response (a repeated complaint) → orchestrator / advisor | whoever reads a reviewer finding — the HANDOFF review aggregator, or the DIAGNOSE unit — sees it repeat the previous attempt's complaint with a new witness case and records that → the orchestrator decides the re-entry (its depth, or none), the advisor where the grounds do not settle it or it is not confident. No spawn checks for it on every attempt (`<autoflow-root>/docs/units/delivery.md` > *A repeated complaint*) |
+| review-response (a repeated complaint) → orchestrator / advisor | whoever reads a reviewer finding — the REVIEW aggregator, or the DIAGNOSE unit — sees it repeat the previous attempt's complaint with a new witness case and records that → the orchestrator decides the re-entry (its depth, or none), the advisor where the grounds do not settle it or it is not confident. No spawn checks for it on every attempt (`<autoflow-root>/docs/units/review.md` > *A repeated complaint*) |
 | GATE:HYPOTHESIS → ARCHITECT | PASS + the report concludes `code change` + its recommendations triaged (no attempt open); the hook gates the spawn on the recorded PASS for a bug / incident issue, and `verdict` `skipped (non-bug issue)` admits it for any other |
 | GATE:HYPOTHESIS (PASS, `non-code lever`) → orchestrator / advisor | a real gap whose lever is data / configuration / operations → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident: a code change is still owed → ARCHITECT; the lever is non-code → the cycle ends with its report (`active:false`, `phase:"awaiting-user"`) |
 | GATE:HYPOTHESIS (FAIL) → DIAGNOSE | the re-entry is the orchestrator's judgment over the evaluator's findings, recorded in the ledger — a U2 unit re-run; no count cap, and the cycle leaves GATE:HYPOTHESIS only on a PASS |
@@ -53,7 +53,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   thread PREFLIGHT identified (review-response), and the decision ledger
   (`<attempt-dir>/issue-{N}-ledger.md`). In a new-issue cycle it also names the criterion review record
   the ledger's last `[criterion-ready]` entry points at (*Criterion review record* below). In a review-response cycle it also names every artifact the
-  previous cycle left (`<attempt-dir>/issue-{N}-c{C}-*.md`) and, where HANDOFF's triage wrote one, the
+  previous cycle left (`<attempt-dir>/issue-{N}-c{C}-*.md`) and, where REVIEW's triage wrote one, the
   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
   (*Re-entry* below).
@@ -153,7 +153,7 @@ The rules below are the ones other documents cite; everything else about the wor
   planning, design or ADR prerequisite clearly required before the issue can be implemented
   (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
   whose lever is not code; on a reviewer finding, one that repeats the previous
-  attempt's complaint with a different witness case ([U6 Delivery](delivery.md) > *A repeated
+  attempt's complaint with a different witness case ([U7 Review](review.md) > *A repeated
   complaint*). A suggested split of the issue stays a suggestion: it is filed only on
   the operator's request, through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
   ([`issue-proposal.md`](../issue-proposal.md)).
@@ -189,7 +189,7 @@ Anything else the unit records is its own, written where it judges useful.
   stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
   false`, `phase: "awaiting-user"`, the report and the decision's record as its report. No counter.
 - **A repeated complaint** (a reviewer finding) → the orchestrator decides the re-entry — its
-  depth, or none — the advisor where the grounds do not settle it ([U6 Delivery](delivery.md) > *A
+  depth, or none — the advisor where the grounds do not settle it ([U7 Review](review.md) > *A
   repeated complaint*). A redefined criterion comes
   back as `[ac-decision]` entries and a unit re-run on them. No counter.
 - **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the report. The dispositions — a
@@ -217,7 +217,7 @@ avg ≥ 7.5.
 
 - **`no change needed`** → no change is made. How the cycle answers the conclusion — closing an
   issue that was already resolved, replying on an open PR, rebutting a reviewer finding a re-entry
-  examined ([U6 Delivery](delivery.md) > *Whether a finding holds*) — is the orchestrator's judgment
+  examined ([U7 Review](review.md) > *Whether a finding holds*) — is the orchestrator's judgment
   over the situation, recorded with its grounds in the ledger ([`core.md`](../core.md) > Rule
   Scope, principles 2–3). Before it closes an issue, the orchestrator confirms the recorded
   `phases.gate_hypothesis` scores meet the PASS line and the report's conclusion is `no change

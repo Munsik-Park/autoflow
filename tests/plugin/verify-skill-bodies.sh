@@ -5,7 +5,7 @@
 # Test: the command bodies and the AutoFlow path notation (issue #454 PR-3)
 # =============================================================================
 # The rules reach a main session through the command bodies — /autoflow:cycle,
-# /autoflow:cycle-u1 … cycle-u6 and /autoflow:criterion-review — generated from
+# /autoflow:cycle-u1 … cycle-u7 and /autoflow:criterion-review — generated from
 # docs/core.md (ADR-0027 D2, ADR-0032), and an AutoFlow path is written
 # `<autoflow-root>/…` wherever a role reads it (ADR-0027 D3). The bodies are the
 # ones `gen-skill-bodies.sh --list` names. Plain bash + awk/sed/grep/cmp (no
@@ -78,7 +78,7 @@ docs/units/build.md|scripts/
 docs/git-workflow.md|docs/<issue>-<desc>
 docs/development-guideline.md|docs/
 docs/development-guideline.md|docs/records/
-docs/development-guideline.md|.codex/
+docs/development-guideline.md|docs/review/
 docs/development-guideline.md|scripts/test/check-host-purity-delta.sh
 docs/evaluation-system.md|docs/records/adr/
 docs/submodule-common-rules.md|docs/records/adr/
@@ -241,7 +241,7 @@ k1() {
     for line in "${lines[@]}"; do
       [ -n "$line" ] && [ "$(grep -cxF -- "$line" "$WORK/k1.core")" -eq 1 ] || continue
       read=1
-      for k in U1 U2 U3 U4 U5 U6; do
+      for k in U1 U2 U3 U4 U5 U6 U7; do
         b="$1/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md"
         case " $units " in *" all "*|*" $k "*) want=1 ;; *) want=0 ;; esac
         grep -qxF -- "$line" "$b" && got=1 || got=0

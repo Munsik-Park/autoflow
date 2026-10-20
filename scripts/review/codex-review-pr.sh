@@ -3,35 +3,34 @@
 # SPDX-License-Identifier: Apache-2.0
 # Run the codex external review of a pull request and keep it as a review record.
 #
-# The review protocol (Korean output, severity ranking, output format) lives in
-# .codex/review.md of the AutoFlow tree this wrapper ships in, which the prompt
-# names by its absolute path; the reviewed repository's own AGENTS.md is loaded
-# automatically because Codex runs in that repository's working directory. This
-# wrapper supplies the target PR number, the optional sub-repo selector, the
-# record file, and the fixed sandbox / approval flags. The review is written to the record file only: it
-# posts no PR comment and changes no label — the aggregation of every review of
-# the PR posts the one comment (docs/units/delivery.md > Review aggregation).
+# The review rules are codex's rule file — docs/review/review-codex.md of the
+# AutoFlow tree this wrapper ships in, or the file `.review.codex.rules` names —
+# which the prompt names by its absolute path, with the lenses file
+# `.review.codex.lenses` names when there is one. codex runs in the reviewed
+# repository's working directory, and loads that tree's own AGENTS.md itself.
+# This wrapper supplies the target PR number, the optional sub-repo selector,
+# the record file, and the fixed sandbox / approval flags. The review is written
+# to the record file only: it posts no PR comment and changes no label — the
+# aggregation of every review of the PR posts the one comment.
 #
-# codex runs only when the external-reviewer configuration names it
-# (docs/reviewer-backend.md) — the target's `.claude/autoflow.local.json` when
-# it has `.review`, else the operator's `~/.autoflow/config.json`; the
-# orchestrator launches this wrapper once per pull request and round for it.
-# Model and effort come from the shared resolver
-# (scripts/review/lib/review-config.sh), from the same file the
+# The orchestrator launches this wrapper once per pull request and round when
+# the reviewer configuration (docs/reviewer-backend.md) — the operator's
+# `~/.autoflow/config.json` — names codex or names no reviewer. Model, effort,
+# rule file and lenses file come from the shared resolver
+# (scripts/review/lib/review-config.sh), from the file the
 # `check-review-backend.sh` readout names; the wrapper prints the same
 # `source:` and `user-config:` lines.
 #
-# When the user file is the source and cannot be read as configured, nothing
-# in it applies: the wrapper prints the fixed marker line
-# `user-config: UNREADABLE <path> — <error>`, starts no codex and exits 6. The
-# marker line, not the exit code, tells this result from a codex exit; the
-# orchestrator asks the operator whether to proceed without external review.
-# An unreadable target file stops here with exit 2.
+# When the user file cannot be read as configured, nothing in it applies: the
+# wrapper prints the fixed marker line `user-config: UNREADABLE <path> —
+# <error>`, starts no codex and exits 6. The marker line, not the exit code,
+# tells this result from a codex exit; the orchestrator asks the operator
+# whether to proceed without this reviewer.
 #
 # Per-PR review (Model A): every PR — the host PR AND each sub-repo PR — is
 # reviewed on its OWN diff, over its OWN repository's tree — a submodule's
 # contents belong to the submodule PR's review, never the host's
-# (.codex/review.md > Before Reviewing). Pass `--repo owner/name` to review a
+# (docs/review/review.md > Before Reviewing). Pass `--repo owner/name` to review a
 # sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh
 # command); omit `--repo` to review the host PR (the current repository).
 #
@@ -48,9 +47,7 @@ set -euo pipefail
 
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_CRP_DIR/lib/review-config.sh"
-# The review convention of the AutoFlow tree this wrapper ships in, by absolute
-# path: the reviewed repository need not carry a copy of its own.
-REVIEW_GUIDE="$(cd "$_CRP_DIR/../.." && pwd)/.codex/review.md"
+AF_ROOT="$(cd "$_CRP_DIR/../.." && pwd)"
 
 USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>]"
 PR=""
@@ -92,11 +89,6 @@ if [[ -z "$PR" || -z "$OUT" ]]; then
   exit 2
 fi
 
-if [[ ! -f "$REVIEW_GUIDE" ]]; then
-  echo "[codex-review] the review convention is missing: $REVIEW_GUIDE" >&2
-  exit 2
-fi
-
 cd "$(git rev-parse --show-toplevel)"
 TOP="$(pwd -P)"
 
@@ -120,20 +112,29 @@ SCRATCH=".autoflow-codex-review-${PR}-$$.md"
 rm -f "$SCRATCH"
 trap 'rm -f "$TOP/$SCRATCH"' EXIT
 
-# Model / effort resolution: a present-but-unreadable target file, an empty
-# model or effort, or an effort outside codex's vocabulary fails closed here
-# (exit 2) — no reviewer launches on a rejected config. An unreadable user file
-# that is the source is the marker result below.
+# Settings resolution: an unreadable user file is the marker result below.
 resolve_reviewer_settings codex-review codex
 review_readout
 if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
-  echo "[codex-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — codex was not started. Fix the file and run again to apply it, or proceed without external review — the operator's choice." >&2
+  echo "[codex-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — codex was not started. Fix the file and run again to apply it, or proceed without this reviewer — the operator's choice." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
-if [[ "$REVIEW_USER_STATE" == warning ]]; then
-  echo "[codex-review] warning: ${REVIEW_USER_CFG_PATH} cannot be read as configured (its error is on the user-config: readout line); not applied — ${REVIEW_CFG_PATH} decides." >&2
-fi
 build_review_backend_args
+
+REVIEW_GUIDE="$(review_path "$REVIEW_RULES" "$TOP")"
+if [[ ! -f "$REVIEW_GUIDE" ]]; then
+  echo "[codex-review] the review convention is missing: $REVIEW_GUIDE" >&2
+  exit 2
+fi
+lenses_clause=""
+if [[ -n "$REVIEW_LENSES" ]]; then
+  lenses_file="$(review_path "$REVIEW_LENSES" "$TOP")"
+  if [[ -f "$lenses_file" ]]; then
+    lenses_clause=" Apply the review lenses at ${lenses_file} in addition."
+  else
+    echo "[codex-review] the lenses file ${lenses_file} is absent — reviewing without it." >&2
+  fi
+fi
 
 if [[ -n "$REPO" ]]; then
   repo_clause=" The PR is in the ${REPO} repository (a sub-repo, NOT this one): pass '--repo ${REPO}' to EVERY gh command."
@@ -164,12 +165,12 @@ if [[ -n "$EXPECTED_HEAD" && "$pr_head" != "$EXPECTED_HEAD" ]]; then
 fi
 
 # Build the review prompt as one value, ending with a fixed sentinel line. The
-# sentinel names the one permitted action — writing the record file — so the
-# AGENTS.md / review-convention defaults cannot add a comment or a label change.
+# sentinel names the one permitted action — writing the record file — so no
+# instruction codex loads from the tree can add a comment or a label change.
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow AGENTS.md and the review convention at ${REVIEW_GUIDE}.${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format of ${REVIEW_GUIDE}, to the file ${SCRATCH} (relative to the repository root). ${SENTINEL}"
+PROMPT="Review pull request #${PR}. Follow the review rules at ${REVIEW_GUIDE}; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH} (relative to the repository root). ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.

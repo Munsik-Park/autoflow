@@ -1,7 +1,4 @@
 {
-  "review": {
-    "reviewers": ["codex"]
-  },
   "tests": {
     "suite_plane": false
   },

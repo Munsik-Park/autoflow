@@ -46,7 +46,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 - The methodology prose is tool-versioned content. It reaches a session only
   through the body of the AutoFlow command that starts the session
-  (`/autoflow:cycle`; `/autoflow:cycle-u1` … `/autoflow:cycle-u6` for one
+  (`/autoflow:cycle`; `/autoflow:cycle-u1` … `/autoflow:cycle-u7` for one
   unit, carrying the parts of the core the unit uses — ADR-0032; or
   `/autoflow:criterion-review` for the cycle's criterion review stage alone),
   an AutoFlow agent
@@ -90,7 +90,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 | Path in the target | Content |
 |---|---|
-| `.claude/autoflow.local.json` | the target's declarations — external reviewers, local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example` (which declares no external reviewer); absent means no local check, no checklist and no suite plane, and the external reviewers of the operator-level file (*Operator-level file* below) |
+| `.claude/autoflow.local.json` | the target's declarations — local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example`; absent means no local check, no checklist and no suite plane. The reviewers are not declared here (*Operator-level file* below) |
 | `.claude/autoflow/spawn-policy.json` | optional: the target's own spawn policy (*Spawn policy* below) |
 | the project's information and rule files | R3 |
 
@@ -98,7 +98,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 | Path | Content |
 |---|---|
-| `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the external reviewers (`{ "review": { … } }`, the target file's shape and parser), used when the target's `.claude/autoflow.local.json` has no `.review` ([`reviewer-backend.md`](reviewer-backend.md) > *Config location*), and the record root (`"record_root": "<absolute path>"`, default `$HOME/.autoflow`) |
+| `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the reviewers AutoFlow runs in every project (`{ "review": { … } }`; [`reviewer-backend.md`](reviewer-backend.md) > *Config location*), and the record root (`"record_root": "<absolute path>"`, default `$HOME/.autoflow`) |
 | the record root (`$HOME/.autoflow` by default) | every file AutoFlow writes: each attempt's record directory `<repo-key>/<stamp>-issue-<N>/` — state, ledger, criterion review, reports, review records and the cycle-layer store — the issue drafts `<repo-key>/drafts/` and proposal records `<repo-key>/proposals/`, `_metrics/` and the hook's `.ledger-check-cache`; outside every checkout's tree, so a target needs no ignore rule for AutoFlow, and the hook and the scripts resolve it through `<autoflow-root>/scripts/lib/records.sh` (`autoflow-records`, on the Bash `PATH`), never from the plugin root or the target ([`state-tracking.md`](state-tracking.md) > *Record location*) |
 
 It is neither target-owned nor shipped. The plugin's SessionStart hook

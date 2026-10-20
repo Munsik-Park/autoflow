@@ -283,7 +283,7 @@ rows, and the sections GATE:QUALITY reads carry the current state.
 | AUDIT FAIL | the AUDIT report and its failed items | AUDIT FAIL (max 2×, shared) |
 | GATE:QUALITY FAIL routed `test` / `impl` | the evaluation report and its failed items | GATE:QUALITY FAIL (max 3×) |
 | a `test` / `impl` recommendation attempt at AUDIT or GATE:QUALITY | the recommendation's subject and finding | the attempt window (max 7×) |
-| HANDOFF review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
+| REVIEW review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
 | advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
 
 An INTEGRATE failure names the failing check and its output; a HANDOFF CI failure routed `test` /
@@ -291,7 +291,7 @@ An INTEGRATE failure names the failing check and its output; a HANDOFF CI failur
 forward again to the INTEGRATE check or the CI that failed.
 
 A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
-([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A HANDOFF thin route fixes the finding on its own surface and returns to the reviewer
+([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A REVIEW thin route fixes the finding on its own surface and returns to the reviewer
 re-review; it does not bring the build report up to date.
 
 The unit reads and writes no `<attempt-dir>/issue-{N}.json` state file, so every counter above is the

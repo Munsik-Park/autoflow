@@ -14,8 +14,8 @@
 
 ## Overview
 
-AutoFlow runs eleven phases and gates (`PREFLIGHT` → `HANDOFF`; PREFLIGHT carries each attempt's
-criterion review stage, `CRITERION-REVIEW`), carried by six functional units, that guide every code change from issue analysis to PR hand-off. Each phase has explicit
+AutoFlow runs twelve phases and gates (`PREFLIGHT` → `REVIEW`; PREFLIGHT carries each attempt's
+criterion review stage, `CRITERION-REVIEW`), carried by seven functional units, that guide every code change from issue analysis to PR hand-off. Each phase has explicit
 entry/exit criteria. Merging is performed
 by an external review process; AutoFlow does not merge.
 
@@ -41,7 +41,7 @@ mapping is preserved below, with upstream's STEP 4–5.5 merged into one BUILD u
 | STEP 6 | GATE:QUALITY |
 | STEP 7 | DELIVER |
 | STEP 8 | INTEGRATE |
-| STEP 9 | HANDOFF |
+| STEP 9 | HANDOFF, REVIEW |
 
 ---
 
@@ -62,7 +62,8 @@ flowchart TD
     QUAL{{GATE:QUALITY}}:::gate
     DEL[DELIVER<br/>Push]:::phase
     INT[INTEGRATE]:::phase
-    HAND[HANDOFF<br/>PR + Hand-off]:::phase
+    HAND[HANDOFF<br/>PR + CI]:::phase
+    REV[REVIEW<br/>Review + Hand-off]:::phase
     ANS[Answer judged<br/>close · reply · rebuttal → review round]:::phase
     DONE([Done]):::terminal
     HUMAN([Human Decision]):::terminal
@@ -93,7 +94,10 @@ flowchart TD
     HAND -.->|env / push rejection ≤2×| HAND
     HAND -->|CI failure · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
     HAND -->|retry exhausted| HUMAN
-    HAND -->|PR created, CI green| DONE
+    HAND -->|PR created, CI green| REV
+    REV -->|Medium+ ≤7× · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
+    REV -->|cap 7 reached| HUMAN
+    REV -->|review clean, CI green| DONE
 
     classDef phase fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
     classDef gate fill:#fff8e1,stroke:#f57f17,color:#bf360c
@@ -146,6 +150,9 @@ BUILD (one unit spawn)
                                                    HANDOFF ◄── retry ≤2×
                                                        │
                                                        ▼
+                                                    REVIEW ◄── Medium+ ≤7× → by remedy_class (doc commit / BUILD / ARCHITECT)
+                                                       │
+                                                       ▼
                                           PR open — external review merges
 ```
 
@@ -165,6 +172,7 @@ Each functional unit's body lives in its own file
 | U4 Build and verify | BUILD, AUDIT | [`units/build.md`](units/build.md) |
 | U5 Completion evaluation | GATE:QUALITY | [`units/completion-evaluation.md`](units/completion-evaluation.md) |
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`units/delivery.md`](units/delivery.md) |
+| U7 Review | REVIEW | [`units/review.md`](units/review.md) |
 
 The rubrics of all four gates — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — are the
 evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*; the unit

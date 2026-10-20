@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/review/review-start-check.sh
 #
-# HANDOFF — did the external reviewer run for one pull request begin? Run right
-# after `scripts/review/codex-review-pr.sh` is launched in the background, once
-# per reviewed PR and round. It waits at most the window for a signal scoped to that PR and
+# REVIEW — did a reviewer run for one pull request begin? Run right after a
+# reviewer's wrapper (`scripts/review/<reviewer>-review-pr.sh`) is launched in
+# the background, once per reviewer, reviewed PR and round. It waits at most the window for a signal scoped to that PR and
 # reports the first one it finds:
 #
 #   completed  the wrapper's output (--log) already carries its completion
@@ -27,9 +27,9 @@
 #       failed, or left no review record
 #   4   the wrapper's output (--log) carries the marker line
 #       `user-config: UNREADABLE <path> — <error>`: the operator's
-#       ~/.autoflow/config.json was the source and could not be read, so no
-#       reviewer started — the orchestrator asks the operator whether to
-#       proceed without external review (issue #463)
+#       ~/.autoflow/config.json could not be read, so no reviewer started —
+#       the orchestrator asks the operator whether to proceed without those
+#       reviewers (issue #463)
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]

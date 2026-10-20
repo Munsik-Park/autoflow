@@ -114,7 +114,7 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   search terms gets them in the same change.
 - **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
   documents under `docs/` other than `docs/records/`, the agent and skill
-  definitions, the review guides under `.codex/`, the PR and issue templates,
+  definitions, the review rules under `docs/review/`, the PR and issue templates,
   and the descriptive fields of
   `.claude/autoflow/spawn-policy.json` — states what to do, when, and under
   which constraint. It carries no account of how a rule came to be (a case; an

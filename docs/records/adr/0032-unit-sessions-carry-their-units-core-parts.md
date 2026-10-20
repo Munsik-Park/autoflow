@@ -6,7 +6,8 @@ Accepted (issue #464: the operator set the per-unit session as the default opera
 method — per-unit commands, an argument choosing the body, how the parts are generated — to the
 working AI, with the grounds in the pull request). Amends ADR-0027 D2 *Commands* and *The core*,
 reverses ADR-0027 > Alternatives > *Per-unit commands*, retires the `unit=U1…U6` argument ADR-0030
-kept (its Decision item 3 and *Positive*), and amends `docs/tool-delivery-contract.md` R2.
+kept (its Decision item 3 and *Positive*), and amends `docs/tool-delivery-contract.md` R2. D1 amended for U7 by ADR-0033 (issue #485):
+`/autoflow:cycle-u7 [<N>]` takes the issue number or nothing and has no entry check that stops it.
 
 ## Context
 

@@ -305,7 +305,7 @@ changes the criterion:
 
 1. **Design (ARCHITECT).** The design unit chooses any disposition in the *Test necessity*
    vocabulary for an issue AC, **with its reason stated in that row**; GATE:PLAN scores the reason.
-2. **External reviewer (HANDOFF).** Every reduced disposition and its reason is carried into the host
+2. **Reviewer (REVIEW).** Every reduced disposition and its reason is carried into the host
    PR body ([U6 Delivery](delivery.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
 3. **Criterion decision.** The orchestrator decides, the advisor where it cannot settle it, when
    the AC's **content** must change — at ARCHITECT or later in the cycle

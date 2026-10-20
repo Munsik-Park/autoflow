@@ -116,15 +116,6 @@ Single-pattern gates are unaffected — they match `CMD_BOUNDARY` over the
 whole `SCAN`. Reference: the default-branch push deny in
 `<autoflow-root>/hooks/check-autoflow-gate.sh`.
 
-**Second consumer — the label-gate deny.** The
-`blocked-by-subrepo` gate-label deny has two forms: the
-`--remove-label blocked-by-subrepo` form is a **single pattern**
-(unaffected, matched over the whole `SCAN`), while the `gh api … -X DELETE
-…/labels/blocked-by-subrepo` REST form is an **AND** of the label
-path and the `-X DELETE` method. That REST form must co-occur in **one
-segment**. Both denies share the single `_SEGMENTS` split computed once from
-`SCAN`.
-
 ### Backgrounded-invocation refinement — `BG_SCAN` / `BG_PREFIX` / `BG_TAIL`
 
 The backgrounded suite-run deny (`<autoflow-root>/hooks/check-autoflow-gate.sh`
@@ -263,7 +254,7 @@ the hook owns the role→gate mapping:
 
 | Channel | Declaration |
 |---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-reviewer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `<autoflow-root>/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
+| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `<autoflow-root>/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
 | Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
 | Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
 
@@ -284,7 +275,7 @@ Mapping (hook-owned — a spawn never selects its own gate): `planning` —
 `autoflow-unit-design` →
 GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
 `autoflow-unit-build` → GATE:PLAN;
-`analysis` — `autoflow-analyzer`, `autoflow-reviewer`,
+`analysis` — `autoflow-analyzer`,
 `autoflow-criterion-tracer`, `autoflow-criterion-analyzer`,
 `autoflow-criterion-reconciler`,
 `autoflow-unit-analysis` — / `evaluation` / `advisor` / research → pass.

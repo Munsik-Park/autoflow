@@ -22,7 +22,7 @@ These documents are the operating source of truth.
 
 | Document | Role |
 | --- | --- |
-| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u6` (one unit, the parts of the core it uses) and `/autoflow:criterion-review` (the criterion review stage alone) command bodies (ADR-0027 D2, ADR-0032). |
+| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u7` (one unit, the parts of the core it uses) and `/autoflow:criterion-review` (the criterion review stage alone) command bodies (ADR-0027 D2, ADR-0032, ADR-0033). |
 | [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
 | [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
 | [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |
@@ -30,7 +30,7 @@ These documents are the operating source of truth.
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [External Review Sequencing](external-review-sequencing.md) | Merge sequencing and external review flow. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through command bodies and agent definitions, target-identity separation, the packaging and PREFLIGHT checks, and the target's own spawn policy. |
-| [Reviewer Contract](reviewer-backend.md) | HANDOFF reviewers: the built-in review and the configured external reviewers, their inputs and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
+| [Reviewer Contract](reviewer-backend.md) | REVIEW reviewers: the reviewers the operator file names, each run by its own script, and the reviews of the target's side, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Criterion Review](criterion-review.md) | The cycle's first stage, CRITERION-REVIEW: an attempt's review of the issue's acceptance criteria against the target's code and policy, the `[criterion-ready]` entry recording the review's settled decisions — the stage's exit — and the readiness fact PREFLIGHT reads. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 
@@ -44,7 +44,7 @@ These documents are the operating source of truth.
 | Filing a new issue | `<autoflow-root>/docs/issue-proposal.md` |
 | An attempt's criterion review stage | `<autoflow-root>/docs/criterion-review.md` |
 | Tool distribution, install/upgrade, or version pinning | `<autoflow-root>/docs/tool-delivery-contract.md` |
-| Reviewers (built-in + external), review aggregation | `<autoflow-root>/docs/reviewer-backend.md`, `<autoflow-root>/docs/external-review-sequencing.md` |
+| Reviewers, review aggregation, merge order | `<autoflow-root>/docs/reviewer-backend.md`, `<autoflow-root>/docs/external-review-sequencing.md` |
 
 ## Design and decision records
 

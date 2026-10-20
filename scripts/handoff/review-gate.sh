@@ -3,15 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/handoff/review-gate.sh
 #
-# HANDOFF review triage — what is read once the findings file exists. For one
+# REVIEW review triage — what is read once the findings file exists. For one
 # reviewed pull request it reads the verdict (`max_severity`, written to the
 # PR's findings file by the review aggregator), names the case, and counts the
-# auto-resolution attempts on record. It changes nothing. The
-# `blocked-by-review` label is the review's signal to the merge actor and is
-# not read here: the verdict decides.
+# auto-resolution attempts on record. It changes nothing.
 #
 # What it does not decide: whether a finding holds, its class, its route, or
-# whether a Low finding is worth fixing now (docs/units/delivery.md > Review
+# whether a Low finding is worth fixing now (docs/units/review.md > Review
 # triage).
 #
 # Attempt count: the level-2 ledger headings ending in `[review-autofix]` after
