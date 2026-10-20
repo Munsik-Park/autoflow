@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # PREFLIGHT target check — the target-owned files agree with the AutoFlow that
 # runs them (ADR-0027 D4; docs/units/preparation.md > Stop conditions)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # suite-manifest.sh — sourced library: the single definition site of the suite
 # subject set, the suite header grammar, and the runtime-budget ceiling.

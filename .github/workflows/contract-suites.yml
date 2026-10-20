@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # .github/workflows/contract-suites.yml — deployment-level checks (ADR-0024 D1, D5; issue #293)
 #
 # This repository's standing layer: the checks whose defect surfaces only after

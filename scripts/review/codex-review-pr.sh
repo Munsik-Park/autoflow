@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # Run the codex external review of a pull request and keep it as a review record.
 #
 # The review protocol (Korean output, severity ranking, output format) lives in

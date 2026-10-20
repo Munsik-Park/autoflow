@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # .github/workflows/plugin-package.yml — plugin packaging acceptance suite (issue #790)
 #
 # Runs the plugin packaging acceptance suites. The repository root is the plugin

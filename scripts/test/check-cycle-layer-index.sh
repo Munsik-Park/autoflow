@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # check-cycle-layer-index.sh — standing predicate: no cycle-layer asset has
 # entered the merged tree.

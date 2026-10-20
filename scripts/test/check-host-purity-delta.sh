@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # scripts/test/check-host-purity-delta.sh
 #
 # Diff-scoped host-purity DELTA guard — Issue #788 ([#785-S2]).

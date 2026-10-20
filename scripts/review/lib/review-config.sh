@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # Shared external-reviewer configuration resolver (issue #184; #979; #411; #463)
 # =============================================================================

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # scripts/gate/remedy-route.sh — class-routed re-entry (issues #140, #192)
 #
 # The classifier tags every failed rubric item — or, at HANDOFF review triage,

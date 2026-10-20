@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # Test: the plugin as installed — hook helpers and rule citations resolve from
 # the installed plugin root (issue #454 PR-3, ADR-0027 D1/D3)

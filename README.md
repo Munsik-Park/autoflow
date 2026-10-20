@@ -290,19 +290,8 @@ first.
 
 ## License
 
-This project is licensed under the **Elastic License 2.0** — see
-[`LICENSE`](LICENSE) and [`LICENSES/Elastic-2.0.txt`](LICENSES/Elastic-2.0.txt).
-
-Summary (the license text governs; this synopsis is informational only):
-
-- **Allowed** — use, copy, distribute (including bundling AutoFlow into your own
-  distributions), modify, and create derivative works, for personal or internal use.
-- **Not allowed** — providing AutoFlow to third parties as a **hosted or managed
-  service** that gives users access to a substantial set of its features or functionality.
-- **As-is** — the software comes with no warranty or condition, to the extent the law allows.
-
-**Commercial exception** — to offer AutoFlow as a hosted or managed service you need a
-separate **commercial license**; contact the repository owner (Munsik-Park) to arrange one.
+This project is licensed under the **Apache License 2.0** — see
+[`LICENSE`](LICENSE) and [`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt).
 
 Licensing metadata follows the [REUSE 3.3](https://reuse.software) specification:
 every tracked file carries an SPDX header or is covered by [`REUSE.toml`](REUSE.toml),

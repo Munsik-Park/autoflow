@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # scripts/review/review-start-check.sh
 #
 # HANDOFF — did the external reviewer run for one pull request begin? Run right

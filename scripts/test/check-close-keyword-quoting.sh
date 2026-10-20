@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # scripts/test/check-close-keyword-quoting.sh
 #
 # AC1.c — close-keyword footgun checker (issue #92).

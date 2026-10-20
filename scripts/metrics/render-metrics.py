@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 """AutoFlow cycle metrics — static HTML view (issue #268).
 
 Reads <record-root>/_metrics/issues.json (written by cycle-metrics.py) and writes ONE
