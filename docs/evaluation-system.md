@@ -237,8 +237,10 @@ scored under the ordinary items, the `doc` class included.
 - **[MUST]** A code comment carries only a sentence that stays true for as long as the code it sits
   on is unchanged. **A comment that diverges from its code, or that carries what a comment does not
   carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion,
-  issue or PR reference, another file's path or contract, or a change history. Record it in
-  `recommendations` with its `path:line` and the severity `Low`; it lowers no item's score, so it is
+  issue or PR reference, another file's path or contract, a change history, or content none of the
+  cases a comment carries admits ([`submodule-common-rules.md`](submodule-common-rules.md) > Change
+  Surface Rules > *Code comments*), such as a value, count or list copied from another file. Record
+  it in `recommendations` with its `path:line` and the severity `Low`; it lowers no item's score, so it is
   never a failed item and carries no `remedy_class`; whether it is fixed is the orchestrator's
   judgment, and the fix is its direct commit ([`units/completion-evaluation.md`](units/completion-evaluation.md) > *Code comments in a target*).
   Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential,

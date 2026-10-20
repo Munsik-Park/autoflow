@@ -68,7 +68,9 @@ These are the rules other documents cite; everything else about the work is the 
   evidence differs. A problem met during the work that the scope does not name is judged under
   [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
   judgment* and recorded under `## Scope judgments`. Tests verify correctness; they do not define the
-  solution — no hard-coding to test inputs, no special-casing an assertion.
+  solution — no hard-coding to test inputs, no special-casing an assertion. Once the scope is
+  implemented and verified, a further change the unit judges useful beyond the scope and the problems
+  its scope judgments include is recorded under `## Scope judgments`, not made.
 - **Test-first (TDD).** Every `driving` and `regression` row's test is written before the
   implementation it verifies and seen failing; a `characterization` test may pass from the start. The
   order of the work — a failing run in the working tree first, or a test commit first — is the
@@ -103,9 +105,10 @@ These are the rules other documents cite; everything else about the work is the 
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
-  commented-out code) — disposes of every hit (removed, rewritten, or kept with the reason the match
-  is not the class) and records the result under `## Comment check`. The check is a signal, not a
-  gate.
+  commented-out code, and content none of the cases under *What a comment carries* admits, such as a
+  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
+  kept with the reason the match is not the class) and records the result under `## Comment check`.
+  The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the unit implements the satisfiable
   subset and records the contradiction in `<attempt-dir>/issue-{N}-green-blocker.md`: the conflicting AC
