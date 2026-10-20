@@ -48,8 +48,9 @@ session's. The other units' commands keep ADR-0032 D1.
 
 **D3 — Every reviewer is a script.** Each reviewer has its own wrapper, `scripts/review/<name>-review-pr.sh`,
 whose environment fits its CLI; no two reviewers share one. `claude` runs `claude -p` in the
-reviewed repository's working directory with read-only tools and the `gh` reads the review needs,
-every tool neither those nor the operator's own settings allow denied without a prompt, and the
+reviewed repository's working directory with Read, Grep and Glob, the `gh` reads the review needs
+and the commands Claude Code itself treats as read-only — every other tool the operator's own
+settings do not allow denied without a prompt — and the
 reviewed repository's own settings not loaded; it reads the cycle's design artifacts in the
 attempt's record directory the wrapper names; `codex` keeps its wrapper. The `autoflow-reviewer`
 agent and its spawn-policy row are retired. The aggregation contract — the review records of a

@@ -7,9 +7,10 @@
 # AutoFlow tree this wrapper ships in, or the file `.review.claude.rules` names —
 # which the prompt names by its absolute path, with the lenses file
 # `.review.claude.lenses` names when there is one. claude runs non-interactively
-# (`claude -p`) in the reviewed repository's working directory, with read-only
-# tools and the gh reads the review needs, beside what the operator's own
-# settings allow; every other tool is denied without a prompt
+# (`claude -p`) in the reviewed repository's working directory, with Read, Grep
+# and Glob on any path, the gh reads the review needs and the commands Claude
+# Code treats as read-only, beside what the operator's own settings allow;
+# every other tool is denied without a prompt
 # (`--permission-mode dontAsk`), and the reviewed repository's own settings and
 # CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
 # not loaded (`--setting-sources user`). Its final message is the
@@ -27,8 +28,8 @@
 # <error>`, starts no claude and exits 6.
 #
 # `--records <dir>` names the attempt's record directory, where claude reads
-# the cycle's design artifacts; claude may read it and the AutoFlow tree beside
-# the working directory (`--add-dir`).
+# the cycle's design artifacts; it and the AutoFlow tree are added to claude's
+# working directories (`--add-dir`).
 #
 # Per-PR review: `--repo owner/name` reviews a sub-repo PR (the prompt tells
 # claude to pass `--repo` to every gh command); without it the PR is the
