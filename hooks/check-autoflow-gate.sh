@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # AutoFlow Gate Check
 # The hook computes pass/fail directly from the raw `scores` object so that the
 # trust chain stops at the script level — the AI's own `pass`/`avg`/`min` fields

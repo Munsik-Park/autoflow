@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # autoflow-records — where AutoFlow's records are (issue #466). The plugin's
 # bin/ is on the Bash PATH of the main session and of every subagent (ADR-0027
 # > Context, M1), so every document, agent definition and script names a record

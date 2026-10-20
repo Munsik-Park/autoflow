@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # Criterion readiness — the exit condition of an attempt's criterion review
 # stage, read by PREFLIGHT before the state file (issues #430, #465;

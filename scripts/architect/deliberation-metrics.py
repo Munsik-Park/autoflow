@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 """ARCHITECT deliberation — cost aggregation over agent transcripts (issue #179).
 
 The effect record of ADR-0023 D4 compares two ARCHITECT arms — the per-turn

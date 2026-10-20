@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # scripts/migrate/migrate-in-tree-records.sh
 #
 # Moves the cycle records a target kept inside its own tree, under

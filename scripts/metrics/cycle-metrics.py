@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 """AutoFlow cycle cost / outcome collector (issue #268).
 
 A record tool, machine-local: it reads what Claude Code already left on disk and

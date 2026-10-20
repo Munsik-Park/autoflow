@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # .github/workflows/host-purity-delta.yml — diff-scoped host-purity DELTA guard (issue #788)
 #
 # Runs scripts/test/check-host-purity-delta.sh directly over this run's own

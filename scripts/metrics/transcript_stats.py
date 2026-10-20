@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 """Aggregation primitives over Claude Code JSONL transcripts (issues #179, #268).
 
 The method is the one ADR-0017 > Notes > C8 records, first committed in

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
-# SPDX-License-Identifier: Elastic-2.0
+# SPDX-License-Identifier: Apache-2.0
 # core-units.tsv — which unit sessions use each part of docs/core.md (issue #464, ADR-0032)
 #
 # The input of scripts/skills/gen-skill-bodies.sh for the unit command bodies
