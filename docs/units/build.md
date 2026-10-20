@@ -106,9 +106,9 @@ These are the rules other documents cite; everything else about the work is the 
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
   commented-out code, and content none of the cases under *What a comment carries* admits, such as a
-  value, count or list copied from elsewhere) — disposes of every hit (removed, rewritten, or kept
-  with the reason the match is not the class) and records the result under `## Comment check`. The
-  check is a signal, not a gate.
+  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
+  kept with the reason the match is not the class) and records the result under `## Comment check`.
+  The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the unit implements the satisfiable
   subset and records the contradiction in `<attempt-dir>/issue-{N}-green-blocker.md`: the conflicting AC
