@@ -1,7 +1,7 @@
 # Reviewer Contract
 
-REVIEW reviews every pull request a cycle opens with more than one reviewer and
-aggregates their reviews into one verdict
+REVIEW reviews every pull request a cycle opens with the reviewers the operator's
+configuration names and aggregates their reviews into one verdict
 ([ADR-0026](records/adr/0026-aggregated-review.md),
 [ADR-0033](records/adr/0033-review-unit-and-script-reviewers.md)). This document
 is the single home for the reviewers — who reviews, on what input, what each one
@@ -17,7 +17,7 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with read-only tools and the `gh` / `git` reads the review needs — and whatever the operator's own `~/.claude/settings.json` allows — every other tool denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt names the rule file by its absolute path, and the final message is the review |
+| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with read-only tools and the `gh` reads the review needs — and whatever the operator's own `~/.claude/settings.json` allows — every other tool denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt names the rule file by its absolute path, and the final message is the review |
 | `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt names the rule file by its absolute path |
 | the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](units/review.md) > *Review aggregation*) |
 
@@ -47,8 +47,8 @@ to these:
   beside the rule file. Absent from a repository, it is left out of that
   repository's review, with a line on stderr.
 
-A relative path is read from the root of the reviewed repository, so one entry
-can name each target's own file.
+A relative path is read from the root of the checkout the wrapper runs in, so
+one entry can name each target's own file.
 
 ## Contract
 

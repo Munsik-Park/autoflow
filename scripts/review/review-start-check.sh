@@ -24,7 +24,7 @@
 # Exit codes:
 #   0   started, or already completed with exit 0
 #   1   no signal within the window — launch the review again once; a second
-#       miss goes to the operator
+#       miss makes that reviewer unavailable for the round
 #   3   the wrapper completed with a non-zero exit — the review run itself
 #       failed, or left no review record
 #   4   the wrapper's output (--log) carries the marker line

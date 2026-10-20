@@ -8,7 +8,7 @@
 # which the prompt names by its absolute path, with the lenses file
 # `.review.claude.lenses` names when there is one. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with read-only
-# tools and the gh / git reads the review needs, beside what the operator's own
+# tools and the gh reads the review needs, beside what the operator's own
 # settings allow; every other tool is denied without a prompt
 # (`--permission-mode dontAsk`), and the reviewed repository's own settings and
 # CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
@@ -165,7 +165,6 @@ echo "[claude-review] starting claude for PR #${PR}${REPO:+ (${REPO})} ($(review
 if claude -p "$PROMPT" \
      --permission-mode dontAsk --setting-sources user \
      --allowedTools Read Grep Glob "Bash(gh pr view:*)" "Bash(gh pr diff:*)" "Bash(gh issue view:*)" \
-       "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" \
      "${add_dirs[@]}" \
      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
      --output-format text < /dev/null > "$SCRATCH"; then

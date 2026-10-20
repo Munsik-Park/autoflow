@@ -48,8 +48,9 @@ session's. The other units' commands keep ADR-0032 D1.
 
 **D3 — Every reviewer is a script.** Each reviewer has its own wrapper, `scripts/review/<name>-review-pr.sh`,
 whose environment fits its CLI; no two reviewers share one. `claude` runs `claude -p` in the
-reviewed repository's working directory with read-only tools and the `gh` / `git` reads the review
-needs, every other tool denied without a prompt, and reads the cycle's design artifacts in the
+reviewed repository's working directory with read-only tools and the `gh` reads the review needs,
+every tool neither those nor the operator's own settings allow denied without a prompt, and the
+reviewed repository's own settings not loaded; it reads the cycle's design artifacts in the
 attempt's record directory the wrapper names; `codex` keeps its wrapper. The `autoflow-reviewer`
 agent and its spawn-policy row are retired. The aggregation contract — the review records of a
 pull request and round into one comment and one findings file (ADR-0026 D2, D3) — does not change
@@ -62,7 +63,7 @@ its author as the source.
 `docs/review/review-<name>.md` beside it, names what that reviewer reads. Per reviewer, the
 configuration may name another rule file (`.review.<name>.rules`) and a file of further review
 lenses (`.review.<name>.lenses`) — the path by which the defect axes a reviewer applies are added
-to. A relative path is read from the reviewed repository's root.
+to. A relative path is read from the root of the checkout the wrapper runs in.
 
 **D5 — The operator file alone names the reviewers, and names the defaults when it names none.**
 A target's `.claude/autoflow.local.json` is not read for reviewers. `.review.reviewers` lists the

@@ -35,11 +35,11 @@
 # command); omit `--repo` to review the host PR (the current repository).
 #
 # The record file is an absolute path outside the checkout's tree — the
-# attempt's record directory (`autoflow-records dir`; issue #466). codex's
-# workspace-write sandbox writes only inside the working directory, so codex
-# writes the review to a scratch file at the repository root, which this
-# wrapper moves to the record file once codex exits and removes on every exit:
-# nothing it or codex writes stays in the target's tree.
+# attempt's record directory (`autoflow-records dir`; issue #466). codex may
+# write that directory beside its working directory (`--add-dir`), so it writes
+# the review to a scratch file there, which this wrapper moves to the record
+# file once codex exits and removes on every exit: nothing it or codex writes
+# lands in the target's tree.
 #
 # Usage: scripts/review/codex-review-pr.sh --pr <number> --out <record file>
 #                                          [--repo <owner/name>] [--expected-head <branch>]
@@ -108,9 +108,9 @@ case "$(cd -P "$(dirname "$OUT")" && pwd)/" in
     ;;
 esac
 rm -f "$OUT"
-SCRATCH=".autoflow-codex-review-${PR}-$$.md"
-rm -f "$SCRATCH"
-trap 'rm -f "$TOP/$SCRATCH"' EXIT
+OUT_DIR="$(cd -P "$(dirname "$OUT")" && pwd)"
+SCRATCH="$(mktemp "${OUT_DIR}/.codex-review-${PR}.XXXXXX")"
+trap 'rm -f "$SCRATCH"' EXIT
 
 # Settings resolution: an unreadable user file is the marker result below.
 resolve_reviewer_settings codex-review codex
@@ -170,7 +170,7 @@ fi
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow the review rules at ${REVIEW_GUIDE}; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH} (relative to the repository root). ${SENTINEL}"
+PROMPT="Review pull request #${PR}. Follow the review rules at ${REVIEW_GUIDE}; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}. ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.
@@ -187,6 +187,7 @@ echo "[codex-review] starting codex for PR #${PR}${REPO:+ (${REPO})} ($(review_c
 if codex exec \
      -s workspace-write \
      -c sandbox_workspace_write.network_access=true \
+     --add-dir "$OUT_DIR" \
      -c approval_policy="never" \
      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
      "$PROMPT" < /dev/null; then

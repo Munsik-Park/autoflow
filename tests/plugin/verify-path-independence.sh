@@ -271,7 +271,7 @@ cat > "$STUB/codex" <<'CODEX'
 # scratch file the prompt names, relative to the repository root (the cwd).
 for _a in "$@"; do _last="$_a"; done
 printf '%s' "$_last" > "$CODEX_PROMPT_CAPTURE"
-_f=$(printf '%s' "$_last" | sed -n 's/.* to the file \([^ ]*\) (relative to the repository root).*/\1/p')
+_f=$(printf '%s' "$_last" | sed -n 's/.* to the file \([^ ]*\)\. Limit .*/\1/p')
 [ -n "$_f" ] && printf 'review\n' > "$_f"
 CODEX
 chmod +x "$STUB/gh" "$STUB/codex"
