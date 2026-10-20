@@ -55,7 +55,7 @@ location*). Each runs as its own script, launched in the background:
 ```
 bash <autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>] [--records <attempt-dir>]
 bash <autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]
-bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's captured output>]
+bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> --reviewer <name> [--repo <owner/name>] [--log <the run's captured output>]
 ```
 
 Each wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs its
@@ -85,9 +85,9 @@ Each review lands in a **review record**,
 `<attempt-dir>/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md` — `<reviewer>` the
 reviewer's name (`claude`, `codex`), `<k>` the PR's review round from `1`.
 
-`review-start-check.sh` confirms a run began with a signal scoped to its own PR — a reviewer
-process or a codex session rollout whose prompt names that pull request, or the wrapper's
-completion marker:
+`review-start-check.sh` confirms a run began with a signal scoped to its own PR and reviewer — that
+reviewer's process or a codex session rollout whose prompt names that pull request, or the
+wrapper's completion marker:
 
 | Exit | Meaning | What follows |
 |---|---|---|

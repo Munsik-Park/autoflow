@@ -17,7 +17,7 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with read-only tools and the `gh` / `git` reads the review needs, every other tool denied without a prompt (`--permission-mode dontAsk`); the prompt names the rule file by its absolute path, and the final message is the review |
+| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with read-only tools and the `gh` / `git` reads the review needs, every other tool denied without a prompt (`--permission-mode dontAsk`), and the reviewed repository's own `.claude/` settings not loaded (`--setting-sources user`) — in a trusted checkout their permission rules would add tools; the prompt names the rule file by its absolute path, and the final message is the review |
 | `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt names the rule file by its absolute path |
 | the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](units/review.md) > *Review aggregation*) |
 
@@ -266,10 +266,11 @@ to gate a cycle.
 
 ## Start-confirmation oracle
 
-`<autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>] [--log <the run's output>]`
+`<autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--reviewer <name>] [--repo <owner/name>] [--log <the run's output>]`
 reads these signals for a reviewer's run and reports the first one it finds
 ([`units/review.md`](units/review.md) > *Reviewer review*): a running process
-whose prompt names `pull request #<N>`, or, for `codex`, a session rollout under
+of that reviewer's CLI (`--reviewer`; reviewers run side by side on one PR) whose prompt names
+`pull request #<N>`, or, for `codex`, a session rollout under
 `~/.codex/sessions/` written since the launch whose prompt does; an advancing
 rollout `mtime` is codex's long-run health signal, and the review runs in the
 background to completion. Each wrapper closes its CLI's stdin (`< /dev/null`)

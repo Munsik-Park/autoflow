@@ -17,7 +17,9 @@
 #
 # With --repo, the process and rollout signals also require the prompt's
 # `--repo <owner/name>` clause, which tells a sub-repo PR from a host PR of the
-# same number.
+# same number. With --reviewer, the process signal also requires that
+# reviewer's CLI, which tells one reviewer's run from another's on the same PR,
+# and the rollout signal is read for codex only.
 #
 # Exit codes:
 #   0   started, or already completed with exit 0
@@ -33,33 +35,39 @@
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]
-#                                             [--log <wrapper output>] [--window <secs>]
+#                                             [--reviewer <name>] [--log <wrapper output>]
+#                                             [--window <secs>]
 
 set -uo pipefail
 
 TAG="review-start-check"
 PR=""
 REPO=""
+REVIEWER=""
 LOGFILE=""
 WINDOW="${REVIEW_START_WINDOW_SECS:-30}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --pr) [ $# -ge 2 ] || { echo "[$TAG] --pr requires a value" >&2; exit 64; }; PR="$2"; shift 2 ;;
     --repo) [ $# -ge 2 ] || { echo "[$TAG] --repo requires a value" >&2; exit 64; }; REPO="$2"; shift 2 ;;
+    --reviewer) [ $# -ge 2 ] || { echo "[$TAG] --reviewer requires a value" >&2; exit 64; }; REVIEWER="$2"; shift 2 ;;
     --log) [ $# -ge 2 ] || { echo "[$TAG] --log requires a value" >&2; exit 64; }; LOGFILE="$2"; shift 2 ;;
     --window) [ $# -ge 2 ] || { echo "[$TAG] --window requires a value" >&2; exit 64; }; WINDOW="$2"; shift 2 ;;
-    -h|--help) echo "Usage: $0 --pr <N> [--repo <owner/name>] [--log <wrapper output>] [--window <secs>]"; exit 0 ;;
+    -h|--help) echo "Usage: $0 --pr <N> [--repo <owner/name>] [--reviewer <name>] [--log <wrapper output>] [--window <secs>]"; exit 0 ;;
     *) echo "[$TAG] unknown argument: $1" >&2; exit 64 ;;
   esac
 done
-case "$PR" in ''|*[!0-9]*) echo "Usage: $0 --pr <N> [--repo <owner/name>] [--log <wrapper output>] [--window <secs>]" >&2; exit 64 ;; esac
+case "$PR" in ''|*[!0-9]*) echo "Usage: $0 --pr <N> [--repo <owner/name>] [--reviewer <name>] [--log <wrapper output>] [--window <secs>]" >&2; exit 64 ;; esac
 case "$WINDOW" in ''|*[!0-9]*) echo "[$TAG] --window takes seconds: $WINDOW" >&2; exit 64 ;; esac
 
 # The wrapper's prompt opens `Review pull request #<N>. `; the trailing period
 # keeps #5 from matching #57.
 PROMPT_RE="Review pull request #${PR}\\. "
 [ -n "$REPO" ] && PROMPT_RE="${PROMPT_RE}.*--repo ${REPO}'"
+PROC_RE="$PROMPT_RE"
+[ -n "$REVIEWER" ] && PROC_RE="(^|/)${REVIEWER} .*${PROMPT_RE}"
 SESSIONS="${CODEX_HOME:-$HOME/.codex}/sessions"
+case "$REVIEWER" in ''|codex) ;; *) SESSIONS="" ;; esac
 # A rollout older than the window plus a minute belongs to an earlier round.
 REACH_MIN=$(( WINDOW / 60 + 2 ))
 
@@ -77,12 +85,12 @@ while :; do
       case "$done_line" in *"(exit=0)"*) exit 0 ;; *) exit 3 ;; esac
     fi
   fi
-  pid="$(pgrep -f -- "$PROMPT_RE" 2>/dev/null | head -1)"
+  pid="$(pgrep -f -- "$PROC_RE" 2>/dev/null | head -1)"
   if [ -n "$pid" ]; then
     echo "started: process $pid (prompt names pull request #$PR${REPO:+ in $REPO})"
     exit 0
   fi
-  if [ -d "$SESSIONS" ]; then
+  if [ -n "$SESSIONS" ] && [ -d "$SESSIONS" ]; then
     rollout="$(find "$SESSIONS" -name 'rollout-*.jsonl' -mmin "-$REACH_MIN" -exec grep -l -E -- "$PROMPT_RE" {} + 2>/dev/null | head -1)"
     if [ -n "$rollout" ]; then
       echo "started: rollout $rollout (prompt names pull request #$PR${REPO:+ in $REPO})"

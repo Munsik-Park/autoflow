@@ -9,7 +9,9 @@
 # `.review.claude.lenses` names when there is one. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with read-only
 # tools and the gh / git reads the review needs; every other tool is denied
-# without a prompt (`--permission-mode dontAsk`). Its final message is the
+# without a prompt (`--permission-mode dontAsk`), and the reviewed repository's
+# own settings, whose permission rules would add tools in a trusted checkout,
+# are not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
 # and changes no label — the aggregation of every review of the PR posts the
 # one comment.
@@ -160,7 +162,7 @@ fi
 echo "[claude-review] starting claude for PR #${PR}${REPO:+ (${REPO})} ($(review_config_summary)) at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 if claude -p "$PROMPT" \
-     --permission-mode dontAsk \
+     --permission-mode dontAsk --setting-sources user \
      --allowedTools Read Grep Glob "Bash(gh pr view:*)" "Bash(gh pr diff:*)" "Bash(gh issue view:*)" \
        "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" \
      "${add_dirs[@]}" \
