@@ -2,61 +2,51 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# PREFLIGHT external-reviewer availability report (issue #979, D5; #411; #463)
+# PREFLIGHT reviewer availability report (issue #979, D5; #411; #463; #485)
 # =============================================================================
-# Resolves the external reviewers through the shared resolver
-# (scripts/review/lib/review-config.sh) — the target's
-# .claude/autoflow.local.json at its repository root when it has `.review`,
-# else the operator's ~/.autoflow/config.json, else none — and prints the
-# readout on stdout:
+# Resolves the reviewers through the shared resolver
+# (scripts/review/lib/review-config.sh) — those the operator's
+# ~/.autoflow/config.json lists, and the default reviewers when it lists none —
+# and prints the readout on stdout:
 #
-#   reviewers: <names|none>          the readout HANDOFF runs them from
-#   source: local <path> | user <path> | none
-#   user-config: absent [<path>] | ok <path> | WARNING <path> — <error> |
-#                UNREADABLE <path> — <error>
+#   reviewers: <names|none>          the readout REVIEW runs them from
+#   source: user <path> | none
+#   user-config: absent [<path>] | ok <path> | UNREADABLE <path> — <error>
 #
-# then reports whether each reviewer has its CLI on PATH. The built-in Claude
-# review needs no CLI and is not checked here. The readout is the same from any
-# working directory inside the target.
+# then reports whether each reviewer has its CLI on PATH. The readout is the
+# same from any working directory.
 #
-#   exit 0   → every configured external reviewer's CLI is present, or none is
-#              configured.
+#   exit 0   → every configured reviewer's CLI is present.
 #   exit 1   → a configured reviewer's CLI is absent; a reason on stderr names
-#              it and the two remedies (install the CLI, or drop the reviewer
-#              from the file that configured it). Advisory: HANDOFF runs the
-#              built-in review alone and the aggregated comment records the
-#              missing reviewer (docs/units/delivery.md > Reviewer review).
-#   exit 2   → the target's .claude/autoflow.local.json cannot be read as
-#              configured (fail-closed).
-#   exit 6   → the user file is the source and cannot be read as configured:
-#              nothing in it applies, no reviewer is checked, and the fixed
-#              marker line `user-config: UNREADABLE <path> — <error>` is on
-#              stdout. The orchestrator asks the operator whether to proceed
-#              without external review. Distinct from 0–4 in both modes.
-#
-# An unreadable user file while the target's `.review` decides is a warning
-# only (`user-config: WARNING …`): the readout and the exit code are the
-# target's.
+#              it and the two remedies (install the CLI, or list the reviewers
+#              to run in the operator file). Advisory: REVIEW runs the other
+#              reviewers and the aggregated comment records the missing one
+#              (docs/units/review.md > Reviewer review).
+#   exit 2   → usage error.
+#   exit 6   → the user file cannot be read as configured: nothing in it
+#              applies, no reviewer is checked, and the fixed marker line
+#              `user-config: UNREADABLE <path> — <error>` is on stdout. The
+#              orchestrator asks the operator whether to proceed without those
+#              reviewers. Distinct from 0–4 in both modes.
 #
 # The per-cycle PREFLIGHT invocation (no `--probe`) is presence-only: a
-# side-effect-free command whose exit encodes codex auth state does not exist,
-# so auth is NOT a PREFLIGHT oracle. A present-but-unauthenticated reviewer
-# passes here; its auth failure surfaces at the HANDOFF review run.
+# side-effect-free command whose exit encodes a reviewer's auth state does not
+# exist, so auth is NOT a PREFLIGHT oracle. A present-but-unauthenticated
+# reviewer passes here; its auth failure surfaces at the REVIEW run.
 #
 # `--probe` is a SEPARATE, on-demand mode: it makes one real authenticated
-# round-trip against each configured external reviewer, over the same channel
-# the HANDOFF review uses. It runs on-demand only — when the operator writes
-# or changes the reviewer configuration — and is NEVER wired into
-# PREFLIGHT and no hook consumes it. Its exit-code contract extends the
-# presence 0/1/2: 0=authenticated (or none configured), 1=CLI absent
-# (short-circuit, reuses the presence exit), 2=usage/config error,
-# 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-failed,
-# 6=user file unreadable (as above).
+# round-trip against each configured reviewer, over the same channel the
+# REVIEW run uses. It runs on-demand only — when the operator writes or
+# changes the reviewer configuration — and is NEVER wired into PREFLIGHT and
+# no hook consumes it. Its exit-code contract extends the presence 0/1/2:
+# 0=authenticated, 1=CLI absent (short-circuit, reuses the presence exit),
+# 2=usage error, 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-
+# failed, 6=user file unreadable (as above).
 #
 # Model / effort: each reviewer's `.review.<name>.model` and `.effort` are
 # resolved by the shared scripts/review/lib/review-config.sh — the same
-# resolver, from the same file, the live wrapper uses — and the --probe
-# round-trip passes them exactly as the HANDOFF review will.
+# resolver, from the same file, the live wrappers use — and the --probe
+# round-trip passes them exactly as the REVIEW run will.
 #
 # Usage: scripts/preflight/check-review-backend.sh [--probe]
 # =============================================================================
@@ -82,21 +72,17 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Resolve the configured external reviewers through the SHARED resolver
-# (scripts/review/lib/review-config.sh): a config the review would reject is
-# rejected here with the same exit 2.
+# Resolve the configured reviewers through the SHARED resolver
+# (scripts/review/lib/review-config.sh).
 # shellcheck source=../review/lib/review-config.sh
 . "$SCRIPT_DIR/../review/lib/review-config.sh"
 resolve_review_config check-review-backend
-# The readout HANDOFF reads for which external reviewers to run.
+# The readout REVIEW reads for which reviewers to run.
 echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 review_readout
 if [ "$REVIEW_USER_STATE" = unreadable ]; then
-  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no external reviewer runs. Fix the file and run again to apply it, or proceed without external review — the operator's choice." >&2
+  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it, or proceed without those reviewers — the operator's choice." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
-fi
-if [ "$REVIEW_USER_STATE" = warning ]; then
-  echo "[check-review-backend] warning: ${REVIEW_USER_CFG_PATH} cannot be read as configured (its error is on the user-config: readout line); not applied — ${REVIEW_CFG_PATH} decides." >&2
 fi
 
 # --------------------------------------------------------------------------
@@ -157,13 +143,13 @@ probe_run_bounded() {
 # exit otherwise.
 probe_finish() {
   if [ "${PROBE_TIMED_OUT:-0}" -eq 1 ]; then
-    echo "[check-review-backend] --probe: could not verify ${BACKEND} auth within ${1}s (timeout / no-TTY interactive-login) — indeterminate; it will surface at the HANDOFF reviewer review." >&2
+    echo "[check-review-backend] --probe: could not verify ${BACKEND} auth within ${1}s (timeout / no-TTY interactive-login) — indeterminate; it will surface at the REVIEW run." >&2
     exit 3
   fi
   if [ "${PROBE_RC:-1}" -eq 0 ]; then
     return 0
   fi
-  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the HANDOFF reviewer review; fix credentials before your first cycle." >&2
+  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the REVIEW run; fix credentials before your first cycle." >&2
   exit 4
 }
 
@@ -181,10 +167,16 @@ probe_codex() {
   probe_finish "$bound"
 }
 
-if [ -z "$REVIEW_REVIEWERS" ]; then
-  echo "[check-review-backend] no external reviewer configured — the built-in Claude review runs alone."
-  exit 0
-fi
+# claude probe: a trivial `claude -p` opens the same model-API connection the
+# review does.
+probe_claude() {
+  local bound="${PROBE_TIMEOUT_SECS:-20}"
+  probe_run_bounded "$bound" \
+    claude -p --permission-mode dontAsk --setting-sources user \
+      ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
+      "Reply with the single token READY."
+  probe_finish "$bound"
+}
 
 missing=0
 for name in $REVIEW_REVIEWERS; do
@@ -192,10 +184,10 @@ for name in $REVIEW_REVIEWERS; do
   build_review_backend_args
   BACKEND="$name"
   if ! command -v "$name" >/dev/null 2>&1; then
-    echo "[check-review-backend] external reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
+    echo "[check-review-backend] reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
     echo "[check-review-backend] remedy 1 — install the ${name} CLI (see docs/reviewer-backend.md)." >&2
-    echo "[check-review-backend] remedy 2 — drop '${name}' from .review.reviewers in ${REVIEW_CFG_PATH}." >&2
-    echo "[check-review-backend] until then HANDOFF runs the built-in review without it, and the aggregated review comment records the omission." >&2
+    echo "[check-review-backend] remedy 2 — list the reviewers to run, without '${name}', in .review.reviewers of ${REVIEW_USER_CFG_PATH:-\$HOME/.autoflow/config.json}." >&2
+    echo "[check-review-backend] until then REVIEW runs the other reviewers without it, and the aggregated review comment records the omission." >&2
     missing=1
     continue
   fi
@@ -204,6 +196,7 @@ for name in $REVIEW_REVIEWERS; do
     # from the environment — mirrors the live wrapper's start marker.
     echo "[check-review-backend] --probe: ${name} ($(review_config_summary))"
     case "$name" in
+      claude) probe_claude ;;
       codex) probe_codex ;;
     esac
   fi

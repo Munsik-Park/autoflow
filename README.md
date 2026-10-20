@@ -2,7 +2,7 @@
 
 A reusable template for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-AutoFlow is a development lifecycle of six functional units (PREFLIGHT → HANDOFF) built on
+AutoFlow is a development lifecycle of seven functional units (PREFLIGHT → REVIEW) built on
 multi-agent role separation, independent analysis, and quantified evaluation
 gates. This template is the **generalized form** of the
 methodology originally implemented in `ontology-platform` — a multi-sub-repo
@@ -10,7 +10,7 @@ deployment orchestrator. The only changes from upstream are:
 
 1. **Name generalization** — numeric `STEP 0~9` (and `5a/5b/5c/5d/5.5/5.7`) identifiers replaced by semantic phase names.
 2. **Identifier placeholders** — service-specific names (`ontology-api`, `saiso`, etc.) replaced by `{{REPO_*}}`/`{{GITHUB_ORG}}` placeholders.
-3. **Terminal scope** — AutoFlow ends at PR creation (`HANDOFF`) instead of upstream's merge-and-close terminal step; an external review process performs the merge. **AutoFlow never merges.**
+3. **Terminal scope** — AutoFlow ends at the hand-off of the reviewed PR (`REVIEW`) instead of upstream's merge-and-close terminal step; an external review process performs the merge. **AutoFlow never merges.**
 4. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, INTEGRATE, HANDOFF CI) re-enters the cycle at the point its cause names (`remedy_class`: doc commit / BUILD / ARCHITECT) instead of upstream's unconditional return to RED.
 5. **Functional units** — ARCHITECT and the build span (upstream's DISPATCH..VALIDATE) each run as one unit agent prescribed by its goal, artifacts and verification (ADR-0025); the VERIFY round-trip and REFINE retry caps are retired with the phases.
 
@@ -35,7 +35,8 @@ AUDIT           Security Audit    — Independent test-first judgment and projec
 GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Push              — the orchestrator's own `git push` (a changed sub-repo's branch too)
 INTEGRATE       Integration Test  — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
-HANDOFF         PR + Hand-off     — push and PR creation by the orchestrator's own commands → CI green → reviewer review → review triage; external review merges out of band (AutoFlow does not merge)
+HANDOFF         PR + CI           — PR creation by the orchestrator's own commands → CI green
+REVIEW          Review (U7)       — the configured reviewers, each run by its own script, and the target's own review bots → one aggregated verdict → review triage → hand-off with the merge order; external review merges out of band (AutoFlow does not merge)
 ```
 
 The happy-path flow at a glance (regression edges and human-escalation paths
@@ -61,7 +62,8 @@ flowchart LR
     AUD --> QUAL{{GATE:QUALITY}}
     QUAL --> DEL[DELIVER]
     DEL --> INT[INTEGRATE]
-    INT --> HAND([HANDOFF])
+    INT --> HAND[HANDOFF]
+    HAND --> REV([REVIEW])
 
     classDef gate fill:#fff8e1,stroke:#f57f17,color:#bf360c
     class HYP,PLAN,AUD,QUAL gate
@@ -112,8 +114,8 @@ Then, in your project:
   open PR, a pause, a review not finished), it enters or reports that one;
   `/autoflow:cycle <issue> new` asks for a new attempt beside it.
   `/autoflow:criterion-review <issue>` runs the review stage alone, and
-  `/autoflow:cycle-u1 <issue>` … `/autoflow:cycle-u6 <issue>` run one unit
-  in a session of its own, with the parts of the core that unit uses. Several
+  `/autoflow:cycle-u1 <issue>` … `/autoflow:cycle-u6 <issue>` and
+  `/autoflow:cycle-u7 [<issue>]` run one unit in a session of its own, with the parts of the core that unit uses. Several
   attempts at one issue — in this checkout, other worktrees or other clones —
   run side by side; each is the checkout's that began it.
 - **Nothing to ignore**: every record — an attempt's state, ledger, reports and
@@ -124,21 +126,19 @@ Then, in your project:
   whose records are still in its own `.autoflow/` from an earlier release moves
   them with `scripts/migrate/migrate-in-tree-records.sh`
   ([`docs/state-tracking.md`](docs/state-tracking.md) > *Record location*).
-- **Choose your external reviewers once, for every project**, in
+- **Your reviewers are set once, for every project**, in
   `~/.autoflow/config.json`. AutoFlow's SessionStart hook creates it on the
   first session start in any project where the plugin is enabled — only when it
   is absent, outside your project's tree — with
-  `{ "review": { "reviewers": [] } }` (external review off) and tells you so;
-  set `"reviewers": ["codex"]` there to run codex beside the built-in Claude
-  review at HANDOFF ([`docs/reviewer-backend.md`](docs/reviewer-backend.md) >
+  `{ "review": { "reviewers": [] } }` and tells you so. With no reviewer named,
+  the default reviewers, `claude` and `codex`, review every pull request at
+  REVIEW; list the reviewers there to choose them, and each one's model, effort,
+  rule file and lenses file ([`docs/reviewer-backend.md`](docs/reviewer-backend.md) >
   *Config location*). A broken file is reported, and you are asked whether to
-  go on without external review.
+  go on without those reviewers.
 - **Declare what your project needs** in `.claude/autoflow.local.json` — the
   file is yours, and absent means none of the following
   ([`.claude/autoflow.local.json.example`](.claude/autoflow.local.json.example)):
-  - `review` — only to override your `~/.autoflow/config.json` for this
-    repository (`"reviewers": []` for none); a `.review` here decides, and a
-    broken user file is then only a warning;
   - `preflight.local_checks[]` — your own per-clone readiness steps, run at
     PREFLIGHT ([`docs/units/preparation.md`](docs/units/preparation.md) > *Stop conditions*);
   - `audit.security_checklist` — the repository-relative path of your security
@@ -176,7 +176,7 @@ claude-autoflow/
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
-├── skills/                            # /autoflow:cycle, /autoflow:cycle-u1 … cycle-u6 — one unit — and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md)
+├── skills/                            # /autoflow:cycle, /autoflow:cycle-u1 … cycle-u7 — one unit — and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md)
 ├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root, an attempt's record directory, a new attempt
 │
 ├── .github/
@@ -192,7 +192,7 @@ claude-autoflow/
 │   ├── submodule-common-rules.md      # Sub-repo shared rules
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
 │   ├── security-checklist.md          # This repository's own security checklist (declared in .claude/autoflow.local.json)
-│   ├── units/                         # Functional-unit documents, U1–U6 (docs/units/)
+│   ├── units/                         # Functional-unit documents, U1–U7 (docs/units/)
 │   └── records/                       # Design & decision records — the source of no rule
 │       ├── design-rationale.md        # Why every rule exists — read for a decision's grounds, routed per role
 │       ├── adr/                       # Architecture Decision Records
@@ -211,7 +211,7 @@ claude-autoflow/
 [`docs/core.md`](docs/core.md) is the operating manual: the AutoFlow lifecycle
 and rules, agent roles and permissions, evaluation criteria, and the Git
 workflow. It reaches a session through the body of `/autoflow:cycle` (a unit's
-`/autoflow:cycle-u1` … `/autoflow:cycle-u6` carry the parts its unit uses, and
+`/autoflow:cycle-u1` … `/autoflow:cycle-u7` carry the parts its unit uses, and
 `/autoflow:criterion-review` the cycle's criterion review stage alone), and a subagent through its agent definition; each
 unit's document is read on entering the unit.
 

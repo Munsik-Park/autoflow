@@ -56,7 +56,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 
 A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down.
 They are triaged by **the procedure the
-reviewer's findings already take** — HANDOFF's review-triage classification, the weighing of whether a finding holds, route, pause criteria, `Low`
+reviewer's findings already take** — REVIEW's review-triage classification, the weighing of whether a finding holds, route, pause criteria, `Low`
 judgment, ledger record and attempt cap — after the PASS of every rubric-scored gate
 (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
 The one thing added is the evaluator's output contract for `recommendations`
@@ -66,7 +66,7 @@ No separate disposition system exists for gate recommendations.
 
 | Review triage | Gate recommendation |
 |---|---|
-| Classification: the reviewer's severity level (`<autoflow-root>/.codex/review.md` > Severity) | the evaluator's, per item, on the same levels |
+| Classification: the reviewer's severity level (`<autoflow-root>/docs/review/review.md` > Severity) | the evaluator's, per item, on the same levels |
 | `remedy_class` on every `Medium`+ finding, by the aggregator — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
 | Route: `<autoflow-root>/scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
 | Pause criteria (a)–(c) | the same three, read for a gate (below) |
@@ -75,7 +75,7 @@ No separate disposition system exists for gate recommendations.
 | Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
 
 - **No aggregator.** The orchestrator reads the evaluator's `recommendations` list
-  directly. It is therefore the orchestrator that weighs whether each item holds ([U6 Delivery](delivery.md) > *Whether a
+  directly. It is therefore the orchestrator that weighs whether each item holds ([U7 Review](review.md) > *Whether a
   finding holds*), and the recommending gate's re-score that judges a rebuttal. A
   `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
   severity, finding), is a report defect:
@@ -238,14 +238,14 @@ carry, never routes the cycle.
 
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Code comments*),
-  is a `Low` finding. It never counts toward the review verdict that keeps `blocked-by-review`
-  (`<autoflow-root>/.codex/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
+  is a `Low` finding. It never counts toward the review's `Medium`+ verdict
+  (`<autoflow-root>/docs/review/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
   it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). It is
   therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity and the route its impact sets, as any finding does.
 - **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
-  `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (HANDOFF
+  `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (REVIEW
   review triage) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
   ([`core.md`](../core.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
   deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no

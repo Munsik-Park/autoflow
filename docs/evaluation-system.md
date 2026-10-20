@@ -113,14 +113,13 @@ A change passes two independent quality procedures, and neither stands in for th
   the analysis, the design and its verification, test-first and the build's records, the completed
   change against the acceptance criteria and the cycle's scope — and holds the gate's authority:
   its scores decide PASS, and a FAIL routes the re-entry.
-- **The reviewers** (`<autoflow-root>/.codex/review.md`; [U6 Delivery](units/delivery.md) > *Reviewer review*)
+- **The reviewers** (`<autoflow-root>/docs/review/review.md`; [U7 Review](units/review.md) > *Reviewer review*)
   review each pull request the cycle opened — its diff against the linked acceptance criteria —
-  for defects in the result; the aggregation of their reviews takes the
-  `blocked-by-review` label off when a round is clean.
+  for defects in the result, and the aggregation of their reviews is one verdict per pull request.
 - A gate PASS does not clear a reviewer finding, and a clean review does not stand in for a gate.
   Each procedure's findings are routed by its own triage ([U5 Completion
-  evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U6
-  Delivery](units/delivery.md) > *Review triage*).
+  evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U7
+  Review](units/review.md) > *Review triage*).
 
 ---
 
@@ -178,7 +177,7 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLA
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations` (or `blocking_issues` when score-blocking). A surviving case may coexist with a score of 7 or higher: the routing obligation is to record it, not to lower the item.
 - **[MUST]** Assign scores only after the FAIL hypothesis has been formed, searched, and dispositioned. Scoring never precedes the search.
-- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`units/delivery.md`](units/delivery.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
+- **[MUST] Re-entry form**. On a re-entry evaluation — one carrying a `rescore` field — the hypothesis for each item in `rescore.rescored` is **"the previously flagged defect still remains"**, searched against the re-entry diff and the prior report's finding for that item; each prior finding is dispositioned `cleared` / `remains` in `rescore.prior_findings`. A prior finding answered by a rebuttal instead of a fix ([`units/review.md`](units/review.md) > *Whether a finding holds*) is searched the same way, against the artifact as it stands and the rebuttal's grounds: `cleared` when the rebuttal holds, `remains` when the finding does. The hypothesis is not "this Nth remedy must FAIL": a defect newly seen on a re-scored item — including one in the text the remedy wrote — is still surfaced (Finding coverage above), and the evaluator judges whether it blocks, recording the judgment and its ground in `rescore.new_findings`; a blocking finding is scored under its item, a non-blocking one is listed in `recommendations` and does not lower the item. The independence rules are untouched — the spawn is fresh and the search still re-derives anchors.
 - **[MUST]** Record the search in the `fail_hypothesis` output field, including the case that finding nothing was the outcome. An empty or omitted `fail_hypothesis` is a contract violation: the orchestrator **rejects** such an evaluation report and re-spawns a fresh Evaluation AI, exactly as it rejects an anchor-less role-spawn report (`<autoflow-root>/docs/core.md` > Execution Principles > *Verify role-spawn claims*). The re-spawn is capped (max 2) — on a third consecutive report whose `fail_hypothesis` is empty or omitted, stop re-spawning and escalate to the user. No machine validator enforces this — the hook reads only `scores` — so the orchestrator's acceptance is the enforcement point.
 
 ### Build observations (GATE:QUALITY input)
@@ -213,7 +212,7 @@ not re-classify.
   default-class <item>`) and overriding it with a stated reason when the default misreads the
   defect (a `Doc updates` cap caused by a prompt string or a hook message is `impl`).
 - **[MUST]** Tag every `recommendations` item of severity `Medium` or above with a `remedy_class`
-  from the same vocabulary, at every rubric-scored gate, by the question HANDOFF's review triage asks of a
+  from the same vocabulary, at every rubric-scored gate, by the question REVIEW's review triage asks of a
   reviewer finding — *does clearing this discard or change a decision the design settled?*
   Yes → `design`; no → the kind of change that clears it. An item below `Medium` carries none.
 - **[MUST]** Write `operator` when the class cannot be stated with confidence. Do not guess: an
@@ -681,7 +680,7 @@ not lower the item.
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
   "blocking_issues": ["items ≤ 3"],
-  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — <autoflow-root>/.codex/review.md > Severity>", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
+  "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | AC id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — <autoflow-root>/docs/review/review.md > Severity>", "finding": "<the finding>", "remedy_class": "<doc | test | impl | design | operator — on Medium and above>" } ]
 }
 ```
 
@@ -707,7 +706,7 @@ read it from the report (it reads the routed class the orchestrator records in s
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
 | `remedy_class` | object, one entry per failed item | **on every FAIL** (`{}` on a PASS) | Value enum `doc` \| `test` \| `impl` \| `design` \| `operator`. A failed item with no entry is a contract violation — reject + re-spawn, as for a missing `fail_hypothesis`. `operator` means "not classifiable with confidence" and pauses the cycle for the operator. |
-| `rescore` | object | **on a re-entry evaluation** — after a FAIL's re-entry, or after a recommendation attempt or rebuttal ([U5 Completion evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U6 Delivery](units/delivery.md) > *Whether a finding holds*) (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items — after a recommendation fix or rebuttal, the items the routed or rebutted recommendations were listed under — plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN, the amended DIAGNOSE artifact at GATE:HYPOTHESIS); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (the re-score's FAIL hypothesis is "the flagged defect still remains", *Evaluator conduct* > *Pre-scoring FAIL hypothesis* > *Re-entry form* above); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
+| `rescore` | object | **on a re-entry evaluation** — after a FAIL's re-entry, or after a recommendation attempt or rebuttal ([U5 Completion evaluation](units/completion-evaluation.md) > *Recommendation triage*; [U7 Review](units/review.md) > *Whether a finding holds*) (absent on a first evaluation) | `source` — the prior report's path; `rescored` — the items scored afresh (the failed items — after a recommendation fix or rebuttal, the items the routed or rebutted recommendations were listed under — plus any inherited item whose anchor the re-entry touched — the re-entry diff at GATE:QUALITY / AUDIT, the decision document's delta section at GATE:PLAN, the amended DIAGNOSE artifact at GATE:HYPOTHESIS); `inherited` — the items whose score is copied from `source`. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding the prior report recorded on a re-scored item, with `status` `cleared` or `remains` and the ground re-derived from the re-entry diff — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (the re-score's FAIL hypothesis is "the flagged defect still remains", *Evaluator conduct* > *Pre-scoring FAIL hypothesis* > *Re-entry form* above); a prior finding with no entry is a report defect — reject + re-spawn, as for a missing `fail_hypothesis`. `new_findings` — one entry per defect newly seen on a re-scored item (`[]` when none), each with the evaluator's `disposition` — `blocking — scored under <item>`, or `recommendation` (also listed in `recommendations`, and the item's score is not lowered for it) — and its ground. Both lists are report material the orchestrator reads; the hook reads neither. |
 
 `refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every
 entry in the build report's (`<attempt-dir>/issue-{N}-build-report.md`) `## Out-of-scope observations — guard / boundary logic touched`
@@ -722,8 +721,8 @@ GATE:HYPOTHESIS, the change set at AUDIT / GATE:QUALITY — or, for an acceptanc
 observes defective as a matter of fact ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion
 decisions*), the criterion's row in `<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`, whose
 `remedy_class` on `Medium`+ is `operator`; `item` — the rubric item it was found under;
-`severity` — a level of `<autoflow-root>/.codex/review.md` > Severity; `finding`; and, on `Medium` and above,
-`remedy_class` from the same enum as the failed-item field, by the same classifying question HANDOFF
+`severity` — a level of `<autoflow-root>/docs/review/review.md` > Severity; `finding`; and, on `Medium` and above,
+`remedy_class` from the same enum as the failed-item field, by the same classifying question REVIEW
 review triage asks of a reviewer finding. After the PASS of any rubric-scored gate the orchestrator
 triages the list ([U5 Completion evaluation](units/completion-evaluation.md) > *Recommendation
 triage*). The hook reads none of the list; it reads the routed class the

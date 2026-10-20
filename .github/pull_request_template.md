@@ -54,16 +54,12 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 ## Sub-repo merge dependency
 
 <!--
-A host PR whose sub-repo pointer depends on an unmerged sub-repo PR is created
-with the `blocked-by-subrepo` label (docs/units/delivery.md > Multi-repo
-delivery). The operator removes it once the sub-repo PR has merged and the host
-pointer equals its merge commit (docs/external-review-sequencing.md >
-Merge-order clearance).
+A host PR whose sub-repo pointer depends on an unmerged sub-repo PR merges after
+it (docs/external-review-sequencing.md > Per-issue procedure).
 -->
 
 - [ ] Sub-repo PR (if any): _link the host's direct sub-repo PR here_.
 - [ ] Sub-repo PR merged, and this branch's pointer equals its merge commit (`git ls-tree HEAD <sub-repo>`).
-- [ ] `blocked-by-subrepo` removed by the operator.
 
 If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/A — no sub-repo dependency`).
 

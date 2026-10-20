@@ -7,8 +7,9 @@
 #   Creates the operator's user-level AutoFlow file, $HOME/.autoflow/config.json
 #   (scripts/lib/user-config.sh), when it is absent, with the default
 #     { "review": { "reviewers": [] } }
-#   — external review off until the operator sets `reviewers` there
-#   (docs/reviewer-backend.md > Config location), and no `record_root`, so the
+#   — no reviewer named, so the default reviewers run until the operator lists
+#   them there (docs/reviewer-backend.md > Config location), and no
+#   `record_root`, so the
 #   record root is the default $HOME/.autoflow (scripts/lib/records.sh) — and,
 #   only when it created
 #   the file, tells the operator where it is and what it holds
@@ -52,7 +53,7 @@ chmod 644 "$tmp" 2>/dev/null || true
 if ln "$tmp" "$cfg" 2>/dev/null; then
   rm -f "$tmp"
   doc="$(cd "$HOOK_DIR/.." && pwd)/docs/reviewer-backend.md"
-  msg="AutoFlow created ${cfg} with { \"review\": { \"reviewers\": [] } } — external review is off. Set \"reviewers\": [\"codex\"] there to run codex beside the built-in review in every project whose .claude/autoflow.local.json has no .review (${doc} > Config location)."
+  msg="AutoFlow created ${cfg} with { \"review\": { \"reviewers\": [] } } — no reviewer is named there, so the default reviewers, claude and codex, review every pull request. List the reviewers to run there to choose them (${doc} > Config location)."
   msg="${msg//\\/\\\\}"
   msg="${msg//\"/\\\"}"
   printf '{"systemMessage":"%s"}\n' "$msg"

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/gate/remedy-route.sh — class-routed re-entry (issues #140, #192)
 #
-# The classifier tags every failed rubric item — or, at HANDOFF review triage,
+# The classifier tags every failed rubric item — or, at REVIEW review triage,
 # every Medium+ review finding, or a CI failure — with a `remedy_class`, and
 # this script is the single owner of the mapping from that class set to the
 # point the cycle re-enters:
@@ -25,7 +25,7 @@
 # Call sites (all read the same mapping; each interprets the printed target
 # in its own unit document, and none reimplements the ranking):
 #   - GATE:QUALITY FAIL, INTEGRATE FAIL, HANDOFF CI failure
-#   - HANDOFF review triage — there `ARCHITECT` means the design owns
+#   - REVIEW review triage — there `ARCHITECT` means the design owns
 #     the moved decision and the orchestrator judges and records where the
 #     re-entry starts within the cycle (from DIAGNOSE or from ARCHITECT);
 #     `BUILD` / `DOC_COMMIT` are the thin path (a U4 re-run or a doc commit

@@ -9,8 +9,8 @@
 # Command matching and check ordering follow docs/gate-matching-standard.md:
 #   - P1: gates match with the shared CMD_BOUNDARY prefix + word boundary,
 #         never a bare `^` (which `cd x && git push` would bypass).
-#   - P2: unconditional denies (gh pr merge / default-branch push /
-#         blocked-by-subrepo label removal) run in Section 1, BEFORE the
+#   - P2: unconditional denies (gh pr merge / default-branch push) run in
+#         Section 1, BEFORE the
 #         activity check, so an inactive/absent state file cannot nullify them.
 #
 # PASS criteria (defined in docs/core.md):
@@ -27,11 +27,6 @@
 #                                     through scripts/issue/create-issue.sh, which
 #                                     re-runs the duplicate search from a draft
 #                                     (docs/issue-proposal.md)
-#   - Bash(remove blocked-by-subrepo label) → DENIED unconditionally; matches the
-#                                     label name across gh pr edit / gh issue edit
-#                                     --remove-label and gh api DELETE .../labels/…
-#                                     (merge-order clearance is the operator's job;
-#                                     blocked-by-review is not gated here)
 #   - Agent (any spawn)             → explicit `model` parameter required
 #                                     (state-independent — docs/core.md > Spawn Model)
 #   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
@@ -171,7 +166,7 @@ if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev/.+-issue-[0-9]+$'; then DEV_
 if ! command -v jq >/dev/null 2>&1; then
   # The state-independent denies of Sections 1 and 1b hold with no jq too, read
   # the same over-inclusive way: a merge, an issue filing, a push naming the
-  # default branch, the merge-order label's removal, a backgrounded suite run,
+  # default branch, a backgrounded suite run,
   # a spawn with no `model`.
   _raw_def=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
   _raw_def="${_raw_def:-main}"
@@ -180,7 +175,6 @@ if ! command -v jq >/dev/null 2>&1; then
   elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
        || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
   elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?${_raw_def}\b|:[[:space:]]*${_raw_def}\b)"; then _raw_why="a push to ${_raw_def}"
-  elif printf '%s' "$INPUT" | grep -qE 'remove-label[[:space:]=]+blocked-by-subrepo|labels/blocked-by-subrepo'; then _raw_why="a change naming the 'blocked-by-subrepo' label"
   elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
   elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
   fi
@@ -484,7 +478,7 @@ $_shb_buf"; fi
 
 if [ "$TOOL_NAME" = "Bash" ]; then
   # Shell-separator segment split shared by the co-occurrence denies below
-  # (label-gate REST form, default-branch push). Computed once from SCAN.
+  # (issue-creation REST form, default-branch push). Computed once from SCAN.
   # NOTE (C3): fold backslash-newline line-continuations into ONE logical line
   # BEFORE the separator split. A `\`<newline> continuation is a single logical
   # shell command, but it leaves a literal newline in SCAN, so the per-segment
@@ -592,42 +586,6 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   if [ "$_bg_deny" = 1 ]; then
     echo "BLOCKED: a backgrounded run of $(af_path scripts/test/run-suites.sh) is denied — run it in the foreground ($(af_path docs/role-common-rules.md) > Bash Execution Mode)." >&2
     echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
-    exit 2
-  fi
-
-  # AutoFlow never clears the `blocked-by-subrepo` merge-order label — that is
-  # the operator's step at merge (the workflow no longer auto-removes it — not
-  # viable for N sub-repos). `blocked-by-review` is not gated: the HANDOFF
-  # review aggregator takes it off on a clean round (ADR-0026). Match the LABEL NAME in a removal
-  # context so the deny (a) covers every natural surface that drops the label —
-  # `gh pr edit` / `gh issue edit --remove-label blocked-by-subrepo` (a PR's
-  # labels are issue labels) and the `gh api … -X DELETE …/labels/
-  # blocked-by-subrepo` REST form — while (b) NOT firing on unrelated label
-  # edits such as the aggregator's `--remove-label blocked-by-review`, and (c)
-  # leaving other labels removable. Residual (accepted; shared by every
-  # Section-1 deny): a quoted label value or a `sh -c "…"`/backtick wrapper is
-  # stripped by SCAN and slips — the threat model is the naive self-clear, and
-  # the bare form is what callers write.
-  # (A) --remove-label <gate label> is a single-pattern gate — unaffected by
-  # segment scoping (one pattern has no co-occurrence to mis-scope).
-  # (B) the `gh api … -X DELETE …/labels/<gate label>` REST form is an AND of
-  # two patterns; require them to co-occur in ONE segment so unrelated
-  # sub-commands (…/labels/blocked-by-subrepo GET ; curl -X DELETE …/other)
-  # no longer false-positive over the whole buffer (issue #13; P1 refinement).
-  _label_deny=0
-  if printf '%s' "$SCAN" | grep -qE "[[:space:]]--remove-label[[:space:]=]+blocked-by-subrepo\b"; then
-    _label_deny=1
-  else
-    while IFS= read -r _seg; do
-      if printf '%s' "$_seg" | grep -qE "/labels/blocked-by-subrepo\b" \
-         && printf '%s' "$_seg" | grep -qE "(-X[[:space:]]*|--method[[:space:]=]+)DELETE\b"; then
-        _label_deny=1; break
-      fi
-    done <<< "$_SEGMENTS"
-  fi
-  if [ "$_label_deny" = 1 ]; then
-    echo "BLOCKED: AutoFlow does not clear the 'blocked-by-subrepo' merge-order label." >&2
-    echo "blocked-by-subrepo is the operator's step at merge ($(af_path docs/external-review-sequencing.md) > Merge-order clearance)." >&2
     exit 2
   fi
 
@@ -868,7 +826,6 @@ role_of_type() {
   case "$_subtype" in
     Explore|Plan|claude-code-guide)              _role="research" ;;
     autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
-    autoflow-reviewer|*:autoflow-reviewer)       _role="analysis" ;;
     autoflow-criterion-tracer|*:autoflow-criterion-tracer)         _role="analysis" ;;
     autoflow-criterion-analyzer|*:autoflow-criterion-analyzer)     _role="analysis" ;;
     autoflow-criterion-reconciler|*:autoflow-criterion-reconciler) _role="analysis" ;;

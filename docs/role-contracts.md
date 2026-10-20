@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment the orchestrator fills by spawning — Evaluation AI, the advisor, a functional-unit agent, and the REVIEW and HANDOFF analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -15,13 +15,12 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
-| HANDOFF built-in reviewer (*Reviewer review*) | anonymous direct (`subagent_type: autoflow-reviewer`) | single-shot — reviews one pull request for one round, writes its review record, and returns; a fresh reviewer is spawned for every pull request and round |
-| HANDOFF review aggregator (*Review aggregation*) and CI-failure classifier (*CI-failure re-entry*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's review records into one comment, its findings file and its label, or reads the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
+| REVIEW review aggregator (*Review aggregation*) and HANDOFF CI-failure classifier (*CI-failure re-entry*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, or reads the failing check's output, records the class and its grounds, and returns; the re-entry it feeds runs through the unit rows |
 | Criterion-review tracer, in-depth analyzer and reconciler (U1's criterion review stage — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its stage 2 file once per review; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the stage 2 file and every in-depth file once per review; each is spawned fresh by the review session |
 | Advisor (a decision point in any phase — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents U2 / U3 / U4 (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per unit entry, prescribed by the unit's goal, artifact contract and verification (ADR-0025 D2); a FAIL returns its findings and the previous artifacts to a fresh unit spawn. Defined in the common frame (#372) and wired into the lifecycle by each unit's migration step (ADR-0025 D9): U2 runs DIAGNOSE, U3 runs ARCHITECT and U4 runs BUILD |
 
-Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator; its CRITERION-REVIEW stage is the session's own stage 1 and the three criterion-review spawns), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its built-in reviewer — on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review` — and its review aggregator / Low-judgment subagent and CI-failure classifier — both on the model per key `handoff-review-triage`. In U1's criterion review stage, the tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
+Other phases either have no role spawn or are run by the orchestrator: PREFLIGHT (orchestrator; its CRITERION-REVIEW stage is the session's own stage 1 and the three criterion-review spawns), DELIVER / INTEGRATE (orchestrator); HANDOFF is orchestrator-run except its CI-failure classifier, and REVIEW except its review aggregator / Low-judgment subagent — both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; REVIEW's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)). In U1's criterion review stage, the tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
 
 ### Model tier revert
 
@@ -225,7 +224,7 @@ which is why the first judgment is the sub-agent's (ADR-0025 D7).
 
 ADR-0025 D1 replaces the sixteen phases with six functional units as the unit of prescription; D2
 prescribes a unit by its goal, its artifact contract, its verification and its loop cap only. The
-three unit agents that run a unit's work are defined here; U1, U5 and U6 have none (U1 and U6 are the orchestrator's
+three unit agents that run a unit's work are defined here; U1, U5, U6 and U7 have none (U1, U6 and U7 are the orchestrator's
 own work, with scripts that read and report, D8; U5 is the gate itself).
 
 | Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |

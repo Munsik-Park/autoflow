@@ -9,9 +9,8 @@
 #
 #   $HOME/.autoflow/config.json
 #
-# It holds the operator's own values — the external reviewers
-# (`{ "review": { … } }`, the same shape and parser as a target's
-# `.claude/autoflow.local.json`; scripts/review/lib/review-config.sh) and the
+# It holds the operator's own values — the reviewers (`{ "review": { … } }`;
+# scripts/review/lib/review-config.sh) and the
 # record root (`"record_root": "<absolute path>"`, default $HOME/.autoflow;
 # scripts/lib/records.sh, issue #466). Each key is read, and validated, by its
 # own reader: an error in one leaves the other as it is. The
@@ -24,8 +23,8 @@
 #       prints $HOME/.autoflow/config.json; prints nothing when HOME is unset
 #       or empty (no user file)
 #   AUTOFLOW_USER_CONFIG_DEFAULT
-#       the content the hook writes: external review off until the operator
-#       sets `reviewers` (opt-in, docs/reviewer-backend.md > Reviewers)
+#       the content the hook writes: no reviewer named, so the default
+#       reviewers run (docs/reviewer-backend.md > Config location)
 
 AUTOFLOW_USER_CONFIG_DEFAULT='{
   "review": { "reviewers": [] }

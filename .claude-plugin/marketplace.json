@@ -7,7 +7,7 @@
     {
       "name": "autoflow",
       "source": "./",
-      "description": "AutoFlow phase-gate engine: hooks, role subagents, the cycle command, the cycle-u1 … cycle-u6 commands for one unit and the criterion-review command for its criterion review stage alone, and the core, usage documents and scripts they cite.",
+      "description": "AutoFlow phase-gate engine: hooks, role subagents, the cycle command, the cycle-u1 … cycle-u7 commands for one unit and the criterion-review command for its criterion review stage alone, and the core, usage documents and scripts they cite.",
       "version": "0.3.5"
     }
   ]
