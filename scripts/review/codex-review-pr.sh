@@ -92,7 +92,7 @@ fi
 cd "$(git rev-parse --show-toplevel)"
 TOP="$(pwd -P)"
 
-# The record is outside the tree; codex writes a scratch file inside it.
+# The record, and codex's scratch file beside it, are outside the tree.
 case "$OUT" in
   /*) ;;
   *)

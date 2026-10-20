@@ -172,7 +172,7 @@ probe_codex() {
 probe_claude() {
   local bound="${PROBE_TIMEOUT_SECS:-20}"
   probe_run_bounded "$bound" \
-    claude -p --permission-mode dontAsk \
+    claude -p --permission-mode dontAsk --setting-sources user \
       ${REVIEW_BACKEND_ARGS[@]+"${REVIEW_BACKEND_ARGS[@]}"} \
       "Reply with the single token READY."
   probe_finish "$bound"
