@@ -136,6 +136,10 @@ classification `scripts/skills/core-units.tsv`.
 - **The state file's schema detail** moves to `docs/state-tracking.md`. It is read when the
   state file is written.
 
+*Amending note (issue #494).* ADR-0035: a command body carries, after the core, the documents
+`scripts/skills/role-docs.tsv` names for it — the unit's document and the state file's schema
+among them — so neither is read on entry.
+
 **Subagents**
 
 - Each agent definition declares the AutoFlow root through `${CLAUDE_PLUGIN_ROOT}`. It names, by

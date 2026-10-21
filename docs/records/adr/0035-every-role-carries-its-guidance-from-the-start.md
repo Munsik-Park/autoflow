@@ -65,6 +65,7 @@ No new criterion is written; the set is read from what the documents already say
   - A session: its unit's document and the documents the core names on the unit's entry (Unit
     Document Loading Contract, Unit references); the homes the core's parts name for what the
     session itself writes and asks — `docs/decision-ledger.md` (the ledger's entries),
+    `docs/issue-proposal.md` (an issue draft),
     `docs/role-contracts.md` > Advisor (the advisor request), `docs/state-tracking.md` (the state
     file; not the criterion review stage, which writes none) and, in a unit that spawns an
     evaluator, `docs/role-contracts.md` > Evaluation AI (its spawn and prompt); and the sections of
@@ -76,8 +77,9 @@ No new criterion is written; the set is read from what the documents already say
   - A subagent: what its definition or contract names as above; the unit agents, whose scope
     `docs/role-common-rules.md` ("the unit agents and their helpers") and
     `docs/submodule-common-rules.md` ("every target scope a role works in") name, take both
-    whole; every other role takes the section of `docs/role-common-rules.md` that names it (Bash
-    Execution Mode) and the Verification and Tools and Reporting Format sections. Each unit agent
+    whole; every other role takes the sections of `docs/role-common-rules.md` that name it (Bash
+    Execution Mode, Result delivery path by spawn mode) and the Verification and Tools and
+    Reporting Format sections. Each unit agent
     also takes its exit gate's rubric, the verification that prescribes it (ADR-0025 D2); the
     evaluator takes Change Surface Rules, against which GATE:PLAN `Scope` and GATE:QUALITY
     `Minimal implementation` and `Impact scope` are scored; the reconciler takes the record's
@@ -121,8 +123,8 @@ parts; a subagent's are few and named per carrier.
 
 **D5 — The evaluator.** One type, `autoflow-evaluator`, serves four gates, and its definition is
 fixed text. It carries `docs/evaluation-system.md` whole — the document it already read whole —
-and the artifact-contract sections of every row of *What it reads*; its gate's row is its input
-set, and another gate's rubric and row stay outside it.
+the artifact-contract sections of every row of *What it reads* and Change Surface Rules; its gate's
+row is its input set, and another gate's rubric and row stay outside it.
 
 **D6 — First run and re-run.** A re-run — a FAIL re-entry, an `impl` or `design` route, a review
 fix — is a fresh spawn of the same type, a session started by the same command or a reviewer run by
@@ -170,8 +172,8 @@ regenerated, not another site. The content of the guidance is not changed.
 ### Negative
 
 - The carriers are larger. Measured on this change (bytes, main `2e72b1a` → this change): the
-  unit command bodies 37,549–44,901 → 133,172–165,095; `/autoflow:cycle` 49,927 → 388,302;
-  `/autoflow:criterion-review` 13,913 → 93,347; the agent definitions 2,816–4,929 → 26,748–147,408;
+  unit command bodies 37,549–44,901 → 141,812–173,735; `/autoflow:cycle` 49,927 → 396,942;
+  `/autoflow:criterion-review` 13,913 → 101,962; the agent definitions 2,816–4,929 → 29,186–149,846;
   the reviewers' rule files 774–1,132 → 11,604–11,962. Most of it was read by path on entry or
   during the work before (the unit document, `docs/evaluation-system.md`,
   `docs/criterion-review.md`, `docs/decision-ledger.md`, `docs/review/review.md`).
@@ -184,8 +186,9 @@ regenerated, not another site. The content of the guidance is not changed.
   no longer tells it to consult `docs/evaluation-system.md` and a helper's carries the text of its
   rules.
 - A spawn with no AutoFlow definition receives its guidance in a prompt its spawner writes, so no
-  generator checks that prompt; what it carries is fixed by name (`docs/units/build.md` > *What
-  crosses a boundary*) and copied from the spawner's own carrier, not chosen at the spawn.
+  generator checks that prompt. For a build helper what it carries is fixed by name
+  (`docs/units/build.md` > *What crosses a boundary*); for a research or ad-hoc spawn it is the
+  rules its work follows, which the spawner names; both are copied from the spawner's own carrier.
 
 ## Amendments
 

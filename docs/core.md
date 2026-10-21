@@ -57,7 +57,7 @@ Each unit's rows are its unit document's `## Transitions` section, which the uni
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`<autoflow-root>/docs/units/delivery.md`](units/delivery.md) | HANDOFF: every pull request open, CI green or recorded as not run |
 | U7 Review | REVIEW | [`<autoflow-root>/docs/units/review.md`](units/review.md) | REVIEW: the aggregated review below Medium, CI green or recorded as not run |
 
-What each phase does, and what else a unit's body carries: the phase list and *Unit references* below.
+What each phase does, and what else a unit's body carries: the phase list and *Unit references* below, and *Context Injection*.
 
 The gate **PASS thresholds** (each ≥ 7, avg ≥ 7.5, security ≤ 3 → immediate block) and the **regression / retry caps** are fixed invariants: they live in the Flow Control table and the **Regressions** line above, and the unit documents and rubrics apply them. Who enforces what: the hook (`<autoflow-root>/hooks/check-autoflow-gate.sh`) computes PASS from the recorded `scores` — for the score-gated role spawns, `git push` and `gh pr create` — and denies `git push` / `gh pr create` while the `audit` or `gate_quality` record carries `remedy_class`; it counts no FAIL. The FAIL and re-entry counts are the orchestrator's own accounting, and the REVIEW auto-resolution count is `<autoflow-root>/scripts/handoff/review-gate.sh`'s (exit `11` at 7).
 

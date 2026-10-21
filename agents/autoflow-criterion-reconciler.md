@@ -52,7 +52,7 @@ Execution Mode).
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/criterion-review.md` > Review record; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/criterion-review.md` > Review record; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -179,6 +179,27 @@ what each finding means for the issue's behavior comes before its anchors.
   ```
 - **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 - **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
+
+---
+
+<!-- From <autoflow-root>/docs/role-common-rules.md > Communication > Result delivery path by spawn mode -->
+
+### Result delivery path by spawn mode
+
+Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
+
+- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
+- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
+
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Orchestrator context discipline*, row 2).
+
+| Spawn mode | Where the report arrives | Required delivery action |
+|---|---|---|
+| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `<attempt-dir>/*` and report an anchor + one-line summary |
+
+A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
+
+The single mode applies to every role; the per-role table is [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Spawn mode by role lifetime.
 
 ---
 

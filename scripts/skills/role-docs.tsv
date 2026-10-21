@@ -72,9 +72,11 @@ agents/autoflow-unit-build.md	docs/role-contracts.md	## Build unit in a target s
 agents/autoflow-unit-build.md	docs/submodule-common-rules.md
 agents/autoflow-unit-build.md	docs/role-common-rules.md
 
-# Every agent definition: the rules of every role spawn (the unit agents
-# carry the whole document above, whose scope names them).
+# Every agent definition: the sections of the rules of every role spawn that
+# name every role (the unit agents carry the whole document above, whose scope
+# names them).
 agents/*.md	docs/role-common-rules.md	## Bash Execution Mode
+agents/*.md	docs/role-common-rules.md	## Communication > ### Result delivery path by spawn mode
 agents/*.md	docs/submodule-common-rules.md	## Reporting Format
 agents/*.md	docs/submodule-common-rules.md	## Verification and Tools
 
@@ -121,11 +123,12 @@ skills/cycle/SKILL.md	docs/reviewer-backend.md
 skills/cycle/SKILL.md	docs/external-review-sequencing.md
 
 # Every command body: the homes the core names for what the session itself
-# writes and asks — the ledger's entries, the advisor's procedure, the state
+# writes and asks — the ledger's entries, an issue draft, the advisor's procedure, the state
 # file (not the criterion review stage, which writes none) and the evaluator's
 # spawn (the units that spawn one) — and the rules every actor of a cycle
 # follows.
 skills/*/SKILL.md	docs/decision-ledger.md
+skills/*/SKILL.md	docs/issue-proposal.md
 skills/*/SKILL.md	docs/role-contracts.md	## Advisor
 skills/cycle/SKILL.md	docs/state-tracking.md
 skills/cycle-u*/SKILL.md	docs/state-tracking.md
