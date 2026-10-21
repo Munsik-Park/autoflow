@@ -68,7 +68,9 @@ No new criterion is written; the set is read from what the documents already say
     `docs/issue-proposal.md` (an issue draft),
     `docs/role-contracts.md` > Advisor (the advisor request), `docs/state-tracking.md` (the state
     file; not the criterion review stage, which writes none) and, in a unit that spawns an
-    evaluator, `docs/role-contracts.md` > Evaluation AI (its spawn and prompt); and the sections of
+    evaluator, `docs/role-contracts.md` > Evaluation AI (its spawn and prompt), and
+    `docs/role-common-rules.md` > Result delivery path by spawn mode (what carries the report it
+    receives, the home the core's Execution Principles name); and the sections of
     `docs/submodule-common-rules.md` whose own scope names every actor (Verification and Tools) or
     every spawn's report (Reporting Format, which the orchestrator also states to a spawn with no
     definition). A session in which the orchestrator commits to the target (U4–U7) takes Change
@@ -172,8 +174,8 @@ regenerated, not another site. The content of the guidance is not changed.
 ### Negative
 
 - The carriers are larger. Measured on this change (bytes, main `2e72b1a` → this change): the
-  unit command bodies 37,549–44,901 → 141,812–173,735; `/autoflow:cycle` 49,927 → 396,942;
-  `/autoflow:criterion-review` 13,913 → 101,962; the agent definitions 2,816–4,929 → 29,186–149,846;
+  unit command bodies 37,549–44,901 → 144,250–176,173; `/autoflow:cycle` 49,927 → 399,380;
+  `/autoflow:criterion-review` 13,913 → 104,400; the agent definitions 2,816–4,929 → 29,186–149,846;
   the reviewers' rule files 774–1,132 → 11,604–11,962. Most of it was read by path on entry or
   during the work before (the unit document, `docs/evaluation-system.md`,
   `docs/criterion-review.md`, `docs/decision-ledger.md`, `docs/review/review.md`).
