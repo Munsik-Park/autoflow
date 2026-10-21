@@ -176,13 +176,13 @@ claude-autoflow/
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
-├── skills/                            # /autoflow:cycle, /autoflow:cycle-u1 … cycle-u7 — one unit — and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md)
+├── skills/                            # /autoflow:cycle, /autoflow:cycle-u1 … cycle-u7 — one unit — and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md and the documents scripts/skills/role-docs.tsv names)
 ├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root, an attempt's record directory, a new attempt
 │
 ├── .github/
 │   └── workflows/                     # Advisory CI guards (.github/workflows/)
 │
-├── docs/                              # Usage documents — read by path under the plugin root
+├── docs/                              # Usage documents — carried by each role's carrier where its role follows them, otherwise read by path under the plugin root
 │   ├── INDEX.md                       # Router: usage documents vs records
 │   ├── core.md                        # The core: cross-unit invariants and authority rules
 │   ├── autoflow-guide.md              # Lifecycle overview + index of the unit documents
