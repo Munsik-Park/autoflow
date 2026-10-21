@@ -16,7 +16,10 @@ issue-952 G4 preservation guards assert on.
 Beyond the happy path, the diagram encodes the design decisions of
 ``docs/records/design-rationale.md``:
 
-- DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node subtitles)
+- the seven functional units of docs/core.md > Functional Units are the
+  columns; DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node
+  subtitles); CRITERION-REVIEW returns to PREFLIGHT, which leads on to
+  DIAGNOSE (docs/units/preparation.md > Transitions)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
 - D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
@@ -24,7 +27,10 @@ Beyond the happy path, the diagram encodes the design decisions of
       stop -> human escalation (dashed red return edges with their caps from
       docs/core.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
-- D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
+- D11 a GATE:QUALITY FAIL, a CI failure at HANDOFF and a Medium+ review at
+      REVIEW re-enter by remedy_class — design -> ARCHITECT, impl / test ->
+      BUILD, doc -> a doc commit; REVIEW's auto-resolution is bounded at 7
+      (top bus)
 """
 
 from pathlib import Path
@@ -34,28 +40,38 @@ from pathlib import Path
 # (badge, stage-name, [(phase, subtitle, kind, isolated)]) — the ``isolated``
 # flag marks phases that run in an isolated sub-context / fresh spawn (D8).
 STAGES = [
-    ("01", "ANALYSIS", [
-        ("PREFLIGHT", "git clean · prior-cycle check", "start", False),
+    ("U1", "PREPARATION", [
+        ("PREFLIGHT", "git clean · prior attempts", "start", False),
+        ("CRITERION-REVIEW", "acceptance criteria", "phase", False),
+    ]),
+    ("U2", "ANALYSIS", [
         ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
         ("GATE:HYPOTHESIS", "fresh eval · one form", "gate", False),
     ]),
-    ("02", "PLANNING", [
+    ("U3", "DESIGN", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),
         ("GATE:PLAN", "fresh eval AI · 5×10", "gate", False),
     ]),
-    ("03", "BUILD", [
+    ("U4", "BUILD AND VERIFY", [
         ("BUILD", "build unit · test-first", "phase", True),
         ("AUDIT", "eval AI · test-first", "gate", False),
     ]),
-    ("04", "QUALITY", [
+    ("U5", "COMPLETION EVAL", [
         ("GATE:QUALITY", "fresh eval AI · 10×10", "gate", False),
     ]),
-    ("05", "DELIVERY", [
+    ("U6", "DELIVERY", [
         ("DELIVER", "branch push", "phase", False),
         ("INTEGRATE", "build · health · e2e", "phase", False),
-        ("HANDOFF", "PR · CI · review triage", "end", False),
+        ("HANDOFF", "PR · CI green", "phase", False),
+    ]),
+    ("U7", "REVIEW", [
+        ("REVIEW", "reviewers · one verdict", "end", False),
     ]),
 ]
+
+# The node a column leaves by, where it is not the column's last: U1's
+# criterion review returns to PREFLIGHT, which leads on to DIAGNOSE.
+STAGE_EXIT = {"U1": "PREFLIGHT"}
 
 # Per-phase FAIL caps rendered inside the node, bottom-right (docs/core.md >
 # Regressions). ↩ = bounded return edge drawn dashed; ↻ = in-place fix cycle.
@@ -100,11 +116,11 @@ SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,
 
 # ---------------------------------------------------------------- geometry
 
-MARGIN, COL_W, COL_GAP = 20, 190, 30
+MARGIN, COL_W, COL_GAP = 20, 190, 24
 PAD, NODE_H, V_GAP, LABEL_H, COL_PAD_B = 12, 46, 18, 40, 14
 TOP, BUS_Y = 80, 58
 NODE_W = COL_W - 2 * PAD
-WIDTH = 2 * MARGIN + 5 * COL_W + 4 * COL_GAP
+WIDTH = 2 * MARGIN + len(STAGES) * COL_W + (len(STAGES) - 1) * COL_GAP
 DASH = 'stroke-dasharray="5 4"'
 
 def col_x(i):
@@ -116,7 +132,7 @@ def node_y(j):
 def col_h(n):
     return LABEL_H + n * NODE_H + (n - 1) * V_GAP + COL_PAD_B
 
-MAX_H = max([col_h(len(s[2])) for s in STAGES] + [col_h(3) + 16 + NODE_H])  # the STOP node sits below column 01
+MAX_H = max([col_h(len(s[2])) for s in STAGES] + [col_h(2) + 16 + NODE_H])  # the STOP node sits below column U2
 LEGEND_Y = TOP + MAX_H + 28
 HEIGHT = LEGEND_Y + 40
 
@@ -185,7 +201,7 @@ def render(theme):
         )
         s.append(
             f'<text x="{x + PAD}" y="{TOP + 25}" font-family="{SANS}" font-size="11" '
-            f'font-weight="700" letter-spacing="1.6" fill="{t["muted"]}">'
+            f'font-weight="700" letter-spacing="1.2" fill="{t["muted"]}">'
             f'<tspan opacity="0.55">{badge}</tspan>  {name}</text>'
         )
         for j, (phase, sub, kind, isolated) in enumerate(phases):
@@ -228,9 +244,17 @@ def render(theme):
                     f'stroke="{t["conn"]}" stroke-width="1.5" marker-end="url(#arr)"/>'
                 )
 
-    # cross-column happy connectors: last node of col i -> first node of col i+1
-    for i in range(4):
-        lx, ly = origin[STAGES[i][2][-1][0]]
+    # U1: CRITERION-REVIEW -> back to PREFLIGHT
+    (px, py), (cx_, cy_) = origin["PREFLIGHT"], origin["CRITERION-REVIEW"]
+    ux = px + NODE_W / 2 + 28
+    s.append(
+        f'<line x1="{ux}" y1="{cy_ - 2}" x2="{ux}" y2="{py + NODE_H + 4}" '
+        f'stroke="{t["conn"]}" stroke-width="1.5" marker-end="url(#arr)"/>'
+    )
+
+    # cross-column happy connectors: the exit node of col i -> first node of col i+1
+    for i in range(len(STAGES) - 1):
+        lx, ly = origin[STAGE_EXIT.get(STAGES[i][0], STAGES[i][2][-1][0])]
         rx, ry = origin[STAGES[i + 1][2][0][0]]
         x1, y1 = lx + NODE_W + 2, ly + NODE_H / 2
         x2, y2 = rx - 4, ry + NODE_H / 2
@@ -260,33 +284,40 @@ def render(theme):
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
-    # GATE:QUALITY FAIL (max 3x) re-entry, drawn to BUILD — the common point
-    # of the remedy_class routes (doc commit / BUILD / ARCHITECT); dashed edge
-    # through the col3/col4 gap
-    (qx, qy), (rx_, ry_) = origin["GATE:QUALITY"], origin["BUILD"]
-    x1, y1 = qx - 4, qy + NODE_H / 2
-    x2, y2 = rx_ + NODE_W + 2, ry_ + 11
+    # remedy_class re-entry bus (D11): GATE:QUALITY FAIL (max 3x), HANDOFF CI
+    # failure and REVIEW Medium+ (max 7x) join it; it drops into ARCHITECT
+    # (design) and BUILD (impl / test); a doc route is a doc commit, no phase
+    (vx, vy), (hx, hy), (qx, qy) = origin["REVIEW"], origin["HANDOFF"], origin["GATE:QUALITY"]
+    (ax, ay), (rx_, ry_) = origin["ARCHITECT"], origin["BUILD"]
+    bx, ex = vx + NODE_W / 2, ax + NODE_W / 2
     s.append(
-        f'<path d="M{x1},{y1} C{x1 - 30},{y1} {x2 + 30},{y2} {x2},{y2}" fill="none" '
+        f'<path d="M{bx},{vy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
+        f'L{ex + 8},{BUS_Y} Q{ex},{BUS_Y} {ex},{BUS_Y + 8} L{ex},{ay - 4}" fill="none" '
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
-
-    # HANDOFF review/CI fail bus -> BUILD (D9: bounded auto-resolution, max 7x)
-    (hx, hy), (rx_, ry_) = origin["HANDOFF"], origin["BUILD"]
-    bx, ex = hx + NODE_W - 24, rx_ + 103
+    for jx, jy in ((hx + NODE_W - 24, hy), (qx + NODE_W / 2, qy)):
+        s.append(
+            f'<path d="M{jx},{jy - 2} L{jx},{BUS_Y}" fill="none" '
+            f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9"/>'
+        )
+    dx = rx_ + NODE_W / 2
     s.append(
-        f'<path d="M{bx},{hy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
-        f'L{ex + 8},{BUS_Y} Q{ex},{BUS_Y} {ex},{BUS_Y + 8} L{ex},{ry_ - 4}" fill="none" '
+        f'<path d="M{dx},{BUS_Y} L{dx},{ry_ - 4}" fill="none" '
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
+    for tx_, tag in ((ex, "design · review: start judged"), (dx, "impl / test")):
+        s.append(
+            f'<text x="{tx_ + 5}" y="{BUS_Y + 15}" font-family="{SANS}" font-size="9" '
+            f'fill="{t["fail"]}">{tag}</text>'
+        )
     s.append(
         f'<text x="{(bx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
-        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to BUILD · review-response ≤7×</text>'
+        f'font-size="10" fill="{t["fail"]}">GATE:QUALITY FAIL / CI fail / review Medium+ (≤7×) → re-entry by remedy_class · doc → doc commit</text>'
     )
 
     # ---- STOP node (D6: no code change -> close/report)
     (gx, gy) = origin["GATE:HYPOTHESIS"]
-    sx, sy = gx, TOP + col_h(3) + 16
+    sx, sy = gx, TOP + col_h(2) + 16
     s.append(
         f'<line x1="{gx + NODE_W / 2}" y1="{gy + NODE_H + 2}" x2="{gx + NODE_W / 2}" '
         f'y2="{sy - 4}" stroke="{t["conn"]}" stroke-width="1.3" {DASH} marker-end="url(#arr)"/>'
