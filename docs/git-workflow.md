@@ -53,20 +53,21 @@ git status                       # must report nothing to commit, working tree c
 
 # 2. Synced with remote
 git fetch origin
-# An attempt's start: its dev branch dev/<date>-<time>-issue-<N>, made at origin/main when the
-# cycle created the attempt (autoflow-records new) and with no commit of its own yet, is checked out and
-# fast-forwarded to the remote default branch's latest commit
-git switch dev/<date>-<time>-issue-<N>
-git merge --ff-only origin/main
+# An attempt's start: its dev branch dev-<date>-<time>-issue-<N>, made at its base's latest commit
+# when the cycle created the attempt (autoflow-records new) and with no commit of its own yet, is
+# checked out and fast-forwarded to its base's latest commit — `autoflow-records base` prints the
+# base; an attempt made at a named commit (git config branch.<dev branch>.autoflow-start) stays there
+git switch dev-<date>-<time>-issue-<N>
+git merge --ff-only origin/<base>
 # A review-response: the dev branch matches its remote branch
-git log HEAD..origin/dev/<date>-<time>-issue-<N> --oneline   # must be empty (or handled)
+git log HEAD..origin/dev-<date>-<time>-issue-<N> --oneline   # must be empty (or handled)
 # In a project with sub-repos, each submodule is at the commit the host's pointer names
 # after the host is synced (the orchestrator's work item; nothing checks it).
 ```
 
-Nothing here checks out or updates the local `main`: a worktree whose `main` is checked out in
-another worktree cannot (`git checkout main` and `git fetch origin main:main` both refuse there),
-and a checkout on any other branch needs no more than `origin/main`.
+Nothing here checks out or updates the local base: a worktree whose base is checked out in
+another worktree cannot (`git checkout <base>` and `git fetch origin <base>:<base>` both refuse
+there), and a checkout on any other branch needs no more than `origin/<base>`.
 
 If any check fails:
 
@@ -180,7 +181,7 @@ untouched.
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
 path and takes only an attempt's dev branch, checked against the shape
-`dev/YYYY-MM-DD-HHMMSS-issue-<N>` before it becomes the record directory's name
+`dev-YYYY-MM-DD-HHMMSS-issue-<N>` (`dev/…` for an attempt made before issue #490) before it becomes the record directory's name
 `<record-root>/<repo-key>/<YYYY-MM-DD-HHMMSS>-issue-<N>/` (repo-key = `<org>__<repo>` derived from
 `origin` — `<autoflow-root>/scripts/lib/records.sh`), and it refuses an attempt whose `checkout` file
 names another checkout. Its one deletion is that reserved path, `issue-<N>-local/disposable`, removed

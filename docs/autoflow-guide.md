@@ -94,10 +94,10 @@ flowchart TD
     HAND -.->|env / push rejection ≤2×| HAND
     HAND -->|CI failure · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
     HAND -->|retry exhausted| HUMAN
-    HAND -->|PR created, CI green| REV
+    HAND -->|PR created, CI green or recorded not run| REV
     REV -->|Medium+ ≤7× · re-entry by remedy_class<br/>doc commit / BUILD / ARCHITECT| BLD
     REV -->|cap 7 reached| HUMAN
-    REV -->|review clean, CI green| DONE
+    REV -->|review clean, CI green or recorded not run| DONE
 
     classDef phase fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
     classDef gate fill:#fff8e1,stroke:#f57f17,color:#bf360c

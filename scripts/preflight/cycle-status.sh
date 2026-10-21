@@ -14,8 +14,8 @@
 # Records live under the record root (scripts/lib/records.sh, issue #466): an
 # attempt — one run of an issue — has its directory
 # `<record-root>/<repo-key>/<stamp>-issue-<N>/`, keyed by its dev branch
-# `dev/<stamp>-issue-<N>`, and belongs to the checkout its `checkout` file
-# names.
+# `dev-<stamp>-issue-<N>` (`dev/<stamp>-issue-<N>` before issue #490), and
+# belongs to the checkout its `checkout` file names.
 #
 # Reported:
 #   - the working tree: the checked-out branch and its dirty paths
@@ -213,12 +213,12 @@ if [ -n "$legacy" ]; then echo "in-tree state files: $legacy"; else echo "in-tre
 
 # ── Attempts of this repository ──
 # Parallel arrays, one slot per attempt not marked completed.
-A_KEY=(); A_ISSUE=(); A_DIR=(); A_OWN=(); A_OWNER=(); A_STATE=(); A_ACTIVE=(); A_PHASE=(); A_CYCLE=(); A_PR=()
+A_KEY=(); A_BRANCH=(); A_ISSUE=(); A_DIR=(); A_OWN=(); A_OWNER=(); A_STATE=(); A_ACTIVE=(); A_PHASE=(); A_CYCLE=(); A_PR=()
 completed=0
 for d in "$R/$KEY"/*-issue-*; do
   [ -d "$d" ] || continue
   k="${d##*/}"
-  af_attempt_key "dev/$k" >/dev/null || continue
+  af_attempt_key "dev-$k" >/dev/null || continue
   if [ -e "$d/completed" ]; then completed=$((completed + 1)); continue; fi
   n="$(af_attempt_issue "$k")"
   owner=""
@@ -237,7 +237,7 @@ for d in "$R/$KEY"/*-issue-*; do
       st=unreadable; incomplete=1
     fi
   fi
-  A_KEY+=("$k"); A_ISSUE+=("$n"); A_DIR+=("$d"); A_OWN+=("$own"); A_OWNER+=("$owner")
+  A_KEY+=("$k"); A_BRANCH+=("$(af_attempt_branch "$d")"); A_ISSUE+=("$n"); A_DIR+=("$d"); A_OWN+=("$own"); A_OWNER+=("$owner")
   A_STATE+=("$st"); A_ACTIVE+=("$act"); A_PHASE+=("$ph"); A_CYCLE+=("$cy"); A_PR+=("")
 done
 
@@ -248,7 +248,7 @@ i=0
 while [ "$i" -lt "${#A_KEY[@]}" ]; do
   if [ "${A_STATE[$i]}" = file ] && [ "${A_ACTIVE[$i]}" != true ] \
      && { [ "${A_OWN[$i]}" = this ] || [ "${A_ISSUE[$i]}" = "$ISSUE" ]; }; then
-    if line="$(pr_of "dev/${A_KEY[$i]}")"; then
+    if line="$(pr_of "${A_BRANCH[$i]}")"; then
       A_PR[$i]="${line:-none}"
     else
       A_PR[$i]="lookup-failed"; incomplete=1
@@ -262,7 +262,7 @@ pr_state() { local p="${A_PR[$1]}"; case "$p" in ''|none|lookup-failed) printf '
 i=0
 [ "${#A_KEY[@]}" -eq 0 ] && echo "attempts: none"
 while [ "$i" -lt "${#A_KEY[@]}" ]; do
-  k="${A_KEY[$i]}"; b="dev/$k"
+  k="${A_KEY[$i]}"; b="${A_BRANCH[$i]}"
   case "${A_OWN[$i]}" in
     this)  ow="this" ;;
     other) ow="other ${A_OWNER[$i]}" ;;
@@ -294,7 +294,7 @@ i=0
 while [ "$i" -lt "${#A_KEY[@]}" ]; do
   if [ "${A_OWN[$i]}" = this ]; then
     case "$(pr_state "$i")" in
-      MERGED|CLOSED) echo "cleanup: ${A_KEY[$i]} branch dev/${A_KEY[$i]} (pr #${A_PR[$i]%% *} $(pr_state "$i"))"; CLEARED="$CLEARED${A_KEY[$i]} " ;;
+      MERGED|CLOSED) echo "cleanup: ${A_KEY[$i]} branch ${A_BRANCH[$i]} (pr #${A_PR[$i]%% *} $(pr_state "$i"))"; CLEARED="$CLEARED${A_KEY[$i]} " ;;
     esac
   fi
   i=$((i + 1))
@@ -306,8 +306,8 @@ done
 # A dev branch carrying the issue's number with no attempt record is not an
 # attempt: reported, never deleted (issue #433).
 {
-  git for-each-ref --format='%(refname:lstrip=2)' "refs/heads/dev/*-issue-$ISSUE"
-  git for-each-ref --format='%(refname:lstrip=3)' "refs/remotes/origin/dev/*-issue-$ISSUE"
+  git for-each-ref --format='%(refname:lstrip=2)' "refs/heads/dev/*-issue-$ISSUE" "refs/heads/dev-*-issue-$ISSUE"
+  git for-each-ref --format='%(refname:lstrip=3)' "refs/remotes/origin/dev/*-issue-$ISSUE" "refs/remotes/origin/dev-*-issue-$ISSUE"
 } | sort -u | while IFS= read -r b; do
   [ -n "$b" ] || continue
   k="$(af_attempt_key "$b")" && [ -d "$R/$KEY/$k" ] && continue
@@ -357,7 +357,7 @@ CRIT=()
 i=0
 while [ "$i" -lt "${#A_KEY[@]}" ]; do
   if [ "${A_ISSUE[$i]}" = "$ISSUE" ] && [ "${A_STATE[$i]}" = none ] && { [ "${A_OWN[$i]}" = this ] || [ "$i" = "$branch_slot" ]; }; then
-    out="$(bash "$SELF_DIR/criterion-ready.sh" status --issue "$ISSUE" --branch "dev/${A_KEY[$i]}" 2>&1)"
+    out="$(bash "$SELF_DIR/criterion-ready.sh" status --issue "$ISSUE" --branch "${A_BRANCH[$i]}" 2>&1)"
     case "$?" in
       0) CRIT[$i]=READY ;;
       1) CRIT[$i]=NOT-READY ;;

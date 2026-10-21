@@ -17,8 +17,8 @@
 #
 # Observe-only: it performs no merge, no CI re-trigger, and no conflict
 # resolution. Conflict *resolution* lives in the docs (a sub-repo pointer →
-# docs/units/delivery.md > Multi-repo delivery; other conflict → rebase
-# origin/main). This script owns only the *confirmation*.
+# docs/units/delivery.md > Multi-repo delivery; other conflict → rebase on
+# the PR's base). This script owns only the *confirmation*.
 #
 # Usage:
 #   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
@@ -422,7 +422,7 @@ else
       # mergeable, so empty unambiguously marks a bad read.
   elif is_not_mergeable "$pre_mergeable" "$pre_state"; then
     mergeable_confirmed=1
-    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
+    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase on the PR's base); HANDOFF internal retry" >&2
     exit 10
   elif is_mergeable_undetermined "$pre_mergeable" "$pre_state"; then
     : # still-computing UNKNOWN on either field (or an unrecognised value): an uncertain read,
@@ -475,7 +475,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   undetermined=0
   if is_mergeable_undetermined "$m" "$s"; then undetermined=1; else mergeable_confirmed=1; fi
   if is_not_mergeable "$m" "$s"; then
-    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase origin/main); HANDOFF internal retry" >&2
+    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase on the PR's base); HANDOFF internal retry" >&2
     exit 10
   fi
 

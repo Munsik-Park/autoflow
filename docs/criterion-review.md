@@ -32,8 +32,9 @@ The review makes that premise hold more often; it does not change it.
   the cycle creates a new attempt first, before the stage writes anything:
   `autoflow-records new --issue N` — on a clean tree, with no active attempt in this checkout — fetches
   `origin`, makes the attempt's record directory under the record root with this checkout as its
-  owner, and checks out a new dev branch `dev/<date>-<time>-issue-<N>` at the remote default
-  branch's latest commit, local only and with no commit of its own until the attempt's state file
+  owner, and checks out a new dev branch `dev-<date>-<time>-issue-<N>` at the latest commit of the
+  attempt's base — the remote default branch, or the branch the operator names (`--base`) — or at
+  the commit the operator names (`--commit`), local only and with no commit of its own until the attempt's state file
   is written. The attempt's key is that branch's name, and every record of the review — the review
   record, the stage 2 and in-depth files, the advisor records, the ledger with its
   `[criterion-ready]` entry — is in that directory, as the cycle's later records are. While an
@@ -75,8 +76,8 @@ The review makes that premise hold more often; it does not change it.
   `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
   criterion references, opened by the reviewer; one that cannot be opened is recorded with the
   reason.
-- **The target's code** — each repository the issue reaches, read at a named commit (the default
-  branch's head unless the issue names another). In a project with sub-repos, each sub-repo is read
+- **The target's code** — each repository the issue reaches, read at a named commit (the commit the
+  attempt's dev branch starts from unless the issue names another). In a project with sub-repos, each sub-repo is read
   at the commit the host's pointer names.
 - **The target's policy** — the decision records and rule documents the criteria touch: the ADRs,
   the project's own information and rule files (a `README.md`, a `CLAUDE.local.md`, whatever the

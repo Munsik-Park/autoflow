@@ -18,12 +18,12 @@ a CI failure is.
 
 - **Goal**: the cycle's branch is on the remote at the commit GATE:QUALITY passed, the change is
   shown working above its own tests, and every pull request of the cycle is open with CI green on
-  its head.
+  its head — or, where no CI runs for it, that fact and its ground recorded on it (*CI*).
 - **Artifact contract**: the pushed branches and the pull requests (*Push and pull request*), the
   integration record (*Integration*), and the ledger entries the routes record.
 - **What a script reads and reports**: CI confirmation (*CI*), by exit code.
 - **Verification**: the integration checks and CI green — both outside the orchestrator's own
-  claim.
+  claim; a CI that did not run is recorded as not run, never read as green.
 - **Loop cap**: HANDOFF internal retry, 2 ([`core.md`](../core.md) > Flow Control > Regressions).
   An INTEGRATE or CI failure is fixed by the unit its class routes to, and the cycle runs forward
   again (*Integration*, *Failure and retry*).
@@ -38,7 +38,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | DELIVER → INTEGRATE | the cycle's branches pushed, a changed sub-repo's included |
 | INTEGRATE → HANDOFF | integration tests pass |
 | INTEGRATE → BUILD | integration / bundle failure — fixed `impl` class → a BUILD unit re-run with the failing check → AUDIT → … → INTEGRATE again |
-| HANDOFF → REVIEW | every pull request of the cycle open, CI green on its head → [U7 Review](review.md) (`<autoflow-root>/docs/units/review.md`) |
+| HANDOFF → REVIEW | every pull request of the cycle open, CI green on its head or recorded on it as not run (*CI*, exit `11`) → [U7 Review](review.md) (`<autoflow-root>/docs/units/review.md`) |
 | HANDOFF → HANDOFF (retry) | environment / transient error or push rejection → internal retry (max 2) |
 | HANDOFF (CI failure) → doc commit / BUILD / ARCHITECT / advisor | `confirm-ci-green.sh` exit `12` → the failing check's `remedy_class`, recorded by an anonymous direct subagent in `<attempt-dir>/issue-{N}-ci-failure.md`, routes as a GATE:QUALITY FAIL does; `operator` → the advisor fixes the class (`<autoflow-root>/docs/units/delivery.md` > *CI-failure re-entry*) |
 | HANDOFF → user | HANDOFF internal retry exhausted (2×) |
@@ -60,10 +60,12 @@ orchestrator's, and nothing checks for an item left out.
   a recorded AUDIT and GATE:QUALITY PASS with no re-entry open
   ([`state-tracking.md`](../state-tracking.md) > Hook gates). They are not issued through a script or a wrapper
   that would carry them past the hook.
-- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch (`main`); the hook
-  denies both. Merging — including, for multi-repo changes, the sub-repo → pointer → host
+- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch or to the
+  attempt's base (`autoflow-records base`); the hook denies them. Merging — including, for multi-repo changes, the sub-repo → pointer → host
   sequencing — is owned entirely by the external review process.
-- **Every pull request the cycle opens is a draft** (`gh pr create --draft …`).
+- **Every pull request the cycle opens is a draft** (`gh pr create --draft …`). The host pull
+  request's base is the attempt's base, the branch `autoflow-records base` prints — the dev
+  branch's `gh-merge-base`, which `gh pr create` reads when no `--base` is given.
 
 What a pull request of a cycle usually carries — offered as what to weigh, not as a checklist:
 
@@ -119,7 +121,7 @@ Cautions:
 
 A **diff-path-conditional** requirement keyed on the class of surface being integrated. It applies to every project; a class the project does not ship resolves to a defined no-op.
 
-**Trigger predicate (deterministic).** Let the diff be `git diff --name-only <base>...HEAD` (base = `git merge-base HEAD main`). The condition **fires** iff any changed path matches the trigger glob set:
+**Trigger predicate (deterministic).** Let the diff be `git diff --name-only <base>...HEAD` (base = `git merge-base HEAD origin/<base>`, `<base>` the attempt's base). The condition **fires** iff any changed path matches the trigger glob set:
 
 | Class | Glob(s) |
 |---|---|
@@ -158,8 +160,8 @@ header carries the full contract; the exit codes route as follows.
 | Exit | Meaning | What follows |
 |---|---|---|
 | `0` | green — at least one check present, every one green, on a PR whose mergeable state was confirmed | *Added test files*, then [U7 Review](review.md) |
-| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: resolve against `origin/main` (rebase or merge) and push again (internal retry); a conflict on a sub-repo pointer another cycle advanced → *Multi-repo delivery* below |
-| `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event, before escalating |
+| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: resolve against `origin/<base>`, the attempt's base (rebase or merge), and push again (internal retry); a conflict on a sub-repo pointer another cycle advanced → *Multi-repo delivery* below |
+| `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event. When the target's CI does not run for this pull request — no workflow, or a trigger, path filter or condition that excludes it — the PR body records that CI did not run and the ground, what CI was to run for it (a `ci-deferred` lint chain, an added test file) is listed as not run, and the cycle goes on to [U7 Review](review.md); whether CI is not running or late is the orchestrator's judgment, recorded with its ground (ADR-0034 D5) |
 | `12` | a check concluded failure | *CI-failure re-entry* below |
 | `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line; check the token's `actions: read`) | raise `CI_POLL_TIMEOUT_SECS` or run again (internal retry), or escalate |
 | `14` | the mergeable state could not be confirmed within the bound — a `gh` transport, auth or parse failure | not a conflict: check `gh auth` and connectivity, run again (internal retry), then escalate |
@@ -205,10 +207,10 @@ Classify the cause and regress along the matching path.
 ```
 CI failure (a check concluded failure, exit 12) → by remedy_class (CI-failure re-entry above)
 CI failure (env / transient)                   → CI retry, then the CI confirmation again (max 2)
-PR CONFLICTING (no checks,                     → resolve vs origin/main (rebase/merge) + push again, OR
+PR CONFLICTING (no checks,                     → resolve vs origin/<base> (rebase/merge) + push again, OR
  build silently skipped)                          a sub-repo pointer → Multi-repo delivery;
                                                   then the CI confirmation again (max 2) — never wait on CI green
-Push rejected (branch state)                   → dev branch rebase on main → push again (max 2)
+Push rejected (branch state)                   → dev branch rebase on origin/<base> → push again (max 2)
 ```
 
 **Max retries**: HANDOFF internal retry max 2. Two failures → human.
@@ -225,7 +227,7 @@ upstream) and where issues are filed are read from the project's own information
 
 **The rule.** After a sub-repo pull request merges, the host keeps a clean state by a reconcile
 merge: the host branch that depends on it points at that pull request's merge commit, and stays
-mergeable with the default branch. Merging is the operator's, so the request to reconcile after a
+mergeable with its pull request's base. Merging is the operator's, so the request to reconcile after a
 sub-repo merge is the operator's too; the orchestrator reconciles when it is asked. When the
 pointer moves before that point, and how a reconcile is carried out, are the orchestrator's,
 derived from this rule and recorded with their grounds in the ledger.
@@ -243,11 +245,11 @@ What is asked:
 
 Cautions:
 
-- A merge of the default branch into a host branch whose pointer still sits where the branch forked
-  resolves the pointer to the default branch's, not to the sub-repo merge commit. The pointer is set
+- A merge of the base into a host branch whose pointer still sits where the branch forked
+  resolves the pointer to the base's, not to the sub-repo merge commit. The pointer is set
   and read back (`git ls-tree HEAD <sub-repo>`) before the push.
-- Another cycle may have moved the default branch's pointer since this branch forked. When the
-  sub-repo merge commit does not contain that pointer — the default branch is ahead of it, or the
+- Another cycle may have moved the base's pointer since this branch forked. When the
+  sub-repo merge commit does not contain that pointer — the base is ahead of it, or the
   two have diverged — reconciling would move the host's pointer backwards or across histories: the
   orchestrator does not push, and reports to the operator.
 - Every pointer move is a host commit the host review reads again; a pointer moved while the

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316)); D2's declared prefix moved into the issue's directory by issue #423 (see Amendment note (issue #423)); the devices it ships to targets run from the plugin root and drift-check D7 becomes the PREFLIGHT target check's D7 leg by issue #454 (see Amendment note (issue #454))
+Proposed; D1 revised by issue #222; S1 + S2 (rule documents and evaluation criteria) implemented by issue #225, which also revised D4's classifier and merged the two sub-issues; D1's scope narrowed to this repository and D3's entry point replaced by issue #238; the run record's evidence form set to the log by issue #249; D3's target-practice rule widened from the test command to the tools the work needs by issue #277 (see Amendment note (issue #277)); D1's closed list narrowed to `packaging` and `manifest`, this repository's committed checks reclassified against it and its suite-plane opt-in withdrawn by issue #293 (see Amendment note (issue #293)); D2's archival narrowed by issue #316 — the store's reserved path `disposable/` is deleted at cleanup, not archived (see Amendment note (issue #316)); D2's declared prefix moved into the issue's directory by issue #423 (see Amendment note (issue #423)); the devices it ships to targets run from the plugin root and drift-check D7 becomes the PREFLIGHT target check's D7 leg by issue #454 (see Amendment note (issue #454)); D4's verdict point and D5's binding to the hand-off widened to a pull request no CI runs for by ADR-0034 (issue #490) (see Amendment note (issue #490))
 
 ## Context
 
@@ -1217,3 +1217,14 @@ scripts. Three places in this record change with it.
   against a target — are `tests/plugin/verify-path-independence.sh`'s W and S legs, and the
   dummy-target E2E is rewritten for an unstamped target. D1's two categories and the rest of the
   table stand.
+
+## Amendment note (issue #490)
+
+ADR-0034 D5 changes what the hand-off is bound to. A pull request of a cycle reaches the review with
+CI green on its head (exit `0`, D4's verdict point) or, when the target's CI does not run for it — no
+workflow, or a trigger, path filter or condition that excludes it — with that fact and its ground
+recorded on it and what CI was to run listed as not run (`docs/units/delivery.md` > *CI*, exit
+`11`). D5's binding-to-the-hand-off is now to CI's result as it is, not to green alone. Its first
+fail-closed property stands: "No check published" is not green, exit `11` is never read as a pass,
+and nothing on the pull request says CI passed. Exits `10`, `12`, `13` and `14`, the CI-failure
+re-entry and the merger's authority (ADR-0003) are unchanged.

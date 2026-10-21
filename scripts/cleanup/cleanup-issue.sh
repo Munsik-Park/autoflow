@@ -29,9 +29,10 @@
 # matches the invoked command, not it.
 #
 # BRANCH BOUNDARY: an attempt is named by its dev branch, whose shape
-# `dev/YYYY-MM-DD-HHMMSS-issue-<N>` is checked before it is turned into its
-# record directory's name — so no glob, slash or `..` reaches a path, and
-# another repository's attempt (a different <repo-key>) is never taken.
+# `dev-YYYY-MM-DD-HHMMSS-issue-<N>` (`dev/…` before issue #490) is checked
+# before it is turned into its record directory's name — so no glob, slash or
+# `..` reaches a path, and another repository's attempt (a different
+# <repo-key>) is never taken.
 #
 # Allow-list (so it never prompts even when rm is denied):
 #   "Bash(<autoflow-root>/scripts/cleanup/cleanup-issue.sh:*)"
@@ -66,7 +67,7 @@ NOW="$(date +%FT%T%z)"
 status=0
 for B in "$@"; do
   if ! A="$(af_attempt_key "$B")"; then
-    echo "refuse: '$B' is not an attempt's dev branch (dev/YYYY-MM-DD-HHMMSS-issue-N)" >&2
+    echo "refuse: '$B' is not an attempt's dev branch (dev-YYYY-MM-DD-HHMMSS-issue-N)" >&2
     status=64
     continue
   fi

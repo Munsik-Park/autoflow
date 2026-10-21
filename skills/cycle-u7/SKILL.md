@@ -48,7 +48,7 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 **Human escalation**: a gate's own regression cap exhausted without a pass (each gate's cap is the "max N×" on the Regressions line above, which fixes the escalation timing — this is **per-gate**, not a cross-gate running total); GATE:HYPOTHESIS has no count cap — the recorded judgment that its PASS is not reachable is its escalation. HANDOFF internal retry exhausted → human. A harness-level block → human.
 **Advisor at a decision point** (ADR-0025 D7): every Flow Control row that routes to the advisor — the rows above and each unit document's `## Transitions` rows — is a decision point — a fresh `autoflow-advisor` answers, its answer is recorded as an `A` ledger entry and applied, and the cycle continues without pausing. The operator stops the forward path only at a harness-level block — a permission denial, a tool, credential or material the environment does not provide, or what using a tool it has lacks (a review-infrastructure failure the reviewer re-run does not clear is one); PREFLIGHT's fail-closed readiness stop is an independent check, not a decision point. An operator override of a recorded decision is an `O` entry under `operator decision`. Procedure and independence: `<autoflow-root>/docs/role-contracts.md` > Advisor.
 **Phase scripts** (ADR-0025 D8): a script AutoFlow ships for a phase reads and reports; it changes nothing in git, on GitHub or in the cycle's state — every such change is the orchestrator's own.
-**Push and PR creation**: the orchestrator pushes and opens the PR(s) with its own `git push` / `gh pr create` — the commands the hook gates, never a script that would carry them past it — and confirms CI is green. What the PR body carries, the host PR's `Closes #N` included, is the orchestrator's; nothing checks it (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*). Merging is external; AutoFlow does not merge.
+**Push and PR creation**: the orchestrator pushes and opens the PR(s) with its own `git push` / `gh pr create` — the commands the hook gates, never a script that would carry them past it — and confirms CI is green, or records on the pull request that CI did not run, never reading that as green. What the PR body carries, the host PR's `Closes #N` included, is the orchestrator's; nothing checks it (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*). Merging is external; AutoFlow does not merge.
 
 ### Unit Document Loading Contract
 
@@ -61,8 +61,8 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 | U3 Design | ARCHITECT, GATE:PLAN | `<autoflow-root>/docs/units/design.md` | GATE:PLAN |
 | U4 Build and verify | BUILD, AUDIT | `<autoflow-root>/docs/units/build.md` | AUDIT |
 | U5 Completion evaluation | GATE:QUALITY | `<autoflow-root>/docs/units/completion-evaluation.md` | GATE:QUALITY |
-| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | `<autoflow-root>/docs/units/delivery.md` | HANDOFF: every pull request open, CI green |
-| U7 Review | REVIEW | `<autoflow-root>/docs/units/review.md` | REVIEW: the aggregated review below Medium, CI green |
+| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | `<autoflow-root>/docs/units/delivery.md` | HANDOFF: every pull request open, CI green or recorded as not run |
+| U7 Review | REVIEW | `<autoflow-root>/docs/units/review.md` | REVIEW: the aggregated review below Medium, CI green or recorded as not run |
 
 What each phase does, and what else a unit reads on entry: the phase list and *Unit references* below.
 

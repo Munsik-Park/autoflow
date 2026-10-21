@@ -318,7 +318,8 @@ directions:
 
 - **Deny holds**: `cd x && git push`, `a && gh pr merge`, `git push origin
   <default>` are blocked; `gh pr merge` blocked even with no/inactive state.
-- **No over-block**: a legitimate `git push -u origin dev/YYYY-MM-DD` and a
+- **No over-block**: a legitimate `git push -u origin dev-YYYY-MM-DD-…` — with a
+  default branch or base `dev` too — and a
   non-merge `gh pr create` are allowed.
 
 The legitimate-allow cases are mandatory — an over-broad pattern that

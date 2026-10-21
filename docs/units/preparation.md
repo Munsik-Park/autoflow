@@ -91,8 +91,10 @@ brings about the following.
   the `entry:` line names, in the mode it names (*Modes*).
 - **The tree is clean and synced.** No uncommitted change or untracked file in the working area,
   and the branch the mode works on — the attempt's dev branch — is where the mode needs it: for a
-  start, fast-forwarded to the remote default branch's latest commit (`git fetch origin`, then
-  `git merge --ff-only origin/<default>` on the dev branch, which has no commit of its own yet); for
+  start, fast-forwarded to its base's latest commit (`git fetch --prune origin`, then
+  `git merge --ff-only origin/<base>` on the dev branch, which has no commit of its own yet; `<base>`
+  is what `autoflow-records base` prints), unless the attempt was made at a commit the operator named
+  — `git config branch.<dev branch>.autoflow-start` prints it — and stays there; for
   a review-response, matching its remote branch ([`git-workflow.md`](../git-workflow.md) > Git
   Clean Check). This holds in a worktree whose default branch is checked out in another worktree
   and on any branch the checkout had: nothing here checks out or updates the local default branch.
@@ -115,7 +117,7 @@ brings about the following.
   - git: <HEAD> clean | <HEAD> dirty (<n> path(s)) | not a git work tree
   ```
 - **An attempt's start gets its state**: on its dev branch — made with the attempt when the cycle
-  created it (`autoflow-records new`), `dev/YYYY-MM-DD-HHMMSS-issue-N` — the state file from the Creation template with that name
+  created it (`autoflow-records new`), `dev-YYYY-MM-DD-HHMMSS-issue-N` — the state file from the Creation template with that name
   in `branch`, `mode: "new-issue"` and `phase: "in-progress"`
   ([`state-tracking.md`](../state-tracking.md) > AutoFlow State Tracking). The name is the
   attempt's for its life: a review-response continues on it, and its record directory is named from
@@ -206,12 +208,16 @@ its exit.
   attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
   with no active attempt in this checkout — fetches `origin`, makes the record directory under the
   record root with this checkout as its owner, and checks out a new dev branch
-  `dev/<date>-<time>-issue-<N>` at the remote default branch's latest commit, local only and with no
-  commit of its own until the state file is written. It refuses — and nothing is made — on a dirty
-  tree, an active attempt of this checkout, a failed fetch, no remote-tracking ref of the default
-  branch, or a record root that is undetermined or unusable (exit `7`); each is a stop reported to
+  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and with no commit of its own
+  until the state file is written. The base — the branch the attempt's pull request merges into —
+  is the remote default branch, or the branch the operator names for the attempt
+  (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
+  (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The
+  operator names them with the request (`/autoflow:cycle <N> new --base <branch>`, …). It refuses —
+  and nothing is made — on a dirty tree, an active attempt of this checkout, a failed fetch, no
+  remote-tracking ref of the base, a commit not in the checkout, or a record root that is undetermined or unusable (exit `7`); each is a stop reported to
   the user, as PREFLIGHT reports it. On `criterion-review`, the attempt named is checked out, and
-  `git fetch origin` runs before the stage reads the code; a failed fetch is the same hard stop,
+  `git fetch --prune origin` runs before the stage reads the code; a failed fetch is the same hard stop,
   and a dirty tree is resolved with the user first (*Cautions*).
 - **The stage is the attempt's criterion review.** What it reads and judges, its stages — stage 1
   in this session, then the `autoflow-criterion-tracer`, `autoflow-criterion-analyzer` and
