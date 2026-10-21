@@ -18,6 +18,12 @@ D2's command amended 2026-10-21 by ADR-0034 (issue #490): `autoflow-records new`
 <branch>` and `--commit <commit>` and refuses a base with no remote-tracking ref or a commit not in
 the checkout.
 
+D5 amended and D3 extended 2026-10-22 by ADR-0036 (issue #493): `/autoflow:criterion-review <N>` is
+also the entry of the abbreviated path, and a `READY` attempt goes on by `/autoflow:cycle <N>` or on
+that path — "`/autoflow:cycle <N>` then enters that attempt as `start`" holds for the full cycle; the
+entries gain `abbreviated <key>` and the kind `none-to-enter <key>:abbreviated`, a printed fact D9's
+rule governs.
+
 ## Context
 
 Up to 0.3.2 the criterion review (#430) was a procedure outside the cycle: the operator ran

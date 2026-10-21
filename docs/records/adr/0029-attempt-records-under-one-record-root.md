@@ -18,6 +18,10 @@ an attempt made before), its record directory names it in a file `branch`, and t
 at the attempt's base — the remote default branch, or the branch or commit the operator names — not
 at `origin/<default>` alone.
 
+Extended 2026-10-22 by ADR-0036 (issue #493): D4's pull request is looked up for an attempt with no
+state file too — an attempt on the abbreviated path — so its `pr:` line is printed and, once its pull
+request is merged or closed, D5's cleanup reaches it through its `cleanup:` line; D5 is unchanged.
+
 ## Context
 
 AI work, unlike a person's, tries one issue in several sessions and puts the results together; each
