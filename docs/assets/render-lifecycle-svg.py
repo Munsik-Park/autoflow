@@ -18,7 +18,8 @@ Beyond the happy path, the diagram encodes the design decisions of
 
 - the seven functional units of docs/core.md > Functional Units are the
   columns; DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node
-  subtitles)
+  subtitles); CRITERION-REVIEW returns to PREFLIGHT, which leads on to
+  DIAGNOSE (docs/units/preparation.md > Transitions)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
 - D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
@@ -26,8 +27,10 @@ Beyond the happy path, the diagram encodes the design decisions of
       stop -> human escalation (dashed red return edges with their caps from
       docs/core.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
-- D11 a CI failure at HANDOFF and a Medium+ review at REVIEW re-enter by
-      remedy_class; REVIEW's auto-resolution is bounded at 7 (top bus)
+- D11 a GATE:QUALITY FAIL, a CI failure at HANDOFF and a Medium+ review at
+      REVIEW re-enter by remedy_class — design -> ARCHITECT, impl / test ->
+      BUILD, doc -> a doc commit; REVIEW's auto-resolution is bounded at 7
+      (top bus)
 """
 
 from pathlib import Path
@@ -39,7 +42,7 @@ from pathlib import Path
 STAGES = [
     ("U1", "PREPARATION", [
         ("PREFLIGHT", "git clean · prior attempts", "start", False),
-        ("CRITERION-REVIEW", "acceptance criteria", "phase", True),
+        ("CRITERION-REVIEW", "acceptance criteria", "phase", False),
     ]),
     ("U2", "ANALYSIS", [
         ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
@@ -65,6 +68,10 @@ STAGES = [
         ("REVIEW", "reviewers · one verdict", "end", False),
     ]),
 ]
+
+# The node a column leaves by, where it is not the column's last: U1's
+# criterion review returns to PREFLIGHT, which leads on to DIAGNOSE.
+STAGE_EXIT = {"U1": "PREFLIGHT"}
 
 # Per-phase FAIL caps rendered inside the node, bottom-right (docs/core.md >
 # Regressions). ↩ = bounded return edge drawn dashed; ↻ = in-place fix cycle.
@@ -237,9 +244,17 @@ def render(theme):
                     f'stroke="{t["conn"]}" stroke-width="1.5" marker-end="url(#arr)"/>'
                 )
 
-    # cross-column happy connectors: last node of col i -> first node of col i+1
+    # U1: CRITERION-REVIEW -> back to PREFLIGHT
+    (px, py), (cx_, cy_) = origin["PREFLIGHT"], origin["CRITERION-REVIEW"]
+    ux = px + NODE_W / 2 + 28
+    s.append(
+        f'<line x1="{ux}" y1="{cy_ - 2}" x2="{ux}" y2="{py + NODE_H + 4}" '
+        f'stroke="{t["conn"]}" stroke-width="1.5" marker-end="url(#arr)"/>'
+    )
+
+    # cross-column happy connectors: the exit node of col i -> first node of col i+1
     for i in range(len(STAGES) - 1):
-        lx, ly = origin[STAGES[i][2][-1][0]]
+        lx, ly = origin[STAGE_EXIT.get(STAGES[i][0], STAGES[i][2][-1][0])]
         rx, ry = origin[STAGES[i + 1][2][0][0]]
         x1, y1 = lx + NODE_W + 2, ly + NODE_H / 2
         x2, y2 = rx - 4, ry + NODE_H / 2
@@ -269,34 +284,35 @@ def render(theme):
     fail_loop("GATE:PLAN", "ARCHITECT", 1)        # plan FAIL -> ARCHITECT (max 3x)
     fail_loop("AUDIT", "BUILD", 1)                # test-first finding / AUDIT FAIL -> BUILD (max 2x)
 
-    # GATE:QUALITY FAIL (max 3x) re-entry, drawn to BUILD — the common point
-    # of the remedy_class routes (doc commit / BUILD / ARCHITECT); dashed edge
-    # through the col3/col4 gap
-    (qx, qy), (rx_, ry_) = origin["GATE:QUALITY"], origin["BUILD"]
-    x1, y1 = qx - 4, qy + NODE_H / 2
-    x2, y2 = rx_ + NODE_W + 2, ry_ + 11
-    s.append(
-        f'<path d="M{x1},{y1} C{x1 - 30},{y1} {x2 + 30},{y2} {x2},{y2}" fill="none" '
-        f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
-    )
-
-    # REVIEW Medium+ / HANDOFF CI fail bus -> BUILD, the common point of the
-    # remedy_class routes (D11; REVIEW auto-resolution max 7x); HANDOFF's CI
-    # failure joins the bus
-    (vx, vy), (hx, hy), (rx_, ry_) = origin["REVIEW"], origin["HANDOFF"], origin["BUILD"]
-    bx, cx, ex = vx + NODE_W / 2, hx + NODE_W - 24, rx_ + 103
+    # remedy_class re-entry bus (D11): GATE:QUALITY FAIL (max 3x), HANDOFF CI
+    # failure and REVIEW Medium+ (max 7x) join it; it drops into ARCHITECT
+    # (design) and BUILD (impl / test); a doc route is a doc commit, no phase
+    (vx, vy), (hx, hy), (qx, qy) = origin["REVIEW"], origin["HANDOFF"], origin["GATE:QUALITY"]
+    (ax, ay), (rx_, ry_) = origin["ARCHITECT"], origin["BUILD"]
+    bx, ex = vx + NODE_W / 2, ax + NODE_W / 2
     s.append(
         f'<path d="M{bx},{vy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
-        f'L{ex + 8},{BUS_Y} Q{ex},{BUS_Y} {ex},{BUS_Y + 8} L{ex},{ry_ - 4}" fill="none" '
+        f'L{ex + 8},{BUS_Y} Q{ex},{BUS_Y} {ex},{BUS_Y + 8} L{ex},{ay - 4}" fill="none" '
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
+    for jx, jy in ((hx + NODE_W - 24, hy), (qx + NODE_W / 2, qy)):
+        s.append(
+            f'<path d="M{jx},{jy - 2} L{jx},{BUS_Y}" fill="none" '
+            f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9"/>'
+        )
+    dx = rx_ + NODE_W / 2
     s.append(
-        f'<path d="M{cx},{hy - 2} L{cx},{BUS_Y}" fill="none" '
-        f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9"/>'
+        f'<path d="M{dx},{BUS_Y} L{dx},{ry_ - 4}" fill="none" '
+        f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
+    for tx_, tag in ((ex, "design · review: start judged"), (dx, "impl / test")):
+        s.append(
+            f'<text x="{tx_ + 5}" y="{BUS_Y + 15}" font-family="{SANS}" font-size="9" '
+            f'fill="{t["fail"]}">{tag}</text>'
+        )
     s.append(
-        f'<text x="{(cx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
-        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → re-entry by remedy_class · review ≤7×</text>'
+        f'<text x="{(bx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
+        f'font-size="10" fill="{t["fail"]}">GATE:QUALITY FAIL / CI fail / review Medium+ (≤7×) → re-entry by remedy_class · doc → doc commit</text>'
     )
 
     # ---- STOP node (D6: no code change -> close/report)

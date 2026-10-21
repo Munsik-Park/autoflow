@@ -22,7 +22,7 @@ AutoFlow structures every code change through a defined lifecycle:
 
 ```
 PREFLIGHT       Preparation (U1)  — prior-attempt resolution, Git clean check, sync, entry, state creation
-CRITERION-REVIEW Criterion review (U1) — the attempt's review of the issue's acceptance criteria against the code and policy
+CRITERION-REVIEW Criterion review (U1) — the attempt's review of the issue's acceptance criteria against the code and policy; on its [criterion-ready] entry, back to PREFLIGHT, whose stop conditions and state file come before DIAGNOSE
 DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
@@ -51,7 +51,8 @@ full diagram):
 ```mermaid
 flowchart LR
     PRE([PREFLIGHT]) --> CRV[CRITERION-REVIEW]
-    CRV --> DIA[DIAGNOSE]
+    CRV --> PRE
+    PRE --> DIA[DIAGNOSE]
     DIA --> HYP{{GATE:HYPOTHESIS}}
     HYP --> ARC[ARCHITECT]
     ARC --> PLAN{{GATE:PLAN}}
