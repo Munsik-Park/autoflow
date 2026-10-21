@@ -52,7 +52,7 @@ remote-tracking ref; bringing them to this state is the orchestrator's.
 git status                       # must report nothing to commit, working tree clean
 
 # 2. Synced with remote
-git fetch origin
+git fetch --prune origin
 # An attempt's start: its dev branch dev-<date>-<time>-issue-<N>, made at its base's latest commit
 # when the cycle created the attempt (autoflow-records new) and with no commit of its own yet, is
 # checked out and fast-forwarded to its base's latest commit — `autoflow-records base` prints the

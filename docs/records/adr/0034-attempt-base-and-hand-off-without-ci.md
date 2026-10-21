@@ -6,7 +6,7 @@ Accepted (issue #490; the criteria settled by the attempt's criterion review, en
 advisor decisions A1 — the pull request's base when the operator names a commit — and A2 — a pull
 request no CI runs for). Amends ADR-0029 D2 (the dev branch's name) and D3, and ADR-0030 D2 (where
 `autoflow-records new` makes the dev branch, and its options); amends ADR-0024 D4 and D5 (what the
-hand-off is bound to — Amendment note (issue #490) there).
+hand-off is bound to — Amendment note (issue #490) there) and ADR-0033 D1's U6 and U7 exits.
 
 ## Context
 
@@ -43,7 +43,9 @@ case and not the only one (A2).
 `--base`, or the remote default branch. The dev branch starts at `--commit`, or at the base's latest
 commit on `origin`. Both are kept on the dev branch in the checkout's git configuration: the base as
 `branch.<dev branch>.gh-merge-base`, which `gh pr create` reads when no `--base` is given, and a named
-commit as `branch.<dev branch>.autoflow-start`. `autoflow-records base` prints the base, and the
+commit as `branch.<dev branch>.autoflow-start`; the record directory keeps the base in a file
+`base`, from which `autoflow-records claim` sets `gh-merge-base` in the checkout that takes the
+attempt over. `autoflow-records base` prints the base, and the
 remote default branch for a branch with none (an attempt made before this change). PREFLIGHT's start
 fast-forwards the dev branch to `origin/<base>` unless `autoflow-start` is set. The operator names
 them with the request (`/autoflow:cycle <N> new --base <branch>`, `--commit <commit>`).
@@ -51,15 +53,14 @@ them with the request (`/autoflow:cycle <N> new --base <branch>`, `--commit <com
 With no name given the base is the remote default branch, as before; it is now read once, at the
 attempt's creation, and kept with the branch. A commit with no `--base` has the remote default branch
 as its base (A1). A commit that is not in the base's history makes the pull request carry the
-commits between them (a pull request holds what follows the merge-base); `git log origin/<base>..HEAD`
-shows that before the pull request is opened, and whether to stop and report or to proceed with the
-fact stated is the cycle's judgment (A1).
+commits between them (a pull request holds what follows the merge-base); `autoflow-records new`
+reports it (`not-in-base: <n>`), and whether to stop and report or to proceed with the fact stated
+is the cycle's judgment (A1).
 
 Why the git configuration: `gh pr create` reads it; the hook reads it with one `git config` before
-any state is read (D3); a deleted branch takes its section with it. It lives in the checkout's
-repository: an attempt taken over (`autoflow-records claim`) from another clone has no
-`gh-merge-base` there and reads the remote default branch, and its open pull request still names its
-base.
+any state is read (D3); a deleted branch takes its section with it. It lives in one repository, so
+the record keeps the base too, for a checkout in another clone that takes the attempt over. The
+`--base` value is the branch's name as it is (`origin/foo` is the branch `origin/foo`).
 
 **D2 — The base stands where the default branch or `main` stood for this attempt's change.** The
 start's fast-forward, the pull request's base, the conflict resolution and the push-rejection

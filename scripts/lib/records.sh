@@ -21,7 +21,8 @@
 # file, the ledger, the reports, the criterion review record and the
 # cycle-layer store, the file `checkout`: one line, the physical path of the
 # checkout the attempt belongs to (the one that started it, or took it over),
-# and the file `branch`: one line, its dev branch (absent before #490).
+# and the files `branch` and `base`: one line each, its dev branch and the
+# branch its pull request merges into (both absent before #490).
 # `completed` marks an attempt whose cleanup has run
 # (scripts/cleanup/cleanup-issue.sh).
 #

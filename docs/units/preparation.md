@@ -213,7 +213,10 @@ its exit.
   is the remote default branch, or the branch the operator names for the attempt
   (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
   (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The
-  operator names them with the request (`/autoflow:cycle <N> new --base <branch>`, …). It refuses —
+  operator names them with the request (`/autoflow:cycle <N> new --base <branch>`, …). A named
+  commit with commits its base does not have is reported (`not-in-base: <n>` — the pull request
+  would carry them); whether to stop and report or go on with that stated is the orchestrator's
+  judgment, recorded with its grounds (ADR-0034 D1). It refuses —
   and nothing is made — on a dirty tree, an active attempt of this checkout, a failed fetch, no
   remote-tracking ref of the base, a commit not in the checkout, or a record root that is undetermined or unusable (exit `7`); each is a stop reported to
   the user, as PREFLIGHT reports it. On `criterion-review`, the attempt named is checked out, and
