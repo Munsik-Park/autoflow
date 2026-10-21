@@ -8,7 +8,7 @@ BUILD and AUDIT are one functional unit, U4 Build and verify
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
 four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
 this file states them, with the cautions the build is asked to heed and the result it owes. How the
-unit reaches the goal — what it reads, whether it spawns helpers, how it divides test and
+unit reaches the goal — what else it reads, whether it spawns helpers, how it divides test and
 implementation work, how it runs its checks and when it stops iterating — is the unit agent's,
 recorded with its grounds in its artifact ([`core.md`](../core.md) > Rule Scope,
 principle 2).
@@ -53,9 +53,9 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — and the build report's path. On a
   re-entry it also names what the re-entry is for and the material that carries it (*Re-entry*
   below).
-- **Documents.** Injection stays role-minimal and routed via `<autoflow-root>/docs/INDEX.md`: the prompt carries a
-  documents line naming the documents the build needs (this file, the affected docs DIAGNOSE
-  identified); the unit reads anything further by its own judgment. The return is routed
+- **Documents.** The unit's agent definition carries this file with the rest of its guidance
+  ([`core.md`](../core.md) > Context Injection); the prompt names the affected docs DIAGNOSE
+  identified by path, and the unit reads anything further by its own judgment. The return is routed
   (*Report routing* below).
 
 ## What the build owes
@@ -159,11 +159,12 @@ worth and where it loses.
   writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
   its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
   observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
-  root (the unit's root declaration) and the paths of the rules its work follows —
-  `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
+  root (the unit's root declaration) and the text of the rules its work follows, from the unit's
+  own definition — `<autoflow-root>/docs/core.md` > Instruction Conventions and Rule Scope, by
+  which they are read, `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
   Change Surface Rules > *Lint chain on the staged surface* and `<autoflow-root>/docs/role-common-rules.md` >
-  Bash Execution Mode — since a `general-purpose` helper receives no AutoFlow rule text of its own
-  (ADR-0027 D2). Requirements of two areas that
+  Bash Execution Mode — since a `general-purpose` helper has no AutoFlow definition of its own
+  (`<autoflow-root>/docs/core.md` > Context Injection). Requirements of two areas that
   cannot both hold take the design-contradiction path above; a design point two areas meet
   differently is a decision point.
 - **A deterministic run is a command, not a context.** Running tests, lint and builds, and
@@ -231,7 +232,7 @@ found — is its own, written where it judges useful.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
 change on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
-Its documents line names that document alone. Its spawn prompt carries the security-checklist record
+Its agent definition carries that document. Its spawn prompt carries the security-checklist record
 line (*Security checklist* below).
 
 - **Test-first not confirmed** → the evaluator scores nothing and returns its `## Test-first`

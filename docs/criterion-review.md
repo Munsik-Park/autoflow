@@ -219,8 +219,9 @@ and returns the record's path and a one-line summary.
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
 verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
 receives the issue body and the stage 1 record and none of the session's conversation, and the
-in-depth context receives the target file and nothing of the session's verdicts or grounds. What each context reads, in what order and with
-which tool, is its own (Rule Scope, principle 2 — [`core.md`](core.md)). Each spawn
+in-depth context receives the target file and nothing of the session's verdicts or grounds. Each context's agent definition carries its part of this document ([`core.md`](core.md) >
+Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
+principle 2 — [`core.md`](core.md)). Each spawn
 declares its role by its `subagent_type` and the model its policy row names
 ([`core.md`](core.md) > Spawn Model), at most five are in flight at once
 ([`core.md`](core.md) > Cost Control > *Concurrent spawns*), and its prompt states the

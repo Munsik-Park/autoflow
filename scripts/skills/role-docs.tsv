@@ -1,0 +1,143 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Apache-2.0
+# role-docs.tsv — what each role's carrier carries besides the text written in it (issue #494, ADR-0035)
+#
+# The input of scripts/skills/gen-skill-bodies.sh for every carrier a role
+# starts with: a command body (skills/<name>/SKILL.md), an agent definition
+# (agents/<name>.md) and a reviewer's rule file (docs/review/review-<name>.md).
+# A carrier carries, in this file's order, the text of every entry whose
+# carrier matches it. A command body's core part is core-units.tsv's
+# (ADR-0032); every other carrier takes its core parts here. The grounds of
+# each entry are in the pull request that sets it. A line with no tab is a
+# comment; an entry's columns are tab-separated:
+#
+#   carrier   a generated file, relative to the AutoFlow root; `*` matches any
+#             name (`agents/*.md`: every agent definition)
+#   document  a usage document, relative to the AutoFlow root
+#   scope     empty: the whole document. Otherwise a heading path: each step a
+#             heading's leading text, steps joined by " > "
+#             ("## Gate rubrics > ### AUDIT"), the section that heading opens
+#   prefix    empty: the whole scope. Otherwise the one block of the scope
+#             whose first line starts with it (a bullet with its continuation)
+#
+# An entry whose document an earlier entry of the same carrier carries whole
+# is not carried twice. The
+# generator fails on an entry that matches no carrier, a scope or prefix that
+# matches no part of its document or more than one, and a link whose target
+# does not exist.
+
+# Agent definitions: the core's reading conventions first.
+agents/*.md	docs/core.md	## Instruction Conventions
+agents/*.md	docs/core.md	## Rule Scope
+
+agents/autoflow-advisor.md	docs/core.md	## Execution Principles	- **[MUST] Human-decision presentation**
+agents/autoflow-advisor.md	docs/role-contracts.md	## Advisor
+agents/autoflow-advisor.md	docs/decision-ledger.md
+
+agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Review aggregation
+agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### A repeated complaint
+agents/autoflow-analyzer.md	docs/units/delivery.md	## CI > ### CI-failure re-entry
+
+agents/autoflow-criterion-tracer.md	docs/criterion-review.md	## Cause reach and rule conflict
+agents/autoflow-criterion-analyzer.md	docs/criterion-review.md	## In-depth analysis and reconciliation
+agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## In-depth analysis and reconciliation
+agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## Review record
+
+agents/autoflow-evaluator.md	docs/evaluation-system.md
+agents/autoflow-evaluator.md	docs/units/analysis.md	## What the analysis owes
+agents/autoflow-evaluator.md	docs/units/analysis.md	## Analysis report
+agents/autoflow-evaluator.md	docs/units/design.md	## Output artifacts
+agents/autoflow-evaluator.md	docs/units/build.md	## What the build owes
+agents/autoflow-evaluator.md	docs/units/build.md	## Build report
+agents/autoflow-evaluator.md	docs/submodule-common-rules.md	## Change Surface Rules
+
+agents/autoflow-unit-analysis.md	docs/units/analysis.md
+agents/autoflow-unit-analysis.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:HYPOTHESIS
+agents/autoflow-unit-analysis.md	docs/role-contracts.md	## Functional-unit agents
+agents/autoflow-unit-analysis.md	docs/submodule-common-rules.md
+agents/autoflow-unit-analysis.md	docs/role-common-rules.md
+
+agents/autoflow-unit-design.md	docs/units/design.md
+agents/autoflow-unit-design.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:PLAN
+agents/autoflow-unit-design.md	docs/role-contracts.md	## Functional-unit agents
+agents/autoflow-unit-design.md	docs/submodule-common-rules.md
+agents/autoflow-unit-design.md	docs/role-common-rules.md
+
+agents/autoflow-unit-build.md	docs/core.md	## Git Workflow — Rules > ### Commit Rules
+agents/autoflow-unit-build.md	docs/units/build.md
+agents/autoflow-unit-build.md	docs/evaluation-system.md	## Gate rubrics > ### AUDIT
+agents/autoflow-unit-build.md	docs/role-contracts.md	## Functional-unit agents
+agents/autoflow-unit-build.md	docs/role-contracts.md	## Build unit in a target scope
+agents/autoflow-unit-build.md	docs/submodule-common-rules.md
+agents/autoflow-unit-build.md	docs/role-common-rules.md
+
+# Every agent definition: the sections of the rules of every role spawn that
+# name every role (the unit agents carry the whole document above, whose scope
+# names them).
+agents/*.md	docs/role-common-rules.md	## Bash Execution Mode
+agents/*.md	docs/role-common-rules.md	## Communication > ### Result delivery path by spawn mode
+agents/*.md	docs/submodule-common-rules.md	## Reporting Format
+agents/*.md	docs/submodule-common-rules.md	## Verification and Tools
+
+# Command bodies: the unit's document and the documents on its entry
+# (docs/core.md > Unit Document Loading Contract, Unit references).
+skills/cycle-u1/SKILL.md	docs/units/preparation.md
+skills/cycle-u1/SKILL.md	docs/criterion-review.md
+skills/cycle-u1/SKILL.md	docs/git-workflow.md	## Git Clean Check
+skills/cycle-u1/SKILL.md	docs/git-workflow.md	## Post-Merge Cleanup
+skills/cycle-u2/SKILL.md	docs/units/analysis.md
+skills/cycle-u2/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle-u3/SKILL.md	docs/units/design.md
+skills/cycle-u3/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle-u4/SKILL.md	docs/units/build.md
+skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle-u4/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u5/SKILL.md	docs/units/completion-evaluation.md
+skills/cycle-u5/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u6/SKILL.md	docs/units/delivery.md
+skills/cycle-u6/SKILL.md	docs/pr-body-guide.md
+skills/cycle-u6/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u7/SKILL.md	docs/units/review.md
+skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
+skills/cycle-u7/SKILL.md	docs/external-review-sequencing.md
+skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/criterion-review/SKILL.md	docs/units/preparation.md	## The criterion review stage
+skills/criterion-review/SKILL.md	docs/criterion-review.md
+
+# The whole cycle in one session: every unit's.
+skills/cycle/SKILL.md	docs/units/preparation.md
+skills/cycle/SKILL.md	docs/criterion-review.md
+skills/cycle/SKILL.md	docs/git-workflow.md	## Git Clean Check
+skills/cycle/SKILL.md	docs/git-workflow.md	## Post-Merge Cleanup
+skills/cycle/SKILL.md	docs/units/analysis.md
+skills/cycle/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle/SKILL.md	docs/units/design.md
+skills/cycle/SKILL.md	docs/units/build.md
+skills/cycle/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle/SKILL.md	docs/units/completion-evaluation.md
+skills/cycle/SKILL.md	docs/units/delivery.md
+skills/cycle/SKILL.md	docs/pr-body-guide.md
+skills/cycle/SKILL.md	docs/units/review.md
+skills/cycle/SKILL.md	docs/reviewer-backend.md
+skills/cycle/SKILL.md	docs/external-review-sequencing.md
+
+# Every command body: the homes the core names for what the session itself
+# writes and asks — the ledger's entries, an issue draft, the advisor's procedure, the state
+# file (not the criterion review stage, which writes none), the evaluator's
+# spawn (the units that spawn one) and what carries a spawn's report — and the
+# rules every actor of a cycle follows.
+skills/*/SKILL.md	docs/decision-ledger.md
+skills/*/SKILL.md	docs/issue-proposal.md
+skills/*/SKILL.md	docs/role-contracts.md	## Advisor
+skills/cycle/SKILL.md	docs/state-tracking.md
+skills/cycle-u*/SKILL.md	docs/state-tracking.md
+skills/cycle/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/cycle-u[2-5]/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/*/SKILL.md	docs/role-common-rules.md	## Communication > ### Result delivery path by spawn mode
+skills/*/SKILL.md	docs/submodule-common-rules.md	## Reporting Format
+skills/*/SKILL.md	docs/submodule-common-rules.md	## Verification and Tools
+
+# Reviewers' rule files: the review rules every reviewer applies.
+docs/review/review-claude.md	docs/review/review.md
+docs/review/review-codex.md	docs/review/review.md

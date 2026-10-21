@@ -9,8 +9,129 @@ is in.
 **Input.**
 - The pull request the run names — its diff, body and linked issue, read with `gh`
   (`--repo <owner/name>` on every call for a sub-repo pull request).
-- `<autoflow-root>/docs/review/review.md` — the review rules, severity levels and Output Format.
+- `<autoflow-root>/docs/review/review.md` — the review rules, severity levels and Output Format, carried below.
 
 **Output.** One review, in the `<autoflow-root>/docs/review/review.md` Output Format and in Korean,
 written to the file the run names. You post no pull-request comment, change no label and do not
 modify the change under review.
+
+<!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
+
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/review/review.md`.
+
+<!-- From <autoflow-root>/docs/review/review.md -->
+
+# Code Review Instructions
+
+The review rules every AutoFlow reviewer applies. Each reviewer's own rule file, which names what that reviewer reads, is beside this one (`<autoflow-root>/docs/review/review-<reviewer>.md`; `<autoflow-root>/docs/reviewer-backend.md` > *Rule files*).
+
+## Before Reviewing
+
+- Read the issue summary, acceptance criteria, PR description, and full PR diff.
+- For GitHub PRs or issues, use the local `gh` CLI for metadata, comments, checks, and diffs. Do not rely on public web access for private or permission-restricted repositories.
+- The review target is what the PR's own repository tracks directly: every file in its tree, a submodule's pointer (gitlink) included. A submodule's contents are not part of it — they are tracked by the submodule's own repository and judged by the review of that repository's PR. Do not report a finding located inside a submodule. A PR whose only change is a submodule pointer is reviewed like any other PR, over its own repository.
+- Identify the changed surfaces, adjacent code within the review target that the diff depends on, and any external contracts affected by the change.
+- If the PR crosses a repo boundary — files inside a submodule, submodule pointers, dispatch workflows, or merge sequencing — also check `<autoflow-root>/docs/repo-boundary-rules.md` and `<autoflow-root>/docs/external-review-sequencing.md`.
+- Use repository documents as review evidence **only** when the PR links or names the relevant document/section, or when you independently discover directly relevant repo context while tracing the changed surface. Do not infer hidden design intent from unrelated repository documents, and do not treat a linked design doc as a reason to pass a change you cannot verify from the diff.
+- Read the **linked issue's acceptance criteria** before judging correctness; a "does not satisfy the contract" finding must be checked against the actual AC reachable from the PR, not an assumed contract.
+- Read the PR body's `## Verification dispositions` list — an AutoFlow cycle's PR carries it; an operator-led PR is not asked to (`<autoflow-root>/docs/pr-body-guide.md` > *Verification dispositions*), and its absence there is not a finding — and judge each stated reason: every issue acceptance criterion not verified by an automated test appears there with its disposition and a one-line reason. A reduction whose stated reason does not hold — an `existing-coverage` claim naming a mechanism that does not fail on that property, a `none` whose absence in fact costs something, a `manual` scenario that does not exist — is a finding. A reduction whose reason does hold is not a finding, and the absence of a test is not a finding on its own.
+
+## Review Posture
+
+- Optimize for depth over speed.
+- Treat the review as a bug-finding pass, not a style pass or general advice pass.
+- Look for concrete bugs, regressions, security issues, data loss risks, broken contracts, and missing tests.
+- Scale review depth with PR size and complexity: trivial PRs get a lightweight pass; large, risky, or cross-boundary PRs get deeper inspection of adjacent code and failure paths.
+- Do not merge, close issues, or perform release/deployment actions as part of review.
+- Do not submit an approval or request-changes review state unless the user explicitly asks for that review state.
+- Keep style, naming, and preference feedback out of blocking findings unless it creates a real maintainability or correctness risk.
+- A code comment carries only a sentence that stays true for as long as the code it sits on is unchanged. **A comment that diverges from its code, or that carries what a comment does not carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion, issue or PR reference, another file's path or contract, a change history, or any content outside the cases a comment carries, each about the code it sits on (an external constraint, an invariant the code does not make evident, what breaks if the code is written otherwise, a function's contract — with at most one ADR identifier as its only reference), such as a value, count or list copied from another file. Such a finding never counts toward the `Medium`+ verdict. Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or personal data, for example — takes the severity its impact sets. A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is code even in comment syntax: a defect in it is judged by the behavior it changes, not by this rule, while an explanation written beside it is a comment. The rule does not apply in the AutoFlow framework's own source repository, which publishes this file to its targets; there comments are reviewed like any other change.
+- Write the entire review output — the summary, every finding, and all prose — in Korean (한글). Keep code identifiers, file paths, command names, and the severity levels in English. This applies to the review record, terminal output, and any comment posted to a PR.
+
+## Severity
+
+Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`, `Low Confidence`. `Low Confidence` is a suspected issue that could not be confirmed; the other levels are confirmed. A `Medium` and above (`Medium`+) finding that holds keeps the cycle from handing the pull request off (`<autoflow-root>/docs/units/review.md` > *End*).
+
+## Review Method
+
+- Search for possible bugs from multiple angles in parallel: changed behavior, adjacent dependencies, tests, security, operational flow, and user-facing contracts.
+- Verify each suspected bug before reporting it. Trace the code path, compare it with the issue or PR claim, and check whether tests would catch it.
+- Review against the intended contract and realistic failure modes; do not expand the contract merely because a stricter invariant can be imagined.
+- Before reporting a finding, support each failure precondition with evidence from code, accepted input paths, supported configurations, or operational procedures. Do not make a reproduction succeed by injecting unreachable states, disabling enforced constraints, or relying on unsupported assumptions. Reproducing a failure does not prove its setup is reachable. Rare and adversarial cases remain in scope when their preconditions are supported by evidence.
+- Apply different evidence standards to implementation and documentation. First classify a documentation statement by whether current system behavior depends on it.
+- Treat documentation as behavior-linked only when it participates in defining, invoking, interpreting, or operating a current system behavior. Verify those statements against the implementation and the authoritative contract.
+- Treat other documentation as descriptive. Review it for accuracy and internal consistency, but do not derive new runtime requirements or broaden the implementation contract from descriptive prose.
+- When documentation and implementation differ, establish authority from the linked acceptance criteria, explicit schema or API contracts, or normative operational instructions before deciding whether the defect is in the implementation or the documentation.
+- Report a suspected issue whose evidence stays weak after tracing as `Low Confidence`, with what would confirm it, rather than dropping it.
+- Rank confirmed findings by severity and user impact.
+- Produce one high-signal overview instead of many scattered observations.
+- Add inline-comment candidates only when a finding maps to a specific changed line.
+- Deliver the review as a review record: when the run names a file, write the whole review to it in the Output Format below; otherwise print it. Post the review to the PR only when the operator asks for it.
+- Do not change a PR's labels. In an AutoFlow cycle each review is one input to the aggregation of every review of the PR, which posts the one review comment (`<autoflow-root>/docs/units/review.md` > *Review aggregation*).
+- Submitting an approval or request-changes review state requires explicit user instruction.
+- Merging, closing issues, and deploying are not allowed during review.
+
+## Review Lenses
+
+1. Security
+- Authentication bypass
+- Authorization or permission errors
+- Secret leakage
+- Injection or unsafe input handling
+- Unsafe command execution
+
+2. Correctness and Regression
+- Behavior that no longer satisfies the issue or PR claims
+- Broken API routes, schema contracts, config names, or feature flags
+- State, retry, idempotency, race, rollback, and error-path bugs — for each read-modify-write or check-then-act on shared state the diff touches (a file, a row, a store entry), name what serializes it (`path:line`) or report that nothing does
+- Adjacent-code assumptions invalidated by the diff
+
+3. Tests
+- Missing acceptance-criteria coverage
+- Missing edge cases around failure, rollback, permissions, and boundary inputs
+- Tests that assert mocks instead of the real runtime contract
+- Flaky or environment-dependent tests introduced by the change
+
+4. Architecture
+- Layer violations
+- Dependency direction problems
+- Cross-repo or submodule boundary violations
+- Runtime behavior that contradicts documented operational flow
+
+5. Performance
+- N+1 calls
+- Expensive loops or repeated work on hot paths
+- Unbounded queries, payloads, or memory growth
+
+## Output Format
+
+All section bodies below are written in Korean (한글); only the section headers, severity labels, code identifiers, and paths stay in English.
+
+# Review Summary
+
+A concise overview of the review result. State whether the PR has blocking findings, non-blocking findings, missing tests, or no material issues found.
+
+# Findings
+
+List confirmed findings, ranked by severity. For each finding include:
+
+- Severity: its level
+- File and line reference
+- What breaks
+- Why it breaks, with code-path evidence
+- Evidence for each failure precondition
+- Suggested fix direction
+
+# Inline Comment Candidates
+
+Only include comments that should be placed on specific changed lines. Keep each comment focused on the concrete bug at that line.
+
+# Missing Tests
+
+List specific test gaps only when they materially affect confidence in the changed behavior.
+
+# Low Confidence
+
+`Low Confidence` findings, each with what would confirm it.
+
+If there are no findings in a section, say `None`.

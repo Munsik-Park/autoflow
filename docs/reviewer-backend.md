@@ -17,8 +17,8 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt names the rule file by its absolute path, and the final message is the review |
-| `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt names the rule file by its absolute path |
+| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
+| `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
 | the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](units/review.md) > *Review aggregation*) |
 
 A new reviewer is a name the resolver supports
@@ -32,18 +32,19 @@ lenses and Output Format — are
 `<autoflow-root>/docs/review/review.md`. Each reviewer's own rule file, beside
 it, names what that reviewer reads and where its review goes:
 `<autoflow-root>/docs/review/review-claude.md`,
-`<autoflow-root>/docs/review/review-codex.md`. The wrapper names the rule file
-in its prompt, and states what `<autoflow-root>` is.
+`<autoflow-root>/docs/review/review-codex.md`, each of which carries the review
+rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
+carries the rule file's text, and states what `<autoflow-root>` is.
 
 Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
 
 - `.review.<reviewer>.rules` — another rule file in place of
-  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt names that file alone, so it carries
+  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, so it carries
   or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
   stops (exit `2`) before the reviewer starts.
 - `.review.<reviewer>.lenses` — a file of further review lenses (the defect
-  axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt names
+  axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt carries
   beside the rule file. Absent from a repository, it is left out of that
   repository's review, with a line on stderr.
 

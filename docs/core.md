@@ -1,6 +1,6 @@
 # AutoFlow Core
 
-<!-- The source of the /autoflow:cycle, /autoflow:cycle-u1 … /autoflow:cycle-u7 and /autoflow:criterion-review command bodies: scripts/skills/gen-skill-bodies.sh generates skills/*/SKILL.md from this file (ADR-0027 D2, ADR-0032), a unit's body by the classification scripts/skills/core-units.tsv. Edit this file — and the classification, for a part added or one whose units change — then regenerate. -->
+<!-- The source of the /autoflow:cycle, /autoflow:cycle-u1 … /autoflow:cycle-u7 and /autoflow:criterion-review command bodies: scripts/skills/gen-skill-bodies.sh generates skills/*/SKILL.md from this file (ADR-0027 D2, ADR-0032), a unit's body by the classification scripts/skills/core-units.tsv, and the parts scripts/skills/role-docs.tsv names into the agent definitions (ADR-0035). Edit this file — and the classification, for a part added or one whose units change — then regenerate. -->
 
 ## Instruction Conventions
 
@@ -27,7 +27,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ### Flow Control
 
-Each unit's rows are its unit document's `## Transitions` section, read on entering the unit (the router table in *Unit Document Loading Contract* below); the rows that leave no single unit are *Any unit* below.
+Each unit's rows are its unit document's `## Transitions` section, which the unit's body carries (the router table in *Unit Document Loading Contract* below); the rows that leave no single unit are *Any unit* below.
 
 #### Any unit
 
@@ -45,9 +45,9 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 
 ### Unit Document Loading Contract
 
-**[MUST]** On entering a phase, Read the document of its unit below **before** acting in that phase. The unit document is the source of truth for that unit's body; this core file does not restate it. Do not execute a phase from memory of a prior cycle — re-read the unit document each cycle.
+**[MUST]** On entering a phase, act on the document of its unit below, which the session's command body carries after the core (*Context Injection*), **before** acting in that phase. The unit document is the source of truth for that unit's body; this core file does not restate it. Do not execute a phase from memory of a prior cycle — the body is the unit document of the installed version.
 
-| Unit | Phases | Document to Read on entry | Exit |
+| Unit | Phases | Unit document | Exit |
 |------|--------|------|------|
 | U1 Preparation | PREFLIGHT, CRITERION-REVIEW | [`<autoflow-root>/docs/units/preparation.md`](units/preparation.md) | PREFLIGHT's readiness conditions |
 | U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | [`<autoflow-root>/docs/units/analysis.md`](units/analysis.md) | GATE:HYPOTHESIS |
@@ -57,7 +57,7 @@ Each unit's rows are its unit document's `## Transitions` section, read on enter
 | U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`<autoflow-root>/docs/units/delivery.md`](units/delivery.md) | HANDOFF: every pull request open, CI green or recorded as not run |
 | U7 Review | REVIEW | [`<autoflow-root>/docs/units/review.md`](units/review.md) | REVIEW: the aggregated review below Medium, CI green or recorded as not run |
 
-What each phase does, and what else a unit reads on entry: the phase list and *Unit references* below.
+What each phase does, and what else a unit's body carries: the phase list and *Unit references* below, and *Context Injection*.
 
 The gate **PASS thresholds** (each ≥ 7, avg ≥ 7.5, security ≤ 3 → immediate block) and the **regression / retry caps** are fixed invariants: they live in the Flow Control table and the **Regressions** line above, and the unit documents and rubrics apply them. Who enforces what: the hook (`<autoflow-root>/hooks/check-autoflow-gate.sh`) computes PASS from the recorded `scores` — for the score-gated role spawns, `git push` and `gh pr create` — and denies `git push` / `gh pr create` while the `audit` or `gate_quality` record carries `remedy_class`; it counts no FAIL. The FAIL and re-entry counts are the orchestrator's own accounting, and the REVIEW auto-resolution count is `<autoflow-root>/scripts/handoff/review-gate.sh`'s (exit `11` at 7).
 
@@ -84,7 +84,7 @@ U7 Review              REVIEW          — the reviewers the operator's configur
 **Flow Control** — the transitions, grouped by the unit they leave. Each group's unit document is the home of the
 procedure a row names; the row keeps the condition and the destination.
 
-Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in an on-demand **unit document**, not in this core file. This file retains what crosses a unit's boundary: the cross-unit invariants and authority rules, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are [`<autoflow-root>/docs/state-tracking.md`](state-tracking.md)). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and a session that runs the whole cycle receives all of it.
+Each unit's body — what it is asked, its artifact contract, its cautions, its routing and its unit-local `[MUST]`/`[DENY]` constraints — lives in its **unit document**, not in this core file. This file retains what crosses a unit's boundary: the cross-unit invariants and authority rules, the router (the unit and phase list and the Flow Control table above, whose per-unit rows are each unit document's `## Transitions` section), the regression / escalation caps (above), the Execution Principles, and the state rules (below; the state file's schema and the hook gates are [`<autoflow-root>/docs/state-tracking.md`](state-tracking.md)). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and a session that runs the whole cycle receives all of it; each receives the documents its units use with them (*Context Injection*).
 
 The rubric of every gate — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the unit's: it lives in [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > *Gate rubrics*, and the unit document routes the gate's result.
 
@@ -92,14 +92,15 @@ The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, th
 
 ### Unit references
 
-| Unit | Also read on entry |
+| Unit | Also on entry |
 |------|------|
 | U1 Preparation | facts: `<autoflow-root>/scripts/preflight/cycle-status.sh`; the criterion review stage: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md); git procedures: [`<autoflow-root>/docs/git-workflow.md`](git-workflow.md) (Git Clean Check, Post-Merge Cleanup) |
-| U2 Analysis | unit agent: `<autoflow-root>/agents/autoflow-unit-analysis.md`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents |
-| U3 Design | unit agent: `<autoflow-root>/agents/autoflow-unit-design.md`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents |
-| U4 Build and verify | unit agent: `<autoflow-root>/agents/autoflow-unit-build.md`; change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh` |
-| U6 Delivery | PR body: [`<autoflow-root>/docs/pr-body-guide.md`](pr-body-guide.md) |
-| U7 Review | reviewers: [`<autoflow-root>/docs/reviewer-backend.md`](reviewer-backend.md); merge order: [`<autoflow-root>/docs/external-review-sequencing.md`](external-review-sequencing.md) |
+| U2 Analysis | unit agent: `autoflow-unit-analysis`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents |
+| U3 Design | unit agent: `autoflow-unit-design`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents |
+| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh` |
+| U5 Completion evaluation | change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules |
+| U6 Delivery | PR body: [`<autoflow-root>/docs/pr-body-guide.md`](pr-body-guide.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules |
+| U7 Review | reviewers: [`<autoflow-root>/docs/reviewer-backend.md`](reviewer-backend.md); merge order: [`<autoflow-root>/docs/external-review-sequencing.md`](external-review-sequencing.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules |
 
 ## Cost Control
 
@@ -164,9 +165,9 @@ bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh check                #
 
 ## Context Injection — Role-Scoped Document Routing
 
-**[MUST]** Subagent document injection is role-scoped, not shared context. `<autoflow-root>/docs/INDEX.md` is the orchestrator's **router** for selecting which documents each role receives — it is never injected wholesale as common context to every spawn.
+**[MUST]** Subagent document injection is role-scoped, not shared context. A role's guidance — the parts of this core it uses and the documents its work follows — is carried by the carrier the role starts with, from the start: a session's command body, a subagent's agent definition, a reviewer's rule file, which its wrapper's prompt carries. `<autoflow-root>/scripts/skills/gen-skill-bodies.sh` generates each carrier from the guidance's homes — a command body's core parts by [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and every carrier's documents, an agent definition's core parts with them, by [`<autoflow-root>/scripts/skills/role-docs.tsv`](../scripts/skills/role-docs.tsv) — so a role's first run and every re-run carry the same guidance. `<autoflow-root>/docs/INDEX.md` is never injected wholesale as common context to every spawn; it routes the usage documents beyond a role's guidance.
 
-Each unit spawn's documents line is set by its unit document — [`<autoflow-root>/docs/units/analysis.md`](units/analysis.md) > Unit spawn, [`<autoflow-root>/docs/units/design.md`](units/design.md) > Unit spawn, [`<autoflow-root>/docs/units/build.md`](units/build.md) > Unit spawn — and preserves role-minimal injection; what a unit reads beyond it is its own judgment. An Evaluation AI's documents line names one document, [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) — the evaluator's standard, its conduct and the rubrics of all four gates — and no unit document.
+A spawn prompt names the cycle's inputs by path — the attempt's artifacts and the target's files — as its unit document's Unit spawn section says, and copies no guidance its carrier carries. A spawn with no AutoFlow definition — a unit's `general-purpose` helper, a research type, an ad-hoc spawn — receives the text of the rules its work follows in the prompt its spawner writes, from the spawner's own carrier. What a role reads beyond its guidance and its inputs is its own judgment.
 
 ## Communication
 

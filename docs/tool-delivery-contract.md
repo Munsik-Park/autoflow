@@ -14,7 +14,7 @@ mechanisms conform to these rules.
 | Rule | Enforced by |
 |------|-------------|
 | R1 — Tool version | plugin packaging, the PREFLIGHT plugin record |
-| R2 — Rule delivery | the command bodies, the agent definitions |
+| R2 — Rule delivery | the command bodies, the agent definitions and the reviewers' rule files, generated and checked (regen-clean); the reviewer wrappers' prompts |
 | R3 — Target-identity separation (the project's own files) | the plugin package |
 | R4 — Packaging and runtime checks | CI, the PREFLIGHT target check |
 
@@ -44,14 +44,17 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 ## R2 — Rule Delivery
 
-- The methodology prose is tool-versioned content. It reaches a session only
-  through the body of the AutoFlow command that starts the session
-  (`/autoflow:cycle`; `/autoflow:cycle-u1` … `/autoflow:cycle-u7` for one
-  unit, carrying the parts of the core the unit uses — ADR-0032; or
-  `/autoflow:criterion-review` for the cycle's criterion review stage alone),
-  an AutoFlow agent
-  definition, or an AutoFlow document a role reads by path under
-  `<autoflow-root>`.
+- The methodology prose is tool-versioned content. It reaches a role only
+  through the carrier the role starts with — a session through the body of
+  the AutoFlow command that starts it (`/autoflow:cycle`;
+  `/autoflow:cycle-u1` … `/autoflow:cycle-u7` for one unit, carrying the
+  parts of the core the unit uses — ADR-0032; or `/autoflow:criterion-review`
+  for the cycle's criterion review stage alone), a subagent through its
+  AutoFlow agent definition, a reviewer through its rule file, which its
+  wrapper's prompt carries, and a spawn with no AutoFlow definition through
+  the prompt its spawner writes — or as an AutoFlow document a role reads by
+  path under `<autoflow-root>` beyond its guidance
+  (`<autoflow-root>/docs/core.md` > Context Injection).
 - **[DENY]** Copying AutoFlow rule text into a target's own files. A framework
   change goes upstream to the tool repository and arrives with a plugin update;
   target-local behavior goes to the project's own files (R3).

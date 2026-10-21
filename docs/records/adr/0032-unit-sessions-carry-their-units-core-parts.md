@@ -8,6 +8,8 @@ working AI, with the grounds in the pull request). Amends ADR-0027 D2 *Commands*
 reverses ADR-0027 > Alternatives > *Per-unit commands*, retires the `unit=U1…U6` argument ADR-0030
 kept (its Decision item 3 and *Positive*), and amends `docs/tool-delivery-contract.md` R2. D1 amended for U7 by ADR-0033 (issue #485):
 `/autoflow:cycle-u7 [<N>]` takes the issue number or nothing and has no entry check that stops it.
+D3 and D4 amended by ADR-0035 (issue #494): a unit's body carries, after its core parts, the
+documents `scripts/skills/role-docs.tsv` names for it, and the generator generates every carrier.
 
 ## Context
 

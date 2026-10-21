@@ -2,12 +2,15 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# gen-skill-bodies.sh — generate the AutoFlow command bodies from the core
-# (issue #454, ADR-0027 D2)
+# gen-skill-bodies.sh — generate the carriers every AutoFlow role starts with
+# (issue #454, ADR-0027 D2; issue #494, ADR-0035)
 # =============================================================================
-# Dev-time generator. The rules reach a main session through the body of the
-# command that starts it, and every command body is generated from one source,
-# docs/core.md:
+# Dev-time generator. The rules reach a role through the carrier it starts
+# with — a main session through the body of the command that starts it, a
+# subagent through its agent definition, a reviewer through its rule file —
+# and each carrier is generated from the rules' homes: the core part of a
+# command body from docs/core.md, and every carrier's documents by the
+# classification scripts/skills/role-docs.tsv:
 #
 #   skills/cycle/SKILL.md            /autoflow:cycle <N> [new] — the whole cycle
 #                                    in one session; the command header, then
@@ -23,6 +26,20 @@
 #                                    U1's criterion review stage alone; the
 #                                    command header, then the core sections the
 #                                    stage is bound by
+#   agents/<name>.md                 an agent definition: its own text, down to
+#   docs/review/review-<name>.md     the generation marker, then what follows
+#                                    it, generated; a reviewer's rule file
+#                                    likewise
+#
+# A command body carries, after its core part, the documents role-docs.tsv
+# names for it; an agent definition and a rule file carry, after the
+# marker, the core parts and the documents it names for them. Each is
+# preceded by a `<!-- From <autoflow-root>/<document> > <section> -->` line.
+# A document's links point at `<autoflow-root>/…` (a link to a section of its
+# own document, at that document); an entry whose document an earlier entry
+# of the same carrier carries whole is left out; an entry that matches no
+# carrier, a scope or prefix that matches no part of its document or more
+# than one, and a link whose target does not exist fail the generation.
 #
 # The classification reads the core in blocks: a heading; a paragraph; a
 # bullet, a table row or a `**`-led line, with the lines that continue it; a
@@ -37,16 +54,17 @@
 # relative to docs/, while a body sits under skills/<name>/, and every AutoFlow
 # path a link names is already written as `<autoflow-root>/…` in its text.
 #
-# The plugin installs without a build step, so the generated bodies are
+# The plugin installs without a build step, so the generated carriers are
 # committed; tests/plugin/verify-skill-bodies.sh runs `--check` (regen-clean),
 # the classification checks, the root declaration and the `<autoflow-root>/…`
 # path closure.
 #
-#   gen-skill-bodies.sh            write every body
-#   gen-skill-bodies.sh --check    exit 0 when the committed bodies equal the
-#                                  generator's output, 1 (naming each body that
+#   gen-skill-bodies.sh            write every carrier
+#   gen-skill-bodies.sh --check    exit 0 when the committed carriers equal the
+#                                  generator's output, 1 (naming each one that
 #                                  differs) otherwise
-#   gen-skill-bodies.sh --list     print each generated body's path
+#   gen-skill-bodies.sh --list     print each generated command body's path
+#   gen-skill-bodies.sh --list-all print every generated carrier's path
 #   gen-skill-bodies.sh --core Uk  print the core part of unit Uk's body
 # Pure bash + awk + sed; BSD and GNU tools alike.
 # =============================================================================
@@ -58,6 +76,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORE="$ROOT/docs/core.md"
 MAP="$ROOT/scripts/skills/core-units.tsv"
+DOCS="$ROOT/scripts/skills/role-docs.tsv"
 UNITS="U1 U2 U3 U4 U5 U6 U7"
 BODIES="cycle cycle-u1 cycle-u2 cycle-u3 cycle-u4 cycle-u5 cycle-u6 cycle-u7 criterion-review"
 
@@ -66,12 +85,14 @@ case "${1:-}" in
   "") ;;
   --check) MODE=check ;;
   --list) for _s in $BODIES; do echo "skills/$_s/SKILL.md"; done; exit 0 ;;
+  --list-all) MODE=list ;;
   --core) MODE=core
           case " $UNITS " in *" ${2:-none} "*) ;; *) echo "usage: gen-skill-bodies.sh --core U1…U7" >&2; exit 2 ;; esac ;;
-  *) echo "usage: gen-skill-bodies.sh [--check | --list | --core Uk]" >&2; exit 2 ;;
+  *) echo "usage: gen-skill-bodies.sh [--check | --list | --list-all | --core Uk]" >&2; exit 2 ;;
 esac
 [ -f "$CORE" ] || { echo "gen-skill-bodies: $CORE not found" >&2; exit 2; }
 [ -f "$MAP" ] || { echo "gen-skill-bodies: $MAP not found" >&2; exit 2; }
+[ -f "$DOCS" ] || { echo "gen-skill-bodies: $DOCS not found" >&2; exit 2; }
 
 # strip_links — a markdown link becomes its text.
 strip_links() { sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g'; }
@@ -97,7 +118,209 @@ need() { [ -n "$2" ] || { echo "gen-skill-bodies: docs/core.md has no $1" >&2; e
 
 ROOT_DECL='AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target'"'"'s own files) is the target'"'"'s, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.'
-GEN_NOTE='<!-- Generated from docs/core.md by scripts/skills/gen-skill-bodies.sh — edit the core, then regenerate. -->'
+GEN_NOTE='<!-- Generated from docs/core.md and the documents scripts/skills/role-docs.tsv names by scripts/skills/gen-skill-bodies.sh — edit those homes, then regenerate. -->'
+MARK='<!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->'
+
+# trim — drop trailing blank lines.
+trim() { sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'; }
+
+# doc_part <document> <scope> <prefix> — the part of a document an entry
+# names: the whole document, the section its heading path opens (to the next
+# heading of its level or above; a line inside a fenced block is no heading),
+# or the one block of it whose first line starts with <prefix>. Exit 3 when
+# the scope opens no section or more than one, 4 when the prefix starts no
+# block or more than one.
+doc_part() {
+  awk -v scope="$2" -v pfx="$3" '
+    function lvl(x) { match(x, /^#+/); return RLENGTH }
+    BEGIN {
+      m = (scope == "") ? 0 : split(scope, st, " > ")
+      for (j = 1; j <= m; j++) sl[j] = lvl(st[j])
+      on = (m == 0)
+    }
+    {
+      isf = ($0 ~ /^[ \t]*```/)
+      if (!fence && !isf && $0 ~ /^#+ /) {
+        d = lvl($0)
+        if (on && m > 0 && d <= depth) on = 0
+        cur[d] = $0; for (j = d + 1; j <= 6; j++) cur[j] = ""
+        if (m > 0 && d == sl[m]) {
+          ok = 1
+          for (j = 1; j <= m; j++) if (index(cur[sl[j]], st[j]) != 1) ok = 0
+          if (ok && ++found == 1) { on = 1; depth = d }
+        }
+      }
+      wasfence = fence
+      if (isf) fence = !fence
+      if (!on) next
+      if (pfx == "") { print; next }
+      if (inb) {
+        if ($0 ~ /^[ \t]*$/ || $0 ~ /^(- |\||#|[0-9]+\. |\*\*)/) inb = 0
+        else { print; next }
+      }
+      if (!wasfence && index($0, pfx) == 1 && ++nb == 1) { print; inb = 1 }
+    }
+    END { if (m > 0 && found != 1) exit 3; if (pfx != "" && nb != 1) exit 4 }' "$ROOT/$1" > "$TMP/part" || return $?
+  trim < "$TMP/part"
+}
+
+# links <document> — a markdown link of a document other than the core points
+# at `<autoflow-root>/…`, its fragment dropped — a link to a section of the
+# document itself, at the document (the core's links are reduced to
+# their text, strip_links); exit 1, naming it, on a link whose target does not
+# exist.
+links() {
+  awk -v doc="$1" -v root="$ROOT" '
+    function norm(x,   n, a, i, o, k, r) {
+      n = split(x, a, "/"); k = 0
+      for (i = 1; i <= n; i++) {
+        if (a[i] == "" || a[i] == ".") continue
+        if (a[i] == "..") { if (k > 0) k--; continue }
+        o[++k] = a[i]
+      }
+      r = ""; for (i = 1; i <= k; i++) r = r (i > 1 ? "/" : "") o[i]
+      return r
+    }
+    BEGIN { dir = doc; sub(/\/[^\/]*$/, "", dir) }
+    /^[ \t]*```/ { fence = !fence; print; next }
+    fence { print; next }
+    {
+      out = ""; l = $0
+      while (match(l, /\[[^]]*\]\([^)]*\)/)) {
+        seg = substr(l, RSTART, RLENGTH)
+        out = out substr(l, 1, RSTART - 1)
+        l = substr(l, RSTART + RLENGTH)
+        t = seg; sub(/^\[[^]]*\]\(/, "", t); sub(/\)$/, "", t)
+        if (t ~ /^(https?:|mailto:|<)/) { out = out seg; continue }
+        txt = seg; sub(/\]\([^)]*\)$/, "]", txt)
+        sub(/#.*$/, "", t)
+        p = (t == "") ? doc : norm(dir "/" t)
+        if (system("test -e \"" root "/" p "\"") != 0) { print "gen-skill-bodies: " doc ": the link target " t " does not exist" | "cat 1>&2"; bad = 1 }
+        out = out txt "(<autoflow-root>/" p ")"
+      }
+      print out l
+    }
+    END { exit bad }'
+}
+
+# label <document> <scope> <prefix> — an entry's name: the document's
+# `<autoflow-root>/…` path, then its heading path and its block, by their text.
+label() {
+  local l="\`<autoflow-root>/$1\`" s c
+  if [ -n "$2" ]; then
+    s="$(printf '%s' "$2" | sed -E -e 's/(^| > )#+ /\1/g')"
+    l="$l > $s"
+  fi
+  if [ -n "$3" ]; then
+    c="$(printf '%s' "$3" | sed -E -e 's/\*\*//g' -e 's/^- //' -e 's/^\[(MUST|DENY)\] //' -e 's/[.:]$//')"
+    l="$l > *$c*"
+  fi
+  printf '%s' "$l"
+}
+
+# entries — the classification's entries, one per line,
+# "<carrier>\t<document>\t<scope>\t<prefix>"; fails on an entry whose document
+# is absent.
+entries() {
+  awk -F '\t' -v root="$ROOT" '
+    index($0, "\t") == 0 { next }
+    {
+      if (system("test -f \"" root "/" $2 "\"") != 0) { print "gen-skill-bodies: role-docs.tsv: \"" $0 "\": no document " $2 | "cat 1>&2"; bad = 1; next }
+      print $1 "\t" $2 "\t" $3 "\t" $4
+    }
+    END { exit bad }' "$DOCS"
+}
+
+# carriers — every generated carrier: the command bodies in the order of
+# BODIES, then every other file an entry's carrier names, in the order they
+# first match. An entry whose carrier matches no file fails.
+carriers() {
+  local _s _e _c _bad=0 _seen="" _hit
+  for _s in $BODIES; do echo "skills/$_s/SKILL.md"; done
+  while IFS=$'\t' read -r _c _; do
+    _hit=0
+    for _s in $BODIES; do [[ "skills/$_s/SKILL.md" == $_c ]] && _hit=1; done
+    for _e in $(cd "$ROOT" && compgen -G "$_c" | LC_ALL=C sort); do
+      case "$_e" in skills/*) continue ;; esac
+      _hit=1
+      case " $_seen " in *" $_e "*) ;; *) _seen="$_seen $_e"; echo "$_e" ;; esac
+    done
+    [ "$_hit" -eq 1 ] || { echo "gen-skill-bodies: role-docs.tsv: the carrier $_c matches no file" >&2; _bad=1; }
+  done < "$TMP/entries"
+  return "$_bad"
+}
+
+# attached <carrier> — the classification's entries for a carrier, in order,
+# less an entry whose document the carrier already carries whole.
+attached() {
+  awk -F '\t' -v c="$1" '
+    function glob(p,   r) { r = p; gsub(/[.+?^$(){}|]/, "\\\\&", r); gsub(/\*/, ".*", r); return "^" r "$" }
+    c ~ glob($1) {
+      if (($2 "\t\t") in seen || ($2 "\t" $3 "\t" $4) in seen) next
+      seen[$2 "\t" $3 "\t" $4] = 1
+      print
+    }' "$TMP/entries"
+}
+
+# doc_list <carrier> — the names of a carrier's entries, joined by "; ".
+doc_list() {
+  local _l="" _c _d _s _p
+  while IFS=$'\t' read -r _c _d _s _p; do
+    _l="${_l:+$_l; }$(label "$_d" "$_s" "$_p")"
+  done < <(attached "$1")
+  printf '%s' "${_l:-none}"
+}
+
+# attachments <carrier> — the text of a carrier's entries, each preceded by its
+# `<!-- From … -->` line and followed by a blank line.
+attachments() {
+  local _c _d _s _p _t _rc _f
+  while IFS=$'\t' read -r _c _d _s _p; do
+    _rc=0; _t="$(doc_part "$_d" "$_s" "$_p")" || _rc=$?
+    case "$_rc" in
+      0) ;;
+      3) echo "gen-skill-bodies: role-docs.tsv: $_d has no single section \"$_s\"" >&2; return 1 ;;
+      4) echo "gen-skill-bodies: role-docs.tsv: $_d > $_s has no single block \"$_p\"" >&2; return 1 ;;
+      *) return 1 ;;
+    esac
+    need "$_d $_s $_p" "$_t"
+    _f="$(label "$_d" "$_s" "$_p" | tr -d '`*')"
+    printf '<!-- From %s -->\n\n' "$_f"
+    if [ "$_d" = docs/core.md ]; then
+      printf '%s\n' "$_t" | strip_links
+    else
+      printf '%s\n' "$_t" | links "$_d" || return 1
+    fi
+    printf '\n'
+  done < <(attached "$1")
+}
+
+# head_of <file> — a carrier's own text: the file down to the marker, less
+# trailing blank lines.
+head_of() { awk -v m="$MARK" '$0 == m { exit } { print }' "$ROOT/$1" | trim; }
+
+# gen_carrier <file> — an agent definition or a rule file: its own text, the
+# marker, the line naming what follows, and the text of its entries.
+gen_carrier() {
+  local h a
+  h="$(head_of "$1")"; need "text of its own in $1" "$h"
+  a="$(attachments "$1")" || return 1
+  printf '%s\n\n%s\n\n' "$h" "$MARK"
+  printf '**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: %s.\n\n' "$(doc_list "$1")"
+  printf '%s\n' "$a" | trim
+}
+
+# docs_line <body> — a command body's line naming the documents it carries.
+docs_line() {
+  printf '**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: %s.\n\n' "$(doc_list "$1")"
+}
+
+# body_docs <body> — a command body's documents, after its core part.
+body_docs() {
+  local a
+  a="$(attachments "$1")" || return 1
+  [ -z "$a" ] || printf '\n%s\n' "$(printf '%s\n' "$a" | trim)"
+}
 
 # classify — the core from its first `## ` heading, one line per core line:
 # "<depth>\t<units>\t<line>", depth the heading level less one (0 off a
@@ -264,7 +487,9 @@ EOF
 **Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt, and `--base <branch>` / `--commit <commit>` with it name the base and the start commit `autoflow-records new` makes it at. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
 
 EOF
+  docs_line skills/cycle/SKILL.md
   core_body | strip_links
+  body_docs skills/cycle/SKILL.md || return 1
   printf '\n%s\n' "$GEN_NOTE"
 }
 
@@ -293,14 +518,16 @@ argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 EOF
+  docs_line skills/criterion-review/SKILL.md
   {
     printf '%s\n\n' "$conv" "$rule" "$spawn" "$ledger"
     printf '## Execution Principles\n\n%s\n%s\n%s\n\n' "$hdp" "$wrapper" "$cross"
     printf '## Cost Control\n\n%s\n' "$conc"
   } | strip_links
+  body_docs skills/criterion-review/SKILL.md || return 1
   printf '\n%s\n' "$GEN_NOTE"
 }
 
@@ -338,7 +565,9 @@ gen_unit() {
   fi
   printf '**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that %s uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: %s.\n\n' \
     "$k" "${out:-none}"
+  docs_line "skills/cycle-$lk/SKILL.md"
   unit_core "$k" < "$TMP/core.tagged" | strip_links
+  body_docs "skills/cycle-$lk/SKILL.md" || return 1
   printf '\n%s\n' "$GEN_NOTE"
 }
 
@@ -349,23 +578,31 @@ if [ "$MODE" = core ]; then
   unit_core "$2" < "$TMP/core.tagged" | strip_links
   exit 0
 fi
-for _s in $BODIES; do mkdir -p "$TMP/$_s"; done
-gen_cycle > "$TMP/cycle/SKILL.md"
-for _k in $UNITS; do gen_unit "$_k" > "$TMP/cycle-$(printf '%s' "$_k" | tr 'U' 'u')/SKILL.md"; done
-gen_criterion_review > "$TMP/criterion-review/SKILL.md"
+entries > "$TMP/entries" || exit 1
+carriers > "$TMP/carriers" || exit 1
+[ "$MODE" = list ] && { cat "$TMP/carriers"; exit 0; }
+mkdir -p "$TMP/out"
+while IFS= read -r _f; do
+  mkdir -p "$TMP/out/$(dirname "$_f")"
+  case "$_f" in
+    skills/cycle/SKILL.md)            gen_cycle ;;
+    skills/criterion-review/SKILL.md) gen_criterion_review ;;
+    skills/cycle-u*/SKILL.md)         _k="${_f#skills/cycle-}"; gen_unit "$(printf '%s' "${_k%%/*}" | tr 'u' 'U')" ;;
+    *)                                gen_carrier "$_f" ;;
+  esac > "$TMP/out/$_f" || exit 1
+done < "$TMP/carriers"
 
 rc=0
-for _s in $BODIES; do
-  _dst="$ROOT/skills/$_s/SKILL.md"
+while IFS= read -r _f; do
+  _dst="$ROOT/$_f"
   if [ "$MODE" = check ]; then
-    if ! cmp -s "$TMP/$_s/SKILL.md" "$_dst"; then
-      echo "gen-skill-bodies: skills/$_s/SKILL.md differs from the generator's output — run: bash scripts/skills/gen-skill-bodies.sh" >&2
+    if ! cmp -s "$TMP/out/$_f" "$_dst"; then
+      echo "gen-skill-bodies: $_f differs from the generator's output — run: bash scripts/skills/gen-skill-bodies.sh" >&2
       rc=1
     fi
   else
-    mkdir -p "$(dirname "$_dst")"
-    cp "$TMP/$_s/SKILL.md" "$_dst"
+    cp "$TMP/out/$_f" "$_dst"
   fi
-done
-[ "$MODE" = check ] && [ "$rc" -eq 0 ] && echo "gen-skill-bodies: OK — every body under skills/ ($(echo $BODIES | tr ' ' ',')) equals the generator's output"
+done < "$TMP/carriers"
+[ "$MODE" = check ] && [ "$rc" -eq 0 ] && echo "gen-skill-bodies: OK — every carrier ($(wc -l < "$TMP/carriers" | tr -d ' '): the command bodies under skills/, the agent definitions and the reviewers' rule files) equals the generator's output"
 exit "$rc"

@@ -5,7 +5,7 @@
 #
 # The review rules are claude's rule file — docs/review/review-claude.md of the
 # AutoFlow tree this wrapper ships in, or the file `.review.claude.rules` names —
-# which the prompt names by its absolute path, with the lenses file
+# whose text the prompt carries, with the text of the lenses file
 # `.review.claude.lenses` names when there is one. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with Read, Grep
 # and Glob on any path, the gh reads the review needs and the commands Claude
@@ -109,11 +109,13 @@ if [[ ! -f "$REVIEW_GUIDE" ]]; then
   exit 2
 fi
 lenses_clause=""
+lenses_text=""
 add_dirs=(--add-dir "$AF_ROOT" --add-dir "$(dirname "$REVIEW_GUIDE")")
 if [[ -n "$REVIEW_LENSES" ]]; then
   lenses_file="$(review_path "$REVIEW_LENSES" "$TOP")"
   if [[ -f "$lenses_file" ]]; then
-    lenses_clause=" Apply the review lenses at ${lenses_file} in addition."
+    lenses_clause=" Apply the review lenses below the rules in addition."
+    lenses_text=$'\n\n'"Review lenses (${lenses_file}):"$'\n\n'"$(cat "$lenses_file")"
     add_dirs+=(--add-dir "$(dirname "$lenses_file")")
   else
     echo "[claude-review] the lenses file ${lenses_file} is absent — reviewing without it." >&2
@@ -155,7 +157,15 @@ fi
 # The prompt ends with a fixed sentinel; review-start-check.sh finds the run by
 # its opening `Review pull request #<N>. `.
 SENTINEL="Limit your actions to reading; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow the review rules at ${REVIEW_GUIDE}; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause} Use the local gh CLI to read the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Reply with the whole review, in the Output Format the rules name, as your final message. ${SENTINEL}"
+# The rules and the lenses are carried as text between the opening line and the
+# closing one, so the reviewer starts with them.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause}
+
+Review rules (${REVIEW_GUIDE}):
+
+$(cat "$REVIEW_GUIDE")${lenses_text}
+
+Use the local gh CLI to read the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Reply with the whole review, in the Output Format the rules name, as your final message. ${SENTINEL}"
 if [[ "$PROMPT" != *"$SENTINEL" ]]; then
   echo "[claude-review] prompt is incomplete — the sentinel tail is missing." >&2
   exit 4
