@@ -59,6 +59,17 @@ criterion review → work outside a cycle → review → end
   proceeds; the review's round count is that decision's input. The review's `[review-autofix]`
   count and its cap of 7 belong to the full cycle and do not count this path's rounds.
 
+## What the coordinating session reads and decides
+
+- **Reads**: the review's return — the pull request's URL and head commit, the verdict, the
+  findings file and the round's comment, the CI result as read and the round count — and the
+  attempt's `dir:`, `pr:` and entry lines from `cycle-status.sh --issue <N>`.
+- **Decides**: whether the path ends (*End and rework*); a rework and what it answers — the
+  findings that hold, the `low-only` findings it judges worth fixing, a red build — or a rebuttal;
+  on CI exit `11`, whether CI does not run or is late, and the record of its not running; and that
+  a defective criterion goes to the attempt's criterion review (*A criterion change*). Whether
+  rework goes on is the operator's.
+
 ## A criterion change
 
 A criterion the work shows defective changes the way it changes for any attempt with no state
