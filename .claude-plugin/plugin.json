@@ -1,7 +1,7 @@
 {
   "name": "autoflow",
   "description": "AutoFlow methodology engine for Claude Code: phase gate hooks, role subagents, the /autoflow:cycle command, /autoflow:cycle-u1 … cycle-u7 (one unit) and /autoflow:criterion-review (its criterion review stage alone), and the core (docs/core.md), usage documents and scripts they cite. State is kept under the record root outside the target's tree (record_root in ~/.autoflow/config.json, default ~/.autoflow).",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "author": {
     "name": "Munsik-Park"
   },
