@@ -1,18 +1,19 @@
 ---
 name: criterion-review
 description: >-
-  Run the criterion review stage of an AutoFlow cycle alone — an attempt's
-  review of the issue's acceptance criteria against the target's code and
-  policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
-  continues that attempt's cycle. Use only when the operator asks for the
-  criterion review by itself (/autoflow:criterion-review <N> [new]).
+  Run the criterion review stage of an AutoFlow cycle alone, also the entry of
+  the abbreviated path — an attempt's review of the issue's acceptance criteria
+  against the target's code and policy, ending at its [criterion-ready] entry;
+  the attempt then goes on by /autoflow:cycle <N> or on the abbreviated path.
+  Use only when the operator asks for the criterion review by itself
+  (/autoflow:criterion-review <N> [new]).
 argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file, and a `READY` attempt then goes on by `/autoflow:cycle <N>` or on the abbreviated path (`<autoflow-root>/docs/abbreviated-path.md`). The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 **The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/preparation.md` > The criterion review stage; `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
@@ -26,9 +27,9 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 This section is the single home of the four principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind.
+1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind. Each binds the path that carries it — the full cycle every one of them, the abbreviated path the ones its definition names (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*).
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the report or ledger entry the phase already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and, in the full cycle, by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a cycle leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -90,14 +91,15 @@ attempt of this checkout active (*PR Wait Rule*), the record root determined and
 before the stop conditions and the state file. It runs on the entries `new` and
 `criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` started; no other command or session is
 needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
-its exit.
+its exit — the entry of the abbreviated path as well ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)):
+a `READY` attempt goes on by `/autoflow:cycle <N>` or on that path.
 
 - **The attempt and its record directory come first.** On `new`, or on the request, the orchestrator creates the
   attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
   with no active attempt in this checkout — fetches `origin`, makes the record directory under the
   record root with this checkout as its owner, and checks out a new dev branch
-  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and with no commit of its own
-  until the state file is written. The base — the branch the attempt's pull request merges into —
+  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and, in the full cycle, with
+  no commit of its own until the state file is written. The base — the branch the attempt's pull request merges into —
   is the remote default branch, or the branch the operator names for the attempt
   (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
   (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The
@@ -163,7 +165,11 @@ The review makes that premise hold more often; it does not change it.
   file — `/autoflow:cycle <N>`, or the U1 session `/autoflow:cycle-u1 <N>`, enters it on the entries `new` and `criterion-review` — and again, on
   that attempt's dev branch, after any edit to the issue body before the state file, since the
   `[criterion-ready]` entry is bound to the body it records (*Confirmation* below). Filing an issue
-  ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)) does not make it ready.
+  ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)) does not make it ready. Run alone
+  (`/autoflow:criterion-review <N>`), the stage is also the entry of the abbreviated path
+  ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)): a `READY` attempt goes on by `/autoflow:cycle <N>`
+  or on that path, and an attempt on that path, which never has a state file, changes a criterion by
+  this review run again on its dev branch.
 - **The cycle makes the attempt before the stage.** On `criterion-review` the stage reviews the
   attempt that entry names — this checkout's attempt of N with no state file: a re-review after a
   body edit, a review left unfinished — and adds its new entry to that attempt's ledger. On `new`
@@ -172,8 +178,8 @@ The review makes that premise hold more often; it does not change it.
   `origin`, makes the attempt's record directory under the record root with this checkout as its
   owner, and checks out a new dev branch `dev-<date>-<time>-issue-<N>` at the latest commit of the
   attempt's base — the remote default branch, or the branch the operator names (`--base`) — or at
-  the commit the operator names (`--commit`), local only and with no commit of its own until the attempt's state file
-  is written. The attempt's key is that branch's name, and every record of the review — the review
+  the commit the operator names (`--commit`), local only and, in the full cycle, with no commit of its own until the
+  attempt's state file is written. The attempt's key is that branch's name, and every record of the review — the review
   record, the stage 2 and in-depth files, the advisor records, the ledger with its
   `[criterion-ready]` entry — is in that directory, as the cycle's later records are. While an
   attempt of N with an open pull request, a paused one, or one whose review is unfinished is still
@@ -486,6 +492,9 @@ the same form.
   *Criterion readiness*). A `review-response`, a resume or a paused cycle does not run it.
 - **DIAGNOSE** — the attempt's review record is one of the U2 unit's inputs in a `new-issue` cycle
   ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *Criterion review record*).
+- **The abbreviated path** — its start: an attempt goes on outside a cycle on its
+  `[criterion-ready]` entry for the current body, and `cycle-status.sh` reports it
+  `criterion-review` while the entry is not valid ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)).
 
 ## Issues filed before this procedure
 

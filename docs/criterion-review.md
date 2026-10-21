@@ -25,7 +25,11 @@ The review makes that premise hold more often; it does not change it.
   file — `/autoflow:cycle <N>`, or the U1 session `/autoflow:cycle-u1 <N>`, enters it on the entries `new` and `criterion-review` — and again, on
   that attempt's dev branch, after any edit to the issue body before the state file, since the
   `[criterion-ready]` entry is bound to the body it records (*Confirmation* below). Filing an issue
-  ([`issue-proposal.md`](issue-proposal.md)) does not make it ready.
+  ([`issue-proposal.md`](issue-proposal.md)) does not make it ready. Run alone
+  (`/autoflow:criterion-review <N>`), the stage is also the entry of the abbreviated path
+  ([`abbreviated-path.md`](abbreviated-path.md)): a `READY` attempt goes on by `/autoflow:cycle <N>`
+  or on that path, and an attempt on that path, which never has a state file, changes a criterion by
+  this review run again on its dev branch.
 - **The cycle makes the attempt before the stage.** On `criterion-review` the stage reviews the
   attempt that entry names — this checkout's attempt of N with no state file: a re-review after a
   body edit, a review left unfinished — and adds its new entry to that attempt's ledger. On `new`
@@ -34,8 +38,8 @@ The review makes that premise hold more often; it does not change it.
   `origin`, makes the attempt's record directory under the record root with this checkout as its
   owner, and checks out a new dev branch `dev-<date>-<time>-issue-<N>` at the latest commit of the
   attempt's base — the remote default branch, or the branch the operator names (`--base`) — or at
-  the commit the operator names (`--commit`), local only and with no commit of its own until the attempt's state file
-  is written. The attempt's key is that branch's name, and every record of the review — the review
+  the commit the operator names (`--commit`), local only and, in the full cycle, with no commit of its own until the
+  attempt's state file is written. The attempt's key is that branch's name, and every record of the review — the review
   record, the stage 2 and in-depth files, the advisor records, the ledger with its
   `[criterion-ready]` entry — is in that directory, as the cycle's later records are. While an
   attempt of N with an open pull request, a paused one, or one whose review is unfinished is still
@@ -348,6 +352,9 @@ the same form.
   *Criterion readiness*). A `review-response`, a resume or a paused cycle does not run it.
 - **DIAGNOSE** — the attempt's review record is one of the U2 unit's inputs in a `new-issue` cycle
   ([U2 Analysis](units/analysis.md) > *Criterion review record*).
+- **The abbreviated path** — its start: an attempt goes on outside a cycle on its
+  `[criterion-ready]` entry for the current body, and `cycle-status.sh` reports it
+  `criterion-review` while the entry is not valid ([`abbreviated-path.md`](abbreviated-path.md)).
 
 ## Issues filed before this procedure
 

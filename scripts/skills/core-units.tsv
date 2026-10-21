@@ -23,6 +23,7 @@
 ## Instruction Conventions		all
 ## Rule Scope		all
 ## Development Lifecycle		split
+## Development Lifecycle	**An attempt goes on by one of two paths.**	U1 U7
 ## Development Lifecycle	**PREFLIGHT cannot be skipped.**	U1 U2
 ## Development Lifecycle	**An attempt's criteria are settled before DIAGNOSE.**	U1 U2
 ## Development Lifecycle > ### Flow Control		split

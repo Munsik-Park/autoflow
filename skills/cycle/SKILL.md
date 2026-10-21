@@ -25,14 +25,16 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 This section is the single home of the four principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind.
+1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind. Each binds the path that carries it — the full cycle every one of them, the abbreviated path the ones its definition names (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*).
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the report or ledger entry the phase already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and, in the full cycle, by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a cycle leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Development Lifecycle — AutoFlow
+
+**An attempt goes on by one of two paths.** After its criterion review, an attempt — one run of an issue, keyed by its dev branch — goes on by the full cycle, which writes its state file at PREFLIGHT and which the rest of this section and every unit document describe, or by the abbreviated path — criterion review, work outside an AutoFlow cycle, review — which never writes a state file and is defined in `<autoflow-root>/docs/abbreviated-path.md`.
 
 **PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the block first and report.
 
@@ -138,7 +140,7 @@ A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md`, fixes set
 - **Verify role-spawn claims before dispatch**: every role-spawn report's Evidence anchor (see `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format item 5) is verified before ACCEPT — `git show <SHA>` for a commit anchor, the summary line read in the cited log for a test-pass anchor (the command is re-run only when the log is absent or does not carry that line, and the run is then `not-run` and run in place — `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *A run's evidence is the log it left*), `git show <SHA>:<file>` at the report's commit for a file-state anchor (a `path:line` is read only at the commit the report names), the result line read in the cited observation record for an observation anchor (`<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*). **An anchor-less report is rejected, not interpreted.** Do not dispatch based on a single AI's unverified claim.
 - **Safety first**: accurate flow execution beats fast response. Accuracy over speed.
 - **Verify before transition**: re-confirm completion conditions before moving on.
-- **The route is the AI's judgment; the independent checks are not** (Rule Scope, principles 1–3): which work phases a change passes through and how deep each goes — DIAGNOSE's analysis, ARCHITECT's design, BUILD's execution, INTEGRATE's bundle — is the working AI's judgment, recorded with its grounds in the ledger entry or phase report that phase already produces. What is never skipped is an independent check, an authority rule under principle 1: PREFLIGHT's readiness conditions, the gate score thresholds (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY), the `git push` / `gh pr create` gate, CI (its result as it is: green, or, where the target's CI does not run for the pull request, that recorded on it — never read as green), the aggregated review and its verdict, and the auto-resolution attempt caps. The hook keeps the two apart structurally: a role spawn is admitted only on the recorded PASS of the gate that precedes it, so a phase whose artifact a gate scores runs at least far enough to produce that artifact, and a skipped phase never skips a gate.
+- **The route is the AI's judgment; the independent checks are not** (Rule Scope, principles 1–3): which work phases a change passes through and how deep each goes — DIAGNOSE's analysis, ARCHITECT's design, BUILD's execution, INTEGRATE's bundle — is the working AI's judgment, recorded with its grounds in the ledger entry or phase report that phase already produces. What the full cycle never skips is an independent check, an authority rule under principle 1 — the abbreviated path's are its definition's (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*): PREFLIGHT's readiness conditions, the gate score thresholds (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY), the `git push` / `gh pr create` gate, CI (its result as it is: green, or, where the target's CI does not run for the pull request, that recorded on it — never read as green), the aggregated review and its verdict, and the auto-resolution attempt caps. The hook keeps the two apart structurally: a role spawn is admitted only on the recorded PASS of the gate that precedes it, so a phase whose artifact a gate scores runs at least far enough to produce that artifact, and a skipped phase never skips a gate.
 - **Role-spawn idle handling**: a task notification signals only that a spawn finished; it does not require a response, and it is not itself the report. Continue work when (a) a spawn returns an actionable report — its return value — (b) a Bash result you initiated returns, or (c) the user types a new prompt. When a **Done** direct-spawn produces no report, do not wait for a follow-up: verify its `<attempt-dir>/*` artifact by shell and proceed (see "Incomplete output is never ground truth").
 - **Background execution is orchestrator-only**: the `run_in_background` + wait-for-completion-notification pattern is available **only** to the orchestrator (the main loop), and every role spawn's Bash runs foreground-only; the binding rule lives in `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST] Wait discipline (orchestrator)**: the orchestrator waits for a subagent, a `Workflow`, or a backgrounded Bash task by **ending its turn** — the harness re-invokes the session with a task notification when the task completes, and other tasks' notifications and the user's prompts are delivered in between. A **blocking wait** — a foreground `sleep` loop polling for a result — is not used. A polling wait is reserved for external state the harness cannot notify about (a CI run, a remote queue), and even then a bounded one; a task the harness tracks is never polled. One timer is admitted beside that wait, the **cache keep-alive wake**: a running task keeps its own prompt cache warm through its own requests, while the orchestrator sends none, so a wait longer than the prompt-cache TTL expires the orchestrator's cached context and its first turn after the notification re-writes all of it. While a tracked task runs, the orchestrator therefore may arm one backgrounded `sleep` shorter than that TTL (`run_in_background`; 50 minutes at the 1-hour TTL) and end its turn. The turn the timer wakes is not a poll: it reads no transcript or output file of the task — only a cheap anchor-check (a log's modification time, `git log -1`) — re-arms the timer and ends the turn, and the timer is stopped once the task's notification arrives. What the wake observes about the task's progress, and any decision drawn from it, is the orchestrator's judgment, recorded with its grounds in the report or ledger entry the phase already produces. The "no turn ends before the work is done" instruction is satisfied by the re-entry — the turn that ends on a pending notification is not an abandonment, the harness resumes it.
@@ -338,10 +340,10 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | Transition | Condition |
 |------|------|
 | PREFLIGHT → CRITERION-REVIEW | `entry: new`, or the operator's request for a new attempt the session judges still to carry out (*Modes*) — the attempt created first (`autoflow-records new --issue N`) — or `entry: criterion-review`, on the attempt's dev branch with the tree clean and `origin` fetched → the attempt's criterion review stage runs in this session (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*) |
-| CRITERION-REVIEW → PREFLIGHT | the stage's exit condition: the attempt's `[criterion-ready]` entry for the current issue body (`criterion-ready.sh status` `READY`) → PREFLIGHT continues at the stop conditions on that attempt, now `entry: start` |
+| CRITERION-REVIEW → PREFLIGHT | the stage's exit condition: the attempt's `[criterion-ready]` entry for the current issue body (`criterion-ready.sh status` `READY`) → PREFLIGHT continues at the stop conditions on that attempt, now `entry: start`; an attempt whose pull request is open is `entry: abbreviated` instead, and the session reports and stops |
 | PREFLIGHT → DIAGNOSE | earlier attempts resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for an attempt's start), and the state file written for `entry: start` (`mode: new-issue`) or `entry: review-response` (`<autoflow-root>/docs/units/preparation.md` > *What is asked*, *Modes*) |
 | PREFLIGHT → resume | `entry: resume` — this checkout's attempt of the issue reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `<autoflow-root>/scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`<autoflow-root>/docs/units/preparation.md` > *Resume*) |
-| PREFLIGHT → user | another issue's attempt mid-cycle in this checkout (`entry: hold`), a pause for a human decision (`entry: paused`), an entry `cycle-status.sh` reports as a stop (`stop …`), a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, an undetermined or unusable record root, or a fail-closed stop condition — a failed target check, an unreadable reviewer configuration the operator does not proceed past, a target-declared local check that does not pass after its declared repair, a criterion review stage a harness-level block leaves without its `[criterion-ready]` entry → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
+| PREFLIGHT → user | another issue's attempt mid-cycle in this checkout (`entry: hold`), a pause for a human decision (`entry: paused`), an attempt on the abbreviated path (`entry: abbreviated`), an entry `cycle-status.sh` reports as a stop (`stop …`), a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, an undetermined or unusable record root, or a fail-closed stop condition — a failed target check, an unreadable reviewer configuration the operator does not proceed past, a target-declared local check that does not pass after its declared repair, a criterion review stage a harness-level block leaves without its `[criterion-ready]` entry → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
 
 ## What is asked
 
@@ -355,9 +357,10 @@ plugin name and version that root's `.claude-plugin/plugin.json` names, and, whe
 work tree of its own, its `HEAD` and whether it is dirty), the record root and this checkout, any
 state file left in the checkout's own `.autoflow/`, and — for every attempt of this repository not
 marked completed — its owner (`this`, `other <path>` for a checkout still there, `gone <path>`), its
-state (`active`, `phase`, `mode`, `cycle`, or `none` for an attempt with no state file yet — in its
-criterion review stage, or ready to start), its dev branch with each side, and, for a state file that is not active, its pull
-request. `cleanup:` lines name this checkout's attempts whose pull request is merged or closed; with
+state (`active`, `phase`, `mode`, `cycle`, or `none` for an attempt with no state file — in its
+criterion review stage, ready to start, or on the abbreviated path
+([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md))), its dev branch with each side, and, for a state
+file that is not active or no state file, its pull request. `cleanup:` lines name this checkout's attempts whose pull request is merged or closed; with
 `--issue {N}`, `criterion:` lines give the readiness of each attempt of N this checkout could start,
 a dev branch carrying N's number with no attempt record is reported `record=none`, and the last line
 is the **entry** — which attempt the request enters, and how (*Modes*). Exit `3` means a fact could
@@ -463,13 +466,15 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | an attempt of N reads `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
 | the checked-out branch is an attempt of N whose checkout is still another one | `stop other-checkout` — reported, not entered (in one clone, git does not let the branch be checked out twice) |
 | the checked-out branch is an attempt of N — taken over first (`claim:`) when its checkout is gone: | |
-| — no state file, its `[criterion-ready]` entry valid for the current body | `start` — the attempt's cycle begins (*What is asked*) |
-| — no state file, no valid entry (the review is not finished, or the body changed after it) | `criterion-review` — the attempt's criterion review stage runs on that branch (*The criterion review stage*) |
+| — no state file, its pull request merged or closed | cleared (`cleanup:`), as any attempt is, and set aside: the *otherwise* rows below give the entry |
+| — no state file, no valid entry (the review is not finished, or the body changed after it), a pull request open or none | `criterion-review` — the attempt's criterion review stage runs on that branch (*The criterion review stage*) |
+| — no state file, its `[criterion-ready]` entry valid for the current body, an open pull request | `abbreviated` — the attempt is on the abbreviated path ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)): reported, not entered; a full cycle of N beside it is a new attempt (*A new attempt is the operator's request*) |
+| — no state file, its `[criterion-ready]` entry valid for the current body, no pull request | `start` — the attempt's cycle begins (*What is asked*) |
 | — `active:false`, `phase` other than `awaiting-user`, an open PR | `review-response` (*Review-response setup*) |
 | — `active:false` at `phase: "awaiting-user"` (a PR open or not), or with no open PR | `paused`: the cycle waits on a human decision and is not cleared. The pending decision and its `<attempt-dir>/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
-| otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
+| otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has a state file and an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
 | otherwise, two or more | `stop candidates` — reported; checking one's dev branch out names it |
-| otherwise, attempts of N still here, none of those — paused, or with a fact that could not be read (a `gh` lookup, an unreadable state file; exit `3`) | `none-to-enter` — each named with its kind; none is entered by the entry, and a paused one's re-entry is the user's decision |
+| otherwise, attempts of N still here, none of those — paused, on the abbreviated path (`abbreviated`), or with a fact that could not be read (a `gh` lookup, an unreadable state file; exit `3`) | `none-to-enter` — each named with its kind; none is entered by the entry, and a paused one's re-entry is the user's decision |
 | otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle may create the attempt and run its criterion review stage (*The criterion review stage*) |
 
 **A new attempt is the operator's request.** It is created only on the `new` entry or on the operator's explicit request
@@ -501,14 +506,15 @@ attempt of this checkout active (*PR Wait Rule*), the record root determined and
 before the stop conditions and the state file. It runs on the entries `new` and
 `criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` started; no other command or session is
 needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
-its exit.
+its exit — the entry of the abbreviated path as well ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)):
+a `READY` attempt goes on by `/autoflow:cycle <N>` or on that path.
 
 - **The attempt and its record directory come first.** On `new`, or on the request, the orchestrator creates the
   attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
   with no active attempt in this checkout — fetches `origin`, makes the record directory under the
   record root with this checkout as its owner, and checks out a new dev branch
-  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and with no commit of its own
-  until the state file is written. The base — the branch the attempt's pull request merges into —
+  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and, in the full cycle, with
+  no commit of its own until the state file is written. The base — the branch the attempt's pull request merges into —
   is the remote default branch, or the branch the operator names for the attempt
   (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
   (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The
@@ -645,7 +651,11 @@ The review makes that premise hold more often; it does not change it.
   file — `/autoflow:cycle <N>`, or the U1 session `/autoflow:cycle-u1 <N>`, enters it on the entries `new` and `criterion-review` — and again, on
   that attempt's dev branch, after any edit to the issue body before the state file, since the
   `[criterion-ready]` entry is bound to the body it records (*Confirmation* below). Filing an issue
-  ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)) does not make it ready.
+  ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)) does not make it ready. Run alone
+  (`/autoflow:criterion-review <N>`), the stage is also the entry of the abbreviated path
+  ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)): a `READY` attempt goes on by `/autoflow:cycle <N>`
+  or on that path, and an attempt on that path, which never has a state file, changes a criterion by
+  this review run again on its dev branch.
 - **The cycle makes the attempt before the stage.** On `criterion-review` the stage reviews the
   attempt that entry names — this checkout's attempt of N with no state file: a re-review after a
   body edit, a review left unfinished — and adds its new entry to that attempt's ledger. On `new`
@@ -654,8 +664,8 @@ The review makes that premise hold more often; it does not change it.
   `origin`, makes the attempt's record directory under the record root with this checkout as its
   owner, and checks out a new dev branch `dev-<date>-<time>-issue-<N>` at the latest commit of the
   attempt's base — the remote default branch, or the branch the operator names (`--base`) — or at
-  the commit the operator names (`--commit`), local only and with no commit of its own until the attempt's state file
-  is written. The attempt's key is that branch's name, and every record of the review — the review
+  the commit the operator names (`--commit`), local only and, in the full cycle, with no commit of its own until the
+  attempt's state file is written. The attempt's key is that branch's name, and every record of the review — the review
   record, the stage 2 and in-depth files, the advisor records, the ledger with its
   `[criterion-ready]` entry — is in that directory, as the cycle's later records are. While an
   attempt of N with an open pull request, a paused one, or one whose review is unfinished is still
@@ -968,6 +978,9 @@ the same form.
   *Criterion readiness*). A `review-response`, a resume or a paused cycle does not run it.
 - **DIAGNOSE** — the attempt's review record is one of the U2 unit's inputs in a `new-issue` cycle
   ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *Criterion review record*).
+- **The abbreviated path** — its start: an attempt goes on outside a cycle on its
+  `[criterion-ready]` entry for the current body, and `cycle-status.sh` reports it
+  `criterion-review` while the entry is not valid ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)).
 
 ## Issues filed before this procedure
 
@@ -2934,6 +2947,9 @@ pull request's reviews into one verdict is made by a spawned role.
 U7 is entered with the issue number or with nothing. Where the cycle stands — its attempt, its pull
 requests and their rounds — is read from the current state: `bash <autoflow-root>/scripts/preflight/cycle-status.sh`
 (with `--issue <N>` when given), the attempt's ledger and records, and the pull requests themselves.
+An attempt with no state file whose pull request is open — an attempt on the abbreviated path — is
+reviewed as *An attempt with no state file* below says, which takes the place of this unit's goal,
+routing, cap and *End* for it.
 
 - **Goal**: every pull request of the cycle reviewed, its aggregated review posted with no
   `Medium`+ finding that holds left and CI green on its head (or recorded on it as not run — [U6
@@ -3166,6 +3182,43 @@ Delivery](delivery.md) > *Multi-repo delivery*), and the host pull request then 
 **[MUST]** AutoFlow merges nothing and promotes no draft; of this order it performs only the
 reconcile, on the operator's request. The hook denies `gh pr merge` and a push to the default
 branch.
+
+## An attempt with no state file
+
+The attempt of the abbreviated path ([`abbreviated-path.md`](<autoflow-root>/docs/abbreviated-path.md)) has no state
+file, and its pull request was opened from its dev branch outside a cycle. U7 reviews it alone,
+entered by `/autoflow:cycle-u7 <N>`, and returns its result to the coordinating session, which
+decides what follows.
+
+- **Where it runs.** In a checkout of the repository — the same origin — whose checked-out branch
+  is the attempt's dev branch at the pull request's head: the `claude` reviewer reads that working
+  tree beside the pull request's diff, and `review-gate.sh` finds the attempt's record directory
+  from the checkout's origin and the checked-out branch. It need not be the checkout that owns the
+  attempt. The attempt and its pull request are read from the `dir:` and `pr:` lines
+  `cycle-status.sh --issue <N>` prints for it in any checkout; its entry — `abbreviated <key>` in
+  the owning checkout, `stop other-checkout <key>` in another — is not a condition of the review.
+- **What runs.** *Reviewer review*, with `--records <attempt-dir>`; *Review aggregation*,
+  unchanged — one PR comment and the findings file per round, every `Medium`+ row that holds tagged
+  with its `remedy_class` — with the aggregator's prompt also naming the review records and the
+  comments of the pull request's earlier rounds, which *A repeated complaint* compares against in
+  place of a `[review-autofix]` entry; and *The case*, whose `case:` line is the verdict —
+  `clean`, `low-only` or `resolve` (a `Medium`+ verdict). A rebuttal from the work is posted on the
+  pull request with its grounds and judged by the next round's aggregation (*Whether a finding
+  holds*).
+- **CI.** Read with `bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <P>` and returned
+  as it is: green (exit `0`), red (`12`), no check published (`11`) together with whether the pull
+  request records that CI does not run for it, or no verdict, not mergeable or inconclusive (`13`,
+  `10`, `14`). Nothing is read as green, and the review records no not-run itself.
+- **What it does not do.** No state file is created, read or required: no `review-triage` marker
+  and no *End* write. A `Medium`+ row's class routes nothing — no `remedy-route.sh`, no BUILD unit
+  re-run, no ARCHITECT re-entry, no `phases.gate_quality.remedy_class`, no `[review-autofix]`
+  entry, no advisor criteria of *Routing*; the rework is the work outside AutoFlow. No attempt cap
+  and no `[autoflow:review-autofix]` comment: `review-gate.sh`'s `attempts:` line and `cap` case
+  count `[review-autofix]` entries, which the path never writes, and are not read.
+- **The return.** The end report carries the pull request's URL and head commit, the verdict, the
+  findings file and the round's comment, the CI result as read, and the round count: this round's
+  `k`, which every review record's name carries — a new round's `k` is one more than the highest
+  the attempt's review store holds for that pull request — with the rework count `k − 1`.
 
 <!-- From <autoflow-root>/docs/reviewer-backend.md -->
 
