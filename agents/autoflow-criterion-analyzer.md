@@ -48,7 +48,7 @@ Execution Mode).
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/role-common-rules.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -109,79 +109,7 @@ declares its role by its `subagent_type` and the model its policy row names
 ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Concurrent spawns*), and its prompt states the
 delivery as "return … as your report".
 
-<!-- From <autoflow-root>/docs/role-common-rules.md -->
-
-# Role Common Rules
-
-> Shared rules that apply to every role spawn (the unit agents and their helpers) participating in
-> the AutoFlow lifecycle in this repository.
-
-The orchestrator (the main session) coordinates work; role spawns are launched as
-Agents and execute the actual writing of code, tests, and documentation. The rules
-below describe the contract every role spawn honours.
-
----
-
-## Identity
-
-- The role spawn understands, implements, and tests files within its assigned scope.
-- The role spawn may **read** any file in the repository.
-- The role spawn **may not modify** files outside the scope assigned by the dispatch
-  instructions for the current issue.
-- Push and PR creation are the orchestrator's responsibility — the role spawn's git
-  work finishes at `git commit` on its branch; the orchestrator pushes at DELIVER
-  ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
-
----
-
-## Git Workflow
-
-```bash
-# At session start (after the orchestrator has prepared a branch in PREFLIGHT)
-git status                  # confirm a clean working tree
-git log --oneline -5        # confirm the recent history
-
-# After completing the assigned work
-git add <files> && git commit
-# The orchestrator pushes (DELIVER) and opens the PR — report completion in the spawn's return value.
-```
-
-**Absolute rules**:
-
-- No direct commits to the default branch (`main`).
-- No new branch within an **attempt** — a review-response cycle continues on the attempt's existing dev branch. A new attempt of the same issue gets its own dev branch only when the cycle creates it, before its criterion review stage (`autoflow-records new` — beside an earlier attempt still here, on the operator's explicit request), even while an earlier attempt's PR is still open, and never from a role. Whether another attempt or another issue may start is **not** gated on a prior PR's merge state; it is governed by [`core.md`](<autoflow-root>/docs/core.md) > PR Wait Rule (the `active` flag, per checkout).
-- Always run `git status` before committing.
-- No `feat`/`fix` commit while tests are failing — use `wip` instead.
-
----
-
-## Commit Format
-
-```
-<type>(#<issue>): <description>
-
-Next: <what comes next>
-```
-
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
-
----
-
-## Session Protocol
-
-At the start of each session:
-
-```bash
-git log --oneline -5        # what was last committed
-git status                  # any uncommitted work?
-```
-
-1. Read the `Next:` line in the most recent commit and continue from there.
-2. Read the assignment in the spawn prompt — it carries the task and the
-   `<attempt-dir>/*` paths. There is no mailbox to poll: the prompt is delivered
-   once, at spawn.
-
----
+<!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->
 
 ## Bash Execution Mode
 
@@ -224,81 +152,6 @@ git status                  # any uncommitted work?
 - **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
-
-## Tree Quiesce (spawn-boundary form)
-
-- **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
-  the assignment its spawn prompt carries.
-- The orchestrator's spawn schedule issues no tree-writing spawn while another spawn's run is in
-  flight.
-
----
-
-## Work Completion Process
-
-```
-Implement → the comment check (<autoflow-root>/docs/units/build.md > What the build owes) → tests pass → commit → return the report
-```
-
-**Required content of the completion report** (the spawn's return value — write any
-body to `<attempt-dir>/*` and return an anchor plus a one-line summary):
-
-- Files changed.
-- Test results (pass/fail).
-- Cross-cutting impact (interfaces, data structures, config).
-- Caveats or known limitations.
-- Branch name and final commit hash.
-
----
-
-## Communication
-
-The orchestrator spawns each role with `Agent`
-(`subagent_type`, explicit `model`), and the spawn's return value is its report. There
-is no team, no mailbox, and no peer-to-peer messaging between roles.
-
-| Action | Method | Note |
-|--------|--------|------|
-| Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
-| Report to orchestrator | the spawn's return value | completion, escalation — body to `<attempt-dir>/*`, return an anchor + one-line summary |
-| Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
-| Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
-
-### Result delivery path by spawn mode
-
-Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
-
-- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
-- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
-
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Orchestrator context discipline*, row 2).
-
-| Spawn mode | Where the report arrives | Required delivery action |
-|---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `<attempt-dir>/*` and report an anchor + one-line summary |
-
-A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
-
-The single mode applies to every role; the per-role table is [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Spawn mode by role lifetime.
-
----
-
-## Quality Standards
-
-- Read and understand the existing code before changing it.
-- Run the relevant tests after each change and confirm they pass.
-- Do not add unnecessary refactors or type annotations. A comment carries only what `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
-- Do not introduce security vulnerabilities.
-- Do not make changes outside the assigned scope.
-
----
-
-## Documentation Rules
-
-- Code/policy: English.
-- Markdown docs: English (source of truth).
-- HTML docs: Korean (translation), if maintained.
-- Interface changes require updating the related docs.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Reporting Format -->
 

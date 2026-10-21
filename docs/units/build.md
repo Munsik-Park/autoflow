@@ -160,8 +160,8 @@ worth and where it loses.
   its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
   observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
   root (the unit's root declaration) and the text of the rules its work follows, from the unit's
-  own definition —
-  `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
+  own definition — `<autoflow-root>/docs/core.md` > Instruction Conventions and Rule Scope, by
+  which they are read, `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
   Change Surface Rules > *Lint chain on the staged surface* and `<autoflow-root>/docs/role-common-rules.md` >
   Bash Execution Mode — since a `general-purpose` helper has no AutoFlow definition of its own
   (`<autoflow-root>/docs/core.md` > Context Injection). Requirements of two areas that

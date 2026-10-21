@@ -14,7 +14,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/preparation.md` > The criterion review stage; `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -79,6 +79,60 @@ A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md`, fixes set
 ## Cost Control
 
 - **Concurrent spawns**: keep ≤ 5 `Agent` spawns in flight at once.
+
+<!-- From <autoflow-root>/docs/units/preparation.md > The criterion review stage -->
+
+## The criterion review stage
+
+CRITERION-REVIEW is the first stage of an attempt's cycle, inside PREFLIGHT: after the entry
+`cycle-status.sh` prints and the conditions before it — no state file left in the tree, no other
+attempt of this checkout active (*PR Wait Rule*), the record root determined and usable — and
+before the stop conditions and the state file. It runs on the entries `new` and
+`criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` started; no other command or session is
+needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
+its exit.
+
+- **The attempt and its record directory come first.** On `new`, or on the request, the orchestrator creates the
+  attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
+  with no active attempt in this checkout — fetches `origin`, makes the record directory under the
+  record root with this checkout as its owner, and checks out a new dev branch
+  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and with no commit of its own
+  until the state file is written. The base — the branch the attempt's pull request merges into —
+  is the remote default branch, or the branch the operator names for the attempt
+  (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
+  (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The
+  operator names them with the request (`/autoflow:cycle <N> new --base <branch>`, …). A named
+  commit with commits its base does not have is reported (`not-in-base: <n>` — the pull request
+  would carry them); whether to stop and report or go on with that stated is the orchestrator's
+  judgment, recorded with its grounds (ADR-0034 D1). It refuses —
+  and nothing is made — on a dirty tree, an active attempt of this checkout, a failed fetch, no
+  remote-tracking ref of the base, a commit not in the checkout, or a record root that is undetermined or unusable (exit `7`); each is a stop reported to
+  the user, as PREFLIGHT reports it. On `criterion-review`, the attempt named is checked out, and
+  `git fetch --prune origin` runs before the stage reads the code; a failed fetch is the same hard stop,
+  and a dirty tree is resolved with the user first (*Cautions*).
+- **The stage is the attempt's criterion review.** What it reads and judges, its stages — stage 1
+  in this session, then the `autoflow-criterion-tracer`, `autoflow-criterion-analyzer` and
+  `autoflow-criterion-reconciler` spawns — its record, its authority and its report are
+  [`criterion-review.md`](<autoflow-root>/docs/criterion-review.md). Every record of it is in the attempt's record
+  directory `<attempt-dir>` (`autoflow-records dir`).
+- **Exit.** The attempt's `[criterion-ready]` entry for the current issue body, which
+  `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue {N}` reports `READY`; then
+  PREFLIGHT continues at the stop conditions on that attempt. While a decision waits on a
+  harness-level block, the entry is not written and the session reports it and stops.
+- **Re-entry.** The stage writes no state file, so a session that ends in the middle of it
+  re-enters it from `cycle-status.sh`'s `criterion-review` entry on the same attempt; what
+  the stage already wrote is in `<attempt-dir>`, and how much of it the stage takes up again is its
+  own judgment, recorded under the review record's `## Session decisions`.
+- **One unit per session.** `/autoflow:cycle-u1 <N>` (`<N> new` for a new attempt)
+  runs U1 — this stage included — from its entry (`new`, `criterion-review`,
+  `start` or `review-response`) to PREFLIGHT → DIAGNOSE, and every stop above is reported the same
+  way.
+- **The stage does not hold its checkout.** No state file exists while it runs, so the PR Wait
+  Rule's `active` signal does not see it: another issue's `new` in the same checkout switches the
+  branch away — only on a clean tree, so no uncommitted work is lost, and the stage's records stay
+  in its `<attempt-dir>`. The attempt left so is reported and re-entered later like any unfinished
+  review (`criterion-review`). An attempt with no state file is not counted as active because an
+  unfinished review left for good would otherwise hold the checkout with no state to clear.
 
 <!-- From <autoflow-root>/docs/criterion-review.md -->
 
@@ -444,6 +498,280 @@ the new attempt, whatever the earlier one left: every attempt begins with its ow
 by whom* > *The cycle makes the attempt before the stage*). A `[criterion-ready]` entry a target recorded inside its
 tree before the record root (`.autoflow/<repo-key>-issue-<N>/`) belongs to no attempt and is not
 read: a new attempt's own criterion review stage records its own.
+
+<!-- From <autoflow-root>/docs/decision-ledger.md -->
+
+# Decision Ledger
+
+The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md`: what an entry records, how it is
+identified, and the grammar of the entries a decision point produces — the advisor's first judgment
+and the operator's override. The ledger's standing constraints —
+append-only, no re-litigation without a new verified fact, host ownership, and identifier
+allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
+
+## Entries
+
+- Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `orchestrator decision`, `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
+- **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`units/design.md`](<autoflow-root>/docs/units/design.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
+
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](<autoflow-root>/docs/units/design.md), [`units/build.md`](<autoflow-root>/docs/units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at REVIEW, its own decision at a point it settles without the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Decision points and harness-level blocks*; an acceptance-criterion change: *Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle, by the criterion review session taking the orchestrator's part — the `[criterion-ready]` entry recording the review's settled decisions (*Criterion-readiness confirmations* below).
+
+## Entry identifier
+
+A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its REVIEW marker in the same grammar: `## O<n> — <title> (cycle <C>, REVIEW) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Routing* > Attempt cap). An entry written before the attempt's state file — in its criterion review stage, the criterion-readiness confirmation included — carries `cycle 0`. Record entries (`preflight-plugin`, `preflight-local-checks`, `preflight-review-config` — [`units/preparation.md`](<autoflow-root>/docs/units/preparation.md)) are level-3 headings and carry no identifier.
+
+| Writer | Namespace |
+|---|---|
+| Orchestrator | `O` |
+| Advisor | `A` |
+| Pre-protocol legacy entries (readable, never issued) | `E` |
+| Legacy facilitator-delegate entries (readable, never issued) | `F` |
+
+This table is the mapping's only documentary home; other documents cite it rather than restate it.
+
+- **Allocation**. `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> <NS>` issues every identifier, called immediately before that entry's own append ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). It takes the next serial above both the highest in the file and the highest already reserved, and reserves it before printing it — an empty directory `issue-{N}-ledger.ids/<ID>` beside the ledger, which one caller alone can create. Writers of one namespace that call it concurrently — two advisors spawned together, each allocating before the other has appended — therefore receive distinct identifiers. A reserved identifier that is never appended (the append denied, the writer stopped) leaves a gap in the serial; a gap is not a defect, and `check` does not report one. A writer whose append must be retried keeps the identifier it was issued.
+- **Identifier collision**. Two entries can share an identifier — entries written before this protocol or before `next` reserved what it issued, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair. A reader that resolves a supersession by identifier (`<autoflow-root>/scripts/gate/security-checklist.sh`) displaces every earlier entry it counts that the named identifier matches — never an operator entry by an advisor's — so a re-deriving entry written by the colliding entries' own authority is the one that stands.
+
+## Decision-point entries
+
+**Advisor decisions and operator overrides.** A decision point is answered first by the advisor
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor): an `A<n>` entry under the authority
+`advisor decision`, carrying a `- Record:` line to the advisor's answer file
+(`<attempt-dir>/issue-{N}-advisor-<ID>.md`) and the marker and fields its kind requires below. Only the
+advisor writes that authority or an `A` heading, and the advisor never writes `operator decision` or
+an `O` / `F` / `E` heading — the gate hook denies both
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Independence*). The operator may
+override an advisor's entry: the orchestrator — the main session, the
+only writer the gate hook admits for an `O` entry or the `operator decision` authority — records the
+override as an `O<n>` entry under the authority `operator decision`, with the same marker and fields
+and an `- Overrides: A<n>` line. An override supersedes the advisor's entry without a new verified
+fact — the operator's authority is the ground, the one supersession the no-re-litigation rule admits
+besides the verified-error exception; an advisor never supersedes an operator entry.
+
+**Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
+ledger append-only ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Independence*). A later
+entry replaces an earlier one only by naming it: `- Supersedes: <id>` (the same authority, on a new
+verified fact or the verified-error exception) or `- Overrides: A<n>` (the operator over the
+advisor). Two standing entries on the same subject whose conclusions disagree, with neither naming
+the other, are a **conflict**: nothing is settled by recency, and the conflict is resolved by a new
+entry — the advisor's, naming the entries it resolves, unless an operator entry is among them, which
+only the operator replaces. The same conclusion recorded twice is not a conflict. An identifier two entries
+already share is read as *Identifier collision* above says, never repaired by editing either entry.
+
+**Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
+never the design's or a unit's to apply: the **orchestrator** decides it first, on the grounds the
+raising report or recommendation carries, and puts it to the **advisor** only where those grounds
+do not settle it or it is not confident ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor >
+*Decision points and harness-level blocks*); the **operator** may override. The change stands only
+as the entries below ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1); choosing how a
+criterion is *verified* is the design's, provided the row states its reason, which the
+reviewers then judge at REVIEW (the three-tier guard — [`units/design.md`](<autoflow-root>/docs/units/design.md) >
+*Report routing*). A content change reaches the orchestrator from wherever it surfaces: the ARCHITECT design
+unit's `## Decision requests` section, before GATE:PLAN; a problem the BUILD unit meets and raises in
+its report; or a gate recommendation that records a criterion defect, or whose
+triage hits the acceptance-criterion pause criterion ([`units/design.md`](<autoflow-root>/docs/units/design.md) > *Report routing*,
+[`units/completion-evaluation.md`](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
+decision is recorded as one entry per decided AC, in the same trailing-marker grammar:
+the heading `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]` (the advisor's: `## A<n> — …`; an override: `## O<n> — …`),
+`<PHASE>` being the phase the change surfaced in, followed by the entry's own `- AC: <ac id>` line (for
+an added criterion, the id it takes), a `- Disposition:` line valued `excluded` / `revised` / `split` /
+`added`, and the ordinary Decision / Grounds / Authority lines with the authority value
+`orchestrator decision` (the advisor's: `advisor decision`; an override: `operator decision`).
+
+**A criterion can be wrong; from ARCHITECT on, the work tests it**. DIAGNOSE takes the criteria as written — it
+analyzes the problem as the issue states it and runs no test of the criteria of its own. That says how
+DIAGNOSE works, not when a defect may be raised: a defect observed as a fact is raised wherever it is
+observed, a gate before ARCHITECT included. From ARCHITECT on — the design, the build
+and every gate after them — a criterion is a hypothesis the work tests, not a truth the
+work is bent to fit: wherever the work and a criterion disagree, *is the criterion wrong?* is one of the
+answers the judgment weighs, beside *how is it satisfied?* A criterion is **defective** when (a) a fact
+it presumes does not hold — a device, a phase or a state it takes for granted; or (b) the scope it draws does not fit the problem — too
+narrow, when the same cause reaches past what it names, and the question is then whether the issue saw
+the problem as local and the approach itself must change, not only whether to include the rest (a
+widening: `revised` / `added`); or too wide, when it binds in a problem separate from this issue (a
+split: `split` / `excluded`). A defect so judged is raised for a decision — the orchestrator's first, the advisor's where it cannot settle it;
+it is never resolved by keeping the criterion's letter. One signal of a defect: a document has to add a rule the criterion did
+not state in order to keep the criterion's letter. This paragraph is the principle's single home;
+the unit documents and agent definitions cite it.
+
+The marker sits at the **end** of the heading. The authority over an acceptance criterion maps to
+these literals and nothing else: the entry's authority **value** is `advisor decision` on an `A<n>`
+entry, or `orchestrator decision` or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
+heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an `operator decision` entry wins. When the
+disposition is `revised`, `split` or `added`, the analysis report's acceptance-criterion table
+(`<attempt-dir>/issue-{N}-analysis.md`) is edited to
+match before re-entry, and this entry is the record of who authorized the edit. An `added` entry
+covers no difference in either gate backstop: the criterion it adds is owed its verification-design
+row and its discharging site like any other.
+
+**Security-checklist decisions** (`[checklist-decision]`). The security checklist AUDIT scores
+against is the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist`,
+and a cycle's AUDIT reads it as of the cycle's base commit ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). Changing it inside a cycle — the file, or the
+declaration that points at it — is never the cycle's own to accept: the **advisor** decides first
+and the **operator** may override. When `<autoflow-root>/scripts/gate/security-checklist.sh status` reports the
+change at AUDIT entry, the orchestrator spawns the advisor, and the answer is recorded in the same
+trailing-marker grammar: the heading `## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]` (an
+override: `## O<n> — …`), followed by a `- Checklist:` line (the declared path at HEAD, or `none` when
+the declaration is dropped), a `- Blob:` line (the `git rev-parse HEAD:<path>` of the approved
+version, or `none`), a `- Disposition:` line valued `accepted` / `rejected`, and the ordinary
+Decision / Grounds / Authority lines with the authority value `advisor decision` (an override:
+`operator decision`), plus the `- Supersedes:` / `- Overrides:` line when it replaces an entry. The
+script counts an entry only when its Decision and Grounds lines are non-empty, its Disposition is
+`accepted` or `rejected`, and its Authority matches its namespace (`advisor decision` on `A<n>`,
+`operator decision` on `O<n>`), and only while its Checklist and Blob equal HEAD's, so a later edit to
+the checklist is a new change owed its own decision. An entry stands unless a later counted entry
+replaces it by name (*Replacement is explicit* above; an advisor entry never replaces an operator
+entry). The standing entries decide only when they agree: all `accepted` → the change is covered; all
+`rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
+`conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
+
+**Criterion-readiness confirmations** (`[criterion-ready]`). In the first stage of an attempt's
+cycle, before its state file, the attempt's own review checks the issue's acceptance criteria and
+the decisions the review settles are recorded ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*). The review session
+judges and records its dispositions, a point it cannot settle is decided by the advisor as at any
+decision point — the answer is itself the decision and does not wait on the operator's review —
+and the operator overrides either when they choose. Once every decision is settled, the review
+session records them in one entry, with no operator confirmation asked: the entry is the record of
+the decisions made under the policy the operator set for the review, under the authority
+`operator decision` — the same authority over acceptance content as an override
+([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
+`## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
+line, a `- Record:` line (the review record's file name in the attempt's own record directory, by name
+alone), an
+`- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
+for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
+`operator decision`. No `A<n>` entry carries the marker, and an attempt that has a state file takes
+none. `<autoflow-root>/scripts/preflight/criterion-ready.sh
+status` reads the **last** entry carrying the marker in the attempt's own ledger — never another
+attempt's — and counts it only when it is an `O` entry
+under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
+the body is confirmed by a new entry, never by editing this one. The entry is the criterion review
+stage's exit, and PREFLIGHT reads that status on the attempt's start
+([`units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *The criterion review stage*, Stop conditions >
+*Criterion readiness*); nothing after the state file reads the entry, and a criterion change from
+then on stays an `[ac-decision]`.
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Advisor -->
+
+## Advisor (first judgment at a decision point)
+
+ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
+This section is the procedure's single home; [`core.md`](<autoflow-root>/docs/core.md) > Flow Control routes to
+it and the unit documents cite it.
+
+### Decision points and harness-level blocks
+
+- **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
+  confident of ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). An acceptance-criterion
+  change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
+  analysis records, a reviewer finding that repeats the previous attempt's complaint, and a
+  GATE:HYPOTHESIS PASS the orchestrator judges unreachable are where such a decision arises, not
+  decision points by their kind: the orchestrator judges each first, and where the grounds the
+  raising report, finding or evaluation carries settle it, it decides and records the decision with
+  those grounds in an `O` ledger entry under `orchestrator decision` — for an acceptance-criterion
+  change, its `[ac-decision]` entries ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+  *Acceptance-criterion decisions*); for a repeated complaint, the attempt's `[review-autofix]`
+  entry. An un-agreed design point, a `remedy_class: operator`, and a recommendation or finding the
+  orchestrator cannot route with confidence (a pause criterion, a rebuttal the re-score or the
+  reviewer keeps while the two sides still disagree) are already decisions the working AI could not
+  settle. A security-checklist change (`[checklist-decision]`) is the one decision point by its
+  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
+  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*). In U1's criterion
+  review stage, a point the review cannot settle is one as well, put by the session running the
+  stage — the orchestrator, or a `/autoflow:criterion-review` session taking its part — in the
+  procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
+  ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*). Each decision point is answered by
+  the advisor first.
+- **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
+  denial), or a tool, credential, installation or material the environment does not provide — for a
+  tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
+  such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
+  `phase:"awaiting-user"` ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > Human-decision
+  presentation). A decision at one of those points can end the cycle instead — a non-code lever or cause, a
+  prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
+  confirm closing the issue, the cycle not closing it itself ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) >
+  *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
+  points and are unchanged ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1).
+
+### Procedure
+
+1. **Request.** The orchestrator writes `<attempt-dir>/issue-{N}-advisor-request-<k>.md` situation-first:
+   the situation in domain terms, the decision asked with each option and what it changes, the
+   orchestrator's own reading — the option it leans to, its grounds, and the point where those
+   grounds stop settling it — and the anchors (the artifact paths, the report or finding the
+   decision surfaced in). The advisor starts from that reading rather than gathering the material
+   anew.
+2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
+   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
+   `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
+   phase. The spawn is never score-gated. Where two or more decisions are open and none depends on
+   another's answer, their advisors may be spawned together, and a decision that depends on another's
+   answer is spawned after that answer is recorded; whether to spawn them together or one after
+   another is the orchestrator's judgment (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2), within the
+   concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
+3. **Answer and record.** The advisor weighs the material itself, writes its answer to
+   `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
+   `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
+   `- Record:` line to the answer file and the marker and fields the decision's kind requires
+   ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)). Its identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> A`, called immediately before the append; the
+   call reserves the identifier, so advisors spawned together receive distinct ones
+   ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
+   the file on disk and checks (*Independence* below), so the prior content is never re-written. It
+   returns the identifier and the answer in one line.
+4. **Apply.** The orchestrator verifies the anchor — the ledger heading and the record file exist —
+   and routes the cycle as the operator's answer to that point would have been routed: the
+   Flow Control row the point sits on names the route. The cycle does not pause. An advisor that
+   reports the decision blocked at the harness level turns it into a harness-level block.
+
+### Independence
+
+The advisor is never the author of what it judges: it is a fresh spawn per decision, not the unit
+agent, role spawn or orchestrator whose work raised the point, and its record carries its own grounds.
+Its authority is worth only that separation, and the operator's override only its own — so each
+is written by its own writer alone and stays as written. Three locks:
+
+- **Authorship — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
+  authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
+  text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
+  the main session (no `agent_type` — the orchestrator, or a `/autoflow:criterion-review` session
+  taking its part, recording its own decision, an operator override or instruction, or the review's
+  `[criterion-ready]` entry); the advisor
+  adds no `operator decision` and no `O` / `F` / `E` heading.
+- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
+  on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
+  A decision changes only by a new entry that names the one it replaces
+  (`<autoflow-root>/docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
+- **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
+  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
+  `- Supersedes:` / `- Overrides:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`; the gate backstops
+  match the `[ac-decision]` marker and read the authority as recorded).
+
+The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
+meant to append to, or writing an authority that is not its own — not a determined evasion (the
+same model as `<autoflow-root>/docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
+(redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
+line, a malformed heading, a variant spelling of an authority).
+
+### Operator override
+
+An operator override of an advisor decision is recorded by the orchestrator as an `O` entry under
+the authority `operator decision`, with the marker of the entry it overrides and a line naming that
+`A` identifier. It supersedes the advisor's entry without a new verified fact — the override is the
+authority ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Advisor decisions and operator
+overrides*) — and the cycle re-enters where the overridden answer's route reaches, consuming no
+re-entry budget.
+
+### Claude Code's advisor tool (`advisorModel`)
+
+Distinct from the advisor sub-agent above: Claude Code's advisor tool
+(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
+mid-task. AutoFlow neither enables it nor directs its use. It cannot carry a
+decision point: its model is configurable and its effort is not, and Claude decides when to call it,
+which is why the first judgment is the sub-agent's (ADR-0025 D7).
+
+---
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Reporting Format -->
 

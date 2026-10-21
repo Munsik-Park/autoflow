@@ -35,7 +35,9 @@
 # names for it; an agent definition and a rule file carry, after the
 # marker, the core parts and the documents it names for them. Each is
 # preceded by a `<!-- From <autoflow-root>/<document> > <section> -->` line.
-# A document's links point at `<autoflow-root>/…`; an entry that matches no
+# A document's links point at `<autoflow-root>/…` (a link to a section of its
+# own document, at that document); an entry whose document an earlier entry
+# of the same carrier carries whole is left out; an entry that matches no
 # carrier, a scope or prefix that matches no part of its document or more
 # than one, and a link whose target does not exist fail the generation.
 #
@@ -163,7 +165,8 @@ doc_part() {
 }
 
 # links <document> — a markdown link of a document other than the core points
-# at `<autoflow-root>/…`, its fragment dropped (the core's links are reduced to
+# at `<autoflow-root>/…`, its fragment dropped — a link to a section of the
+# document itself, at the document (the core's links are reduced to
 # their text, strip_links); exit 1, naming it, on a link whose target does not
 # exist.
 links() {
@@ -188,10 +191,10 @@ links() {
         out = out substr(l, 1, RSTART - 1)
         l = substr(l, RSTART + RLENGTH)
         t = seg; sub(/^\[[^]]*\]\(/, "", t); sub(/\)$/, "", t)
-        if (t ~ /^(https?:|mailto:|#|<)/) { out = out seg; continue }
+        if (t ~ /^(https?:|mailto:|<)/) { out = out seg; continue }
         txt = seg; sub(/\]\([^)]*\)$/, "]", txt)
         sub(/#.*$/, "", t)
-        p = norm(dir "/" t)
+        p = (t == "") ? doc : norm(dir "/" t)
         if (system("test -e \"" root "/" p "\"") != 0) { print "gen-skill-bodies: " doc ": the link target " t " does not exist" | "cat 1>&2"; bad = 1 }
         out = out txt "(<autoflow-root>/" p ")"
       }

@@ -346,7 +346,7 @@ elif [ -n "$k3bad" ]; then
 elif [ "$k3spec" != "agents/autoflow-advisor.md:docs/decision-ledger.md " ]; then
   failc "K3" "an advisor definition without its decision-ledger text was read as '$k3spec'"
 else
-  pass "K3: $k3n role-docs.tsv entries read apart from the generator; each one's text is in every carrier it names; a carrier missing one is caught"
+  pass "K3: $k3n role-docs.tsv entries read apart from the generator; each one's first line follows its From line in every carrier it names (the whole text is G1's); a carrier missing one is caught"
 fi
 
 # K4 — the documents the core's tables name for a unit, in that unit's body and

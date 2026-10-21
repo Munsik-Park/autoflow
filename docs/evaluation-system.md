@@ -54,9 +54,9 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
   are the orchestrator's and are not read. A rubric's citation of one of them names the
   orchestrator's handling of the result and asks no read of the evaluator.
 - What lies outside the input set — the gate hook, the state file and its keys, the spawn policy,
-  another gate's rubric and its row's sections, an earlier cycle's artifacts the Input line does not
-  name — is read, or applied where the definition carries it, only when the change under evaluation
-  modifies it.
+  another gate's rubric and its row's sections (which the definition carries), an earlier cycle's
+  artifacts the Input line does not name — is read only when the change under evaluation modifies
+  it.
 
 ### What it confirms
 

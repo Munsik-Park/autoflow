@@ -14,7 +14,7 @@ mechanisms conform to these rules.
 | Rule | Enforced by |
 |------|-------------|
 | R1 — Tool version | plugin packaging, the PREFLIGHT plugin record |
-| R2 — Rule delivery | the command bodies, the agent definitions |
+| R2 — Rule delivery | the command bodies, the agent definitions and the reviewers' rule files, generated and checked (regen-clean); the reviewer wrappers' prompts |
 | R3 — Target-identity separation (the project's own files) | the plugin package |
 | R4 — Packaging and runtime checks | CI, the PREFLIGHT target check |
 

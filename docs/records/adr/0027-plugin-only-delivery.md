@@ -13,8 +13,9 @@ bullets (the leading part within 18,000 bytes, the re-invocation first line) and
 check amendment superseded by ADR-0031 (PR #475): AutoFlow does not consider compaction. D2's
 *Commands* and *The core* amended, and Alternatives > *Per-unit commands* reversed, by ADR-0032
 (issue #464): `/autoflow:cycle-u1` … `/autoflow:cycle-u6` run one unit with the core parts it uses.
-D2's *Subagents* first and second bullets amended by ADR-0035 (issue #494): an agent definition
-carries the core parts and documents it is bound by, and a helper's prompt their text.
+D2's *The core*, *Other homes* and *Subagents* first and second bullets amended by ADR-0035 (issue
+#494): a command body carries its unit's documents after the core, an agent definition the core
+parts and documents it is bound by, and a helper's prompt their text.
 
 ## Context
 

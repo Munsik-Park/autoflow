@@ -5,7 +5,7 @@
 Accepted (issue #494: the operator's instruction to unify the guidance each role receives and to
 compose it, in the modular operation, as the core document plus the documents the stage needs;
 the method left to the working session, with the grounds in the pull request). Amends ADR-0027 D2
-*Subagents*, ADR-0032 D3 and D4, ADR-0025 D2's "what it reads", and
+*The core*, *Other homes* and *Subagents*, ADR-0032 D3 and D4, ADR-0025 D2's "what it reads", and
 `docs/tool-delivery-contract.md` R2.
 
 ## Context
@@ -58,17 +58,33 @@ No new criterion is written; the set is read from what the documents already say
   takes (`all`) and the standard by which a `[MUST]` item is told from a judgment item — and the
   core part its own definition names as binding it (the build unit: Commit Rules; the advisor:
   Execution Principles > *Human-decision presentation*).
-- *The documents.* For a session: its unit's document and the documents the core names on the
-  unit's entry (Unit Document Loading Contract, Unit references), and the sections of
-  `docs/submodule-common-rules.md` whose own scope names every actor (Verification and Tools) or
-  every spawn's report (Reporting Format, which the orchestrator also states to a spawn with no
-  definition). For a subagent: the documents and sections its definition or its contract names as
-  its contract, its document, the documents line of its spawn or the rules its work follows, and
-  the documents whose own scope statement names it — `docs/role-common-rules.md` (every role
-  spawn), `docs/submodule-common-rules.md` (every target scope a role works in: the unit agents
-  take it whole; every other role its Verification and Tools and Reporting Format sections). Each
-  unit agent also takes its exit gate's rubric, the verification that prescribes it (ADR-0025 D2).
-  For a reviewer: its rule file and `docs/review/review.md`, the rules that rule file names.
+- *The documents.* One reading for every role: the documents and sections its carrier names as
+  the home of what the role itself does — its contract, its document, the documents line of its
+  spawn, the grammar of what it writes, the rules its work follows — and the documents whose own
+  scope statement names it.
+  - A session: its unit's document and the documents the core names on the unit's entry (Unit
+    Document Loading Contract, Unit references); the homes the core's parts name for what the
+    session itself writes and asks — `docs/decision-ledger.md` (the ledger's entries),
+    `docs/role-contracts.md` > Advisor (the advisor request), `docs/state-tracking.md` (the state
+    file; not the criterion review stage, which writes none) and, in a unit that spawns an
+    evaluator, `docs/role-contracts.md` > Evaluation AI (its spawn and prompt); and the sections of
+    `docs/submodule-common-rules.md` whose own scope names every actor (Verification and Tools) or
+    every spawn's report (Reporting Format, which the orchestrator also states to a spawn with no
+    definition). A session in which the orchestrator commits to the target (U4–U7) takes Change
+    Surface Rules, the home of the lint chain the core's Commit Rules bind it to and of the
+    comment rules its direct fixes follow.
+  - A subagent: what its definition or contract names as above; the unit agents, whose scope
+    `docs/role-common-rules.md` ("the unit agents and their helpers") and
+    `docs/submodule-common-rules.md` ("every target scope a role works in") name, take both
+    whole; every other role takes the section of `docs/role-common-rules.md` that names it (Bash
+    Execution Mode) and the Verification and Tools and Reporting Format sections. Each unit agent
+    also takes its exit gate's rubric, the verification that prescribes it (ADR-0025 D2); the
+    evaluator takes Change Surface Rules, against which GATE:PLAN `Scope` and GATE:QUALITY
+    `Minimal implementation` and `Impact scope` are scored; the reconciler takes the record's
+    section contract (`docs/criterion-review.md` > Review record) it updates.
+  - A reviewer: its rule file and `docs/review/review.md`, the rules that rule file names.
+  - A helper: the three rules `docs/units/build.md` > *What crosses a boundary* names and the
+    core's Instruction Conventions and Rule Scope, by which they are read.
 - *Not carried.* A section the carried text cites for one item stays a citation, read at its home
   when that item needs it — the shape `docs/evaluation-system.md` > *What it reads* already states
   for the evaluator; a core part a unit's classification leaves out (ADR-0032); the cycle's inputs
@@ -94,7 +110,7 @@ A document's links point at `<autoflow-root>/…`. An entry already carried whol
 not carried twice. The generator fails on an entry that matches no carrier, a scope or block that
 matches no part of its document or more than one, and a link target that does not exist;
 `--check` compares every carrier, `--list-all` names them. `tests/plugin/verify-skill-bodies.sh`
-checks, apart from the generator, that each entry's text is in every carrier it names (K3), that
+checks, apart from the generator, that each entry's first line follows its `From` line in every carrier it names (K3; the whole text is the regen-clean check's), that
 the documents the core's tables name for a unit are in that unit's body and the whole-cycle body
 (K4), and that every agent definition is a generated carrier (G4).
 
@@ -154,10 +170,11 @@ regenerated, not another site. The content of the guidance is not changed.
 ### Negative
 
 - The carriers are larger. Measured on this change (bytes, main `2e72b1a` → this change): the
-  unit command bodies 37,549–44,901 → 85,694–125,640; `/autoflow:cycle` 49,927 → 344,269;
-  `/autoflow:criterion-review` 13,913 → 61,119; the agent definitions 2,816–4,929 → 33,876–133,083;
-  the reviewers' rule files 774–1,132 → 11,604–11,962. Most of it was read by path on entry before
-  (the unit document, `docs/evaluation-system.md`, `docs/criterion-review.md`, `docs/review/review.md`).
+  unit command bodies 37,549–44,901 → 133,172–165,095; `/autoflow:cycle` 49,927 → 388,302;
+  `/autoflow:criterion-review` 13,913 → 93,347; the agent definitions 2,816–4,929 → 26,748–147,408;
+  the reviewers' rule files 774–1,132 → 11,604–11,962. Most of it was read by path on entry or
+  during the work before (the unit document, `docs/evaluation-system.md`,
+  `docs/criterion-review.md`, `docs/decision-ledger.md`, `docs/review/review.md`).
 - A change to a carried document regenerates every carrier that carries it, and the generated text
   is committed.
 
@@ -165,9 +182,17 @@ regenerated, not another site. The content of the guidance is not changed.
 
 - The prompts are unchanged in what they name — the inputs, by path — except that the evaluator's
   no longer tells it to consult `docs/evaluation-system.md` and a helper's carries the text of its
-  three rules.
+  rules.
+- A spawn with no AutoFlow definition receives its guidance in a prompt its spawner writes, so no
+  generator checks that prompt; what it carries is fixed by name (`docs/units/build.md` > *What
+  crosses a boundary*) and copied from the spawner's own carrier, not chosen at the spawn.
 
 ## Amendments
+
+### ADR-0027 D2 > The core, Other homes
+
+- *The core*: a command body carries, after the core, the documents `role-docs.tsv` names for it.
+- *Other homes*: a unit's document is carried by the unit's command body, not read on entering it.
 
 ### ADR-0027 D2 > Subagents
 

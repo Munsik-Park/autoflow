@@ -34,7 +34,7 @@ A change to the per-phase assignment follows the revert rule above.
 
 This section is the orchestrator's side of the Evaluation AI: how it is spawned, prompted and its
 result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
-output — is [`evaluation-system.md`](evaluation-system.md), the one document its spawn names.
+output — is [`evaluation-system.md`](evaluation-system.md), the one document its agent definition carries with the sections it names.
 
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.

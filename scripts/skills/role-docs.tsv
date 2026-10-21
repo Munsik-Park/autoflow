@@ -20,7 +20,8 @@
 #   prefix    empty: the whole scope. Otherwise the one block of the scope
 #             whose first line starts with it (a bullet with its continuation)
 #
-# An entry already carried whole by its document is not carried twice. The
+# An entry whose document an earlier entry of the same carrier carries whole
+# is not carried twice. The
 # generator fails on an entry that matches no carrier, a scope or prefix that
 # matches no part of its document or more than one, and a link whose target
 # does not exist.
@@ -41,6 +42,7 @@ agents/autoflow-analyzer.md	docs/units/delivery.md	## CI > ### CI-failure re-ent
 agents/autoflow-criterion-tracer.md	docs/criterion-review.md	## Cause reach and rule conflict
 agents/autoflow-criterion-analyzer.md	docs/criterion-review.md	## In-depth analysis and reconciliation
 agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## In-depth analysis and reconciliation
+agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## Review record
 
 agents/autoflow-evaluator.md	docs/evaluation-system.md
 agents/autoflow-evaluator.md	docs/units/analysis.md	## What the analysis owes
@@ -48,16 +50,19 @@ agents/autoflow-evaluator.md	docs/units/analysis.md	## Analysis report
 agents/autoflow-evaluator.md	docs/units/design.md	## Output artifacts
 agents/autoflow-evaluator.md	docs/units/build.md	## What the build owes
 agents/autoflow-evaluator.md	docs/units/build.md	## Build report
+agents/autoflow-evaluator.md	docs/submodule-common-rules.md	## Change Surface Rules
 
 agents/autoflow-unit-analysis.md	docs/units/analysis.md
 agents/autoflow-unit-analysis.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:HYPOTHESIS
 agents/autoflow-unit-analysis.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-analysis.md	docs/submodule-common-rules.md
+agents/autoflow-unit-analysis.md	docs/role-common-rules.md
 
 agents/autoflow-unit-design.md	docs/units/design.md
 agents/autoflow-unit-design.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:PLAN
 agents/autoflow-unit-design.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-design.md	docs/submodule-common-rules.md
+agents/autoflow-unit-design.md	docs/role-common-rules.md
 
 agents/autoflow-unit-build.md	docs/core.md	## Git Workflow — Rules > ### Commit Rules
 agents/autoflow-unit-build.md	docs/units/build.md
@@ -65,9 +70,11 @@ agents/autoflow-unit-build.md	docs/evaluation-system.md	## Gate rubrics > ### AU
 agents/autoflow-unit-build.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-build.md	docs/role-contracts.md	## Build unit in a target scope
 agents/autoflow-unit-build.md	docs/submodule-common-rules.md
+agents/autoflow-unit-build.md	docs/role-common-rules.md
 
-# Every agent definition: the rules of every role spawn.
-agents/*.md	docs/role-common-rules.md
+# Every agent definition: the rules of every role spawn (the unit agents
+# carry the whole document above, whose scope names them).
+agents/*.md	docs/role-common-rules.md	## Bash Execution Mode
 agents/*.md	docs/submodule-common-rules.md	## Reporting Format
 agents/*.md	docs/submodule-common-rules.md	## Verification and Tools
 
@@ -88,10 +95,12 @@ skills/cycle-u5/SKILL.md	docs/units/completion-evaluation.md
 skills/cycle-u5/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u6/SKILL.md	docs/units/delivery.md
 skills/cycle-u6/SKILL.md	docs/pr-body-guide.md
+skills/cycle-u6/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u7/SKILL.md	docs/units/review.md
 skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
 skills/cycle-u7/SKILL.md	docs/external-review-sequencing.md
 skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/criterion-review/SKILL.md	docs/units/preparation.md	## The criterion review stage
 skills/criterion-review/SKILL.md	docs/criterion-review.md
 
 # The whole cycle in one session: every unit's.
@@ -111,7 +120,17 @@ skills/cycle/SKILL.md	docs/units/review.md
 skills/cycle/SKILL.md	docs/reviewer-backend.md
 skills/cycle/SKILL.md	docs/external-review-sequencing.md
 
-# Every command body: the rules every actor of a cycle follows.
+# Every command body: the homes the core names for what the session itself
+# writes and asks — the ledger's entries, the advisor's procedure, the state
+# file (not the criterion review stage, which writes none) and the evaluator's
+# spawn (the units that spawn one) — and the rules every actor of a cycle
+# follows.
+skills/*/SKILL.md	docs/decision-ledger.md
+skills/*/SKILL.md	docs/role-contracts.md	## Advisor
+skills/cycle/SKILL.md	docs/state-tracking.md
+skills/cycle-u*/SKILL.md	docs/state-tracking.md
+skills/cycle/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/cycle-u[2-5]/SKILL.md	docs/role-contracts.md	## Evaluation AI
 skills/*/SKILL.md	docs/submodule-common-rules.md	## Reporting Format
 skills/*/SKILL.md	docs/submodule-common-rules.md	## Verification and Tools
 
