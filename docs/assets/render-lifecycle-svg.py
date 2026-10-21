@@ -16,7 +16,9 @@ issue-952 G4 preservation guards assert on.
 Beyond the happy path, the diagram encodes the design decisions of
 ``docs/records/design-rationale.md``:
 
-- DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node subtitles)
+- the seven functional units of docs/core.md > Functional Units are the
+  columns; DIAGNOSE, ARCHITECT and BUILD each run as one unit spawn (node
+  subtitles)
 - D2  every gate is a fresh-spawned Evaluation AI (gate subtitles, legend)
 - D3  the hook computes PASS from raw scores (legend)
 - D6  GATE:HYPOTHESIS concludes no code change -> stop/close (dashed STOP node)
@@ -24,7 +26,8 @@ Beyond the happy path, the diagram encodes the design decisions of
       stop -> human escalation (dashed red return edges with their caps from
       docs/core.md > Regressions)
 - D8  deliberation runs in isolated sub-contexts (isolation glyph)
-- D9  HANDOFF review auto-resolution re-enters BUILD, bounded at 7 (top bus)
+- D11 a CI failure at HANDOFF and a Medium+ review at REVIEW re-enter by
+      remedy_class; REVIEW's auto-resolution is bounded at 7 (top bus)
 """
 
 from pathlib import Path
@@ -34,26 +37,32 @@ from pathlib import Path
 # (badge, stage-name, [(phase, subtitle, kind, isolated)]) — the ``isolated``
 # flag marks phases that run in an isolated sub-context / fresh spawn (D8).
 STAGES = [
-    ("01", "ANALYSIS", [
-        ("PREFLIGHT", "git clean · prior-cycle check", "start", False),
+    ("U1", "PREPARATION", [
+        ("PREFLIGHT", "git clean · prior attempts", "start", False),
+        ("CRITERION-REVIEW", "acceptance criteria", "phase", True),
+    ]),
+    ("U2", "ANALYSIS", [
         ("DIAGNOSE", "analysis unit · one spawn", "phase", True),
         ("GATE:HYPOTHESIS", "fresh eval · one form", "gate", False),
     ]),
-    ("02", "PLANNING", [
+    ("U3", "DESIGN", [
         ("ARCHITECT", "design unit · one spawn", "phase", True),
         ("GATE:PLAN", "fresh eval AI · 5×10", "gate", False),
     ]),
-    ("03", "BUILD", [
+    ("U4", "BUILD AND VERIFY", [
         ("BUILD", "build unit · test-first", "phase", True),
         ("AUDIT", "eval AI · test-first", "gate", False),
     ]),
-    ("04", "QUALITY", [
+    ("U5", "COMPLETION EVAL", [
         ("GATE:QUALITY", "fresh eval AI · 10×10", "gate", False),
     ]),
-    ("05", "DELIVERY", [
+    ("U6", "DELIVERY", [
         ("DELIVER", "branch push", "phase", False),
         ("INTEGRATE", "build · health · e2e", "phase", False),
-        ("HANDOFF", "PR · CI · review triage", "end", False),
+        ("HANDOFF", "PR · CI green", "phase", False),
+    ]),
+    ("U7", "REVIEW", [
+        ("REVIEW", "reviewers · one verdict", "end", False),
     ]),
 ]
 
@@ -100,11 +109,11 @@ SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,
 
 # ---------------------------------------------------------------- geometry
 
-MARGIN, COL_W, COL_GAP = 20, 190, 30
+MARGIN, COL_W, COL_GAP = 20, 190, 24
 PAD, NODE_H, V_GAP, LABEL_H, COL_PAD_B = 12, 46, 18, 40, 14
 TOP, BUS_Y = 80, 58
 NODE_W = COL_W - 2 * PAD
-WIDTH = 2 * MARGIN + 5 * COL_W + 4 * COL_GAP
+WIDTH = 2 * MARGIN + len(STAGES) * COL_W + (len(STAGES) - 1) * COL_GAP
 DASH = 'stroke-dasharray="5 4"'
 
 def col_x(i):
@@ -116,7 +125,7 @@ def node_y(j):
 def col_h(n):
     return LABEL_H + n * NODE_H + (n - 1) * V_GAP + COL_PAD_B
 
-MAX_H = max([col_h(len(s[2])) for s in STAGES] + [col_h(3) + 16 + NODE_H])  # the STOP node sits below column 01
+MAX_H = max([col_h(len(s[2])) for s in STAGES] + [col_h(2) + 16 + NODE_H])  # the STOP node sits below column U2
 LEGEND_Y = TOP + MAX_H + 28
 HEIGHT = LEGEND_Y + 40
 
@@ -185,7 +194,7 @@ def render(theme):
         )
         s.append(
             f'<text x="{x + PAD}" y="{TOP + 25}" font-family="{SANS}" font-size="11" '
-            f'font-weight="700" letter-spacing="1.6" fill="{t["muted"]}">'
+            f'font-weight="700" letter-spacing="1.2" fill="{t["muted"]}">'
             f'<tspan opacity="0.55">{badge}</tspan>  {name}</text>'
         )
         for j, (phase, sub, kind, isolated) in enumerate(phases):
@@ -229,7 +238,7 @@ def render(theme):
                 )
 
     # cross-column happy connectors: last node of col i -> first node of col i+1
-    for i in range(4):
+    for i in range(len(STAGES) - 1):
         lx, ly = origin[STAGES[i][2][-1][0]]
         rx, ry = origin[STAGES[i + 1][2][0][0]]
         x1, y1 = lx + NODE_W + 2, ly + NODE_H / 2
@@ -271,22 +280,28 @@ def render(theme):
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
 
-    # HANDOFF review/CI fail bus -> BUILD (D9: bounded auto-resolution, max 7x)
-    (hx, hy), (rx_, ry_) = origin["HANDOFF"], origin["BUILD"]
-    bx, ex = hx + NODE_W - 24, rx_ + 103
+    # REVIEW Medium+ / HANDOFF CI fail bus -> BUILD, the common point of the
+    # remedy_class routes (D11; REVIEW auto-resolution max 7x); HANDOFF's CI
+    # failure joins the bus
+    (vx, vy), (hx, hy), (rx_, ry_) = origin["REVIEW"], origin["HANDOFF"], origin["BUILD"]
+    bx, cx, ex = vx + NODE_W / 2, hx + NODE_W - 24, rx_ + 103
     s.append(
-        f'<path d="M{bx},{hy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
+        f'<path d="M{bx},{vy - 2} L{bx},{BUS_Y + 8} Q{bx},{BUS_Y} {bx - 8},{BUS_Y} '
         f'L{ex + 8},{BUS_Y} Q{ex},{BUS_Y} {ex},{BUS_Y + 8} L{ex},{ry_ - 4}" fill="none" '
         f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9" marker-end="url(#arrf)"/>'
     )
     s.append(
-        f'<text x="{(bx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
-        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → back to BUILD · review-response ≤7×</text>'
+        f'<path d="M{cx},{hy - 2} L{cx},{BUS_Y}" fill="none" '
+        f'stroke="{t["fail"]}" stroke-width="1.3" {DASH} opacity="0.9"/>'
+    )
+    s.append(
+        f'<text x="{(cx + ex) / 2}" y="{BUS_Y - 8}" text-anchor="middle" font-family="{SANS}" '
+        f'font-size="10" fill="{t["fail"]}">CI fail / review Medium+ → re-entry by remedy_class · review ≤7×</text>'
     )
 
     # ---- STOP node (D6: no code change -> close/report)
     (gx, gy) = origin["GATE:HYPOTHESIS"]
-    sx, sy = gx, TOP + col_h(3) + 16
+    sx, sy = gx, TOP + col_h(2) + 16
     s.append(
         f'<line x1="{gx + NODE_W / 2}" y1="{gy + NODE_H + 2}" x2="{gx + NODE_W / 2}" '
         f'y2="{sy - 4}" stroke="{t["conn"]}" stroke-width="1.3" {DASH} marker-end="url(#arr)"/>'

@@ -1,21 +1,17 @@
-# Claude AutoFlow Template
+# Claude AutoFlow
 
-A reusable template for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+A reusable framework for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), delivered as a Claude Code plugin.
 
 AutoFlow is a development lifecycle of seven functional units (PREFLIGHT → REVIEW) built on
 multi-agent role separation, independent analysis, and quantified evaluation
-gates. This template is the **generalized form** of the
-methodology originally implemented in `ontology-platform` — a multi-sub-repo
-deployment orchestrator. The only changes from upstream are:
+gates. Your project installs the plugin and runs its cycle; AutoFlow writes no file
+into the project's tree (see [Quick Start](#quick-start)). Three properties set its scope:
 
-1. **Name generalization** — numeric `STEP 0~9` (and `5a/5b/5c/5d/5.5/5.7`) identifiers replaced by semantic phase names.
-2. **Identifier placeholders** — service-specific names (`ontology-api`, `saiso`, etc.) replaced by `{{REPO_*}}`/`{{GITHUB_ORG}}` placeholders.
-3. **Terminal scope** — AutoFlow ends at the hand-off of the reviewed PR (`REVIEW`) instead of upstream's merge-and-close terminal step; an external review process performs the merge. **AutoFlow never merges.**
-4. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, INTEGRATE, HANDOFF CI) re-enters the cycle at the point its cause names (`remedy_class`: doc commit / BUILD / ARCHITECT) instead of upstream's unconditional return to RED.
-5. **Functional units** — ARCHITECT and the build span (upstream's DISPATCH..VALIDATE) each run as one unit agent prescribed by its goal, artifacts and verification (ADR-0025); the VERIFY round-trip and REFINE retry caps are retired with the phases.
+1. **Terminal scope** — AutoFlow ends at the hand-off of the reviewed PR (`REVIEW`); an external review process performs the merge. **AutoFlow never merges.**
+2. **Late-gate re-entry** — a late-gate FAIL (GATE:QUALITY, INTEGRATE, HANDOFF CI) re-enters the cycle at the point its cause names (`remedy_class`: doc commit / BUILD / ARCHITECT).
+3. **Functional units** — DIAGNOSE, ARCHITECT and the build span (BUILD, AUDIT) each run as one unit agent prescribed by its goal, artifacts and verification (ADR-0025).
 
-Aside from these divergences, every rule, retry cap, evaluation category, and pass
-threshold is preserved from upstream. A project without sub-repos is the plain case (DELIVER
+A project without sub-repos is the plain case (DELIVER
 pushes one branch, HANDOFF opens one PR).
 
 ---
@@ -26,6 +22,7 @@ AutoFlow structures every code change through a defined lifecycle:
 
 ```
 PREFLIGHT       Preparation (U1)  — prior-attempt resolution, Git clean check, sync, entry, state creation
+CRITERION-REVIEW Criterion review (U1) — the attempt's review of the issue's acceptance criteria against the code and policy
 DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
 ARCHITECT       Design unit (U3)  — Feature design + verification design
@@ -45,7 +42,7 @@ full diagram):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/autoflow-lifecycle-dark.svg">
-  <img alt="AutoFlow 16-phase lifecycle — Analysis → Planning → TDD → Quality → Delivery. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the FAIL retry loops (≤N×, or judged at GATE:HYPOTHESIS; a cap exhausted or a pass judged unreachable escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
+  <img alt="AutoFlow lifecycle — seven functional units: Preparation → Analysis → Design → Build and verify → Completion evaluation → Delivery → Review. Amber evaluation gates are fresh-spawned Evaluation AIs enforced by the gate hook; dashed red edges are the FAIL retry loops (≤N×, or judged at GATE:HYPOTHESIS; a cap exhausted or a pass judged unreachable escalates to a human); the isolation glyph marks phases running in isolated sub-contexts; the dashed STOP node is the no-code-change analysis exit." src="docs/assets/autoflow-lifecycle-light.svg" width="100%">
 </picture>
 
 <details>
@@ -53,7 +50,8 @@ full diagram):
 
 ```mermaid
 flowchart LR
-    PRE([PREFLIGHT]) --> DIA[DIAGNOSE]
+    PRE([PREFLIGHT]) --> CRV[CRITERION-REVIEW]
+    CRV --> DIA[DIAGNOSE]
     DIA --> HYP{{GATE:HYPOTHESIS}}
     HYP --> ARC[ARCHITECT]
     ARC --> PLAN{{GATE:PLAN}}
@@ -168,7 +166,7 @@ repository (one per sub-repo, for a project with sub-repos).
 ## Repository Structure
 
 ```
-claude-autoflow/
+autoflow/
 │
 ├── README.md
 ├── CLAUDE.md                          # Notes for developing AutoFlow itself (the core is docs/core.md)
@@ -282,10 +280,6 @@ merges (`docs/units/delivery.md` > *Multi-repo delivery*).
 2. Create a feature branch (`feature/your-change`).
 3. Follow the existing documentation style.
 4. Submit a PR with a clear description.
-
-Note: this repository is the **generalized form** of `ontology-platform`'s
-AutoFlow methodology. New methodology changes belong in the upstream project
-first.
 
 ---
 
