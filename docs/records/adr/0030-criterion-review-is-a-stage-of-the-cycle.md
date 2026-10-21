@@ -14,6 +14,10 @@ review creates the attempt) and, in D4, the `not-ready` and `new` entries and "`
 `new`, and `/autoflow:criterion-review <N>` runs the cycle's criterion review stage alone instead
 of starting a review outside a cycle.
 
+D2's command amended 2026-10-21 by ADR-0034 (issue #490): `autoflow-records new` takes `--base
+<branch>` and `--commit <commit>` and refuses a base with no remote-tracking ref or a commit not in
+the checkout.
+
 ## Context
 
 Up to 0.3.2 the criterion review (#430) was a procedure outside the cycle: the operator ran

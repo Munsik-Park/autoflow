@@ -6,7 +6,9 @@ Accepted (operator decisions recorded in issue #485 > 운영자 결정, 범위, 
 (2026-10-21) and #479에서 옮긴 내용 (2026-10-21); criteria settled by the attempt's criterion
 review). Amends ADR-0025 D1 (the unit table) and D4 (where the external verification layer runs),
 ADR-0026 D1 and D4 (the built-in review spawn and the `blocked-by-review` label), ADR-0028 D2, D4
-and D5 (the target source, the default, the readout), and ADR-0032 D1 for U7's command.
+and D5 (the target source, the default, the readout), and ADR-0032 D1 for U7's command. D1's U6
+and U7 exits ("CI green") amended by ADR-0034 D5 (issue #490): CI green, or recorded on the pull
+request as not run.
 
 ## Context
 

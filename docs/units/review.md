@@ -17,13 +17,14 @@ requests and their rounds — is read from the current state: `bash <autoflow-ro
 (with `--issue <N>` when given), the attempt's ledger and records, and the pull requests themselves.
 
 - **Goal**: every pull request of the cycle reviewed, its aggregated review posted with no
-  `Medium`+ finding that holds left and CI green on its head, and the state file handed off.
+  `Medium`+ finding that holds left and CI green on its head (or recorded on it as not run — [U6
+  Delivery](delivery.md) > *CI*), and the state file handed off.
 - **Artifact contract**: each reviewed PR's review records and findings file (*Reviewer review*,
   *Review aggregation*), and the ledger entries the routes record.
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), and the triage case with its attempt count (*Review triage*).
   Each reports by exit code.
-- **Verification**: the aggregated review clean and CI green — outside the orchestrator's own
+- **Verification**: the aggregated review clean and CI green, or CI's not running recorded — outside the orchestrator's own
   claim.
 - **Loop cap**: auto-resolution of reviewer findings, 7 attempts ([`core.md`](../core.md) > Flow
   Control > Regressions).
@@ -38,7 +39,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 |------|------|
 | REVIEW (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`<autoflow-root>/scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`<autoflow-root>/docs/units/review.md` > *Review triage*; the case is `<autoflow-root>/scripts/handoff/review-gate.sh` exit `10`) |
 | REVIEW (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`<autoflow-root>/docs/units/review.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
-| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports the merge order → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
+| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green, or CI recorded as not run → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports the merge order → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
 
 ## Reviewer review
 
@@ -217,7 +218,8 @@ Every route is recorded in `<attempt-dir>/issue-{N}-ledger.md` with a `review-au
 ## End
 
 Once every pull request of the cycle is clean — `review-gate.sh` reports `clean` or `low-only` on
-each of them and the Low findings are triaged — and CI is green, the orchestrator hands the
+each of them and the Low findings are triaged — and CI is green, or recorded on the pull request as
+not run ([U6 Delivery](delivery.md) > *CI*), the orchestrator hands the
 cycle off:
 
 - the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in

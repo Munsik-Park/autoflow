@@ -255,13 +255,13 @@ description: >-
   attempt's criterion review stage, to REVIEW; `new` asks for a new attempt of
   the issue (one unit alone is /autoflow:cycle-u1 … cycle-u7). Use only when the
   operator starts or resumes an AutoFlow cycle (/autoflow:cycle <N> [new]).
-argument-hint: "<issue-number> [new]"
+argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
 ---
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
+**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt, and `--base <branch>` / `--commit <commit>` with it name the base and the start commit `autoflow-records new` makes it at. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
 
 EOF
   core_body | strip_links
@@ -287,13 +287,13 @@ description: >-
   policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
   continues that attempt's cycle. Use only when the operator asks for the
   criterion review by itself (/autoflow:criterion-review <N> [new]).
-argument-hint: "<issue-number> [new]"
+argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
 ---
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Read `<autoflow-root>/docs/criterion-review.md` now and follow it; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 EOF
   {
@@ -317,7 +317,7 @@ gen_unit() {
   phases="$(unit_field "$k" 2)"; need "unit table phases for $k" "$phases"
   out="$(left_out "$k")"
   new=" <N>"; hint="<issue-number>"
-  [ "$k" = U1 ] && { new=" <N> [new]"; hint="<issue-number> [new]"; }
+  [ "$k" = U1 ] && { new=" <N> [new]"; hint="<issue-number> [new [--base <branch>] [--commit <commit>]]"; }
   [ "$k" = U7 ] && { new=" [<N>]"; hint="[<issue-number>]"; }
   printf -- '---\nname: cycle-%s\ndescription: >-\n' "$lk"
   printf 'Run unit %s (%s — %s) of an AutoFlow cycle alone, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s%s).\n' \
@@ -329,7 +329,7 @@ gen_unit() {
       "$k" "$name" "$phases" "$k"
   else
     if [ "$k" = U1 ]; then
-      printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt)'
+      printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`)'
     else
       printf '**Scope** (`$ARGUMENTS`: `<N>`)'
     fi

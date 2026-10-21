@@ -58,8 +58,9 @@
 #                          entries that disagree (`conflict=<ids>`)
 #     `score=` names what AUDIT reads (`<rev>:<path>`, or `none`); on exit 3 it
 #     is `pending` — the orchestrator spawns the advisor before AUDIT.
-#     --base  the base is `git merge-base HEAD <rev>` (default: origin/HEAD's
-#             branch, then origin/main, then main).
+#     --base  the base is `git merge-base HEAD <rev>` (default: the checked-out
+#             branch's base — its `gh-merge-base` on origin, issue #490 — then
+#             origin/HEAD's branch, then origin/main, then main).
 #     --ledger  the issue ledger; without it no change is covered.
 #
 # Exit codes: 0 = resolved; 3 = a change needs a decision (the advisor's first);
@@ -112,14 +113,17 @@ blob_at() {
 }
 
 resolve_base() {
-  local r cand def
+  local r cand def br gb
   if [ -n "$1" ]; then
     git rev-parse -q --verify "$1^{commit}" >/dev/null || die "--base '$1' does not resolve to a commit"
     git merge-base HEAD "$1" || die "no merge-base between HEAD and '$1'"
     return 0
   fi
   def="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  for cand in "$def" origin/main main; do
+  br="$(git symbolic-ref -q --short HEAD 2>/dev/null || true)"
+  gb=""
+  [ -z "$br" ] || gb="$(git config "branch.$br.gh-merge-base" 2>/dev/null || true)"
+  for cand in ${gb:+"origin/$gb"} "$def" origin/main main; do
     [ -n "$cand" ] || continue
     if git rev-parse -q --verify "$cand^{commit}" >/dev/null; then
       r="$(git merge-base HEAD "$cand" 2>/dev/null)" && { printf '%s\n' "$r"; return 0; }

@@ -13,6 +13,11 @@ Superseded in part 2026-10-19 by ADR-0030 (issue #465): D3 — the attempt is cr
 `not-ready` and `new` entries and "`/autoflow:cycle <N>` never creates an attempt (A6)". The rest of
 D3 and D4 stands. See *D3 > Superseding note (2026-10-19)*.
 
+Amended 2026-10-21 by ADR-0034 (issue #490): D2's dev branch is `dev-<stamp>-issue-<N>` (`dev/…` for
+an attempt made before), its record directory names it in a file `branch`, and the dev branch starts
+at the attempt's base — the remote default branch, or the branch or commit the operator names — not
+at `origin/<default>` alone.
+
 ## Context
 
 AI work, unlike a person's, tries one issue in several sessions and puts the results together; each

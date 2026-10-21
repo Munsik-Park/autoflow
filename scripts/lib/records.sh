@@ -15,12 +15,16 @@
 #   <record-root>/.ledger-check-cache             the gate hook's ledger cache
 #
 # An attempt is one run of an issue: its key is the name of its dev branch
-# without `dev/` — `dev/<stamp>-issue-<N>` → `<stamp>-issue-<N>`, <stamp> being
-# `YYYY-MM-DD-HHMMSS`. Its record directory holds the state file, the ledger,
-# the reports, the criterion review record and the cycle-layer store, and the
-# file `checkout`: one line, the physical path of the checkout the attempt
-# belongs to (the one that started it, or took it over). `completed` marks an
-# attempt whose cleanup has run (scripts/cleanup/cleanup-issue.sh).
+# without `dev-` — `dev-<stamp>-issue-<N>` → `<stamp>-issue-<N>`, <stamp> being
+# `YYYY-MM-DD-HHMMSS`; an attempt made before issue #490 has the dev branch
+# `dev/<stamp>-issue-<N>`, the same key. Its record directory holds the state
+# file, the ledger, the reports, the criterion review record and the
+# cycle-layer store, the file `checkout`: one line, the physical path of the
+# checkout the attempt belongs to (the one that started it, or took it over),
+# and the files `branch` and `base`: one line each, its dev branch and the
+# branch its pull request merges into (both absent before #490).
+# `completed` marks an attempt whose cleanup has run
+# (scripts/cleanup/cleanup-issue.sh).
 #
 # The record root is `record_root` in the operator's user file
 # $HOME/.autoflow/config.json (scripts/lib/user-config.sh); the file's place
@@ -52,6 +56,8 @@
 #       encoding of <root>
 #   af_attempt_key <branch>
 #       the attempt key of a dev branch, or nothing (return 1) for any other
+#   af_attempt_branch <record dir>
+#       the dev branch of the attempt whose record directory that is
 #   af_attempt_issue <key>
 #       the issue number an attempt key carries
 #   af_checkout_live <path> <repo-key>
@@ -217,8 +223,14 @@ autoflow_repo_key() {
 }
 
 af_attempt_key() {
-  printf '%s\n' "$1" | grep -Eq '^dev/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}-issue-[0-9]+$' || return 1
-  printf '%s' "${1#dev/}"
+  printf '%s\n' "$1" | grep -Eq '^dev[-/][0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}-issue-[0-9]+$' || return 1
+  printf '%s' "${1#dev?}"
+}
+
+af_attempt_branch() {
+  _ab=""
+  [ -f "$1/branch" ] && { IFS= read -r _ab < "$1/branch" || true; }
+  printf '%s' "${_ab:-dev/${1##*/}}"
 }
 
 af_attempt_issue() {

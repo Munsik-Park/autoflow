@@ -21,7 +21,8 @@
 # Gate points:
 #   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
 #   - Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)
-#   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only)
+#   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only);
+#                                     likewise the dev branch's base (issue #490)
 #   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
 #                                     (POST to the issues collection). Filing goes
 #                                     through scripts/issue/create-issue.sh, which
@@ -133,7 +134,8 @@ GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b
 # ── The session's checkout and branch (issue #466) ──
 # A session with no AutoFlow dev branch checked out can have no attempt in
 # progress, so what the record root and the input are read for is nothing a
-# gate decides there. Any `dev/…-issue-<N>` name counts, the pre-#433 form too.
+# gate decides there. Any `dev-…-issue-<N>` name counts, and `dev/…-issue-<N>`
+# — an attempt made before issue #490 — the pre-#433 form too.
 # A detached HEAD is read through an interrupted rebase or `git am`, whose
 # head-name file still names the branch being rebuilt — a push of `HEAD:<dev
 # branch>` from the middle of one is a dev-branch session's push.
@@ -150,7 +152,21 @@ if [ -z "$SESSION_BRANCH" ]; then
   done
 fi
 DEV_SESSION=0
-if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev/.+-issue-[0-9]+$'; then DEV_SESSION=1; fi
+if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev[-/].+-issue-[0-9]+$'; then DEV_SESSION=1; fi
+
+# ── The branches AutoFlow does not push to (P2; issue #490) ──
+# The remote default branch, and in a dev-branch session its base — the branch
+# its pull request merges into, kept as the dev branch's `gh-merge-base` by
+# `autoflow-records new`. PUSH_DENY_RE matches one of them as a whole branch
+# name: the name ends where a character no branch name has there follows, so a
+# base `dev` does not match `dev-…` (a `\b` there would).
+DENY_BRANCHES=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+DENY_BRANCHES="${DENY_BRANCHES:-main}"
+if [ "$DEV_SESSION" = 1 ]; then
+  _base=$(git -C "$PROJECT_DIR" config "branch.$SESSION_BRANCH.gh-merge-base" 2>/dev/null || true)
+  if [ -n "$_base" ] && [ "$_base" != "$DENY_BRANCHES" ]; then DENY_BRANCHES="$DENY_BRANCHES $_base"; fi
+fi
+PUSH_DENY_RE="($(printf '%s\n' $DENY_BRANCHES | sed 's/[.+(){}|$]/\\&/g' | paste -sd'|' -))([^[:alnum:]_./-]|\$)"
 
 # ── Section 0: no jq (issue #466) ──
 # The input, the user file and every state file are JSON, read with jq. With
@@ -168,13 +184,11 @@ if ! command -v jq >/dev/null 2>&1; then
   # the same over-inclusive way: a merge, an issue filing, a push naming the
   # default branch, a backgrounded suite run,
   # a spawn with no `model`.
-  _raw_def=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
-  _raw_def="${_raw_def:-main}"
   _raw_why=""
   if printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge\b'; then _raw_why="'gh pr merge' — AutoFlow does not merge"
   elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
        || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
-  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?${_raw_def}\b|:[[:space:]]*${_raw_def}\b)"; then _raw_why="a push to ${_raw_def}"
+  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then _raw_why="a push to ${DENY_BRANCHES// / or }"
   elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
   elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
   fi
@@ -631,8 +645,6 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     exit 2
   fi
 
-  DEFAULT_BRANCH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
-  DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
   # Segment-scoped default-branch-push deny (issue #3): the "git push" and the
   # "target is the default branch" patterns must co-occur in ONE command segment,
   # not merely somewhere in the multi-line scan buffer. Splitting on the shell
@@ -646,8 +658,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # fragment lets `git -c k=v push origin <default>` still match (issue #13).
   while IFS= read -r _bp_seg; do
     if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
-       && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?${DEFAULT_BRANCH}\b|:[[:space:]]*${DEFAULT_BRANCH}\b)"; then
-      echo "BLOCKED: AutoFlow does not push to ${DEFAULT_BRANCH} — push the dev branch and open a PR ($(af_path docs/core.md) > Push and PR creation)." >&2
+       && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then
+      echo "BLOCKED: AutoFlow does not push to ${DENY_BRANCHES// / or } — push the dev branch and open a PR ($(af_path docs/core.md) > Push and PR creation)." >&2
       exit 2
     fi
   done <<< "$_SEGMENTS"
