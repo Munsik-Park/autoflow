@@ -39,9 +39,10 @@
 #         each entry's first line (the document's, its section heading or its
 #         block) follows the entry's `<!-- From … -->` line in every carrier
 #         the entry names; a carrier missing an entry is caught
-#     K4  every document the core's Unit Document Loading Contract and Unit
-#         references tables name for a unit is carried by that unit's body and
-#         by the /autoflow:cycle body
+#     K4  every document, and every section of it, the core's Unit Document
+#         Loading Contract and Unit references tables name for a unit is
+#         carried by that unit's body and by the /autoflow:cycle body; a body
+#         missing a named section is caught
 #
 #   B   root declaration
 #     B1  every body and every agent definition declare the root through
@@ -349,24 +350,58 @@ else
   pass "K3: $k3n role-docs.tsv entries read apart from the generator; each one's first line follows its From line in every carrier it names (the whole text is G1's); a carrier missing one is caught"
 fi
 
-# K4 — the documents the core's tables name for a unit, in that unit's body and
-# the whole-cycle body.
-k4=""; k4n=0
-while IFS= read -r row; do
-  k=$(printf '%s' "$row" | sed -E 's/^\| (U[1-7]) .*/\1/')
-  for d in $(printf '%s' "$row" | grep -oE '<autoflow-root>/docs/[^`)]*\.md' | sed 's|^<autoflow-root>/||' | sort -u); do
-    k4n=$((k4n + 1))
-    for b in "skills/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md" skills/cycle/SKILL.md; do
-      grep -q "^<!-- From <autoflow-root>/$d[ ]" "$REPO_ROOT/$b" || k4="$k4 $b:$d"
+# K4 — the documents and sections the core's tables name for a unit, in that
+# unit's body and the whole-cycle body. A table item is a document link, then
+# its sections — " > <Section>" or " (<Section>, <Section>)" — or none: the
+# whole document. An item is met by the body's `From` line of the whole
+# document, or of a section of it whose last step starts with the item's.
+# k4_items — "<Uk>\t<document>\t<section>" per item of the two tables.
+k4_items() {
+  awk '/^### Unit Document Loading Contract|^### Unit references/ { on = 1; next } /^##/ { on = 0 }
+    on && /^\| U[1-7] / {
+      k = substr($0, 3, 2); l = $0
+      while (match(l, /\[`<autoflow-root>\/docs\/[^`]*\.md`\]\([^)]*\)/)) {
+        d = substr(l, RSTART + 18, RLENGTH); sub(/`\].*$/, "", d)
+        l = substr(l, RSTART + RLENGTH)
+        if (l ~ /^ > /) {
+          sec = substr(l, 4); sub(/(;| \|).*$/, "", sec); print k "\t" d "\t" sec
+        } else if (l ~ /^ \(/) {
+          sec = substr(l, 3); sub(/\).*$/, "", sec); n = split(sec, a, ", ")
+          for (i = 1; i <= n; i++) print k "\t" d "\t" a[i]
+        } else print k "\t" d "\t"
+      }
+    }' "$REPO_ROOT/docs/core.md"
+}
+# k4 <skills-root> — each "<body>:<document>[ > <section>]" not met; the last
+# line is the number of items read.
+k4() {
+  local n=0 k d sec b
+  while IFS=$'\t' read -r k d sec; do
+    n=$((n + 1))
+    for b in "cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md" cycle/SKILL.md; do
+      grep -qxF "<!-- From <autoflow-root>/$d -->" "$1/$b" && continue
+      [ -n "$sec" ] && awk -v h="<!-- From <autoflow-root>/$d > " -v s="$sec" '
+        index($0, h) == 1 { x = $0; sub(/ -->$/, "", x); sub(/^.* > /, "", x); if (index(x, s) == 1) f = 1 }
+        END { exit !f }' "$1/$b" && continue
+      echo "skills/$b:$d${sec:+ > $sec}"
     done
-  done
-done < <(awk '/^### Unit Document Loading Contract|^### Unit references/ { on = 1; next } /^##/ { on = 0 } on && /^\| U[1-7] /' "$REPO_ROOT/docs/core.md")
-if [ "$k4n" -lt 10 ]; then
-  failc "K4" "only $k4n documents read from the core's tables (vacuous)"
-elif [ -n "$k4" ]; then
-  failc "K4" "a document the core names for a unit is not in its body:$k4"
+  done < <(k4_items)
+  echo "$n"
+}
+k4 "$REPO_ROOT/skills" > "$WORK/k4.out"
+k4n=$(tail -1 "$WORK/k4.out"); k4bad=$(sed '$d' "$WORK/k4.out" | tr '\n' ' ')
+cp -R "$REPO_ROOT/skills" "$WORK/k4skills"
+sed 's|^<!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->$|<!-- dropped -->|' \
+  "$REPO_ROOT/skills/cycle-u5/SKILL.md" > "$WORK/k4skills/cycle-u5/SKILL.md"
+k4spec=$(k4 "$WORK/k4skills" | sed '$d' | tr '\n' ' ')
+if [ "$k4n" -lt 15 ]; then
+  failc "K4" "only $k4n items read from the core's tables (vacuous)"
+elif [ -n "$k4bad" ]; then
+  failc "K4" "a document or section the core names for a unit is not in its body: $k4bad"
+elif [ "$k4spec" != "skills/cycle-u5/SKILL.md:docs/submodule-common-rules.md > Change Surface Rules " ]; then
+  failc "K4" "a U5 body without its Change Surface Rules section was read as '$k4spec'"
 else
-  pass "K4: the $k4n documents the core's tables name for the units are in each unit's body and the /autoflow:cycle body"
+  pass "K4: the $k4n documents and sections the core's tables name for the units are in each unit's body and the /autoflow:cycle body; a body missing a named section is caught"
 fi
 
 # ── B: root declaration ──────────────────────────────────────────────────────

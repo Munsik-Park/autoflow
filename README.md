@@ -213,7 +213,8 @@ and rules, agent roles and permissions, evaluation criteria, and the Git
 workflow. It reaches a session through the body of `/autoflow:cycle` (a unit's
 `/autoflow:cycle-u1` … `/autoflow:cycle-u7` carry the parts its unit uses, and
 `/autoflow:criterion-review` the cycle's criterion review stage alone), and a subagent through its agent definition; each
-unit's document is read on entering the unit.
+command body carries its unit's document and the other documents the session follows after the
+core, and each agent definition the core parts and documents its role follows (ADR-0035).
 
 ### 2. Multi-Agent Separation
 

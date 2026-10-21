@@ -115,8 +115,8 @@ not carried twice. The generator fails on an entry that matches no carrier, a sc
 matches no part of its document or more than one, and a link target that does not exist;
 `--check` compares every carrier, `--list-all` names them. `tests/plugin/verify-skill-bodies.sh`
 checks, apart from the generator, that each entry's first line follows its `From` line in every carrier it names (K3; the whole text is the regen-clean check's), that
-the documents the core's tables name for a unit are in that unit's body and the whole-cycle body
-(K4), and that every agent definition is a generated carrier (G4).
+the documents, and the sections of them, the core's tables name for a unit are in that unit's body
+and the whole-cycle body (K4), and that every agent definition is a generated carrier (G4).
 
 **D4 — Relation to ADR-0032.** One generator and two classifications: `core-units.tsv` keeps the
 core parts of a command body; `role-docs.tsv` adds the documents of every carrier and the core
