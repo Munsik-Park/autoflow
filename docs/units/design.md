@@ -8,7 +8,7 @@ ARCHITECT and GATE:PLAN are one functional unit, U3 Design
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed
 by four things only — its goal, its artifact contract, its verification and its loop cap (D2) —
 and this file states them, with the cautions the design is asked to heed and the result it owes.
-How the unit reaches the goal — what it reads, whether it spawns helpers, whether it asks a critic
+How the unit reaches the goal — what else it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
 the unit agent's, recorded with its grounds in its artifact ([`core.md`](../core.md) > Rule
 Scope, principle 2).
@@ -46,9 +46,9 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   (`<attempt-dir>/issue-{N}-ledger.md`), the DIAGNOSE artifact (`<attempt-dir>/issue-{N}-analysis.md`, the
   GATE:HYPOTHESIS reports) — and the two output paths. On a re-entry it also names what the
   re-entry is for and the previous documents (*Re-entry* below).
-- **Documents.** Injection is role-minimal and routed via
-  `<autoflow-root>/docs/INDEX.md`, never wholesale: the prompt carries a documents line naming the documents the design needs (e.g. the relevant
-  `docs/records/adr/*`, `docs/records/design-rationale.md`); the unit reads anything further its
+- **Documents.** The unit's agent definition carries this file and the rubric it is scored on with
+  the rest of its guidance ([`core.md`](../core.md) > Context Injection); the prompt names the target's documents the design needs by path (e.g. the relevant
+  `docs/records/adr/*`, `docs/records/design-rationale.md`), and the unit reads anything further its
   design needs, by its own judgment.
 - **Before the gate (orchestrator-side).** The orchestrator confirms
   `<attempt-dir>/issue-{N}-feature-design.md` and `<attempt-dir>/issue-{N}-verification-design.md` exist
@@ -321,7 +321,7 @@ to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 One fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-plan` names) scores the two documents on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its
-documents line names that document alone.
+agent definition carries that document.
 
 - **PASS** (avg ≥ 7.5, each ≥ 7) → recommendation triage
   ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) → BUILD.

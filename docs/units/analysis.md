@@ -8,7 +8,7 @@ DIAGNOSE and GATE:HYPOTHESIS are one functional unit, U2 Analysis
 ([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
 four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
 this file states them, with the cautions the analysis is asked to heed and the result it owes. How
-the unit reaches the goal — what it reads and in what order, whether it spawns helpers and what it
+the unit reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is the unit agent's, recorded with its grounds in its
 artifact ([`core.md`](../core.md) > Rule Scope, principle 2).
 
@@ -57,10 +57,10 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
   PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
   `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
   (*Re-entry* below).
-- **Documents.** Injection stays role-minimal and routed via `<autoflow-root>/docs/INDEX.md`, never wholesale: the
-  prompt carries a documents line naming the documents the analysis needs (this file, and the
+- **Documents.** The unit's agent definition carries the documents the analysis needs (this file, and the
   rubric it is scored on, [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
-  GATE:HYPOTHESIS); the unit reads anything further by its own judgment.
+  GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](../core.md) > Context Injection);
+  the prompt copies none of them, and the unit reads anything further by its own judgment.
 - **Before the gate (orchestrator-side).** The orchestrator confirms the report exists, is
   non-empty and carries every section *Analysis report* lists. A missing one is an infrastructure
   cause: the unit is spawned again with the same inputs, consuming no counter. The return is then
@@ -173,7 +173,7 @@ date on a re-entry. Every section below is present; a section with nothing to re
 | `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the orchestrator (*Verification — GATE:HYPOTHESIS*) |
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (documents line) |
+| `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (spawn prompt) |
 | `## Decision points` | each decision point with its grounds, or `none` | the orchestrator (*Report routing*) |
 
 Anything else the unit records is its own, written where it judges useful.
@@ -205,7 +205,7 @@ Anything else the unit records is its own, written where it judges useful.
 One independent Evaluation AI (`autoflow-evaluator`), fresh-spawned per entry on the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, scores the report on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS — one
-form for every issue. Its documents line names that document alone. The orchestrator records the
+form for every issue. Its agent definition carries that document. The orchestrator records the
 scores under `phases.gate_hypothesis`, with the `verdict` `pending` → `evaluated` for a bug /
 incident issue and `skipped (non-bug issue)` otherwise ([`core.md`](../core.md) > AutoFlow
 State Tracking > `verdict` rule). The hook gates the ARCHITECT spawn on the recorded PASS for a bug

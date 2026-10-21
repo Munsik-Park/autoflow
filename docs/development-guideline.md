@@ -110,8 +110,12 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   home lists search terms that find every sentence stating or citing the rule.
   Before committing a change to the rule, run `git grep` with those terms and
   read the hits as one set; a site that disagrees is reduced to a citation, not
-  re-worded. Hits in `docs/records/` are read, not rewritten. A home without
-  search terms gets them in the same change.
+  re-worded. Hits in `docs/records/` are read, not rewritten, and hits in a
+  carrier's generated text — what `<autoflow-root>/scripts/skills/gen-skill-bodies.sh` copies
+  from a home into a command body, an agent definition or a reviewer's rule
+  file — are regenerated from the home, not edited; such a copy is the home's
+  text, not another site. A home without search terms gets them in the same
+  change.
 - **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
   documents under `docs/` other than `docs/records/`, the agent and skill
   definitions, the review rules under `docs/review/`, the PR and issue templates,

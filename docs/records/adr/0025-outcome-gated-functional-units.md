@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421; D7 amended by operator decision 2026-10-06, issue #429; D8's list of fail-closed checks amended by ADR-0027 (operator decision 2026-10-17, issue #454); D1's U6 row split into U6 Delivery and U7 Review, and D4's external verification layer run as U7, by ADR-0033 (issue #485).
+Accepted (operator verdict 2026-10-02, issue #369: steps 1–6 measured together on four llmroute issues, no step rolled back). Operator decisions 2026-09-28 recorded in D5, D6, D7 and D9; D8 amended by operator decisions 2026-09-29 and 2026-10-01; D1 and D3 amended by operator decision 2026-10-01, issue #392; D2 amended by operator decision 2026-10-02, issue #399; D1, D3, D4, D6 and D7 amended by operator decision 2026-10-04, issue #421; D7 amended by operator decision 2026-10-06, issue #429; D8's list of fail-closed checks amended by ADR-0027 (operator decision 2026-10-17, issue #454); D1's U6 row split into U6 Delivery and U7 Review, and D4's external verification layer run as U7, by ADR-0033 (issue #485); D2's "what it reads" amended by ADR-0035 (issue #494): the guidance the unit agent's definition carries is not a reading choice, and what it reads beyond it is the unit's.
 
 ## Context
 

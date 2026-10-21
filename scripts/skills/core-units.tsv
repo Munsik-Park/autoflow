@@ -58,12 +58,13 @@
 ## Development Lifecycle > ### Unit Document Loading Contract	The rubric of every gate	U2 U3 U4 U5
 ## Development Lifecycle > ### Unit Document Loading Contract	The evaluation contract	U2 U3 U4 U5
 ## Development Lifecycle > ### Unit references		split
-## Development Lifecycle > ### Unit references	| Unit |	U1 U2 U3 U4 U6 U7
-## Development Lifecycle > ### Unit references	|------|	U1 U2 U3 U4 U6 U7
+## Development Lifecycle > ### Unit references	| Unit |	all
+## Development Lifecycle > ### Unit references	|------|	all
 ## Development Lifecycle > ### Unit references	| U1 Preparation |	U1
 ## Development Lifecycle > ### Unit references	| U2 Analysis |	U2
 ## Development Lifecycle > ### Unit references	| U3 Design |	U3
 ## Development Lifecycle > ### Unit references	| U4 Build and verify |	U4
+## Development Lifecycle > ### Unit references	| U5 Completion evaluation |	U5
 ## Development Lifecycle > ### Unit references	| U6 Delivery |	U6
 ## Development Lifecycle > ### Unit references	| U7 Review |	U7
 ## Cost Control		all
@@ -83,7 +84,7 @@
 ## Spawn Model	**[MUST]** A lower-tier gate's PASS	all
 ## Context Injection		split
 ## Context Injection	**[MUST]** Subagent document injection	all
-## Context Injection	Each unit spawn's documents line	U2 U3 U4 U5
+## Context Injection	A spawn prompt names the cycle's inputs	all
 ## Communication		all
 ## Cross-Project Boundary Rules		all
 ## Project Information		split

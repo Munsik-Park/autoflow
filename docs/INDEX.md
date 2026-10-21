@@ -5,8 +5,9 @@ It routes two document classes that live in separate trees: the **usage
 documents** an agent reads and follows while a cycle runs — the source of the
 rules — and the **design and decision records** under
 `<autoflow-root>/docs/records/`, read for a decision's history and grounds, the source of no
-rule. Both ship in the plugin; a role reads a usage document by its path under
-`<autoflow-root>`.
+rule. Both ship in the plugin; a role's carrier carries the usage documents its
+work follows (`<autoflow-root>/docs/core.md` > Context Injection), and a role
+reads any other by its path under `<autoflow-root>`.
 
 ## Usage documents
 

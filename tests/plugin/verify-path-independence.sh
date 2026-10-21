@@ -38,9 +38,9 @@
 #     S3  outside a git repository, with no --root: usage exit 2
 #
 #   W   codex review wrapper prompt
-#     W1  the prompt names the plugin root's docs/review/review-codex.md by
-#         absolute path, and the record lands at --out, outside the target's
-#         tree, leaving it clean
+#     W1  the prompt carries the text of the plugin root's
+#         docs/review/review-codex.md, naming it by absolute path, and the
+#         record lands at --out, outside the target's tree, leaving it clean
 #     W2  a plugin root without docs/review/review-codex.md: exit 2, codex not
 #         started
 # =============================================================================
@@ -287,10 +287,12 @@ run_wrapper() {
 TW="$WORK/target-w"
 git_init "$(mkdir -p "$TW" && echo "$TW")"
 run_wrapper "$PLUGIN/scripts/review/codex-review-pr.sh" "$TW" "$WORK/w1.prompt"; rc=$?
-if [ "$rc" -eq 0 ] && grep -qF "the review rules at $PLUGIN/docs/review/review-codex.md;" "$WORK/w1.prompt" \
+if [ "$rc" -eq 0 ] && grep -qxF "Review rules ($PLUGIN/docs/review/review-codex.md):" "$WORK/w1.prompt" \
+   && grep -qxF "$(head -1 "$PLUGIN/docs/review/review-codex.md")" "$WORK/w1.prompt" \
+   && grep -qxF "$(tail -1 "$PLUGIN/docs/review/review-codex.md")" "$WORK/w1.prompt" \
    && grep -qF "<autoflow-root> in them is $PLUGIN." "$WORK/w1.prompt" \
    && [ -s "$WORK/w1.prompt.rec/out.md" ] && [ -z "$(git -C "$TW" status --porcelain)" ]; then
-  pass "W1: the prompt names the plugin root's docs/review/review-codex.md by absolute path; the record lands outside the tree, nothing stays in it"
+  pass "W1: the prompt carries the plugin root's docs/review/review-codex.md, its first and last lines included; the record lands outside the tree, nothing stays in it"
 else
   failc "W1" "wrapper" "rc=$rc prompt=$(head -c 400 "$WORK/w1.prompt" 2>/dev/null) err=$(head -c 200 "$WORK/w1.prompt.err")"
 fi

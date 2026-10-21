@@ -36,8 +36,9 @@
 #         copy
 #     R4  every agent definition, with ${CLAUDE_PLUGIN_ROOT} substituted as the
 #         harness substitutes it in an agent body, declares the installed root
-#         and every `<autoflow-root>/…` path and `> Section` it cites resolves
-#         there; every generated command body's paths resolve there as well
+#         and every `<autoflow-root>/…` path and `> Section` its own text (above
+#         its generation marker) cites resolves there; every generated
+#         carrier's paths resolve there as well
 #     R5  `autoflow-root` (bin/) prints the installed root
 # =============================================================================
 
@@ -264,11 +265,16 @@ for _a in "$ROOT"/agents/*.md; do
   # measurement M1); the declaration then names the installed root, and
   # `<autoflow-root>` reads as that root.
   body=$(sed "s|\${CLAUDE_PLUGIN_ROOT}|$ROOT|g" "$_a")
-  printf '%s\n' "$body" | grep -qxF "AutoFlow root (\`<autoflow-root>\`): $ROOT" || r4="$r4 nodecl:${_a##*/}"
-  r4="$r4$(check_citations "${_a##*/}" "$(printf '%s' "$body" | tr '\n' ' ' | sed -E 's/ +/ /g' | sed "s|<autoflow-root>/|$ROOT/|g")" | tr '\n' ' ')"
+  printf '%s\n' "$body" | grep -xF "AutoFlow root (\`<autoflow-root>\`): $ROOT" >/dev/null || r4="$r4 nodecl:${_a##*/}"
+  # The definition's own text: its sections resolve. The text generated below
+  # its marker is its documents' (scripts/skills/role-docs.tsv); its paths
+  # resolve, with the command bodies' below.
+  own=$(printf '%s\n' "$body" | awk '/^<!-- Generated below / { exit } { print }')
+  r4="$r4$(check_citations "${_a##*/}" "$(printf '%s' "$own" | tr '\n' ' ' | sed -E 's/ +/ /g' | sed "s|<autoflow-root>/|$ROOT/|g")" | tr '\n' ' ')"
 done
-for _s in $(bash "$ROOT/scripts/skills/gen-skill-bodies.sh" --list | sed -e 's|^skills/||' -e 's|/SKILL.md$||'); do
-  body=$(sed "s|<autoflow-root>/|$ROOT/|g" "$ROOT/skills/$_s/SKILL.md")
+for _f in $(bash "$ROOT/scripts/skills/gen-skill-bodies.sh" --list-all); do
+  _s="${_f#skills/}"; _s="${_s%/SKILL.md}"
+  body=$(sed "s|<autoflow-root>/|$ROOT/|g" "$ROOT/$_f")
   r4="$r4$(printf '%s' "$body" | grep -oE "$ROOT/[^] \`'\"),;|]*" | sed 's/[.:]*$//' | sort -u \
     | while IFS= read -r _p; do
         _g=$(printf '%s' "$_p" | sed -E -e 's/<[^>]*>/*/g' -e 's/\{[^}]*\}/*/g' -e 's/…/*/g')
@@ -278,7 +284,7 @@ done
 if [ "$nagents" -lt 9 ]; then
   failc "R4" "only $nagents agent definitions in the installed copy"
 elif [ -z "$(printf '%s' "$r4" | tr -d ' ')" ]; then
-  pass "R4: $nagents agent definitions declare the installed root and their citations resolve there; so do the command bodies' paths"
+  pass "R4: $nagents agent definitions declare the installed root and their own citations resolve there; so do every generated carrier's paths"
 else
   failc "R4" "$r4"
 fi

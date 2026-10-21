@@ -2,8 +2,8 @@
 
 > This document is the Evaluation AI's: the standard it evaluates by, its conduct, every gate's
 > rubric — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — and the output it returns. The
-> evaluator reads it and the sections it names for the gate (*The evaluator's standard* > *What it
-> reads*). How the orchestrator spawns and prompts the evaluator is
+> evaluator's agent definition carries it and the sections it names for every gate (*The
+> evaluator's standard* > *What it reads*). How the orchestrator spawns and prompts the evaluator is
 > [`role-contracts.md`](role-contracts.md) > Evaluation AI; what it does with the result is the
 > unit document of the gate's unit.
 
@@ -39,8 +39,9 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
 
 - **[MUST]** The gate's **input set**: the artifacts the gate's **Input** line names (*Gate
   rubrics* below), the change under evaluation, and the sections the table below names — the
-  contract of the artifact it scores. Another document is read only at the section this document
-  cites for the item being scored, never whole.
+  contract of the artifact it scores. The agent definition carries this document and the sections
+  of every row; the gate's row is its input set. Another document is read only at the section this
+  document cites for the item being scored, never whole.
 
   | Gate | Artifact-contract sections |
   |---|---|
@@ -53,8 +54,9 @@ evidence a confirmation rests on and how far it goes are set here, and the evalu
   are the orchestrator's and are not read. A rubric's citation of one of them names the
   orchestrator's handling of the result and asks no read of the evaluator.
 - What lies outside the input set — the gate hook, the state file and its keys, the spawn policy,
-  another gate's rubric, an earlier cycle's artifacts the Input line does not name — is read only
-  when the change under evaluation modifies it.
+  another gate's rubric and its row's sections, an earlier cycle's artifacts the Input line does not
+  name — is read, or applied where the definition carries it, only when the change under evaluation
+  modifies it.
 
 ### What it confirms
 

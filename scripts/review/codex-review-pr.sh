@@ -5,7 +5,7 @@
 #
 # The review rules are codex's rule file — docs/review/review-codex.md of the
 # AutoFlow tree this wrapper ships in, or the file `.review.codex.rules` names —
-# which the prompt names by its absolute path, with the lenses file
+# whose text the prompt carries, with the text of the lenses file
 # `.review.codex.lenses` names when there is one. codex runs in the reviewed
 # repository's working directory, and loads that tree's own AGENTS.md itself.
 # This wrapper supplies the target PR number, the optional sub-repo selector,
@@ -127,10 +127,12 @@ if [[ ! -f "$REVIEW_GUIDE" ]]; then
   exit 2
 fi
 lenses_clause=""
+lenses_text=""
 if [[ -n "$REVIEW_LENSES" ]]; then
   lenses_file="$(review_path "$REVIEW_LENSES" "$TOP")"
   if [[ -f "$lenses_file" ]]; then
-    lenses_clause=" Apply the review lenses at ${lenses_file} in addition."
+    lenses_clause=" Apply the review lenses below the rules in addition."
+    lenses_text=$'\n\n'"Review lenses (${lenses_file}):"$'\n\n'"$(cat "$lenses_file")"
   else
     echo "[codex-review] the lenses file ${lenses_file} is absent — reviewing without it." >&2
   fi
@@ -170,7 +172,15 @@ fi
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-PROMPT="Review pull request #${PR}. Follow the review rules at ${REVIEW_GUIDE}; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause} Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}. ${SENTINEL}"
+# The rules and the lenses are carried as text between the opening line and the
+# closing one, so the reviewer starts with them.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}
+
+Review rules (${REVIEW_GUIDE}):
+
+$(cat "$REVIEW_GUIDE")${lenses_text}
+
+Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}. ${SENTINEL}"
 
 # Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
 # edited or clipped prompt stays here instead of reaching codex partial.

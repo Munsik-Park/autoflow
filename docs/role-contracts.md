@@ -42,8 +42,8 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 - Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type, instruction to consult `<autoflow-root>/docs/evaluation-system.md`, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`<attempt-dir>/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — instruct the AI to read `<autoflow-root>/docs/evaluation-system.md > [section]` or `<attempt-dir>/*` file paths directly. The same principle (file-path-only references) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
+1. **[MUST]** Include in the prompt: evaluation type, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`<attempt-dir>/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the `<attempt-dir>/*` files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
 3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
@@ -233,11 +233,12 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 | `autoflow-unit-design` | U3 Design (ARCHITECT, GATE:PLAN) | planning — GATE:HYPOTHESIS pass, or a `skipped` verdict | `gate_plan` |
 | `autoflow-unit-build` | U4 Build and verify (BUILD, AUDIT) | implementation — GATE:PLAN pass | `audit`, test-first judged by its evaluator |
 
-- **Method is the unit's.** How the unit reaches its goal — what it reads, whether it spawns helpers
+- **Method is the unit's.** How the unit reaches its goal — what else it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
   with its grounds in the unit's artifact ([`core.md`](core.md) > Rule Scope, principle 2).
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
-  verification, and nothing else.
+  verification, and nothing else of their own; below that they carry the unit's guidance, generated
+  ([`core.md`](core.md) > Context Injection).
 - **A unit agent's spawns inherit its gate class.** The hook admits a spawn whose caller
   (`agent_type`) is a unit agent without a role declaration and judges it by the unit's class; a
   declared role that has a gate of its own keeps that gate too, so an existing role type is never
@@ -254,7 +255,7 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
   `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
   `effort` parameter, omitted when the row reads out the inherit sentinel
   ([U4 Build and verify](units/build.md) > *Dividing the work*). A helper receives in its prompt
-  the AutoFlow root and the paths of the rules its work follows
+  the AutoFlow root and the text of the rules its work follows
   ([U4 Build and verify](units/build.md) > *What crosses a boundary*).
 
 ---
