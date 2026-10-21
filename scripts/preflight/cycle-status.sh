@@ -62,8 +62,8 @@
 #   otherwise, among this checkout's attempts of N (cleared ones aside):
 #     start / criterion-review / review-response <key>
 #                                     exactly one is ready to start, still in
-#                                     its criterion review stage, or has an
-#                                     open pull request
+#                                     its criterion review stage, or has a
+#                                     state file and an open pull request
 #     stop candidates <key> …         two or more — check one's dev branch out
 #     none-to-enter <key>:<kind> …    none of those, but attempts of N are
 #                                     still here (paused, abbreviated, or a
