@@ -112,11 +112,13 @@ KEY="$(autoflow_repo_key "$ROOT")"
 incomplete=0
 
 # "<number> <STATE> <url>" of the branch's pull request (an open one when there
-# is one, otherwise the most recently updated), or empty.
+# is one, otherwise the most recently updated), or empty. `gh pr list --head`
+# also lists a fork's pull request whose branch has the same name, so only one
+# gh reports as opened from this repository counts.
 pr_of() {
   local out
-  out="$(gh pr list --head "$1" --state all --limit 30 --json number,state,url,updatedAt 2>/dev/null)" || return 1
-  printf '%s' "$out" | jq -r 'sort_by(.updatedAt) | ((map(select(.state == "OPEN")) | last) // last) | if . == null then "" else "\(.number) \(.state) \(.url)" end'
+  out="$(gh pr list --head "$1" --state all --limit 30 --json number,state,url,updatedAt,isCrossRepository 2>/dev/null)" || return 1
+  printf '%s' "$out" | jq -r 'map(select(.isCrossRepository == false)) | sort_by(.updatedAt) | ((map(select(.state == "OPEN")) | last) // last) | if . == null then "" else "\(.number) \(.state) \(.url)" end'
 }
 side() { if git show-ref --verify --quiet "$1"; then echo yes; else echo no; fi; }
 
