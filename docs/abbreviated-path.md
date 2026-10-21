@@ -84,8 +84,11 @@ changes a criterion otherwise. The work goes on from the new entry.
 The path's independent checks are three: the attempt's `[criterion-ready]` entry for the current
 issue body — its start, and the only way a criterion's content changes on it (*A criterion
 change*); CI as it is (*End and rework*); and the aggregated review and its verdict.
-The merge prohibition binds it as it binds every attempt: the hook denies `gh pr merge` whatever the
-state, and merging is external. The gate score thresholds, the score-gated `git push` /
+The hook's state-independent denies bind it as they bind every attempt
+([`state-tracking.md`](state-tracking.md) > *Hook gates*) — among them `gh pr merge` (the merge
+prohibition; merging is external), a push to the default branch or to the dev branch's base,
+`gh issue create`, and a ledger write that changes the ledger's earlier text or adds an entry under
+an authority the writer does not hold. The gate score thresholds, the score-gated `git push` /
 `gh pr create` gate and the auto-resolution attempt caps are the full cycle's; the path does not
 carry them ([`core.md`](core.md) > Rule Scope, principle 1).
 

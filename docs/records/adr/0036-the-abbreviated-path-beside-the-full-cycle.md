@@ -99,8 +99,10 @@ checkout its owner, which is what its later `cleanup:` line needs.
 **D7 — Which checks bind which path.** The full cycle keeps every check it has. The path's
 independent checks are the attempt's `[criterion-ready]` entry for the current body, CI as it is
 and the aggregated review and its verdict; the merge prohibition binds both, enforced by the hook
-whatever the state. The gate score thresholds, the score-gated `git push` / `gh pr create` gate and
-the auto-resolution caps are the full cycle's. Rule Scope principle 1 says each rule binds the path
+whatever the state, as do the hook's other state-independent denies — a push to the default branch
+or the dev branch's base, `gh issue create`, the ledger's authorship check. The gate score
+thresholds, the score-gated `git push` / `gh pr create` gate and the auto-resolution caps are the
+full cycle's. Rule Scope principle 1 says each rule binds the path
 that carries it, principle 3 names the gates for the full cycle, and the never-skipped list is the
 full cycle's and cites the path's.
 
