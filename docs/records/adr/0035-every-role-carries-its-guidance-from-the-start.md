@@ -278,8 +278,7 @@ the change ships. What follows are this change's dispositions and their grounds 
    - `autoflow-unit-design` gains the ADR trigger list, against which its design is scored (the
      rules its work follows);
    - the advisor gains the core's *Decision Ledger*, the ledger's standing constraints its entries
-     follow, which its carried `docs/decision-ledger.md` names (the core part its own definition
-     names as binding it).
+     follow, which its carried `docs/decision-ledger.md` names (the rules its work follows).
 
 3. **The homes the triage cites, per unit.** For each U2–U5 session, each home
    `## Recommendation triage` cites is carried, or stays a citation on D2's *Not carried* first
