@@ -122,13 +122,21 @@ outputs:
 
 ## 6. Open decisions
 
-| # | Decision | Why it is open |
+| # | Decision | Status |
 |---|---|---|
-| Q1 | Where the evaluation gate lives | Today the hook refuses push and PR without AUDIT and GATE:QUALITY PASS. With no state that device goes. Either the delivery module requires a quality evaluation report as an input, which keeps the guarantee in a module contract, or the guarantee becomes the Coordinator's. `CLAUDE.md` defines AutoFlow as evaluation-gated, so the choice is recorded either way. |
-| Q2 | Where the pass threshold lives | avg ≥ 7.5, min ≥ 7, security > 3 (`hooks/check-autoflow-gate.sh:1305-1312`). Either a `verdict` field in the evaluation module's output, or the Coordinator's rule. |
-| Q3 | The line between a module's own repetition and an external loop | Some repetition stays inside one module today: re-spawn on a missing report section, the criterion review's four stages. Proposed line: repeating until the output meets its format is the module's; re-running on an evaluation result is the Coordinator's. |
-| Q4 | The ledger's standing | `[criterion-ready]` and `[checklist-decision]` are one module's output and another's input. One shared append-only file, or per-module outputs. It also settles the contradiction between [state-tracking.md](../../state-tracking.md) ("the ledger is not a gate input — no gate verdict, retry cap or transition reads it") and [units/review.md](../../units/review.md) > Review triage (the cap counted from `[review-autofix]` entries). |
-| Q5 | How a change request is expressed | Today the orchestrator edits the analysis report's AC table after an `[ac-decision]` ([units/analysis.md](../../units/analysis.md) > Re-entry). No party does that in this model: a design or evaluation module outputs an AC change request, and the Coordinator re-runs analysis. |
+| Q1 | Where the evaluation gate lives | **Withdrawn** (operator, 2026-10-23). The question assumed an actor that pushes or opens a PR outside the module whose output that is — the current model's premise, where one orchestrator holds every tool and the hook reads the command it issues (ADR-0025 D8). In this model push and PR are the delivery module's output and no other module produces them; how modules are run is the Coordinator's composition. The hook's push, PR and U3/U4 spawn gates go (§3). Whether delivery takes an evaluation output is settled in its contract by what its output needs: the PR body's known gaps carry the recommendations deferred or separated at triage ([units/delivery.md](../../units/delivery.md) > Push and pull request), so the quality evaluation's triage result is a content input, not an admission condition. |
+| Q2 | Where the pass threshold lives | **Settled** (operator, 2026-10-23): AutoFlow provides the reference values with the evaluation output; applying them is the Coordinator's. The evaluation module outputs scores, grounds and `remedy_class` and no `verdict` — as today, where the evaluator scores and the hook computes PASS ([core.md](../../core.md) > Flow Control; [evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format). The reference values are today's PASS Criteria (avg ≥ 7.5, each item ≥ 7, security ≤ 3 → rework; [evaluation-system.md](../../evaluation-system.md) > PASS Criteria), kept with the rubric whose scale they are set on. Where in the output or the contract they sit is fixed when the evaluation contracts are drafted. |
+| Q3 | The line between a module's own repetition and an external loop | **Settled** (operator, 2026-10-23): an output that falls short of its format is re-run by the Coordinator; a module runs once and does not loop. Re-running on an evaluation result is the Coordinator's as well. Today's re-spawn on a missing report section is already the orchestrator's ([units/analysis.md](../../units/analysis.md) > Unit spawn), so it moves to the Coordinator with the rest of the orchestrator's routing. Still to place: the criterion review's four stages — one module, or four. |
+| Q4 | The ledger's standing | **Settled** (operator, 2026-10-23): the ledger holds only decisions — entries that settle what a module cannot settle itself (`[criterion-ready]`, `[ac-decision]`, `[checklist-decision]`, a design point), under their authority: `operator decision` and the main session's own decision in the `O` namespace, `advisor decision` in the `A` namespace ([decision-ledger.md](../../decision-ledger.md) > Entry identifier). In this model the main session that writes `O` is the Coordinator's. A module contract may name such an entry as an input ("the ledger decision with marker X"). What a module can produce itself is its own output file. The orchestrator's entries leave the ledger: the attempt records counted for the caps (`[gate-autofix]`, `[review-autofix]`), the cap-window reset (`[reentry-decision]`) and `[rebuttal]` are the Coordinator's records; the gate verdict entries ([decision-ledger.md](../../decision-ledger.md) > Entries, *Writers*) are replaced by the evaluation output files. The hook's append-only and authorship denies stay as they are and keep guarding these entries. The contradiction between [state-tracking.md](../../state-tracking.md) ("the ledger is not a gate input") and the REVIEW cap counted from `[review-autofix]` entries goes with both: the first document is removed, the count moves to the Coordinator. |
+| Q5 | How an acceptance-criterion change is applied | **Settled** (operator, 2026-10-23): the applied criteria are an output of their own. A deterministic script computes them from the analysis report's first AC table and the `[ac-decision]` entries; every later module takes that output as its input. The request is already a module output (the design's `## Decision requests`, the build report, an evaluation recommendation — [units/design.md](../../units/design.md) > Report routing) and the decision a ledger entry (Q4); only the edit the orchestrator makes today to the analysis report's table ([units/analysis.md](../../units/analysis.md) > Re-entry) is replaced. It needs the `[ac-decision]` grammar ([decision-ledger.md](../../decision-ledger.md) > Decision-point entries, *Acceptance-criterion decisions*) to carry the criterion's new text for `revised`, `split` and `added` — today the entry has `- AC:`, `- Disposition:` and one Decision line, which a script cannot apply. Rejected: re-running analysis on the entries (a full analysis run for a table edit, and other content may move); each consuming module applying the entries itself (one application in five places). |
+
+Operator's words:
+
+- Q1: "생각해보면 이 질문이 조금 이상한 것이 각 단계는 자기가 실행을 하는 범위가 있어요. 입력이 있고 출력의 형식이 있죠. 근데 그 출력의 형식을 무시하고 직접 푸시나 PR을 생성한다라는 가정을 하는 거잖아요. 이 지금 질문이 맞아요?"
+- Q2: "C 형태가 맞는 것 같아요. 기본적으로 출력 값에 레퍼런스 루브릭 값을 제공하는 것은 오토플로우에서 제공하는 것이 맞고, 그것을 실제로 적용하는 것은 외부에서 적용하는 것이 현재 설정입니다."
+- Q3: "참고로 추가하면 현재 만약에 출력의 형식이 부족하다라고 하면 조율자가 다시 실행을 시킬 거예요. 즉 루프로 재실행하는 구조로 만들면 이 문제는 해결이 됩니다."
+- Q4: "c" (option C: the ledger holds only decisions).
+- Q5: "B로 진행하세요." (option B: the applied criteria as an output of their own, computed by a script).
 
 ## 7. Couplings to resolve
 
@@ -164,6 +172,8 @@ rather than reading a declared output.
 - One contract validator: input check at module start, output check at module end.
 - A check that the contracts and the documents agree, on the `core-units.tsv` →
   `verify-skill-bodies.sh` pattern.
+- A script that computes the applied acceptance criteria from the analysis report's table and the
+  `[ac-decision]` entries, and the grammar field it needs (Q5).
 - An ADR that supersedes the decisions below.
 
 ## 9. Decisions this supersedes
@@ -195,4 +205,4 @@ No test today exercises the score thresholds, the planning or implementation spa
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508; pushed the branch. | #508: settle Q1–Q5 with the operator. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508; pushed the branch. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). | #508: place the criterion review's stages (Q3 remainder); then the contract format, the module invocation, and the design and plan contract drafts. |
