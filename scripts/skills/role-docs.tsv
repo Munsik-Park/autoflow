@@ -38,6 +38,7 @@ agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Review a
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### A repeated complaint
 agents/autoflow-analyzer.md	docs/units/delivery.md	## CI > ### CI-failure re-entry
+agents/autoflow-analyzer.md	docs/review/review.md	## Severity
 
 agents/autoflow-criterion-tracer.md	docs/criterion-review.md	## Cause reach and rule conflict
 agents/autoflow-criterion-analyzer.md	docs/criterion-review.md	## In-depth analysis and reconciliation
@@ -51,18 +52,23 @@ agents/autoflow-evaluator.md	docs/units/design.md	## Output artifacts
 agents/autoflow-evaluator.md	docs/units/build.md	## What the build owes
 agents/autoflow-evaluator.md	docs/units/build.md	## Build report
 agents/autoflow-evaluator.md	docs/submodule-common-rules.md	## Change Surface Rules
+agents/autoflow-evaluator.md	docs/review/review.md	## Severity
+agents/autoflow-evaluator.md	docs/development-guideline.md	## 4. ADR Policy > ### When to create an ADR
 
 agents/autoflow-unit-analysis.md	docs/units/analysis.md
 agents/autoflow-unit-analysis.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:HYPOTHESIS
 agents/autoflow-unit-analysis.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-analysis.md	docs/submodule-common-rules.md
 agents/autoflow-unit-analysis.md	docs/role-common-rules.md
+agents/autoflow-unit-analysis.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding
 
 agents/autoflow-unit-design.md	docs/units/design.md
 agents/autoflow-unit-design.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:PLAN
 agents/autoflow-unit-design.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-design.md	docs/submodule-common-rules.md
 agents/autoflow-unit-design.md	docs/role-common-rules.md
+agents/autoflow-unit-design.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding
+agents/autoflow-unit-design.md	docs/development-guideline.md	## 4. ADR Policy > ### When to create an ADR
 
 agents/autoflow-unit-build.md	docs/core.md	## Git Workflow — Rules > ### Commit Rules
 agents/autoflow-unit-build.md	docs/units/build.md
@@ -71,6 +77,7 @@ agents/autoflow-unit-build.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-build.md	docs/role-contracts.md	## Build unit in a target scope
 agents/autoflow-unit-build.md	docs/submodule-common-rules.md
 agents/autoflow-unit-build.md	docs/role-common-rules.md
+agents/autoflow-unit-build.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding
 
 # Every agent definition: the sections of the rules of every role spawn that
 # name every role (the unit agents carry the whole document above, whose scope
@@ -88,20 +95,35 @@ skills/cycle-u1/SKILL.md	docs/git-workflow.md	## Git Clean Check
 skills/cycle-u1/SKILL.md	docs/git-workflow.md	## Post-Merge Cleanup
 skills/cycle-u2/SKILL.md	docs/units/analysis.md
 skills/cycle-u2/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle-u2/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/cycle-u2/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/cycle-u2/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
 skills/cycle-u3/SKILL.md	docs/units/design.md
 skills/cycle-u3/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/cycle-u3/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/cycle-u3/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/cycle-u3/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
 skills/cycle-u4/SKILL.md	docs/units/build.md
 skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Functional-unit agents
 skills/cycle-u4/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u4/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/cycle-u4/SKILL.md	docs/units/completion-evaluation.md	## FAIL routing
+skills/cycle-u4/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/cycle-u5/SKILL.md	docs/units/completion-evaluation.md
 skills/cycle-u5/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u5/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/cycle-u5/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/cycle-u6/SKILL.md	docs/units/delivery.md
 skills/cycle-u6/SKILL.md	docs/pr-body-guide.md
+skills/cycle-u6/SKILL.md	docs/title-guide.md
 skills/cycle-u6/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u7/SKILL.md	docs/units/review.md
 skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
 skills/cycle-u7/SKILL.md	docs/external-review-sequencing.md
 skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u7/SKILL.md	docs/units/completion-evaluation.md	## Code comments in a target
+skills/cycle-u7/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/criterion-review/SKILL.md	docs/units/preparation.md	## The criterion review stage
 skills/criterion-review/SKILL.md	docs/criterion-review.md
 
@@ -115,9 +137,11 @@ skills/cycle/SKILL.md	docs/role-contracts.md	## Functional-unit agents
 skills/cycle/SKILL.md	docs/units/design.md
 skills/cycle/SKILL.md	docs/units/build.md
 skills/cycle/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/cycle/SKILL.md	docs/units/completion-evaluation.md
 skills/cycle/SKILL.md	docs/units/delivery.md
 skills/cycle/SKILL.md	docs/pr-body-guide.md
+skills/cycle/SKILL.md	docs/title-guide.md
 skills/cycle/SKILL.md	docs/units/review.md
 skills/cycle/SKILL.md	docs/reviewer-backend.md
 skills/cycle/SKILL.md	docs/external-review-sequencing.md

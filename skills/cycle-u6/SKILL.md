@@ -14,7 +14,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U6 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: An attempt goes on by one of two paths, PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U7 Review, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U7 Review; Spawn Model: A unit agent's spawns inherit its gate class; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits, Score recording, This object is the value; Evaluation System.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/delivery.md`; `<autoflow-root>/docs/pr-body-guide.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/delivery.md`; `<autoflow-root>/docs/pr-body-guide.md`; `<autoflow-root>/docs/title-guide.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -89,7 +89,7 @@ Each unit's body — what it is asked, its artifact contract, its cautions, its 
 
 | Unit | Also on entry |
 |------|------|
-| U6 Delivery | PR body: `<autoflow-root>/docs/pr-body-guide.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules |
+| U6 Delivery | PR body: `<autoflow-root>/docs/pr-body-guide.md`; PR title: `<autoflow-root>/docs/title-guide.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules |
 
 ## Cost Control
 
@@ -641,6 +641,80 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 - 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).
+
+<!-- From <autoflow-root>/docs/title-guide.md -->
+
+# Issue & PR Title Guide
+
+공통 접두어를 대괄호로 묶고, 나머지 설명은 자유롭게 기술한다.
+
+## 형식
+
+```
+[type · epic-slice · #N]  자유 설명    ← epic 서브이슈 PR
+[type · epic-slice]       자유 설명    ← epic 서브이슈 (이슈 생성 시 번호 미정)
+[type · #N]               자유 설명    ← 독립 이슈 / epic 트래커 / 독립 이슈 PR
+```
+
+| 항목 | 설명 |
+|------|------|
+| `type` | `feat` / `fix` / `chore` / `docs` — 아래 표 참고 |
+| `epic-slice` | Epic 번호와 슬라이스 코드 (`#73-S3f`, `#72-S5a` 등). epic 서브이슈에만 사용 |
+| `#N` | GitHub 이슈 번호. **이슈 제목에는 생략 가능**; **PR 제목에는 필수** |
+| 자유 설명 | 길이·언어 제한 없음 |
+
+## type 값
+
+| type | 언제 |
+|------|------|
+| `feat` | 새 기능 구현 |
+| `fix` | 버그 수정 |
+| `chore` | 설정·인프라·자동화 |
+| `docs` | 문서 단독 변경 |
+
+## 예시
+
+### 이슈 제목
+
+```
+[feat · #73-S3f]  소진 내역 탭 프론트 — 기간 필터 + 검색
+[feat · #72-S5a]  멤버 관리 테이블 프론트엔드
+[feat · #224]     Enterprise 멤버 활동 감사 로그 구현
+[fix  · #200]     YouTube 자막 취득 실패
+[chore · #43]     PAT rotation 문서화
+```
+
+### PR 제목
+
+```
+[feat · #73-S3f · #231]  소진 내역 탭 프론트 — 기간 필터 + 검색
+[feat · #72-S5a · #217]  멤버 관리 테이블 프론트엔드
+[feat · #224]             Enterprise 멤버 활동 감사 로그
+[fix  · #200]             YouTube 자막 취득 실패
+[chore · #43]             PAT rotation 문서화
+```
+
+## 접두어 구성 원리
+
+`epic-slice`와 `#N`은 역할이 다르다.
+
+| 참조 | 의미 | 이슈 | PR |
+|------|------|------|----|
+| `epic-slice` (`#73-S3f`) | 어느 Epic의 몇 번째 슬라이스인가 | ✅ | ✅ |
+| `#N` (이슈 번호) | 어떤 GitHub 이슈를 닫는가 | 생략 가능 | **필수** |
+
+epic 서브이슈가 아닌 경우(독립 이슈, epic 트래커)는 `epic-slice` 없이 `#N`만 사용한다.
+
+## 커밋 메시지와의 관계
+
+커밋 메시지 규칙(`<autoflow-root>/docs/core.md` > Commit Rules)은 별도로 유지된다.
+
+```
+feat(#231): 소진 내역 탭 프론트 — 기간 필터 + 검색   ← 커밋
+[feat · #73-S3f · #231] 소진 내역 탭 프론트            ← PR 제목
+```
+
+커밋은 `type(#N):` 형식, 이슈·PR 제목은 `[type · ref]` 형식으로 구별한다.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 

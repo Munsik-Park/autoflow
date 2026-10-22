@@ -41,8 +41,10 @@
 #         the entry names; a carrier missing an entry is caught
 #     K4  every document, and every section of it, the core's Unit Document
 #         Loading Contract and Unit references tables name for a unit is
-#         carried by that unit's body and by the /autoflow:cycle body; a body
-#         missing a named section is caught
+#         carried by that unit's body and by the /autoflow:cycle body — by its
+#         own `From` line, or as a heading inside a carried section of the
+#         same document; a body missing a named section, and one whose
+#         enclosing section lacks it, are caught
 #
 #   B   root declaration
 #     B1  every body and every agent definition declare the root through
@@ -354,7 +356,9 @@ fi
 # unit's body and the whole-cycle body. A table item is a document link, then
 # its sections — " > <Section>" or " (<Section>, <Section>)" — or none: the
 # whole document. An item is met by the body's `From` line of the whole
-# document, or of a section of it whose last step starts with the item's.
+# document, or of a section of it whose last step starts with the item's, or
+# by a heading starting with the item's section in the text that a `From` line
+# of a section of the same document opens, up to the next `From` line.
 # k4_items — "<Uk>\t<document>\t<section>" per item of the two tables.
 k4_items() {
   awk '/^### Unit Document Loading Contract|^### Unit references/ { on = 1; next } /^##/ { on = 0 }
@@ -381,7 +385,13 @@ k4() {
     for b in "cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md" cycle/SKILL.md; do
       grep -qxF "<!-- From <autoflow-root>/$d -->" "$1/$b" && continue
       [ -n "$sec" ] && awk -v h="<!-- From <autoflow-root>/$d > " -v s="$sec" '
-        index($0, h) == 1 { x = $0; sub(/ -->$/, "", x); sub(/^.* > /, "", x); if (index(x, s) == 1) f = 1 }
+        index($0, "<!-- From ") == 1 {
+          on = (index($0, h) == 1); fence = 0
+          x = $0; sub(/ -->$/, "", x); sub(/^.* > /, "", x); if (on && index(x, s) == 1) f = 1
+          next
+        }
+        on && /^[ \t]*```/ { fence = !fence; next }
+        on && !fence && /^#+ / { t = $0; sub(/^#+ /, "", t); if (index(t, s) == 1) f = 1 }
         END { exit !f }' "$1/$b" && continue
       echo "skills/$b:$d${sec:+ > $sec}"
     done
@@ -393,15 +403,17 @@ k4n=$(tail -1 "$WORK/k4.out"); k4bad=$(sed '$d' "$WORK/k4.out" | tr '\n' ' ')
 cp -R "$REPO_ROOT/skills" "$WORK/k4skills"
 sed 's|^<!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->$|<!-- dropped -->|' \
   "$REPO_ROOT/skills/cycle-u5/SKILL.md" > "$WORK/k4skills/cycle-u5/SKILL.md"
+sed 's|^### Scope judgment$|### dropped|' "$REPO_ROOT/skills/cycle/SKILL.md" > "$WORK/k4skills/cycle/SKILL.md"
 k4spec=$(k4 "$WORK/k4skills" | sed '$d' | tr '\n' ' ')
+k4want="skills/cycle/SKILL.md:docs/submodule-common-rules.md > Scope judgment skills/cycle/SKILL.md:docs/submodule-common-rules.md > Scope judgment skills/cycle-u5/SKILL.md:docs/submodule-common-rules.md > Change Surface Rules "
 if [ "$k4n" -lt 15 ]; then
   failc "K4" "only $k4n items read from the core's tables (vacuous)"
 elif [ -n "$k4bad" ]; then
   failc "K4" "a document or section the core names for a unit is not in its body: $k4bad"
-elif [ "$k4spec" != "skills/cycle-u5/SKILL.md:docs/submodule-common-rules.md > Change Surface Rules " ]; then
-  failc "K4" "a U5 body without its Change Surface Rules section was read as '$k4spec'"
+elif [ "$k4spec" != "$k4want" ]; then
+  failc "K4" "a U5 body without its Change Surface Rules section and a cycle body whose Change Surface Rules lacks its Scope judgment heading were read as '$k4spec'"
 else
-  pass "K4: the $k4n documents and sections the core's tables name for the units are in each unit's body and the /autoflow:cycle body; a body missing a named section is caught"
+  pass "K4: the $k4n documents and sections the core's tables name for the units are in each unit's body and the /autoflow:cycle body; a body missing a named section, and one whose enclosing section lacks it, are caught"
 fi
 
 # ── B: root declaration ──────────────────────────────────────────────────────

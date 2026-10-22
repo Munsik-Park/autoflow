@@ -57,7 +57,7 @@ Hard rules:
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/review.md` > Review triage > Review aggregation; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/units/review.md` > Review triage > A repeated complaint; `<autoflow-root>/docs/units/delivery.md` > CI > CI-failure re-entry; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/review.md` > Review triage > Review aggregation; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/units/review.md` > Review triage > A repeated complaint; `<autoflow-root>/docs/units/delivery.md` > CI > CI-failure re-entry; `<autoflow-root>/docs/review/review.md` > Severity; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -163,6 +163,12 @@ Not classifiable with confidence, or the failure output unobtainable → `operat
 ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
 report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
 records the route as an `O` ledger entry naming the check and the class.
+
+<!-- From <autoflow-root>/docs/review/review.md > Severity -->
+
+## Severity
+
+Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`, `Low Confidence`. `Low Confidence` is a suspected issue that could not be confirmed; the other levels are confirmed. A `Medium` and above (`Medium`+) finding that holds keeps the cycle from handing the pull request off (`<autoflow-root>/docs/units/review.md` > *End*).
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->
 

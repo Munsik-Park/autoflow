@@ -15,7 +15,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U7 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U6 Delivery; Spawn Model: A unit agent's spawns inherit its gate class; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits, Score recording, This object is the value; Evaluation System.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -90,7 +90,7 @@ Each unit's body — what it is asked, its artifact contract, its cautions, its 
 
 | Unit | Also on entry |
 |------|------|
-| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules |
+| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -986,6 +986,51 @@ A high-scoring change:
 - *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold, and names the comment blocks it rests on.
 
 The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`<autoflow-root>/docs/evaluation-system.md` > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
+
+---
+
+<!-- From <autoflow-root>/docs/units/completion-evaluation.md > Code comments in a target -->
+
+## Code comments in a target
+
+A comment in a target's code that diverges from its code, or that carries what a comment does not
+carry, never routes the cycle.
+
+- **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
+  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Code comments*),
+  is a `Low` finding. It never counts toward the review's `Medium`+ verdict
+  (`<autoflow-root>/docs/review/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
+  it ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Code comments in a target*). It is
+  therefore never a failed item, never the cause of a FAIL on the average, carries no `remedy_class`, and is not a `doc` item. Only that
+  finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
+  personal data, for example — takes the severity and the route its impact sets, as any finding does.
+- **Fix — the orchestrator's direct commit.** Whether a comment surfaced by this gate's
+  `recommendations`, the build report's `## Comment check` or the reviewer's `Low` findings (REVIEW
+  review triage) is fixed is the orchestrator's judgment, recorded with its grounds in the ledger
+  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2). A fix is one orchestrator commit that
+  deletes comment lines or corrects their sentences and changes nothing else, and it ends there: no
+  sweep record, no re-entry, no re-score, and no review round. The commit still runs the lint chain over its staged files
+  ([`core.md`](<autoflow-root>/docs/core.md) > Commit Rules); one made after HANDOFF's push is pushed, and the CI
+  confirmation runs on the new head. A comment whose correct wording is uncertain is deleted, not
+  rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
+  comment, or that removes a defect of its own ground (above), is not this route.
+- **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and
+  which lines those are is the working AI's judgment in that target, with no list kept (*Code
+  comments* > *Directives are code*). A defect in one takes the severity and the route of the
+  behavior it changes.
+- **This repository is excluded.** Here a comment takes the reviewer's severity as judged, the
+  `doc` class, and the `doc` re-entry's sweep record.
+- *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
+  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); the build unit of that scope makes
+  the same single commit on the same terms.
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Role Vocabulary and Spawn Mode > Model tier revert -->
+
+### Model tier revert
+
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through an AUDIT test-first finding, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms: the exit claim it returns — a unit's artifacts done — stands where a gate's PASS stands, and the contradicting signal is the next check's finding on what it produced in the same cycle (AUDIT, GATE:QUALITY), or a reviewer-review Medium+ finding on that artifact. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+
+A change to the per-phase assignment follows the revert rule above.
 
 ---
 

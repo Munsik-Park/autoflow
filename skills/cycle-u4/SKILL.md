@@ -14,7 +14,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U4 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: An attempt goes on by one of two paths, PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: Push and PR creation; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U5 Completion eval, U6 Delivery, U7 Review; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U5 Completion evaluation, U6 Delivery, U7 Review; Project Information: A project whose information names sub-repos; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits; Git Workflow — Rules: PR Wait Rule.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; `<autoflow-root>/docs/units/completion-evaluation.md` > FAIL routing; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -92,7 +92,7 @@ The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, th
 
 | Unit | Also on entry |
 |------|------|
-| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh` |
+| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh`; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; the routes: `<autoflow-root>/docs/units/completion-evaluation.md` > FAIL routing; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -769,6 +769,206 @@ A high-scoring change:
 - *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold, and names the comment blocks it rests on.
 
 The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`<autoflow-root>/docs/evaluation-system.md` > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
+
+---
+
+<!-- From <autoflow-root>/docs/units/completion-evaluation.md > Recommendation triage -->
+
+## Recommendation triage
+
+A PASS report's `recommendations` are findings the evaluator recorded without scoring the item down.
+They are triaged by **the procedure the
+reviewer's findings already take** — REVIEW's review-triage classification, the weighing of whether a finding holds, route, pause criteria, `Low`
+judgment, ledger record and attempt cap — after the PASS of every rubric-scored gate
+(GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) and before the transition it opens.
+The one thing added is the evaluator's output contract for `recommendations`
+([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format): each item names its
+subject — a `path:line` of the evaluated artifact at the evaluated commit, or a section of the evaluated artifact (a design document, the DIAGNOSE analysis report) — its severity in the reviewer's vocabulary, and — on `Medium` and above — its `remedy_class`.
+No separate disposition system exists for gate recommendations.
+
+| Review triage | Gate recommendation |
+|---|---|
+| Classification: the reviewer's severity level (`<autoflow-root>/docs/review/review.md` > Severity) | the evaluator's, per item, on the same levels |
+| `remedy_class` on every `Medium`+ finding, by the aggregator — *does clearing this discard or change a decision the design settled?* | the evaluator's, on every `Medium`+ recommendation, by the same question — the class it already puts on a failed item (*FAIL routing* below), and the same classifying authority |
+| Route: `<autoflow-root>/scripts/gate/remedy-route.sh route <class>...` | as a FAIL re-enters — to the phase that owns the change: at a gate after execution the same script; at a gate before execution the gate's own FAIL route (below) |
+| Pause criteria (a)–(c) | the same three, read for a gate (below) |
+| `Low`: the orchestrator's judgment — fix now, or defer with a one-line PR note | the same, its grounds the two questions of [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*; a `Low` fixed now is an attempt like a `Medium`+, and a below-layer `Low` at a gate before execution is deferred to BUILD (below) |
+| Verification of the fix: the next review round (*Reviewer review*) | the recommending gate's existing narrowed re-score (*Re-entry re-score*; [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:PLAN > *Re-entry re-score*, > AUDIT > *Review-response re-score*; at GATE:HYPOTHESIS the same form over the amended artifact) |
+| Record: a `[review-autofix]` ledger entry per attempt; cap 7 | a `[gate-autofix]` ledger entry per attempt, in the same grammar; cap 7 on its own window |
+
+- **No aggregator.** The orchestrator reads the evaluator's `recommendations` list
+  directly. It is therefore the orchestrator that weighs whether each item holds ([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a
+  finding holds*), and the recommending gate's re-score that judges a rebuttal. A
+  `Medium`+ item with no `remedy_class`, or any item missing a field of that contract (subject, item,
+  severity, finding), is a report defect:
+  reject and re-spawn the evaluator, as for a missing `fail_hypothesis`.
+- **A criterion defect is decided, at any severity.** A recommendation that records an
+  acceptance criterion defective — the evaluator records one as a fact, the criterion as its subject
+  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format) — or one whose fix
+  could keep a criterion's letter only by adding a rule the criterion did not state
+  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*), is neither
+  routed, separated nor deferred as a `Low`: the orchestrator decides the change — putting it to the advisor only where the
+  recommendation's grounds do not settle it or it is not confident ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — and the
+  decision is recorded as its `[ac-decision]` entries ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* > *An acceptance-criterion change raised
+  later in the cycle*).
+- **`Medium` and above → do not transition.** Route as a FAIL re-enters — to the phase that owns
+  the change:
+  - **A gate after execution** — AUDIT and GATE:QUALITY — routes by `<autoflow-root>/scripts/gate/remedy-route.sh
+    route` over the `Medium`+ recommendations' classes (mixed → farthest; `operator` anywhere stops routing and goes to the advisor)
+    and re-enters where it prints (`DOC_COMMIT` / `BUILD` / `ARCHITECT`, exactly as at
+    *FAIL routing*, the `doc` route's sweep record included); the routed work flows forward, and the
+    recommending gate re-scores on the narrowed input its re-entry already uses.
+  - **A gate before execution** — GATE:HYPOTHESIS and GATE:PLAN — does not call the script: every `Medium`+ recommendation is resolved on the artifact the gate scores,
+    by the gate's own FAIL route narrowed to the item, and re-scored by the same form: at GATE:PLAN an ARCHITECT unit re-run naming the
+    recommendation ([U3 Design](<autoflow-root>/docs/units/design.md) > *Re-entry*), then GATE:PLAN's *Re-entry re-score* ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:PLAN) over the
+    delta; at GATE:HYPOTHESIS a U2 unit re-run naming the recommendation amends the analysis
+    report ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *Re-entry*) — a problem the confirmed cause carries enters its
+    `## Scope judgments` — then the same form re-scores. The class such a recommendation carries (`doc` / `test` / `impl` / `design`) names the
+    change the problem will need once the design or analysis carries it; it rides on the amended
+    artifact as the ground ARCHITECT or BUILD then reads, and it never sends the cycle forward
+    past the gate unre-scored. A fact below the decision layer ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts*
+    item 1) is not a defect of the artifact these gates score, so the evaluator records it at `Low`, and the orchestrator's `Low` judgment **defers**
+    it: to the build — recorded in the gate's verdict entry as deferred to BUILD, carried
+    in the BUILD spawn prompt, and judged with that work at GATE:QUALITY — or to the known-gaps
+    line. It is never a fix-now attempt: it takes no re-score by this gate, no `[gate-autofix]` entry
+    and no `remedy_class` in state.
+  - **Not directly related** — none of question 1's three conditions holds — is separated as *Scope
+    judgment*'s table says, recorded with its ground and a separate issue the follow-up path. A
+    `Medium`+ recommendation that **is** directly related is fixed on its route or put to the
+    advisor; the orchestrator never separates one on its own judgment (advisor criterion (b)).
+- **Put to the advisor** (a request written situation-first — [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; the cycle does not
+  pause) when the attempt hits any of: (a) the fix needs a contract or
+  acceptance-criterion change the orchestrator cannot settle on the grounds at hand (the criterion-defect bullet above);
+  (b) the fix direction is ambiguous, or the orchestrator judges a directly related recommendation
+  undesirable to fix in this cycle (question 2) and would separate it; (c) the re-score
+  dispositions the previous attempt's finding `remains` after its fix (`rescore.prior_findings`)
+  — the same complaint answered twice — and the re-score's grounds do not settle the next fix. The advisor's `A` entry
+  selects re-entry.
+- **`Low`** → the orchestrator's judgment, on the two questions, recorded with its grounds in the
+  gate's verdict entry: fix now, or defer — to the PR body's known-gaps line
+  ([`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *한계와 known gaps*), or, for a `Low` below the decision
+  layer at a gate before execution, to the build at BUILD (above). A `Low`
+  fixed now **enters the procedure above as an attempt from that point**: the orchestrator judges
+  its `remedy_class` (the evaluator tags none on a `Low`), and the fix is routed, recorded as a
+  `[gate-autofix]` entry, marked in `phases.<gate>.remedy_class`, re-scored by the same gate and
+  counted on the same window exactly as a `Medium`+ attempt. A `Low` on a target
+  comment's divergence or disallowed content keeps its own handling — the orchestrator's direct
+  commit, or left (*Code comments in a target* below).
+- **Record.** Each attempt — a `Medium`+ recommendation, or a `Low` the orchestrator fixes now: a route that re-enters a phase and awaits the gate's re-score — is one ledger entry headed
+  `## O<n> — <title> (cycle <C>, <GATE>) [gate-autofix]`, naming each recommendation it routes
+  (subject, severity, class), the route, and the grounds — appended before the routed work starts.
+  The marker sits at the end of the heading like `[review-autofix]`, and the two are distinct:
+  neither cap's count reads the other's marker. While an attempt is open the orchestrator records
+  the routed class as `phases.<gate>.remedy_class` in the state file, as it does for a FAIL
+  ([`core.md`](<autoflow-root>/docs/core.md) > AutoFlow State Tracking > *Remedy class recording*), and removes it
+  once the re-score PASSes and no attempt is left open — a `Medium`+ the re-score itself raises is a
+  new attempt; the hook denies `git push` / `gh pr create` while it is present on `audit` or
+  `gate_quality`.
+  A resume reads the same field ([U1 Preparation](<autoflow-root>/docs/units/preparation.md) > *Resume*).
+- **Attempt cap = 7**: the consecutive `[gate-autofix]` entries this cycle since the last user
+  re-entry decision (an entry whose heading ends in `[reentry-decision]`). When the triage after the 7th such attempt would open
+  another — a `Medium`+ still open, or a `Low` the orchestrator would fix now — it pauses for the
+  user instead; the user's decision resets the window. A re-score's own recommendations enter this
+  triage on the same window, so a run of `Low`-only re-scores each fixed now counts like a run of
+  `Medium`+ fixes. The cap bounds attempts, and reaching it is
+  never a separation reason — the disposition at the cap is the operator's.
+- **Not a FAIL.** An attempt consumes no FAIL cap; a re-score that FAILs is an ordinary FAIL, routed
+  and counted by the gate's own rule, and a route through ARCHITECT consumes the ARCHITECT re-entry
+  counter. The transition opens when the PASS stands and no attempt is open — every `Medium`+
+  fixed and re-scored clean, withdrawn by the re-score on its rebuttal, separated as not directly
+  related, or decided by the advisor or the operator, and any
+  `Low` fixed now re-scored.
+
+**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) >
+Documentation Policy). Its search terms:
+
+```
+git grep -n -i -E 'recommendation triage|recommendations triaged|recommendation attempt|gate-autofix|attempt (is left )?open|no attempt|fixed now|fix-now|fix now|open re-entry|reviewer-finding procedure|recommendations.{0,40}(Medium|remedy_class)'
+```
+
+<!-- From <autoflow-root>/docs/units/completion-evaluation.md > FAIL routing -->
+
+## FAIL routing (`remedy_class`)
+
+The evaluator tags **every failed item** (score < 7) with a
+`remedy_class` — the kind of change that clears it — and the orchestrator re-enters the cycle at the
+nearest phase that can make that change. The evaluator is the classifying authority: the BUILD unit does not
+re-classify.
+
+| `remedy_class` | Meaning | Re-entry |
+|---|---|---|
+| `doc` | the item clears by editing documentation with no behavior change — in this repository comment text too; a target comment's divergence or disallowed content is never a failed item, while a defect a comment carries on its own ground is classed like any other (*Code comments in a target* below) | orchestrator doc commit → the local run the doc diff requires → GATE:QUALITY re-score |
+| `test` | the item clears by changing test assets | a BUILD unit re-run with the failed items → AUDIT ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Re-entry*) |
+| `impl` | the item clears by changing implementation | the same BUILD re-run |
+| `design` | the item clears only by revisiting the agreed design | ARCHITECT (consumes the ARCHITECT re-entry counter, as the BUILD design-contradiction row does) |
+| `operator` | the evaluator cannot classify with confidence | the advisor's answer fixes the class ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor); the cycle re-enters on that class's route |
+
+- **Default class per item** — the evaluator's starting point, overridable with a stated reason:
+  `Doc updates` → `doc`; `Test coverage`, `Test quality` → `test`; `Fit` → `design`; every other
+  item → `impl` (`<autoflow-root>/scripts/gate/remedy-route.sh default-class <item>`). A `Doc updates` cap caused
+  by text that executes — a prompt string inside a workflow script, a hook message — is `impl`, not
+  `doc`. When the evaluator is not confident, it writes `operator` rather than guessing: an
+  unclassifiable item is never carried along a route chosen for its neighbours.
+- **Mixed classes go to the farthest point**: `design` > `impl` > `test` > `doc`; `operator` anywhere
+  stops routing and goes to the advisor. `<autoflow-root>/scripts/gate/remedy-route.sh route <class>...` is the single owner of this rule; the
+  orchestrator records the routed class as `phases.gate_quality.remedy_class` in the state file
+  ([`core.md`](<autoflow-root>/docs/core.md) > AutoFlow State Tracking > Remedy class recording).
+- **[MUST]** A FAIL report with a failed item lacking `remedy_class` is a contract violation: reject
+  it and re-spawn a fresh Evaluation AI, exactly as for a missing `fail_hypothesis`
+  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Remedy class*).
+
+### `doc` re-entry — class-level remedy
+
+The `doc` route's remedy must be **class-level, not site-level**. The fix anchors on a **repo-wide sweep
+for the pattern the evaluator named**, not on the list of sites it happened to find. The sweep
+enumerates; **which hits the remedy fixes is the orchestrator's judgment**, recorded with its grounds
+in the sweep record (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2).
+
+1. Write `<attempt-dir>/issue-{N}-remedy-sweep.md` with two sections: `## Command` — the repo-wide
+   command(s) that enumerate the pattern — and `## Output` — their output, the full hit list. The
+   remedy fixes every hit in a normative document ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY > *Known blind-spot checks* > reference integrity —
+   the one definition of the boundary) and records, beside the two sections, the scope judgment for
+   the rest: a hit in a historical record is fixed only where the evaluator's recorded judgment
+   named it as misleading, and is otherwise recorded as exempt with the ground (the record is
+   followed by no one). The judgment and its grounds are
+   prose in the same file; the hook reads only the two sections.
+2. Commit the doc remedy (orchestrator authority: [`core.md`](<autoflow-root>/docs/core.md) > Team Structure /
+   Commit Ownership); its lint outcome is added as that commit's rows in the build report's `## Lint`
+   table ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report).
+   **The hook denies `git commit` while `remedy_class` is `doc` until the sweep
+   record exists with both sections non-empty** — it checks the record file, never the wording of an
+   instruction. On a second `doc` FAIL of the same class, the orchestrator re-examines its scope
+   judgment against the grounds the new report records — the previously flagged defect that
+   `rescore.prior_findings` marks `remains`, or a new finding it marks blocking — and records the
+   revised judgment in the sweep record; a wider predicate is one possible outcome, not a rule.
+   No standing doc-phrase suite is kept.
+3. Run, once, the tests the doc diff requires ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *Local
+   verification*) — often none for a doc-only diff; on an opted-in target the selector names any
+   suite whose `ci-subject` reaches an edited doc — and record the command and its summary line,
+   with the log the run wrote.
+4. Re-score (below).
+
+<!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
+
+### Whether a finding holds
+
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
+
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR and runs *Reviewer review* on that PR again — a new round, also when the round only rebuts and changes no code — and that round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed and its `rejected` row needs no `remedy_class` — nothing reads one there — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](<autoflow-root>/docs/units/preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
+
+**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
+
+```
+git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|each) (finding|recommendation|item) holds'
+```
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Role Vocabulary and Spawn Mode > Model tier revert -->
+
+### Model tier revert
+
+**[MUST]** Revert a phase to the higher tier — updating `.claude/autoflow/spawn-policy.json` in the same commit — when a lower-tier gate's PASS is materially contradicted within the same cycle: a defect that gate's rubric covers surfaces through an AUDIT test-first finding, an AUDIT block, or a reviewer-review Medium+ finding on the same surface. A lower-tier **role spawn** is covered on the same terms: the exit claim it returns — a unit's artifacts done — stands where a gate's PASS stands, and the contradicting signal is the next check's finding on what it produced in the same cycle (AUDIT, GATE:QUALITY), or a reviewer-review Medium+ finding on that artifact. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
+
+A change to the per-phase assignment follows the revert rule above.
 
 ---
 

@@ -61,7 +61,7 @@ reported. Return only your artifact paths, commit SHAs and a one-line summary
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/core.md` > Git Workflow — Rules > Commit Rules; `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > AUDIT; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope; `<autoflow-root>/docs/submodule-common-rules.md`; `<autoflow-root>/docs/role-common-rules.md`.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/core.md` > Git Workflow — Rules > Commit Rules; `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > AUDIT; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope; `<autoflow-root>/docs/submodule-common-rules.md`; `<autoflow-root>/docs/role-common-rules.md`; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds > *Handling a finding*.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -1102,3 +1102,7 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 - Markdown docs: English (source of truth).
 - HTML docs: Korean (translation), if maintained.
 - Interface changes require updating the related docs.
+
+<!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds > Handling a finding -->
+
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
