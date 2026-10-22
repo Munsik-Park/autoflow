@@ -15,7 +15,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U7 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U6 Delivery; Spawn Model: A unit agent's spawns inherit its gate class; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits, Score recording, This object is the value; Evaluation System.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/units/build.md` > Unit spawn; `<autoflow-root>/docs/units/build.md` > Re-entry; `<autoflow-root>/docs/units/delivery.md` > CI; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -90,7 +90,7 @@ Each unit's body — what it is asked, its artifact contract, its cautions, its 
 
 | Unit | Also on entry |
 |------|------|
-| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; the build re-run: `<autoflow-root>/docs/units/build.md` > Unit spawn; its re-entry: `<autoflow-root>/docs/units/build.md` > Re-entry; CI: `<autoflow-root>/docs/units/delivery.md` > CI; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -1023,6 +1023,110 @@ carry, never routes the cycle.
 - *Secondary (multi-repo):* a comment in a sub-repo is outside the orchestrator's scope
   ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); the build unit of that scope makes
   the same single commit on the same terms.
+
+<!-- From <autoflow-root>/docs/units/build.md > Unit spawn -->
+
+## Unit spawn
+
+- **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
+  prompt states the goal and names the inputs by path — the two design documents
+  (`<attempt-dir>/issue-{N}-feature-design.md`, `<attempt-dir>/issue-{N}-verification-design.md`), the
+  acceptance-criterion list (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`), the
+  decision ledger, the cycle-layer store `<attempt-dir>/issue-{N}-local/`, and each recommendation a
+  gate's triage deferred to the build with its subject and finding
+  ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — and the build report's path. On a
+  re-entry it also names what the re-entry is for and the material that carries it (*Re-entry*
+  below).
+- **Documents.** The unit's agent definition carries this file with the rest of its guidance
+  ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection); the prompt names the affected docs DIAGNOSE
+  identified by path, and the unit reads anything further by its own judgment. The return is routed
+  (*Report routing* below).
+
+<!-- From <autoflow-root>/docs/units/build.md > Re-entry -->
+
+## Re-entry
+
+No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-build` by *Unit
+spawn* above, whose prompt names what the re-entry is for, the material that carries it, and the
+build report so far. On a re-entry that passes through AUDIT and GATE:QUALITY, the report is
+brought up to date, not rewritten: a row a re-entry supersedes is replaced, a new commit adds its lint
+rows, and the sections GATE:QUALITY reads carry the current state.
+
+| Re-entry | Material named | Counter |
+|---|---|---|
+| AUDIT test-first finding | the AUDIT report's `## Test-first` section | AUDIT FAIL (max 2×, shared) |
+| AUDIT FAIL | the AUDIT report and its failed items | AUDIT FAIL (max 2×, shared) |
+| GATE:QUALITY FAIL routed `test` / `impl` | the evaluation report and its failed items | GATE:QUALITY FAIL (max 3×) |
+| a `test` / `impl` recommendation attempt at AUDIT or GATE:QUALITY | the recommendation's subject and finding | the attempt window (max 7×) |
+| REVIEW review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
+| advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
+
+An INTEGRATE failure names the failing check and its output; a HANDOFF CI failure routed `test` /
+`impl` names `<attempt-dir>/issue-{N}-ci-failure.md`. The unit fixes what failed, and the cycle runs
+forward again to the INTEGRATE check or the CI that failed.
+
+A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
+([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A REVIEW thin route fixes the finding on its own surface and returns to the reviewer
+re-review; it does not bring the build report up to date.
+
+The unit reads and writes no `<attempt-dir>/issue-{N}.json` state file, so every counter above is the
+orchestrator's own accounting.
+
+<!-- From <autoflow-root>/docs/units/delivery.md > CI -->
+
+## CI
+
+```
+bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
+```
+
+The script reads the PR's mergeable state first and then runs one finite, deadline-bounded poll over
+the checks the CI publishes on the PR head — any check, by count and conclusion, never by name. Its
+header carries the full contract; the exit codes route as follows.
+
+| Exit | Meaning | What follows |
+|---|---|---|
+| `0` | green — at least one check present, every one green, on a PR whose mergeable state was confirmed | *Added test files*, then [U7 Review](<autoflow-root>/docs/units/review.md) |
+| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: resolve against `origin/<base>`, the attempt's base (rebase or merge), and push again (internal retry); a conflict on a sub-repo pointer another cycle advanced → *Multi-repo delivery* below |
+| `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event. When the target's CI does not run for this pull request — no workflow, or a trigger, path filter or condition that excludes it — the PR body records that CI did not run and the ground, what CI was to run for it (a `ci-deferred` lint chain, an added test file) is listed as not run, and the cycle goes on to [U7 Review](<autoflow-root>/docs/units/review.md); whether CI is not running or late is the orchestrator's judgment, recorded with its ground (ADR-0034 D5) |
+| `12` | a check concluded failure | *CI-failure re-entry* below |
+| `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line; check the token's `actions: read`) | raise `CI_POLL_TIMEOUT_SECS` or run again (internal retry), or escalate |
+| `14` | the mergeable state could not be confirmed within the bound — a `gh` transport, auth or parse failure | not a conflict: check `gh auth` and connectivity, run again (internal retry), then escalate |
+| `64` | usage | fix the invocation |
+
+Cautions:
+
+- The orchestrator does not write its own poll loop, and does not read an empty status as green. A
+  `CONFLICTING` PR may receive no check at all; that is exit `10`, not a missed webhook.
+- Exits `10` and `14` carry the reserved `HANDOFF-INTERNAL-RETRY` token on stderr.
+
+**Added test files.** On exit `0`, each test file this cycle added to the target's tree (the build
+report's `## Test files kept`) is confirmed to have actually run in the PR head's CI. The criterion
+is execution visible in a job's log: a workflow that only registers the file, or a job that only
+prints its path, did not run it, and a log that could not be read shows neither. Beside each file the
+PR body's `## Verification dispositions` records the job that ran it, or that no job ran it and what
+was done — the file wired into the target's CI and pushed again (internal retry, then *CI* again), or
+listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI. How it
+is confirmed is the orchestrator's judgment. A cycle that added no test file has nothing to confirm.
+
+### CI-failure re-entry
+
+A CI failure (exit `12`) re-enters by `remedy_class` through `<autoflow-root>/scripts/gate/remedy-route.sh route`
+([Transitions](<autoflow-root>/docs/units/delivery.md)). The orchestrator
+does not read the failure log itself (Cost Control): an anonymous direct subagent —
+`subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
+check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
+`<attempt-dir>/issue-{N}-ci-failure.md` with the failing check, the first failing assertion or error,
+**one `remedy_class`** (`doc` / `test` / `impl` / `design` / `operator`) and the grounds for it —
+the class of change that clears the failure, `design` when clearing it would discard or change a
+decision the design settled — and returns the class plus a one-line summary.
+`<autoflow-root>/scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `BUILD` /
+`ARCHITECT` / `PAUSE`); the re-entered phase runs forward to HANDOFF again and *CI* re-confirms.
+Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
+([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
+report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
+records the route as an `O` ledger entry naming the check and the class.
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Role Vocabulary and Spawn Mode > Model tier revert -->
 

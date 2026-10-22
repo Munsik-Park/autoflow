@@ -30,6 +30,7 @@
 agents/*.md	docs/core.md	## Instruction Conventions
 agents/*.md	docs/core.md	## Rule Scope
 
+agents/autoflow-advisor.md	docs/core.md	## Decision Ledger
 agents/autoflow-advisor.md	docs/core.md	## Execution Principles	- **[MUST] Human-decision presentation**
 agents/autoflow-advisor.md	docs/role-contracts.md	## Advisor
 agents/autoflow-advisor.md	docs/decision-ledger.md
@@ -108,10 +109,12 @@ skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Functional-unit agents
 skills/cycle-u4/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u4/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
 skills/cycle-u4/SKILL.md	docs/units/completion-evaluation.md	## FAIL routing
+skills/cycle-u4/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/cycle-u4/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/cycle-u5/SKILL.md	docs/units/completion-evaluation.md
 skills/cycle-u5/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/cycle-u5/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/cycle-u5/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 skills/cycle-u5/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/cycle-u6/SKILL.md	docs/units/delivery.md
@@ -123,6 +126,9 @@ skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
 skills/cycle-u7/SKILL.md	docs/external-review-sequencing.md
 skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u7/SKILL.md	docs/units/completion-evaluation.md	## Code comments in a target
+skills/cycle-u7/SKILL.md	docs/units/build.md	## Unit spawn
+skills/cycle-u7/SKILL.md	docs/units/build.md	## Re-entry
+skills/cycle-u7/SKILL.md	docs/units/delivery.md	## CI
 skills/cycle-u7/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
 skills/criterion-review/SKILL.md	docs/units/preparation.md	## The criterion review stage
 skills/criterion-review/SKILL.md	docs/criterion-review.md
@@ -138,6 +144,7 @@ skills/cycle/SKILL.md	docs/units/design.md
 skills/cycle/SKILL.md	docs/units/build.md
 skills/cycle/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle/SKILL.md	docs/role-contracts.md	## Role Vocabulary and Spawn Mode > ### Model tier revert
+skills/cycle/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/cycle/SKILL.md	docs/units/completion-evaluation.md
 skills/cycle/SKILL.md	docs/units/delivery.md
 skills/cycle/SKILL.md	docs/pr-body-guide.md

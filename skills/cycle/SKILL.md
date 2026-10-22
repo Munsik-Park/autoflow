@@ -13,7 +13,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt, and `--base <branch>` / `--commit <commit>` with it name the base and the start commit `autoflow-records new` makes it at. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/preparation.md`; `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/git-workflow.md` > Git Clean Check; `<autoflow-root>/docs/git-workflow.md` > Post-Merge Cleanup; `<autoflow-root>/docs/units/analysis.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/units/design.md`; `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/units/completion-evaluation.md`; `<autoflow-root>/docs/units/delivery.md`; `<autoflow-root>/docs/pr-body-guide.md`; `<autoflow-root>/docs/title-guide.md`; `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/preparation.md`; `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/git-workflow.md` > Git Clean Check; `<autoflow-root>/docs/git-workflow.md` > Post-Merge Cleanup; `<autoflow-root>/docs/units/analysis.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/units/design.md`; `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:QUALITY > Known blind-spot checks > *Impact scope / Doc updates — reference integrity on moves*; `<autoflow-root>/docs/units/completion-evaluation.md`; `<autoflow-root>/docs/units/delivery.md`; `<autoflow-root>/docs/pr-body-guide.md`; `<autoflow-root>/docs/title-guide.md`; `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -112,10 +112,10 @@ The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, th
 | U1 Preparation | facts: `<autoflow-root>/scripts/preflight/cycle-status.sh`; the criterion review stage: `<autoflow-root>/docs/criterion-review.md`; git procedures: `<autoflow-root>/docs/git-workflow.md` (Git Clean Check, Post-Merge Cleanup) |
 | U2 Analysis | unit agent: `autoflow-unit-analysis`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; the `Low` judgment's questions: `<autoflow-root>/docs/submodule-common-rules.md` > Scope judgment |
 | U3 Design | unit agent: `autoflow-unit-design`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; the `Low` judgment's questions: `<autoflow-root>/docs/submodule-common-rules.md` > Scope judgment |
-| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh`; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; the routes: `<autoflow-root>/docs/units/completion-evaluation.md` > FAIL routing; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
-| U5 Completion evaluation | change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh`; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; the routes: `<autoflow-root>/docs/units/completion-evaluation.md` > FAIL routing; normative documents: `<autoflow-root>/docs/evaluation-system.md` > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U5 Completion evaluation | change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; normative documents: `<autoflow-root>/docs/evaluation-system.md` > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 | U6 Delivery | PR body: `<autoflow-root>/docs/pr-body-guide.md`; PR title: `<autoflow-root>/docs/title-guide.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules |
-| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; the build re-run: `<autoflow-root>/docs/units/build.md` > Unit spawn; its re-entry: `<autoflow-root>/docs/units/build.md` > Re-entry; CI: `<autoflow-root>/docs/units/delivery.md` > CI; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -2272,6 +2272,34 @@ The evaluator records each such finding in the item's `reason` and in `recommend
 A change to the per-phase assignment follows the revert rule above.
 
 ---
+
+<!-- From <autoflow-root>/docs/evaluation-system.md > Gate rubrics > GATE:QUALITY > Known blind-spot checks > Impact scope / Doc updates — reference integrity on moves -->
+
+- **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
+  or renames files, sections, or identifiers, require evidence of a repo-wide
+  inbound-reference sweep (direct references, test-harness expectations, paraphrased
+  mentions). A dangling reference in a **normative document** caps the affected item at 6.
+  The cap binds normative documents only; a stale name in a **historical record** is the
+  evaluator's judgment.
+  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
+    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
+    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
+    `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
+    (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a
+    role to read — the command bodies under `<autoflow-root>/skills/` and the usage documents
+    `<autoflow-root>/docs/INDEX.md` routes, outside the records under `<autoflow-root>/docs/records/`.
+  - *Historical records* are what is kept as a record of a past state and followed by no one:
+    per-issue manual-verification records, report-excerpt fixtures
+    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and completed attempts'
+    records. A fixture that an executing test reads is still a historical record for this check,
+    while the test that reads it is normative.
+  - For a stale name in a historical record the evaluator judges whether a reader following the
+    normative documents would be misled by it, and records the judgment with its grounds in the
+    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
+    rests on that recorded ground alone, never on the name's presence; a record whose stale names
+    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
 
 <!-- From <autoflow-root>/docs/units/completion-evaluation.md -->
 

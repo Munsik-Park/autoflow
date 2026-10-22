@@ -14,7 +14,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U5 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: An attempt goes on by one of two paths, PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: Push and PR creation; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery, U7 Review; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery, U7 Review; Spawn Model: A unit agent's spawns inherit its gate class; Project Information: A project whose information names sub-repos; Team Structure: Build unit (U4), Functional-unit agents; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits; Git Workflow — Rules: PR Wait Rule.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/completion-evaluation.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/completion-evaluation.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:QUALITY > Known blind-spot checks > *Impact scope / Doc updates — reference integrity on moves*; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -91,7 +91,7 @@ The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, th
 
 | Unit | Also on entry |
 |------|------|
-| U5 Completion evaluation | change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U5 Completion evaluation | change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; normative documents: `<autoflow-root>/docs/evaluation-system.md` > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -656,6 +656,34 @@ A high-scoring change:
 The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`<autoflow-root>/docs/evaluation-system.md` > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
 
 ---
+
+<!-- From <autoflow-root>/docs/evaluation-system.md > Gate rubrics > GATE:QUALITY > Known blind-spot checks > Impact scope / Doc updates — reference integrity on moves -->
+
+- **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
+  or renames files, sections, or identifiers, require evidence of a repo-wide
+  inbound-reference sweep (direct references, test-harness expectations, paraphrased
+  mentions). A dangling reference in a **normative document** caps the affected item at 6.
+  The cap binds normative documents only; a stale name in a **historical record** is the
+  evaluator's judgment.
+  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
+    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
+    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
+    `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
+    (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a
+    role to read — the command bodies under `<autoflow-root>/skills/` and the usage documents
+    `<autoflow-root>/docs/INDEX.md` routes, outside the records under `<autoflow-root>/docs/records/`.
+  - *Historical records* are what is kept as a record of a past state and followed by no one:
+    per-issue manual-verification records, report-excerpt fixtures
+    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and completed attempts'
+    records. A fixture that an executing test reads is still a historical record for this check,
+    while the test that reads it is normative.
+  - For a stale name in a historical record the evaluator judges whether a reader following the
+    normative documents would be misled by it, and records the judgment with its grounds in the
+    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
+    rests on that recorded ground alone, never on the name's presence; a record whose stale names
+    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
 
