@@ -118,7 +118,7 @@ stop being paths the plugin defines. They become two ways of composing the modul
 
 ## 5. Contract format and module invocation
 
-§5.1–5.2 *proposed — pending the operator's confirmation*; §5.3 **accepted** by the operator, 2026-10-23 ("3 수용"). Drafts that follow it: the design module
+**Accepted** by the operator, 2026-10-23: §5.3 ("3 수용"), then §5.1–5.2 ("2 수용") — the contract files' place and reading, not the run's input and output files, whose place is the Coordinator's (§5.3). Drafts that follow it: the design module
 ([`docs/contracts/design.yaml`](../../contracts/design.yaml)) and the plan evaluation module
 ([`docs/contracts/plan.yaml`](../../contracts/plan.yaml)). No device reads them yet.
 
@@ -303,4 +303,4 @@ No test today exercises the score thresholds, the planning or implementation spa
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109`; created and pushed the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). Then, the operator away and proposals taken on the recommended option by the operator's instruction: the criterion review as four modules (§4), the contract format and invocation (§5), the drafts `docs/contracts/design.yaml` and `docs/contracts/plan.yaml`. The committed checks pass locally (the `run:` steps of `contract-suites.yml`, `plugin-package.yml`, `e2e-dummy-target.yml`). | The operator confirms or changes the proposals marked *pending* (§4, §5); then sub-issue 2. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109`; created and pushed the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). Then, the operator away and proposals taken on the recommended option by the operator's instruction: the criterion review as four modules (§4), the contract format and invocation (§5), the drafts `docs/contracts/design.yaml` and `docs/contracts/plan.yaml`. The committed checks pass locally (the `run:` steps of `contract-suites.yml`, `plugin-package.yml`, `e2e-dummy-target.yml`). | File sub-issue 2 under #507 (the validator, every module's contract, the contract–document check, criteria-apply) with the open points §5.3 lists. |
