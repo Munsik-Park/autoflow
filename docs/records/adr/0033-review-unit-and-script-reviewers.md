@@ -10,7 +10,10 @@ and D5 (the target source, the default, the readout), and ADR-0032 D1 for U7's c
 and U7 exits ("CI green") amended by ADR-0034 D5 (issue #490): CI green, or recorded on the pull
 request as not run. D1–D2 amended by ADR-0036 (issue #493): U7 also runs alone on an attempt with no
 state file — the abbreviated path's — by `/autoflow:cycle-u7 <N>`, without the state write, the routes
-or the cap, and returns its verdict, CI result and round count.
+or the cap, and returns its verdict, CI result and round count. D6 amended by ADR-0037 (issue #500):
+the end report names no merge order — it carries each pull request's URL and head commit, the
+verdict, CI as recorded and a host pull request's dependency on a sub-repo pull request; the labels'
+retirement and the merge prohibition stand.
 
 ## Context
 

@@ -3,19 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/cleanup/cleanup-issue.sh
 #
-# AutoFlow Post-Merge Cleanup helper — MARKS a resolved attempt COMPLETED in its
+# AutoFlow's record function — MARKS an attempt that is over COMPLETED in its
 # record directory `<record-root>/<repo-key>/<stamp>-issue-<N>/` (issues #423,
 # #466; scripts/lib/records.sh). The records stay where they are: the record
 # root is outside every checkout's tree from the start, so nothing is moved,
 # copied or archived. It DELETES exactly one path, the cycle-layer store's
 # reserved top-level entry `issue-<N>-local/disposable` (reproducible output —
 # ADR-0024 D2), and then writes the mark `completed`; nothing else is deleted.
-# It touches no git ref, no remote and no pull request: the local dev branch is
-# the orchestrator's step, and the remote branch and the pull request are left
-# as they are (docs/git-workflow.md > Post-Merge Cleanup).
+# It touches no git ref, no remote and no pull request.
 #
-# Run at PREFLIGHT prior-attempt resolution once the attempt's PR is observed
-# merged or closed. Only THIS checkout's attempt is marked — the one whose
+# Its precondition: an attempt that is not active (no state file, or one whose
+# `active` is not `true`) and whose PR is merged or closed. The script does not
+# read the state file, so the caller holds the precondition; whether and when
+# the script runs is the Coordinator's. Only THIS checkout's attempt is
+# marked — the one whose
 # `checkout` file names this checkout: an attempt whose checkout is gone is
 # left as it is until another checkout takes it over (`autoflow-records claim`),
 # and another live checkout's attempt is never touched (issue #466 AC4).

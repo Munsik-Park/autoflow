@@ -9,7 +9,9 @@ operator decisions O5 and O6 — no automatic rework cap on the path, continuing
 call). Amends ADR-0030 D5 (`/autoflow:criterion-review` also enters the path) and ADR-0033 D1–D2
 (U7 also runs alone on an attempt with no state file), and extends ADR-0030 D3 and ADR-0029 D4 (the
 entry `abbreviated` and the pull request read for an attempt with no state file). ADR-0025 D3–D4
-stand for the full cycle (*Relation to other decisions* below).
+stand for the full cycle (*Relation to other decisions* below). D6 amended by ADR-0037 (issue
+#500): the `cleanup:` line stands, naming an attempt that is not active and whose pull request is
+merged or closed; what is done on it is the Coordinator's, not Post-Merge Cleanup at PREFLIGHT.
 
 ## Context
 

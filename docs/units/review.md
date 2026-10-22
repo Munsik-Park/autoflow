@@ -31,8 +31,8 @@ routing, cap and *End* for it.
   claim.
 - **Loop cap**: auto-resolution of reviewer findings, 7 attempts ([`core.md`](../core.md) > Flow
   Control > Regressions).
-- **Result owed**: the report of *End*, with each PR's URL and head commit, the review verdict and
-  the merge order.
+- **Result owed**: the report of *End*, with each PR's URL and head commit, the review verdict, CI
+  as recorded and, for a host PR whose pointer names a sub-repo PR's commit, that dependency.
 
 ## Transitions
 
@@ -42,7 +42,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 |------|------|
 | REVIEW (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`<autoflow-root>/scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`<autoflow-root>/docs/units/review.md` > *Review triage*; the case is `<autoflow-root>/scripts/handoff/review-gate.sh` exit `10`) |
 | REVIEW (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`<autoflow-root>/docs/units/review.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
-| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green, or CI recorded as not run → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports the merge order → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
+| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green, or CI recorded as not run → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports each pull request's facts → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
 
 ## Reviewer review
 
@@ -145,7 +145,7 @@ it leaves behind is fixed:
 It returns `{max_severity, findings}`.
 
 - **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `<attempt-dir>/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `<autoflow-root>/scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
-- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold. The order in which a host PR and its sub-repo PR merge is the operator's, reported at *End*.
+- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
 - **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 
 ### The case
@@ -227,29 +227,23 @@ cycle off:
 
 - the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in
   it changed.
-- the report names the order in which the pull requests merge (*Merge order* below).
+- the report names each pull request's URL and head commit, its review verdict and its CI as
+  recorded, and, for a host pull request whose pointer names a sub-repo pull request's commit, that
+  dependency.
 
 Cautions:
 
 - The hand-off is not made while a pull request of the cycle has a `Medium`+ verdict.
 - A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`).
 
-Report: "PR #N open (draft) — aggregated review posted — handed to external review." with
-each PR's URL and head commit, and the merge order. AutoFlow ends; the session may terminate.
+Report: "PR #N open (draft) — aggregated review posted — handed to external review." with the
+facts above. AutoFlow ends; the session may terminate.
 
-The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle in this checkout (or in the live session if it observes the decision before terminating) — the local dev branch's deletion and the attempt's completed mark; its records stay in `<attempt-dir>/`, and its remote branch and pull request are left as they are; see [U1 Preparation](preparation.md) > *What is asked*.
+**[MUST]** AutoFlow merges nothing and promotes no draft. The hook denies `gh pr merge` and a push
+to the default branch.
 
-### Merge order
-
-Merging is outside AutoFlow ([`external-review-sequencing.md`](../external-review-sequencing.md)).
-The report names the order for the operator: a pull request with no sub-repo dependency in any
-order; a host pull request whose pointer depends on a sub-repo pull request after it — the
-sub-repo pull request merges first, the host is reconciled to its merge commit ([U6
-Delivery](delivery.md) > *Multi-repo delivery*), and the host pull request then merges.
-
-**[MUST]** AutoFlow merges nothing and promotes no draft; of this order it performs only the
-reconcile, on the operator's request. The hook denies `gh pr merge` and a push to the default
-branch.
+What follows an external merge or close — the attempt's branches and records included — is outside
+AutoFlow ([`git-workflow.md`](../git-workflow.md) > Post-Merge Cleanup).
 
 ## An attempt with no state file
 

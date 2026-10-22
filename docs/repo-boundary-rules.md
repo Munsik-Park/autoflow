@@ -22,7 +22,7 @@ Every produced artifact belongs to the scope that owns the files it lives in: co
 
 ### Procedures (절차)
 
-Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → host pointer), the sub-repo push and the host reconcile on request are the Orchestrator's coordination surface; merge ordering is the operator's. *See:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`<autoflow-root>/docs/core.md`).
+Coordination steps — work breakdown, sequencing, integration verification, and PR opening — belong to the Orchestrator; execution steps — writing code and tests, and committing them — belong to the target scope. No agent performs a step outside its scope. *Secondary (multi-repo):* cross-repo sequencing (sub-repo → host pointer) and the sub-repo push are the Orchestrator's coordination surface; merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1, Rule 3, and Rule 4 (below), and the PR-opener = Orchestrator column of Commit Ownership (`<autoflow-root>/docs/core.md`).
 
 ### Backlog (백로그)
 
@@ -64,7 +64,7 @@ Any agent can **read** files from other repos to understand interfaces, contract
 The Orchestrator AI's job is to:
 - Break down cross-repo work into per-repo issues
 - Sequence the work to avoid conflicts
-- Verify integration after individual repos merge
+- Verify integration across the repos before the hand-off (INTEGRATE)
 
 The Orchestrator should **not** write implementation code in sub-repos.
 
@@ -107,7 +107,6 @@ All exceptions must be:
 │           (host repo)           │
 ├─────────────────────────────────┤
 │  - Creates sub-issues           │
-│  - Coordinates merge order      │
 │  - Verifies integration         │
 └───────┬───────────┬─────────────┘
         │           │
@@ -139,6 +138,5 @@ Before starting a cross-repo change:
 
 - [ ] Orchestrator has created tracking issue
 - [ ] A host-repo work item exists for each affected repo (labeled with that repo); no issue is filed in the target repo
-- [ ] Merge order is defined
 - [ ] Interface contracts are documented
 - [ ] Rollback plan exists (what if one repo's change fails?)

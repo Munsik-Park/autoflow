@@ -103,4 +103,5 @@ carry them ([`core.md`](core.md) > Rule Scope, principle 1).
   the issue is to be entered. Nothing enters it: the full cycle does not start it, and a full cycle
   of the issue beside it is a new attempt, made only on the operator's request;
 - once the pull request is merged or closed, a `cleanup:` line in the owning checkout, and the
-  attempt is cleared like any other ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup).
+  attempt is cleared — set aside by the entry — like any other; what follows is outside AutoFlow
+  ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup).

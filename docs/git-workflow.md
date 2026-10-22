@@ -119,65 +119,72 @@ Closes #<issue-number>
 
 ---
 
-## Merge Strategy
-
-### Recommended: Squash and Merge
-
-- PR description becomes the commit body.
-
-### When to Use Regular Merge
-
-- Large features whose individual commits tell an important story.
-- Multi-phase implementations where history matters.
-
-### Merge Sequencing (external review)
-
-A host PR with no sub-repo dependency is promoted and merged by the external reviewer directly. A
-host PR that depends on a sub-repo PR merges after it: the sub-repo PR merges, the host is reconciled
-to its merge commit, the operator confirms the host pointer equals that merge commit, and the host PR
-is then promoted and merged. AutoFlow reports this order at the end of a cycle. The rule AutoFlow
-keeps for the host's pointer, and its cautions, are [`units/delivery.md`](units/delivery.md) >
-*Multi-repo delivery*; the reviewer- and operator-facing guide is
-[`external-review-sequencing.md`](external-review-sequencing.md).
-
----
-
 ## Post-Merge Cleanup
 
-Performed at PREFLIGHT of the next cycle once an attempt's PR is observed merged
-or closed (or by the live session if it observes the decision first). Apply it
-to **every** resolved attempt of this checkout — one whose record directory's
-`checkout` file names this checkout — that `cycle-status.sh` reports on a
-`cleanup:` line; `<branch>` is its dev branch. An attempt of another checkout
-still there (`owner=other`), an attempt whose checkout is gone (`owner=gone`)
-until a checkout takes it over, and a dev branch with no attempt record
-(`record=none`) are reported and not touched, locally or on the remote
-([`units/preparation.md`](units/preparation.md) > *What is asked*):
+**Merging, and what follows it, are outside AutoFlow.** Whether and when a pull request is merged,
+in what sequence beside the pull requests it depends on, by what method, and what is confirmed
+before it — the sub-repo pointer included — are the external review's. What follows a merge or a
+close — how a host pointer is brought up after a sub-repo pull request merges, what becomes of the
+attempt's dev branches on either side, and what is cleaned up, when and how, the record function
+below included — is the Coordinator's. AutoFlow defines no step, order or
+timing for either, and none of its steps waits on them.
 
-```bash
-git switch --detach origin/<default> # only when <branch> is the checked-out branch
-git branch -D <branch>               # the local dev branch
-<autoflow-root>/scripts/cleanup/cleanup-issue.sh <branch>  # delete its issue-<N>-local/disposable/, then mark the attempt completed (accepts several branches)
-```
+The **Coordinator** is the role outside AutoFlow that assembles AutoFlow's functional and
+evaluation modules — each takes an input, such as a work branch or an issue number, and produces a
+result — into a pipeline. AutoFlow's text names it the owner of what follows a merge or a close,
+and of nothing else: that work varies by repository and environment, so it is not AutoFlow's.
+Merging stays the external review's, and one party may hold both roles. It is a role's name only:
+AutoFlow names no person, session or repository that holds it, defines no step, order or timing for
+it, and makes no link that reads its procedure. It is not the orchestrator, AutoFlow's own role,
+which runs a cycle and ends at the hand-off.
 
-**Nothing on the remote is changed.** The remote dev branch and the pull request are left as
-they are — they are the record the attempt left for whoever reads the attempts together, and
-deleting a remote branch is a push. Cleanup reads the pull request's state and changes no label,
-comment or state on it. `git branch -D` is used because the PR's merge (a squash, a rebase) or its
-closing leaves the branch unmerged into any local branch; the observed merged or closed PR is the
-ground, and the remote branch keeps the commits.
+What AutoFlow keeps there:
 
-**Delete the reserved path, mark the rest.** Cleanup deletes the attempt's reserved path
-`<attempt-dir>/issue-{N}-local/disposable/` — the reproducible output its cycle assets wrote there
+- It merges nothing, promotes no draft, and pushes to neither the default branch nor the attempt's
+  base; every pull request it opens is a draft ([`units/delivery.md`](units/delivery.md) > *Push
+  and pull request*; [`units/review.md`](units/review.md) > *End*).
+- The entry sets aside an attempt of this checkout that is not active and whose pull request is
+  merged or closed, by those observed facts alone, and `cycle-status.sh` names it on a `cleanup:`
+  line ([`units/preparation.md`](units/preparation.md) > *What is asked*, *Modes*).
+- Its own steps change nothing on the remote: PREFLIGHT reads the pull request's state and fetches,
+  the record function below reads neither, and neither deletes a remote branch, pushes, or closes,
+  labels or comments on a pull request.
+
+**The record function.** `<autoflow-root>/scripts/cleanup/cleanup-issue.sh <dev branch> [<dev
+branch> …]` marks an attempt that is over. Its precondition is an attempt of this checkout — one
+whose record directory's `checkout` file names this checkout — that is not active (it has no state
+file, or its state file's `active` is not `true`) and whose pull request is merged or closed: the
+attempt `cycle-status.sh` names on a `cleanup:` line. The mark ends the attempt for the gate hook
+too — the hook passes over a record directory marked `completed` when it looks for this checkout's
+active attempt — so an attempt still running is not marked, even when its pull request was merged
+or closed out of band. The script does not read the state file itself. An attempt of another
+checkout still there (`owner=other`), or one whose checkout is gone (`owner=gone`) until a checkout
+takes it over, is not this checkout's to mark, and the script refuses it; a dev branch with no
+attempt record (`record=none`) has no attempt to mark.
+
+It deletes the attempt's reserved path `<attempt-dir>/issue-{N}-local/disposable/` — the
+reproducible output its cycle assets wrote there
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *How a test is
 run is the target's practice*) — and then writes the mark `<attempt-dir>/completed`. Nothing is
 moved or archived: the record directory is under the record root, outside every checkout's tree,
 from the start, and everything outside the reserved path stays in it — the management files (state
 JSON, decision ledger, criterion review, design docs, reports) **and the rest of its cycle-layer
 store `issue-{N}-local/`**. A completed attempt is no longer listed as an attempt and is never
-entered again. A deletion that fails leaves that attempt unmarked and exits non-zero; re-run
-cleanup once the path is removable. A store that is itself a symbolic link keeps its target
-untouched.
+entered again. A deletion that fails leaves that attempt unmarked and exits non-zero; re-run it
+once the path is removable. A store that is itself a symbolic link keeps its target untouched. It
+touches no git ref.
+
+Whether and when it runs is the Coordinator's. An attempt left unmarked:
+
+1. stays listed by `cycle-status.sh`;
+2. has its pull request looked up on every `cycle-status.sh` run. A lookup that fails is a fact not
+   read: the run exits `3`, and the entry for the requested issue, read from the attempt's other
+   facts, can name it unread until a run reads the lookup — `none-to-enter <key>:unread`, or
+   `stop unreadable <key>` on its checked-out dev branch, for example
+   ([`units/preparation.md`](units/preparation.md) > *Modes*);
+3. keeps its `issue-{N}-local/disposable/` on disk.
+
+While its pull request can be read, it changes no other issue's entry and no exit code.
 
 **[MUST] Use the wrapper, not a bare `rm`.** `cleanup-issue.sh` is invoked by
 path and takes only an attempt's dev branch, checked against the shape
@@ -205,13 +212,13 @@ by its absolute path — `Bash(<the AutoFlow root>/scripts/cleanup/cleanup-issue
 
 A cycle that changes no sub-repo opens one PR, and that PR carries `Closes #N`.
 
-*Secondary (multi-repo):* when the cycle changes a sub-repo, it opens a PR there too — the host PR carries the close keyword and merges last, each sub-repo PR references only and merges first:
+*Secondary (multi-repo):* when the cycle changes a sub-repo, it opens a PR there too — the host PR carries the close keyword, each sub-repo PR references only:
 
 ```
-# Host PR (merges last — closes the issue)
+# Host PR (closes the issue)
 Closes #N
 
-# Sub-repo PR (merges first — references only, does NOT close)
+# Sub-repo PR (references only, does NOT close)
 Part of <host-owner>/<host-name>#N
 ```
 

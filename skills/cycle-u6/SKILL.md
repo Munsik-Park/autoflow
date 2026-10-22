@@ -180,7 +180,7 @@ For details, see `<autoflow-root>/docs/repo-boundary-rules.md`.
 
 AutoFlow does not classify a project's repository structure and keeps no file of project facts. When work on a repository starts, the AI reads the project's own information and rule files where they exist — a `README.md`, a `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs, such as how the repositories are composed (a host and its sub-repos, forks and upstreams) and where issues are filed. The operator writes those files while setting up the project, and they may already exist. A fact the work needs that no such file states is asked of the operator in conversation, with the request that the operator create the file or record the fact in it.
 
-A project whose information names sub-repos delivers each changed sub-repo on its own pull request and keeps the host clean by its pointer: `<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*.
+A project whose information names sub-repos delivers each changed sub-repo on its own pull request, and the host pull request's pointer names the commit it delivers: `<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*.
 
 ## Team Structure
 
@@ -233,7 +233,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 | Feature (implementation and tests, sub-repo) | Build unit (U4) of that scope | Orchestrator |
 | Rules / config / infra / bulk docs | Orchestrator                      | Orchestrator |
 | Comment divergence fix (target code) | Orchestrator (sub-repo: the build unit of that scope) | Orchestrator |
-| Sub-repo pointer (gitlink) commit or reconcile merge | Orchestrator  | Orchestrator |
+| Sub-repo pointer (gitlink) commit | Orchestrator  | Orchestrator |
 
 ## Reference Documents
 
@@ -310,8 +310,8 @@ orchestrator's, and nothing checks for an item left out.
   ([`state-tracking.md`](<autoflow-root>/docs/state-tracking.md) > Hook gates). They are not issued through a script or a wrapper
   that would carry them past the hook.
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch or to the
-  attempt's base (`autoflow-records base`); the hook denies them. Merging — including, for multi-repo changes, the sub-repo → pointer → host
-  sequencing — is owned entirely by the external review process.
+  attempt's base (`autoflow-records base`); the hook denies them. Merging is owned entirely by the
+  external review process.
 - **Every pull request the cycle opens is a draft** (`gh pr create --draft …`). The host pull
   request's base is the attempt's base, the branch `autoflow-records base` prints — the dev
   branch's `gh-merge-base`, which `gh pr create` reads when no `--base` is given.
@@ -474,12 +474,9 @@ not classify the project; what the sub-repos are, where each one's pull request 
 upstream) and where issues are filed are read from the project's own information
 ([`core.md`](<autoflow-root>/docs/core.md) > Project Information).
 
-**The rule.** After a sub-repo pull request merges, the host keeps a clean state by a reconcile
-merge: the host branch that depends on it points at that pull request's merge commit, and stays
-mergeable with its pull request's base. Merging is the operator's, so the request to reconcile after a
-sub-repo merge is the operator's too; the orchestrator reconciles when it is asked. When the
-pointer moves before that point, and how a reconcile is carried out, are the orchestrator's,
-derived from this rule and recorded with their grounds in the ledger.
+What follows a sub-repo pull request's merge — whether the host's pointer moves to it, when and
+how — is the Coordinator's, outside AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) >
+Post-Merge Cleanup).
 
 What is asked:
 
@@ -494,20 +491,20 @@ What is asked:
 
 Cautions:
 
-- A merge of the base into a host branch whose pointer still sits where the branch forked
-  resolves the pointer to the base's, not to the sub-repo merge commit. The pointer is set
-  and read back (`git ls-tree HEAD <sub-repo>`) before the push.
-- Another cycle may have moved the base's pointer since this branch forked. When the
-  sub-repo merge commit does not contain that pointer — the base is ahead of it, or the
-  two have diverged — reconciling would move the host's pointer backwards or across histories: the
+- A merge of the base into the host branch — the conflict resolution *Failure and retry* routes
+  here — can resolve the pointer to the base's, not to the sub-repo commit the cycle delivers. The
+  pointer is set to the delivered commit and read back (`git ls-tree HEAD <sub-repo>`) before the
+  push.
+- Another cycle may have moved the base's pointer since this branch forked. When the delivered
+  sub-repo commit does not contain that pointer — the base is ahead of it, or the two have
+  diverged — setting it would move the host's pointer backwards or across histories: the
   orchestrator does not push, and reports to the operator.
 - Every pointer move is a host commit the host review reads again; a pointer moved while the
   sub-repo pull request is still changing under review costs a host re-review per move.
 - A sub-repo nested inside a sub-repo is that sub-repo's own delivery.
 
 Result owed: each pull request's URL and head commit; for the host pull request, the commit each
-changed sub-repo's pointer names. After a reconcile: the pointer read back equal to the merge
-commit, and the CI confirmation on the new head (*CI*).
+changed sub-repo's pointer names.
 
 <!-- From <autoflow-root>/docs/pr-body-guide.md -->
 
@@ -1292,7 +1289,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 - **The record root** is `record_root` in the operator's `~/.autoflow/config.json` — an absolute path; the file itself never moves with it. No file, no key, or a JSON `null` → the default `~/.autoflow`. A file that cannot be read as JSON (a syntax error, or no `jq`), or a `record_root` that is not an absolute path string (not a string, empty, relative), leaves the record root **undetermined**, never the default in its stead; an error in the same file's `.review` does not touch it. A record root inside the session's checkout, or one that cannot be created or written, is **unusable**. Either way every script that needs it writes nothing and stops with exit `7` and the marker line `record-root: UNDETERMINED <config path> — <error>` or `record-root: UNUSABLE <record root> — <error>`, asking nothing; the next run reads the file anew. Nothing else — no environment variable — names the root, the records or `_metrics/`.
 - **The owner**: the file `checkout` in the record directory names the checkout the attempt belongs to — the one that started it, or the one that took it over (`autoflow-records claim`, once that checkout is gone). Entry, the hook's gates and cleanup read only this checkout's attempts ([`<autoflow-root>/docs/units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *What is asked*).
-- **Completed**: the file `completed` marks an attempt whose Post-Merge Cleanup has run; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
+- **Completed**: the file `completed` marks an attempt that is over, written by the record function `cleanup-issue.sh`; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
 - **Records kept inside the tree before the record root** (`.autoflow/<repo-key>-issue-{N}/`, issues #423 to #465): a state file there is never passed over. The hook refuses the score-gated calls and PREFLIGHT stops (`entry: stop in-tree-records`) until `<autoflow-root>/scripts/migrate/migrate-in-tree-records.sh` moves each such directory whose state file names a dev branch `dev/<stamp>-issue-{N}` to that attempt's record directory, with this checkout as its owner; the cycle then continues from there. One naming no such branch is moved too when it reads `active: false` — to `<record-root>/<repo-key>/in-tree-<date>-<time>-issue-{N}/`, marked `completed`, kept as a record and never entered; when it reads `active: true` it is reported and left for the operator (name the branch in the attempt shape, or set `active: false`), and the script runs again. A directory with no state file (a proposal record, a criterion review of no attempt) is not a cycle and is left in place.
 
 **Companion artifact**: `<attempt-dir>/issue-{N}-ledger.md` — the attempt's append-only decision ledger ([Decision Ledger](<autoflow-root>/docs/core.md)). The hook reads it **advisorily only** and never denies a tool call on what it finds; the ledger is not a gate input — no gate verdict, retry cap or transition reads it.
@@ -1347,7 +1344,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 These gates are wired via PreToolUse on `Bash` (git / gh commands), `Write|Edit|MultiEdit` and `Agent`.
 
-**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT's prior-attempt resolution reads the file (review-response mode) and, once the PR is observed merged or closed, marks the attempt completed; its records stay in its record directory (`<autoflow-root>/docs/units/preparation.md` > *What is asked*).
+**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT reads the file afterwards — review-response while its PR is open, set aside once it is merged or closed (`<autoflow-root>/docs/units/preparation.md` > *Modes*); what follows a merge or a close is outside AutoFlow (`<autoflow-root>/docs/git-workflow.md` > Post-Merge Cleanup).
 **Forced termination**: also set `active` to `false`.
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Communication > Result delivery path by spawn mode -->

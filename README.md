@@ -21,7 +21,7 @@ pushes one branch, HANDOFF opens one PR).
 AutoFlow structures every code change through a defined lifecycle:
 
 ```
-PREFLIGHT       Preparation (U1)  — prior-attempt resolution, Git clean check, sync, entry, state creation
+PREFLIGHT       Preparation (U1)  — Git clean check, sync, entry, state creation
 CRITERION-REVIEW Criterion review (U1) — the attempt's review of the issue's acceptance criteria against the code and policy; on its [criterion-ready] entry, back to PREFLIGHT, whose stop conditions and state file come before DIAGNOSE
 DIAGNOSE        Analysis unit (U2) — Current structure, gap, necessity, conclusion with its grounds
 GATE:HYPOTHESIS Analysis Eval     — Scored analysis assessment (one form: conclusion grounds, goal coverage)
@@ -33,7 +33,7 @@ GATE:QUALITY    Completion Eval   — Scored quality assessment (gate)
 DELIVER         Push              — the orchestrator's own `git push` (a changed sub-repo's branch too)
 INTEGRATE       Integration Test  — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
 HANDOFF         PR + CI           — PR creation by the orchestrator's own commands → CI green
-REVIEW          Review (U7)       — the configured reviewers, each run by its own script, and the target's own review bots → one aggregated verdict → review triage → hand-off with the merge order; external review merges out of band (AutoFlow does not merge)
+REVIEW          Review (U7)       — the configured reviewers, each run by its own script, and the target's own review bots → one aggregated verdict → review triage → hand-off with each PR's facts; external review merges out of band (AutoFlow does not merge)
 ```
 
 The happy-path flow at a glance (regression edges and human-escalation paths
@@ -249,8 +249,9 @@ project's own information and rule files where they exist — a `README.md`, a
 `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
 (see `docs/core.md` > Project Information), and asks the operator for a fact no
 file states. A project with sub-repos delivers each changed sub-repo on its own
-PR and keeps the host's pointer clean by a reconcile merge after the sub-repo PR
-merges (`docs/units/delivery.md` > *Multi-repo delivery*).
+PR, and the host PR's pointer names the commit it delivers
+(`docs/units/delivery.md` > *Multi-repo delivery*); what follows a merge is
+outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 
 ### Evaluation Tuning
 

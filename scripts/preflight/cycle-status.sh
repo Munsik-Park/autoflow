@@ -6,8 +6,8 @@
 # =============================================================================
 # Reads and reports. It changes nothing: no fetch, no checkout, no branch or
 # file is created, moved or deleted, no state file is written, and nothing is
-# sent to GitHub but reads. What is done with a fact — which attempt is
-# cleared, how an interrupted attempt resumes — is the orchestrator's
+# sent to GitHub but reads. What is done with a fact — how an interrupted
+# attempt resumes, for one — is the orchestrator's
 # (docs/units/preparation.md); which attempt the requested issue enters, and
 # how, follows from the facts alone and is printed as the `entry:` line.
 #
@@ -32,8 +32,8 @@
 #     file: in its criterion review stage, ready to start, or on the
 #     abbreviated path), its dev branch with each side and, for a state file
 #     that is not active or no state file, its pull request
-#   - `cleanup:` per attempt of this checkout whose pull request is merged or
-#     closed — the Post-Merge Cleanup it is owed
+#   - `cleanup:` per attempt of this checkout that is not active and whose
+#     pull request is merged or closed — set aside by the entry
 #   - with --issue N: `criterion:` for each attempt of N with no state file
 #     this checkout could start; each dev branch carrying N's number with no
 #     attempt record (`record=none`, issue #433); for the attempt the entry
@@ -47,7 +47,8 @@
 #   hold <key>             another issue's attempt of this checkout is active
 #   stop multiple-active   this checkout has two or more active attempts
 #   resume <key>           this checkout's attempt of N is active
-#   on the checked-out branch, when it is an attempt of N — taken over first
+#   on the checked-out branch, when it is an attempt of N not cleared (`cleanup:`)
+#   — taken over first
 #   (`claim <key>`) when its checkout is gone:
 #     stop other-checkout <key>   its checkout is still there
 #     start <key>                 no state file, criterion READY, no pull
@@ -293,7 +294,8 @@ while [ "$i" -lt "${#A_KEY[@]}" ]; do
 done
 [ "$completed" -gt 0 ] && echo "completed attempts: $completed"
 
-# Post-Merge Cleanup owed: this checkout's attempts whose pull request is merged
+# `cleanup:` lines: this checkout's attempts that are not active and whose pull
+# request is merged
 # or closed. An attempt whose checkout is gone is not cleared from here — it is
 # taken over first (issue #466 AC4).
 CLEARED=" "

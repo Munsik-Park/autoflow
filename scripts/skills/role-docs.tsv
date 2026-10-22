@@ -123,7 +123,6 @@ skills/cycle-u6/SKILL.md	docs/title-guide.md
 skills/cycle-u6/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u7/SKILL.md	docs/units/review.md
 skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
-skills/cycle-u7/SKILL.md	docs/external-review-sequencing.md
 skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/cycle-u7/SKILL.md	docs/units/completion-evaluation.md	## Code comments in a target
 skills/cycle-u7/SKILL.md	docs/units/build.md	## Unit spawn
@@ -151,7 +150,6 @@ skills/cycle/SKILL.md	docs/pr-body-guide.md
 skills/cycle/SKILL.md	docs/title-guide.md
 skills/cycle/SKILL.md	docs/units/review.md
 skills/cycle/SKILL.md	docs/reviewer-backend.md
-skills/cycle/SKILL.md	docs/external-review-sequencing.md
 
 # Every command body: the homes the core names for what the session itself
 # writes and asks — the ledger's entries, an issue draft, the advisor's procedure, the state
