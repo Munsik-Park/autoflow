@@ -507,18 +507,19 @@ gen_criterion_review() {
 ---
 name: criterion-review
 description: >-
-  Run the criterion review stage of an AutoFlow cycle alone — an attempt's
-  review of the issue's acceptance criteria against the target's code and
-  policy, ending at its [criterion-ready] entry; /autoflow:cycle <N> then
-  continues that attempt's cycle. Use only when the operator asks for the
-  criterion review by itself (/autoflow:criterion-review <N> [new]).
+  Run the criterion review stage of an AutoFlow cycle alone, also the entry of
+  the abbreviated path — an attempt's review of the issue's acceptance criteria
+  against the target's code and policy, ending at its [criterion-ready] entry;
+  the attempt then goes on by /autoflow:cycle <N> or on the abbreviated path.
+  Use only when the operator asks for the criterion review by itself
+  (/autoflow:criterion-review <N> [new]).
 argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
 ---
 
 EOF
   printf '%s\n\n' "$ROOT_DECL"
   cat <<'EOF'
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file. The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
+**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file, and a `READY` attempt then goes on by `/autoflow:cycle <N>` or on the abbreviated path (`<autoflow-root>/docs/abbreviated-path.md`). The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
 
 EOF
   docs_line skills/criterion-review/SKILL.md
@@ -538,22 +539,23 @@ wrap76() {
 }
 
 gen_unit() {
-  local k="$1" lk name phases new hint out
+  local k="$1" lk name phases new hint out alone
   lk="$(printf '%s' "$k" | tr 'U' 'u')"
   name="$(unit_field "$k" 1)";   need "unit table row for $k" "$name"
   phases="$(unit_field "$k" 2)"; need "unit table phases for $k" "$phases"
   out="$(left_out "$k")"
   new=" <N>"; hint="<issue-number>"
   [ "$k" = U1 ] && { new=" <N> [new]"; hint="<issue-number> [new [--base <branch>] [--commit <commit>]]"; }
-  [ "$k" = U7 ] && { new=" [<N>]"; hint="[<issue-number>]"; }
+  alone="of an AutoFlow cycle alone"
+  [ "$k" = U7 ] && { new=" [<N>]"; hint="[<issue-number>]"; alone="of an AutoFlow cycle alone, or the review of an attempt with no state file on the abbreviated path"; }
   printf -- '---\nname: cycle-%s\ndescription: >-\n' "$lk"
-  printf 'Run unit %s (%s — %s) of an AutoFlow cycle alone, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s%s).\n' \
-    "$k" "$name" "$phases" "$k" "$k" "$lk" "$new" | wrap76
+  printf 'Run unit %s (%s — %s) %s, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s%s).\n' \
+    "$k" "$name" "$phases" "$alone" "$k" "$k" "$lk" "$new" | wrap76
   printf 'argument-hint: "%s"\n---\n\n' "$hint"
   printf '%s\n\n' "$ROOT_DECL"
   if [ "$k" = U7 ]; then
-    printf '**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit %s, %s (%s), of a cycle alone: read where the cycle stands from the current state — `bash <autoflow-root>/scripts/preflight/cycle-status.sh`, with `--issue <N>` when given — run %s from there to its exit transition, and end the session with the report the invoking prompt asks for.\n\n' \
-      "$k" "$name" "$phases" "$k"
+    printf '**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit %s, %s (%s), of a cycle alone: read where the cycle stands from the current state — `bash <autoflow-root>/scripts/preflight/cycle-status.sh`, with `--issue <N>` when given — run %s from there to its exit transition, and end the session with the report the invoking prompt asks for. On an attempt with no state file whose pull request is open — the abbreviated path'"'"'s — %s runs as `<autoflow-root>/docs/units/review.md` > *An attempt with no state file* says and ends with the report that section names.\n\n' \
+      "$k" "$name" "$phases" "$k" "$k"
   else
     if [ "$k" = U1 ]; then
       printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`)'

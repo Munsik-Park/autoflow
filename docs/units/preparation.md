@@ -39,10 +39,10 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 | Transition | Condition |
 |------|------|
 | PREFLIGHT → CRITERION-REVIEW | `entry: new`, or the operator's request for a new attempt the session judges still to carry out (*Modes*) — the attempt created first (`autoflow-records new --issue N`) — or `entry: criterion-review`, on the attempt's dev branch with the tree clean and `origin` fetched → the attempt's criterion review stage runs in this session (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*) |
-| CRITERION-REVIEW → PREFLIGHT | the stage's exit condition: the attempt's `[criterion-ready]` entry for the current issue body (`criterion-ready.sh status` `READY`) → PREFLIGHT continues at the stop conditions on that attempt, now `entry: start` |
+| CRITERION-REVIEW → PREFLIGHT | the stage's exit condition: the attempt's `[criterion-ready]` entry for the current issue body (`criterion-ready.sh status` `READY`) → PREFLIGHT continues at the stop conditions on that attempt, now `entry: start`; an attempt whose pull request is open is `entry: abbreviated` instead, and the session reports and stops |
 | PREFLIGHT → DIAGNOSE | earlier attempts resolved, Git clean, remote synced, the stop conditions passed (criterion readiness included for an attempt's start), and the state file written for `entry: start` (`mode: new-issue`) or `entry: review-response` (`<autoflow-root>/docs/units/preparation.md` > *What is asked*, *Modes*) |
 | PREFLIGHT → resume | `entry: resume` — this checkout's attempt of the issue reads `active:true` → the re-entry point is the orchestrator's judgment over the facts `<autoflow-root>/scripts/preflight/cycle-status.sh --issue N` reports, recorded in the ledger; a gate with no recorded scores is run, never assumed passed (`<autoflow-root>/docs/units/preparation.md` > *Resume*) |
-| PREFLIGHT → user | another issue's attempt mid-cycle in this checkout (`entry: hold`), a pause for a human decision (`entry: paused`), an entry `cycle-status.sh` reports as a stop (`stop …`), a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, an undetermined or unusable record root, or a fail-closed stop condition — a failed target check, an unreadable reviewer configuration the operator does not proceed past, a target-declared local check that does not pass after its declared repair, a criterion review stage a harness-level block leaves without its `[criterion-ready]` entry → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
+| PREFLIGHT → user | another issue's attempt mid-cycle in this checkout (`entry: hold`), a pause for a human decision (`entry: paused`), an attempt on the abbreviated path (`entry: abbreviated`), an entry `cycle-status.sh` reports as a stop (`stop …`), a dirty tree (resolved only with the user's approval), a Git state that cannot be synced, an undetermined or unusable record root, or a fail-closed stop condition — a failed target check, an unreadable reviewer configuration the operator does not proceed past, a target-declared local check that does not pass after its declared repair, a criterion review stage a harness-level block leaves without its `[criterion-ready]` entry → report and stop; DIAGNOSE does not begin (`<autoflow-root>/docs/units/preparation.md`) |
 
 ## What is asked
 
@@ -56,9 +56,10 @@ plugin name and version that root's `.claude-plugin/plugin.json` names, and, whe
 work tree of its own, its `HEAD` and whether it is dirty), the record root and this checkout, any
 state file left in the checkout's own `.autoflow/`, and — for every attempt of this repository not
 marked completed — its owner (`this`, `other <path>` for a checkout still there, `gone <path>`), its
-state (`active`, `phase`, `mode`, `cycle`, or `none` for an attempt with no state file yet — in its
-criterion review stage, or ready to start), its dev branch with each side, and, for a state file that is not active, its pull
-request. `cleanup:` lines name this checkout's attempts whose pull request is merged or closed; with
+state (`active`, `phase`, `mode`, `cycle`, or `none` for an attempt with no state file — in its
+criterion review stage, ready to start, or on the abbreviated path
+([`abbreviated-path.md`](../abbreviated-path.md))), its dev branch with each side, and, for a state
+file that is not active or no state file, its pull request. `cleanup:` lines name this checkout's attempts whose pull request is merged or closed; with
 `--issue {N}`, `criterion:` lines give the readiness of each attempt of N this checkout could start,
 a dev branch carrying N's number with no attempt record is reported `record=none`, and the last line
 is the **entry** — which attempt the request enters, and how (*Modes*). Exit `3` means a fact could
@@ -164,13 +165,15 @@ to the checkout that started it, or that took it over. Evaluated in order:
 | an attempt of N reads `active:true` | `resume` — the in-progress cycle continues (*Resume*); it is not restarted |
 | the checked-out branch is an attempt of N whose checkout is still another one | `stop other-checkout` — reported, not entered (in one clone, git does not let the branch be checked out twice) |
 | the checked-out branch is an attempt of N — taken over first (`claim:`) when its checkout is gone: | |
-| — no state file, its `[criterion-ready]` entry valid for the current body | `start` — the attempt's cycle begins (*What is asked*) |
-| — no state file, no valid entry (the review is not finished, or the body changed after it) | `criterion-review` — the attempt's criterion review stage runs on that branch (*The criterion review stage*) |
+| — no state file, its pull request merged or closed | cleared (`cleanup:`), as any attempt is, and set aside: the *otherwise* rows below give the entry |
+| — no state file, no valid entry (the review is not finished, or the body changed after it), a pull request open or none | `criterion-review` — the attempt's criterion review stage runs on that branch (*The criterion review stage*) |
+| — no state file, its `[criterion-ready]` entry valid for the current body, an open pull request | `abbreviated` — the attempt is on the abbreviated path ([`abbreviated-path.md`](../abbreviated-path.md)): reported, not entered; a full cycle of N beside it is a new attempt (*A new attempt is the operator's request*) |
+| — no state file, its `[criterion-ready]` entry valid for the current body, no pull request | `start` — the attempt's cycle begins (*What is asked*) |
 | — `active:false`, `phase` other than `awaiting-user`, an open PR | `review-response` (*Review-response setup*) |
 | — `active:false` at `phase: "awaiting-user"` (a PR open or not), or with no open PR | `paused`: the cycle waits on a human decision and is not cleared. The pending decision and its `<attempt-dir>/issue-{N}-*.md` context are reported. Re-entry is driven by the user's new decision — never an automatic mode, never a silent restart: when the user decides to continue, the orchestrator sets `active: true` and continues where the pause was taken |
-| otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
+| otherwise, exactly one attempt of N is ready to start, still in its criterion review stage, or has a state file and an open PR (an attempt cleared at this PREFLIGHT aside) | that attempt's `start`, `criterion-review` or `review-response` — its dev branch is checked out first |
 | otherwise, two or more | `stop candidates` — reported; checking one's dev branch out names it |
-| otherwise, attempts of N still here, none of those — paused, or with a fact that could not be read (a `gh` lookup, an unreadable state file; exit `3`) | `none-to-enter` — each named with its kind; none is entered by the entry, and a paused one's re-entry is the user's decision |
+| otherwise, attempts of N still here, none of those — paused, on the abbreviated path (`abbreviated`), or with a fact that could not be read (a `gh` lookup, an unreadable state file; exit `3`) | `none-to-enter` — each named with its kind; none is entered by the entry, and a paused one's re-entry is the user's decision |
 | otherwise — no attempt of N in this checkout, or every one cleared | `new` — the cycle may create the attempt and run its criterion review stage (*The criterion review stage*) |
 
 **A new attempt is the operator's request.** It is created only on the `new` entry or on the operator's explicit request
@@ -202,14 +205,15 @@ attempt of this checkout active (*PR Wait Rule*), the record root determined and
 before the stop conditions and the state file. It runs on the entries `new` and
 `criterion-review`, and on the operator's request for a new attempt (*Modes*), in the session `/autoflow:cycle <N>` or `/autoflow:cycle-u1 <N>` started; no other command or session is
 needed, and `/autoflow:criterion-review <N>` runs this stage alone, from the same entries, ending at
-its exit.
+its exit — the entry of the abbreviated path as well ([`abbreviated-path.md`](../abbreviated-path.md)):
+a `READY` attempt goes on by `/autoflow:cycle <N>` or on that path.
 
 - **The attempt and its record directory come first.** On `new`, or on the request, the orchestrator creates the
   attempt before the stage writes anything: `autoflow-records new --issue {N}` — on a clean tree,
   with no active attempt in this checkout — fetches `origin`, makes the record directory under the
   record root with this checkout as its owner, and checks out a new dev branch
-  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and with no commit of its own
-  until the state file is written. The base — the branch the attempt's pull request merges into —
+  `dev-<date>-<time>-issue-<N>` at its base's latest commit, local only and, in the full cycle, with
+  no commit of its own until the state file is written. The base — the branch the attempt's pull request merges into —
   is the remote default branch, or the branch the operator names for the attempt
   (`autoflow-records new --issue {N} --base <branch>`); an operator who names a commit
   (`--commit <commit>`, with or without `--base`) has the dev branch made at that commit. The

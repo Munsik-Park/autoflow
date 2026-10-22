@@ -15,6 +15,9 @@ pull request's reviews into one verdict is made by a spawned role.
 U7 is entered with the issue number or with nothing. Where the cycle stands — its attempt, its pull
 requests and their rounds — is read from the current state: `bash <autoflow-root>/scripts/preflight/cycle-status.sh`
 (with `--issue <N>` when given), the attempt's ledger and records, and the pull requests themselves.
+An attempt with no state file whose pull request is open — an attempt on the abbreviated path — is
+reviewed as *An attempt with no state file* below says, which takes the place of this unit's goal,
+routing, cap and *End* for it.
 
 - **Goal**: every pull request of the cycle reviewed, its aggregated review posted with no
   `Medium`+ finding that holds left and CI green on its head (or recorded on it as not run — [U6
@@ -247,3 +250,40 @@ Delivery](delivery.md) > *Multi-repo delivery*), and the host pull request then 
 **[MUST]** AutoFlow merges nothing and promotes no draft; of this order it performs only the
 reconcile, on the operator's request. The hook denies `gh pr merge` and a push to the default
 branch.
+
+## An attempt with no state file
+
+The attempt of the abbreviated path ([`abbreviated-path.md`](../abbreviated-path.md)) has no state
+file, and its pull request was opened from its dev branch outside a cycle. U7 reviews it alone,
+entered by `/autoflow:cycle-u7 <N>`, and returns its result to the coordinating session, which
+decides what follows.
+
+- **Where it runs.** In a checkout of the repository — the same origin — whose checked-out branch
+  is the attempt's dev branch at the pull request's head: the `claude` reviewer reads that working
+  tree beside the pull request's diff, and `review-gate.sh` finds the attempt's record directory
+  from the checkout's origin and the checked-out branch. It need not be the checkout that owns the
+  attempt. The attempt and its pull request are read from the `dir:` and `pr:` lines
+  `cycle-status.sh --issue <N>` prints for it in any checkout; its entry — `abbreviated <key>` in
+  the owning checkout, `stop other-checkout <key>` in another — is not a condition of the review.
+- **What runs.** *Reviewer review*, with `--records <attempt-dir>`; *Review aggregation*,
+  unchanged — one PR comment and the findings file per round, every `Medium`+ row that holds tagged
+  with its `remedy_class` — with the aggregator's prompt also naming the review records and the
+  comments of the pull request's earlier rounds, which *A repeated complaint* compares against in
+  place of a `[review-autofix]` entry; and *The case*, whose `case:` line is the verdict —
+  `clean`, `low-only` or `resolve` (a `Medium`+ verdict). A rebuttal from the work is posted on the
+  pull request with its grounds and judged by the next round's aggregation (*Whether a finding
+  holds*).
+- **CI.** Read with `bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <P>` and returned
+  as it is: green (exit `0`), red (`12`), no check published (`11`) together with whether the pull
+  request records that CI does not run for it, or no verdict, not mergeable or inconclusive (`13`,
+  `10`, `14`). Nothing is read as green, and the review records no not-run itself.
+- **What it does not do.** No state file is created, read or required: no `review-triage` marker
+  and no *End* write. A `Medium`+ row's class routes nothing — no `remedy-route.sh`, no BUILD unit
+  re-run, no ARCHITECT re-entry, no `phases.gate_quality.remedy_class`, no `[review-autofix]`
+  entry, no advisor criteria of *Routing*; the rework is the work outside AutoFlow. No attempt cap
+  and no `[autoflow:review-autofix]` comment: `review-gate.sh`'s `attempts:` line and `cap` case
+  count `[review-autofix]` entries, which the path never writes, and are not read.
+- **The return.** The end report carries the pull request's URL and head commit, the verdict, the
+  findings file and the round's comment, the CI result as read, and the round count: this round's
+  `k`, which every review record's name carries — a new round's `k` is one more than the highest
+  the attempt's review store holds for that pull request — with the rework count `k − 1`.

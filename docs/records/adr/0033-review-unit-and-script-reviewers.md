@@ -8,7 +8,9 @@ review). Amends ADR-0025 D1 (the unit table) and D4 (where the external verifica
 ADR-0026 D1 and D4 (the built-in review spawn and the `blocked-by-review` label), ADR-0028 D2, D4
 and D5 (the target source, the default, the readout), and ADR-0032 D1 for U7's command. D1's U6
 and U7 exits ("CI green") amended by ADR-0034 D5 (issue #490): CI green, or recorded on the pull
-request as not run.
+request as not run. D1–D2 amended by ADR-0036 (issue #493): U7 also runs alone on an attempt with no
+state file — the abbreviated path's — by `/autoflow:cycle-u7 <N>`, without the state write, the routes
+or the cap, and returns its verdict, CI result and round count.
 
 ## Context
 
