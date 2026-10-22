@@ -287,8 +287,21 @@ The list is the survey's reading; the ADR that supersedes them checks each again
 No test today exercises the score thresholds, the planning or implementation spawn gates,
 `remedy_class` blocking, the remedy-sweep gate or the validator's enums.
 
+## 11. Observations
+
+- The hook's security rule reads the score key `security` or `보안` only
+  (`hooks/check-autoflow-gate.sh:1305`), and GATE:PLAN's rubric item is named `Security`
+  ([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring). A security score of 3
+  or less therefore fails on the each-item ≥ 7 rule instead, with that rule's reason — the outcome
+  is the same FAIL. It bears on Q2's reference values: `security_rework_at_or_below` is subsumed by
+  `each_item_at_least` unless the Coordinator routes it differently.
+- `reuse lint` run locally (`reuse[charset-normalizer]` through `uvx`) reports
+  `scripts/resync-submodules.sh` as carrying no licensing information, though its second and third
+  lines are the SPDX header; the two new `.yaml` files are counted compliant. Not investigated: the
+  file is not touched by this work.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508; pushed the branch. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). | #508: place the criterion review's stages (Q3 remainder); then the contract format, the module invocation, and the design and plan contract drafts. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109`; created and pushed the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). Then, the operator away and proposals taken on the recommended option by the operator's instruction: the criterion review as four modules (§4), the contract format and invocation (§5), the drafts `docs/contracts/design.yaml` and `docs/contracts/plan.yaml`. The committed checks pass locally (the `run:` steps of `contract-suites.yml`, `plugin-package.yml`, `e2e-dummy-target.yml`). | The operator confirms or changes the proposals marked *pending* (§4, §5); then sub-issue 2. |
