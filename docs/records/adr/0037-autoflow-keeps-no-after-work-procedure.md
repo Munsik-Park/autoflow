@@ -147,7 +147,8 @@ AutoFlow prescribes the steps of neither.
    "operator" in AutoFlow's documents.
 2. *The merge keeps its one owner.* Merging stays the external review's (M1), and one party may
    hold both roles. Source: the operator decision ("Merging stays the external review's"), ADR-0003
-   and M1; "one party may hold both roles" is D2's lead above.
+   and M1; "one party may hold both roles" comes from D2's lead above ("one person may hold both
+   roles").
 3. *A role's name only.* AutoFlow names no person, session or repository that holds the role,
    defines no step, order or timing for it, and makes no link that reads its procedure. Source: the
    operator decision (a role's name; no particular session implementation or its repository; no
@@ -158,9 +159,11 @@ AutoFlow prescribes the steps of neither.
    fact that AutoFlow's documents describe the orchestrator with the same root word ("coordinates
    role spawns", `docs/core.md` > Team Structure); the operator decision does not state it.
 
-"Operator" stays AutoFlow's word for the person who sets the project up, decides and configures
-(`docs/core.md` > Project Information); a role that a person, a session or a pipeline can hold is
-not that person, so the owner of M2–M5 has a name of its own.
+"Operator" stays AutoFlow's word for a person: the one who sets the project up and is asked for a
+fact no file states (`docs/core.md` > Project Information), whose configuration names the record
+root (`docs/core.md` > AutoFlow State Tracking (Hook integration)), and whose decisions this
+record's Status cites. A role that a person, a session or a pipeline can hold is not that person,
+so the owner of M2–M5 has a name of its own.
 
 **D3 — PREFLIGHT's progression stops depending on the cleanup.** "prior-cycle resolved", "earlier
 attempts resolved", "cleared away" and the core's "prior-attempt resolution (cleanup after external
