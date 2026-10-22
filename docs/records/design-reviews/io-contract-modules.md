@@ -76,10 +76,36 @@ A unit today bundles work with its gate: U2 = DIAGNOSE + GATE:HYPOTHESIS, U3 = A
 GATE:PLAN, U4 = BUILD + AUDIT. With judging moved outside, the work and the evaluation become
 separate modules:
 
-- **Functional modules** produce artifacts: criterion-review, analysis, design, build,
-  delivery, review.
+- **Functional modules** produce artifacts: the criterion review's four modules (below),
+  analysis, design, build, delivery, review.
 - **Evaluation modules** take artifacts and produce an evaluation report (scores,
   `remedy_class`, findings): hypothesis, plan, audit, quality.
+- **Deterministic modules** are scripts with no model: criteria-apply, which computes the applied
+  acceptance criteria (Q5).
+
+The criterion review is four modules (Q3 remainder, *proposed — pending the operator's
+confirmation*): criterion-screen (today's stage 1: the review items and the screening, writing the
+review record and one target file per criterion), criterion-trace (stage 2), criterion-in-depth
+(one run per criterion with an in-depth target) and criterion-reconcile. Grounds:
+
+- Each stage already has fixed input and output files, and its independence is already an input
+  restriction: stage 2 "receives the issue body and the stage 1 record and none of the session's
+  conversation, and the in-depth context receives the target file and nothing of the session's
+  verdicts or grounds" ([criterion-review.md](../../criterion-review.md) > In-depth analysis and
+  reconciliation, *What the procedure fixes*). A contract states exactly that.
+- Q3 puts every re-run with the Coordinator. As one module, a stage whose output falls short would
+  either be re-run inside the module — a loop Q3 rules out — or force a re-run of the whole review.
+  As four, the Coordinator re-runs the one stage.
+- The order — stage 2 and the in-depth analyses alongside each other once stage 1 is written, the
+  reconciliation after all of them ([criterion-review.md](../../criterion-review.md) > Stages of the
+  review) — is run today by the session that spawns them, the part that becomes the Coordinator's.
+- Stage 1 is carried today by that session itself (*When and by whom* > *Reviewer*); with the
+  session becoming the Coordinator, stage 1 has to become a module of its own.
+
+What follows the four — putting an open question to the advisor, editing the issue body to the
+settled decisions, and the `[criterion-ready]` entry (an `O` entry the main session writes,
+*Confirmation*) — is the Coordinator's, being decisions and their record (Q4). Whether the issue-body
+edit becomes a deterministic module like criteria-apply is left to the contracts of sub-issue 2.
 
 This split is the one ADR-0037 D2 already names ("functional and evaluation modules"). It also
 closes a gap the survey found: only AUDIT's report has a fixed path
@@ -126,7 +152,7 @@ outputs:
 |---|---|---|
 | Q1 | Where the evaluation gate lives | **Withdrawn** (operator, 2026-10-23). The question assumed an actor that pushes or opens a PR outside the module whose output that is — the current model's premise, where one orchestrator holds every tool and the hook reads the command it issues (ADR-0025 D8). In this model push and PR are the delivery module's output and no other module produces them; how modules are run is the Coordinator's composition. The hook's push, PR and U3/U4 spawn gates go (§3). Whether delivery takes an evaluation output is settled in its contract by what its output needs: the PR body's known gaps carry the recommendations deferred or separated at triage ([units/delivery.md](../../units/delivery.md) > Push and pull request), so the quality evaluation's triage result is a content input, not an admission condition. |
 | Q2 | Where the pass threshold lives | **Settled** (operator, 2026-10-23): AutoFlow provides the reference values with the evaluation output; applying them is the Coordinator's. The evaluation module outputs scores, grounds and `remedy_class` and no `verdict` — as today, where the evaluator scores and the hook computes PASS ([core.md](../../core.md) > Flow Control; [evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format). The reference values are today's PASS Criteria (avg ≥ 7.5, each item ≥ 7, security ≤ 3 → rework; [evaluation-system.md](../../evaluation-system.md) > PASS Criteria), kept with the rubric whose scale they are set on. Where in the output or the contract they sit is fixed when the evaluation contracts are drafted. |
-| Q3 | The line between a module's own repetition and an external loop | **Settled** (operator, 2026-10-23): an output that falls short of its format is re-run by the Coordinator; a module runs once and does not loop. Re-running on an evaluation result is the Coordinator's as well. Today's re-spawn on a missing report section is already the orchestrator's ([units/analysis.md](../../units/analysis.md) > Unit spawn), so it moves to the Coordinator with the rest of the orchestrator's routing. Still to place: the criterion review's four stages — one module, or four. |
+| Q3 | The line between a module's own repetition and an external loop | **Settled** (operator, 2026-10-23): an output that falls short of its format is re-run by the Coordinator; a module runs once and does not loop. Re-running on an evaluation result is the Coordinator's as well. Today's re-spawn on a missing report section is already the orchestrator's ([units/analysis.md](../../units/analysis.md) > Unit spawn), so it moves to the Coordinator with the rest of the orchestrator's routing. The criterion review's stages: four modules, *proposed — pending the operator's confirmation* (§4). |
 | Q4 | The ledger's standing | **Settled** (operator, 2026-10-23): the ledger holds only decisions — entries that settle what a module cannot settle itself (`[criterion-ready]`, `[ac-decision]`, `[checklist-decision]`, a design point), under their authority: `operator decision` and the main session's own decision in the `O` namespace, `advisor decision` in the `A` namespace ([decision-ledger.md](../../decision-ledger.md) > Entry identifier). In this model the main session that writes `O` is the Coordinator's. A module contract may name such an entry as an input ("the ledger decision with marker X"). What a module can produce itself is its own output file. The orchestrator's entries leave the ledger: the attempt records counted for the caps (`[gate-autofix]`, `[review-autofix]`), the cap-window reset (`[reentry-decision]`) and `[rebuttal]` are the Coordinator's records; the gate verdict entries ([decision-ledger.md](../../decision-ledger.md) > Entries, *Writers*) are replaced by the evaluation output files. The hook's append-only and authorship denies stay as they are and keep guarding these entries. The contradiction between [state-tracking.md](../../state-tracking.md) ("the ledger is not a gate input") and the REVIEW cap counted from `[review-autofix]` entries goes with both: the first document is removed, the count moves to the Coordinator. |
 | Q5 | How an acceptance-criterion change is applied | **Settled** (operator, 2026-10-23): the applied criteria are an output of their own. A deterministic script computes them from the analysis report's first AC table and the `[ac-decision]` entries; every later module takes that output as its input. The request is already a module output (the design's `## Decision requests`, the build report, an evaluation recommendation — [units/design.md](../../units/design.md) > Report routing) and the decision a ledger entry (Q4); only the edit the orchestrator makes today to the analysis report's table ([units/analysis.md](../../units/analysis.md) > Re-entry) is replaced. It needs the `[ac-decision]` grammar ([decision-ledger.md](../../decision-ledger.md) > Decision-point entries, *Acceptance-criterion decisions*) to carry the criterion's new text for `revised`, `split` and `added` — today the entry has `- AC:`, `- Disposition:` and one Decision line, which a script cannot apply. Rejected: re-running analysis on the entries (a full analysis run for a table edit, and other content may move); each consuming module applying the entries itself (one application in five places). |
 
