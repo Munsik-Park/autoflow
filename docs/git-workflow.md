@@ -135,7 +135,7 @@ What AutoFlow keeps there:
   base; every pull request it opens is a draft ([`units/delivery.md`](units/delivery.md) > *Push
   and pull request*; [`units/review.md`](units/review.md) > *End*).
 - The entry sets aside an attempt of this checkout that is not active and whose pull request is
-  merged or closed, by that observed state alone, and `cycle-status.sh` names it on a `cleanup:`
+  merged or closed, by those observed facts alone, and `cycle-status.sh` names it on a `cleanup:`
   line ([`units/preparation.md`](units/preparation.md) > *What is asked*, *Modes*).
 - Its own steps change nothing on the remote: PREFLIGHT reads the pull request's state and fetches,
   the record function below reads neither, and neither deletes a remote branch, pushes, or closes,

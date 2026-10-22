@@ -10,8 +10,7 @@
 # copied or archived. It DELETES exactly one path, the cycle-layer store's
 # reserved top-level entry `issue-<N>-local/disposable` (reproducible output —
 # ADR-0024 D2), and then writes the mark `completed`; nothing else is deleted.
-# It touches no git ref, no remote and no pull request
-# (docs/git-workflow.md > Post-Merge Cleanup).
+# It touches no git ref, no remote and no pull request.
 #
 # Its precondition: an attempt that is not active (no state file, or one whose
 # `active` is not `true`) and whose PR is merged or closed. The script does not

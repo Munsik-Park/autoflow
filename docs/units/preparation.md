@@ -66,7 +66,7 @@ record root is undetermined or unusable (its marker line says why — the operat
 the directory, and PREFLIGHT runs again); the line says which. From those facts the orchestrator
 brings about the following.
 
-- **An attempt whose pull request is merged or closed is set aside.** An attempt of this checkout
+- **An attempt that is over is set aside.** An attempt of this checkout
   — its `checkout` file names this checkout — that is not active and whose pull request is merged
   or closed (`cleanup:`) is cleared, whatever its issue: the entry passes over it (*Modes*). What
   is then done with its branches and its records, and when, is the operator's practice

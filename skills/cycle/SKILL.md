@@ -367,7 +367,7 @@ record root is undetermined or unusable (its marker line says why — the operat
 the directory, and PREFLIGHT runs again); the line says which. From those facts the orchestrator
 brings about the following.
 
-- **An attempt whose pull request is merged or closed is set aside.** An attempt of this checkout
+- **An attempt that is over is set aside.** An attempt of this checkout
   — its `checkout` file names this checkout — that is not active and whose pull request is merged
   or closed (`cleanup:`) is cleared, whatever its issue: the entry passes over it (*Modes*). What
   is then done with its branches and its records, and when, is the operator's practice
@@ -1053,7 +1053,7 @@ What AutoFlow keeps there:
   base; every pull request it opens is a draft ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Push
   and pull request*; [`units/review.md`](<autoflow-root>/docs/units/review.md) > *End*).
 - The entry sets aside an attempt of this checkout that is not active and whose pull request is
-  merged or closed, by that observed state alone, and `cycle-status.sh` names it on a `cleanup:`
+  merged or closed, by those observed facts alone, and `cycle-status.sh` names it on a `cleanup:`
   line ([`units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *What is asked*, *Modes*).
 - Its own steps change nothing on the remote: PREFLIGHT reads the pull request's state and fetches,
   the record function below reads neither, and neither deletes a remote branch, pushes, or closes,

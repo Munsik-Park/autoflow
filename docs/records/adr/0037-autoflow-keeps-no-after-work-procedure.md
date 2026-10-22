@@ -35,8 +35,9 @@ meets an earlier attempt, as fixed commands, an order and a timing:
   its transition "earlier attempts resolved" (`docs/units/preparation.md`).
 
 No device enforced any of it. The hook has no reconcile or gitlink gate; `cycle-status.sh` sets an
-attempt whose pull request is merged or closed aside by that state alone and never reads its local
-dev branch or its `completed` mark for the entry; `cleanup-issue.sh` already touched no git ref.
+attempt that is not active and whose pull request is merged or closed aside by those facts alone
+and never reads its local dev branch or its `completed` mark for the entry; `cleanup-issue.sh`
+already touched no git ref.
 The text alone held the next cycle and fixed one practice, so a session or a reviewer reading it
 judged a repository that merges or cleans up otherwise — a dev branch kept and pruned later, a host
 pointer brought up another way — a deviation from AutoFlow. The operator's intent (issue #500,
@@ -66,7 +67,7 @@ AutoFlow keeps only what holds in every environment and what binds its own autho
   (`docs/core.md` > PR Wait Rule — "Use the `active` flag as the single start signal"); it never
   read the cleanup.
 - **K4** The entry sets aside an attempt of this checkout that is not active and whose pull request
-  is merged or closed, by that observed state alone, and `cycle-status.sh` names it on a `cleanup:`
+  is merged or closed, by those observed facts alone, and `cycle-status.sh` names it on a `cleanup:`
   line. Ground: a fact the entry already computes; "cleared" stays the word for this classification,
   as `cycle-status.sh` and ADR-0036 D6 use it, and is no longer tied to a cleanup action.
 - **K5** AutoFlow's own steps — PREFLIGHT and `cleanup-issue.sh` — change nothing on the remote, and
