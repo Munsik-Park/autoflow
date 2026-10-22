@@ -239,7 +239,10 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
   device — the script reading the state file, or the hook treating a `completed` directory that
   holds an active state file as found — needs a decision of its own (an unreadable state file, an
   attempt with no state file, a stale `active: true` left by a stopped session) and is not taken
-  here.
+  here. The operator decided on 2026-10-22 that the stated precondition suffices and that no
+  separate issue proposes such a refusal: marking a running attempt `completed` is a deliberate
+  departure from the procedure that shows at once, so no device guards it in advance, and an actual
+  occurrence is handled when it arises.
 
 ### Neutral / Trade-Offs
 
