@@ -195,4 +195,4 @@ No test today exercises the score thresholds, the planning or implementation spa
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document. | Settle Q1–Q5, or draft the U3 design module's contract against [units/design.md](../../units/design.md) > Output artifacts. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507. | File sub-issue 1 under #507, then settle Q1–Q5. |
