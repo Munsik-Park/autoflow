@@ -6,7 +6,8 @@ Accepted (issue #494: the operator's instruction to unify the guidance each role
 compose it, in the modular operation, as the core document plus the documents the stage needs;
 the method left to the working session, with the grounds in the pull request). Amends ADR-0027 D2
 *The core*, *Other homes* and *Subagents*, ADR-0032 D3 and D4, ADR-0025 D2's "what it reads", and
-`docs/tool-delivery-contract.md` R2.
+`docs/tool-delivery-contract.md` R2. D2's session and subagent sets and D5's evaluator set aligned
+with the carriers by issue #499, with each carriage's grounds (see Amendment note (issue #499)).
 
 ## Context
 
@@ -227,3 +228,100 @@ document a role reads by path beyond its guidance.
 ## Related Issues / PRs
 
 - #494, #464 (ADR-0032), #454 (ADR-0027), #369 (ADR-0025), #485 (ADR-0033).
+
+## Amendment note (issue #499)
+
+The recommendation triage (`docs/units/completion-evaluation.md` > *Recommendation triage*), which
+the session of every rubric-scored gate performs after the gate's PASS, reached the U2, U3 and U4
+sessions by path only: D2's session enumeration does not name it, and the core names it in Flow
+Control rows that no check reads. Issue #499 aligns the sets D2 and D5 describe with the carriers
+the change ships. What follows are this change's dispositions and their grounds under D2 as written.
+
+1. **The session sets.** Every command-body carriage this change adds enters D2's session
+   enumeration through its first clause, "the documents the core names on the unit's entry (Unit
+   Document Loading Contract, Unit references)": the core's *Unit references* table names each one
+   in its unit's row.
+   - U2, U3 and U4: `docs/units/completion-evaluation.md` > *Recommendation triage*, the home of
+     what the session itself does after its gate's PASS.
+   - U2–U5: the procedures the triage hands the session, as item 3 disposes of them —
+     `docs/units/review.md` > *Whether a finding holds* (U2–U5), `docs/submodule-common-rules.md` >
+     Change Surface Rules > *Scope judgment* (U2, U3) and `docs/units/completion-evaluation.md` >
+     *FAIL routing* with its *`doc` re-entry* (U4).
+   - U4, U5 and `/autoflow:cycle`: the reference-integrity block of `docs/evaluation-system.md` >
+     GATE:QUALITY > *Known blind-spot checks*, the one definition of the normative documents a
+     `doc` remedy fixes every hit in.
+   - U6 and `/autoflow:cycle`: `docs/title-guide.md`, the grammar of the pull request title U6
+     writes.
+   - U7: `docs/units/completion-evaluation.md` > *Code comments in a target*, the terms of the
+     direct commit U7 makes for a reviewer's comment `Low`; `docs/units/build.md` > *Unit spawn* and
+     *Re-entry*, the BUILD unit re-run U7 runs on a thin route; `docs/units/delivery.md` > *CI*, the
+     confirmation of CI after a thin route's push and at *End*.
+   - U4, U5, U7 and `/autoflow:cycle`: `docs/role-contracts.md` > *Model tier revert*. The core's
+     Spawn Model hands every session the revert and names this home for its signals and their
+     anchor; the signals it lists arise at AUDIT (U4), GATE:QUALITY (U5) and the reviewer review
+     (U7).
+
+   U2 and U3 take Change Surface Rules > *Scope judgment* on the triage's `Low` judgment, beside
+   the U4–U7 commit ground, which stays as it is.
+
+2. **The agent definitions' sets.** D5's evaluator set gains `docs/review/review.md` > *Severity*,
+   the value set of the `severity` it writes on every recommendation (the grammar of what it
+   writes), and `docs/development-guideline.md` > ADR Policy > *When to create an ADR*, the list its
+   ADR-conformance checks decide a trigger area against (the rules its work follows). Under D2's
+   subagent clause:
+   - the analyzer gains `docs/review/review.md` > *Severity*, the level set and order behind the
+     severity and `max_severity` it writes (the grammar of what it writes);
+   - the three unit agents gain the first block of `docs/units/review.md` > *Whether a finding
+     holds*, whose scope statement names "a role the route hands a finding to" (the documents whose
+     own scope statement names it); the section's second block is the aggregator's and the
+     orchestrator's;
+   - `autoflow-unit-design` gains the ADR trigger list, against which its design is scored (the
+     rules its work follows);
+   - the advisor gains the core's *Decision Ledger*, the ledger's standing constraints its entries
+     follow, which its carried `docs/decision-ledger.md` names (the rules its work follows).
+
+3. **The homes the triage cites, per unit.** For each U2–U5 session, each home
+   `## Recommendation triage` cites is carried, or stays a citation on D2's *Not carried* first
+   category — "a section the carried text cites for one item stays a citation, read at its home
+   when that item needs it" — with the fact that makes it one.
+
+   | Home | U2 | U3 | U4 | U5 | *Not carried* category | Ground of a citation |
+   |---|---|---|---|---|---|---|
+   | `docs/units/completion-evaluation.md` > Recommendation triage | carried | carried | carried | carried before | — | — |
+   | `docs/units/review.md` > Review triage > Whether a finding holds | carried | carried | carried | carried | — | — |
+   | `docs/submodule-common-rules.md` > Change Surface Rules > Scope judgment | carried | carried | carried before | carried before | — | — |
+   | `docs/units/completion-evaluation.md` > FAIL routing (with *`doc` re-entry*) | cite | cite | carried | carried before | first | At a gate before execution the triage calls no script and resolves on the gate's own FAIL route; the class a `Low` fixed now records is chosen by the question, and among the values, the carried triage states; the table's re-entry column is not used there. |
+   | `docs/units/completion-evaluation.md` > Re-entry re-score | cite | cite | cite | carried before | first | GATE:QUALITY's re-score is the evaluator's act on its narrowed input, which its definition carries; the session's act, spawning a fresh evaluator, is carried (`docs/role-contracts.md` > Evaluation AI). |
+   | `docs/units/completion-evaluation.md` > Code comments in a target | cite | cite | cite | carried before | first | The evaluator records a comment finding at GATE:QUALITY only; no GATE:HYPOTHESIS, GATE:PLAN or AUDIT recommendation is one. |
+   | `docs/units/design.md` > Report routing > An acceptance-criterion change raised later in the cycle | cite | carried before | cite | cite | first | The session's steps — the decision, the advisor where the grounds do not settle it, one `[ac-decision]` entry per criterion, the analysis table edited on `revised`, `split` or `added`, the re-entry point and its budget — are carried in `docs/decision-ledger.md` > *Acceptance-criterion decisions* and the core's Any-unit row. |
+   | `docs/units/design.md` > Output artifacts (the decision layer) | cite | carried before | cite | cite | first | U2: at GATE:HYPOTHESIS the evaluator records a fact below the decision layer at `Low`, and the session's act, deferring it to BUILD in the verdict entry, is stated in the carried triage. U4, U5: the citing clause defers such a fact at a gate before execution, and no AUDIT or GATE:QUALITY recommendation reaches it. |
+   | `docs/units/design.md` > Re-entry | cite | carried before | cite | cite | first | An ARCHITECT unit re-run is the U3 session's act. |
+   | `docs/units/analysis.md` > Re-entry | carried before | cite | cite | cite | first | A U2 unit re-run is the U2 session's act. |
+   | `docs/evaluation-system.md` > Evaluation Output Format; > GATE:PLAN > Re-entry re-score; > AUDIT > Review-response re-score | cite | cite | cite | cite | first | The evaluator's grammar and acts, which its definition carries; the fields the session checks before it accepts a report are listed in the carried triage. |
+   | `docs/review/review.md` > Severity | cite | cite | cite | cite | first | The evaluator assigns the level, and the session routes on the threshold the carried triage states (`Medium` and above, `Low`); a level outside those names (`Low Confidence`) is the one item the session reads the home for. |
+   | `docs/units/review.md` > Reviewer review | cite | cite | cite | cite | first | The review round that verifies a reviewer finding's fix is U7's act. |
+   | `docs/pr-body-guide.md` > 한계와 known gaps | cite | cite | cite | cite | first | U6 writes the pull request's body; the session records a deferral in its verdict entry (the carried triage). |
+   | `docs/units/preparation.md` > Resume | cite | cite | cite | cite | first | The resume is U1's act. |
+   | `docs/development-guideline.md` > Documentation Policy | cite | cite | cite | cite | first | It governs a change to the rule's text (its search terms), not the triage. |
+   | `docs/decision-ledger.md`; `docs/role-contracts.md` > Advisor; `docs/core.md` > Remedy class recording | carried before | carried before | carried before | carried before | — | — |
+
+4. **The check's reach.** `tests/plugin/verify-skill-bodies.sh` K4 fails when a command-body
+   carriage of item 1 is deleted from `scripts/skills/role-docs.tsv` and the carriers are
+   regenerated, because the core's table names it; it also meets an item whose section a body
+   carries inside an enclosing section of the same document (the whole-cycle body carries *Scope
+   judgment* inside Change Surface Rules). The agent-definition carriages of item 2 have no
+   committed check that fails on their deletion. No declaration of them exists apart from
+   `role-docs.tsv` — D2 reads an agent's set from its definition's and contract's prose, and D3
+   makes `role-docs.tsv` the classification — so such a check would need a second machine-readable
+   list of the same entries: the classification in two homes, and a device per item. A deletion
+   still changes the generated carrier, its "Carried below" line and the pull request's diff the
+   reviewers read.
+
+5. **Consequence.** The carriers grow. Measured (bytes, main `42d0080` → this change): the unit
+   command bodies 144,667–179,601 → 160,789–194,000 (`/autoflow:cycle-u1` unchanged);
+   `/autoflow:cycle` 405,252 → 413,359; the agent definitions that change — the advisor, the
+   analyzer, the evaluator and the three unit agents — 39,724–150,065 → 40,205–151,415, the
+   criterion-review agents unchanged; `/autoflow:criterion-review` (105,687) and the reviewers'
+   rule files (11,604–11,962) unchanged.
+
+These are this change's dispositions and their grounds under D2 as written.

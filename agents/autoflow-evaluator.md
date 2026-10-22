@@ -70,7 +70,7 @@ Hard rules:
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/evaluation-system.md`; `<autoflow-root>/docs/units/analysis.md` > What the analysis owes; `<autoflow-root>/docs/units/analysis.md` > Analysis report; `<autoflow-root>/docs/units/design.md` > Output artifacts; `<autoflow-root>/docs/units/build.md` > What the build owes; `<autoflow-root>/docs/units/build.md` > Build report; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/evaluation-system.md`; `<autoflow-root>/docs/units/analysis.md` > What the analysis owes; `<autoflow-root>/docs/units/analysis.md` > Analysis report; `<autoflow-root>/docs/units/design.md` > Output artifacts; `<autoflow-root>/docs/units/build.md` > What the build owes; `<autoflow-root>/docs/units/build.md` > Build report; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/review/review.md` > Severity; `<autoflow-root>/docs/development-guideline.md` > 4. ADR Policy > When to create an ADR; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -1372,6 +1372,29 @@ A high-scoring change:
 The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`<autoflow-root>/docs/evaluation-system.md` > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
 
 ---
+
+<!-- From <autoflow-root>/docs/review/review.md > Severity -->
+
+## Severity
+
+Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`, `Low Confidence`. `Low Confidence` is a suspected issue that could not be confirmed; the other levels are confirmed. A `Medium` and above (`Medium`+) finding that holds keeps the cycle from handing the pull request off (`<autoflow-root>/docs/units/review.md` > *End*).
+
+<!-- From <autoflow-root>/docs/development-guideline.md > 4. ADR Policy > When to create an ADR -->
+
+### When to create an ADR
+
+Create or update an ADR before implementation when a change affects one of
+these **trigger areas**. This list is the one the ADR-conformance checks read:
+GATE:PLAN's *ADR-conformance check* and GATE:QUALITY's *Fit — ADR
+conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GATE:QUALITY) decide "trigger area hit" and
+"N/A" against it.
+
+- Host/submodule responsibility boundaries.
+- Deployment topology or CI/CD authority.
+- Tenant isolation, accounting ownership, file visibility, or access control.
+- Secret/config management.
+- Agent workflow gates, evaluation policy, or merge authority.
+- External service dependencies.
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->
 
