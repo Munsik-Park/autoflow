@@ -9,7 +9,7 @@ request no CI runs for). Amends ADR-0029 D2 (the dev branch's name) and D3, and 
 hand-off is bound to — Amendment note (issue #490) there) and ADR-0033 D1's U6 and U7 exits. D2
 amended by ADR-0037 (issue #500): the multi-repo reconcile leaves D2's list of what follows the
 base, and the cleanup's `git switch --detach origin/<default>` its list of what is left as it is —
-neither is a step of AutoFlow's; what follows a merge is the operator's practice.
+neither is a step of AutoFlow's; what follows a merge is the Coordinator's.
 
 ## Context
 

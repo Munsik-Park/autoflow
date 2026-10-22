@@ -1,4 +1,4 @@
-# ADR-0037: AutoFlow keeps no after-work procedure — merging is the external review's, what follows it the operator's practice
+# ADR-0037: AutoFlow keeps no after-work procedure — merging is the external review's, what follows it the Coordinator's
 
 ## Status
 
@@ -6,9 +6,10 @@ Accepted (issue #500: the operator's instruction of 2026-10-22 in the issue body
 settled by the attempt's criterion review, entry O2, with the operator decisions of 2026-10-22 —
 the intent that no single after-work practice is fixed and that replacing the current one with
 another fixed one is no resolution, principles 1–3, the role-separation view and the scope
-decision (c)). Amends ADR-0029 D5, ADR-0033 D6, ADR-0034 D2 and ADR-0036 D6; supersedes issue
-#386's operator decision to keep the reconcile rule. Consistent with ADR-0003, which takes no
-amendment (*Relation to other decisions* below).
+decision (c); and the operator decision of 2026-10-22, entry O16, that names the owner of what
+follows a merge the Coordinator). Amends ADR-0029 D5, ADR-0033 D6, ADR-0034 D2 and ADR-0036 D6;
+supersedes issue #386's operator decision to keep the reconcile rule. Consistent with ADR-0003,
+which takes no amendment (*Relation to other decisions* below).
 
 ## Context
 
@@ -72,7 +73,7 @@ AutoFlow keeps only what holds in every environment and what binds its own autho
   as `cycle-status.sh` and ADR-0036 D6 use it, and is no longer tied to a cleanup action.
 - **K5** AutoFlow's own steps — PREFLIGHT and `cleanup-issue.sh` — change nothing on the remote, and
   the script touches no git ref. Ground: a property of AutoFlow's functions, true in every
-  environment; it no longer reads as a rule on what the operator does with a remote branch.
+  environment; it no longer reads as a rule on what the Coordinator does with a remote branch.
 - **K6** The record function `cleanup-issue.sh <dev branch>…`. Its precondition is an attempt of
   this checkout that is not active (it has no state file, or its state file's `active` is not
   `true`) and whose pull request is merged or closed — the attempt a `cleanup:` line names. It
@@ -80,8 +81,8 @@ AutoFlow keeps only what holds in every environment and what binds its own autho
   attempt is no longer listed and never entered again; it refuses another checkout's attempt and a
   name not in the dev-branch shape, follows no symbolic link, and is invoked by path, not as a bare
   `rm` (the existing `[MUST]` and allow-list). Ground: AutoFlow's own record format, read by
-  `cycle-status.sh` and the hook; only AutoFlow knows its meaning and its guard, so the operator's
-  practice uses it as a module rather than reimplementing it. The precondition's ground: the mark
+  `cycle-status.sh` and the hook; only AutoFlow knows its meaning and its guard, so the Coordinator
+  uses it as a module rather than reimplementing it. The precondition's ground: the mark
   ends the attempt for the gate hook as well — the hook passes over a record directory marked
   `completed` when it looks for this checkout's active state, and with none found it gates nothing —
   so an attempt still running is never marked, even when its pull request was merged or closed out
@@ -111,36 +112,61 @@ AutoFlow prescribes the steps of neither.
   sequencing contract. Ground: AC1 names it; no device enforces it; ADR-0003 gives it to external
   reviewers; the operator's intent rules out fixing one practice.
 - **M2** The reconcile, or any other way a host pointer is brought up after a sub-repo merge.
-  Owner: **the operator's practice**. Leaves the text: *The rule* of Multi-repo delivery, "the
+  Owner: **the Coordinator**. Leaves the text: *The rule* of Multi-repo delivery, "the
   orchestrator reconciles when it is asked" and the after-reconcile result owed; Commit Ownership's
   "reconcile merge"; `docs/repo-boundary-rules.md`'s "host reconcile on request"; the Sub-repo
   pointer section's host-default-branch invariant and its reconcile pointer. Ground: AC1 names it;
   AutoFlow never writes the default branch (K1), so the state of the host's default branch is what a
   merge practice achieves, not something AutoFlow can keep.
 - **M3** Branch handling after a merge or a close — the attempt's dev branches, local and remote.
-  Owner: **the operator's practice**. Leaves the text: `git switch --detach origin/<default>`,
+  Owner: **the Coordinator**. Leaves the text: `git switch --detach origin/<default>`,
   `git branch -D <branch>`, the remote dev branch kept as "the record the attempt left". Ground: AC1
   names it; the operator's intent: deleting at each merge and keeping and pruning later are both
   valid.
-- **M4** The submodule update after a merge. Owner: **the operator's practice** (the confirmation
+- **M4** The submodule update after a merge. Owner: **the Coordinator** (the confirmation
   before a merge is M1's). Leaves the text: every statement of it — the reconcile's pointer move, the
   operator's `git ls-tree` confirmation. Ground: AC1 names it.
 - **M5** What is cleaned up, when and how — whether and when the record function runs included.
-  Owner: **the operator's practice**. Leaves the text: the PREFLIGHT step "Earlier attempts are
+  Owner: **the Coordinator**. Leaves the text: the PREFLIGHT step "Earlier attempts are
   resolved"; "Performed at PREFLIGHT of the next cycle … or by the live session"; `cleanup-issue.sh`'s
   "Run at PREFLIGHT prior-attempt resolution"; `docs/repo-boundary-rules.md`'s "Verify integration
   after individual repos merge", which becomes the integration verification before the hand-off.
   Ground: AC1 names "무엇을 언제 어떻게 정리하는지"; the operator's role-separation view puts the
-  cleanup policy on the side that runs AutoFlow.
+  cleanup policy with the Coordinator.
 
-The operator is AutoFlow's existing name for whoever sets the project up and runs AutoFlow on it
-(`docs/core.md` > Project Information); no new label is introduced.
+**The Coordinator.** The owner of M2–M5 is the **Coordinator**, a role's name, defined once in
+`docs/git-workflow.md` > Post-Merge Cleanup (D5) by four propositions, each with its source:
+
+1. *The role.* The Coordinator is the role outside AutoFlow that assembles AutoFlow's functional
+   and evaluation modules — each takes an input, such as a work branch or an issue number, and
+   produces a result — into a pipeline; AutoFlow's text names it the owner of what follows a merge
+   or a close (M2–M5), and of nothing else. Source: the operator decision (entry O16) gives the
+   name, the assembly view and the ownership of the work after the merge — that work varies by
+   repository and environment, so it is not AutoFlow's. The bound to what follows a merge or a
+   close is this decision's own, on the operator decision's scope, which replaces no other
+   "operator" in AutoFlow's documents.
+2. *The merge keeps its one owner.* Merging stays the external review's (M1), and one party may
+   hold both roles. Source: the operator decision ("Merging stays the external review's"), ADR-0003
+   and M1; "one party may hold both roles" is D2's lead above.
+3. *A role's name only.* AutoFlow names no person, session or repository that holds the role,
+   defines no step, order or timing for it, and makes no link that reads its procedure. Source: the
+   operator decision (a role's name; no particular session implementation or its repository; no
+   link that reads that party's procedure) and the scope decision (c); "no step, order or timing"
+   is AC1's ("명령·순서·시점으로 규정하지 않고") and the boundary statement's (D5).
+4. *Not the orchestrator.* The orchestrator is AutoFlow's own role: it runs a cycle and ends at the
+   hand-off, and the Coordinator's work lies outside AutoFlow. Source: this decision's own, on the
+   fact that AutoFlow's documents describe the orchestrator with the same root word ("coordinates
+   role spawns", `docs/core.md` > Team Structure); the operator decision does not state it.
+
+"Operator" stays AutoFlow's word for the person who sets the project up, decides and configures
+(`docs/core.md` > Project Information); a role that a person, a session or a pipeline can hold is
+not that person, so the owner of M2–M5 has a name of its own.
 
 **D3 — PREFLIGHT's progression stops depending on the cleanup.** "prior-cycle resolved", "earlier
 attempts resolved", "cleared away" and the core's "prior-attempt resolution (cleanup after external
 merge/close)" leave PREFLIGHT's conditions, and the *What is asked* bullet that deleted the local
 dev branch and marked the attempt becomes a fact: such an attempt is set aside by the entry (K4),
-and what is then done with its branches and records, and when, is the operator's (M3, M5).
+and what is then done with its branches and records, and when, is the Coordinator's (M3, M5).
 PREFLIGHT's conditions are the entry, a clean tree, a synced remote and the stop conditions — the
 conditions that already decided the device's answer. No script behavior changes.
 
@@ -152,12 +178,13 @@ reconcile".
 
 **D5 — One home for the boundary.** `docs/git-workflow.md` > Post-Merge Cleanup keeps its heading
 and states, in place of the fixed procedure: merging is the external review's and what follows it is
-the operator's practice; AutoFlow defines no step, order or timing for either, and none of its steps
-waits on them; what AutoFlow keeps there (K1, K4, K5); and the record function (K6) with what an
-attempt left unmarked costs (*Consequences* below). Every other place that stated or relied on the
-cleanup links there. The heading stays because it names a topic, and renaming it would break the
-citations in force (ADR-0024 > Amendment note (issue #316); ADR-0036; two `role-docs.tsv` rows; the
-core's U1 references).
+the Coordinator's; AutoFlow defines no step, order or timing for either, and none of its steps
+waits on them; the Coordinator's one definition (D2); what AutoFlow keeps there (K1, K4, K5); and
+the record function (K6) with what an attempt left unmarked costs (*Consequences* below). Every
+other place that stated or relied on the cleanup links there, and every other place that names the
+Coordinator uses the term without defining it. The heading stays because it names a topic, and
+renaming it would break the citations in force (ADR-0024 > Amendment note (issue #316); ADR-0036;
+two `role-docs.tsv` rows; the core's U1 references).
 
 **D6 — `docs/external-review-sequencing.md` is removed.** Its procedure is M1 and M2 whole, and its
 one other statement — each pull request is reviewed on its own diff over its own repository — is
@@ -171,7 +198,7 @@ no reconcile or gitlink gate exists, `scripts/resync-submodules.sh` derives subm
 `.gitmodules` and is referenced by nothing, and `cycle-status.sh` and `cleanup-issue.sh` presuppose
 neither a structure nor a branch practice. The authority denies stay (principle 1). Principle 4 is
 met by the scripts' usage text — `cleanup-issue.sh` states K6's precondition and that when it runs is
-the operator's practice, `cycle-status.sh` states what a `cleanup:` line names — the classification
+the Coordinator's, `cycle-status.sh` states what a `cleanup:` line names — the classification
 (`role-docs.tsv` loses D6's two rows; `core-units.tsv` is unchanged) and the regenerated carriers.
 
 **The issue's open questions.** (1) What stays: D1 — the `completed` mark stays as a standalone
@@ -186,22 +213,22 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
 ## Alternatives Considered
 
 - **PREFLIGHT keeps running `cleanup-issue.sh` on `cleanup:` lines, without branch deletion.** It
-  would still fix when AutoFlow cleans and what — the M5 item AC1 leaves to the operator — and would
-  be one fixed practice replacing another.
-- **Remove `cleanup-issue.sh` and leave the whole cleanup to the operator.** The mark is AutoFlow's
-  record format, read by `cycle-status.sh` and the hook; a practice would have to reimplement
-  AutoFlow internals and the checkout guard.
+  would still fix when AutoFlow cleans and what — the M5 item AC1 leaves to the Coordinator — and
+  would be one fixed practice replacing another.
+- **Remove `cleanup-issue.sh` and leave the whole cleanup to the Coordinator.** The mark is
+  AutoFlow's record format, read by `cycle-status.sh` and the hook; a practice would have to
+  reimplement AutoFlow internals and the checkout guard.
 - **Split `cleanup-issue.sh` into a mark and a delete.** No criterion needs it; a behavior change
   with no gain.
 - **PREFLIGHT asks the operator at each start what to clean, or keeps the step as optional.** A step
-  AutoFlow adds where the operator already decides; an optional step at a fixed time still names a
-  timing.
+  AutoFlow adds where the Coordinator already decides; an optional step at a fixed time still names
+  a timing.
 - **Keep the merge order in the end report as advice.** An order AutoFlow names is what a reviewer
   reads as the procedure — the defect the issue reports.
 - **Remove the whole of Multi-repo delivery.** The pre-hand-off delivery is the cycle's own work, and
   HANDOFF's pointer-conflict route would point at nothing.
-- **Keep the reconcile as a default the operator may replace.** A default AutoFlow states is still
-  the procedure a reader applies and judges against.
+- **Keep the reconcile as a default the Coordinator may replace.** A default AutoFlow states is
+  still the procedure a reader applies and judges against.
 - **Reduce `docs/external-review-sequencing.md` to a stub.** A document whose only content is a
   pointer invites a reader to look there for a procedure; D5 states the boundary.
 - **A project-information key AutoFlow reads and runs at PREFLIGHT.** AutoFlow would read and run the
@@ -210,12 +237,12 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
 - **State the precondition as a timing ("not while a cycle runs on it").** AutoFlow naming a timing
   (M5) where the device already computes the fact, and a reader could not check it against anything
   `cycle-status.sh` prints.
-- **The operator's practice owns M1 as well.** The merge would have two owners, against ADR-0003
-  and the kept template line, or ADR-0003 would have to hand the merge's sequencing to the operator;
+- **The Coordinator owns M1 as well.** The merge would have two owners, against ADR-0003 and the
+  kept template line, or ADR-0003 would have to hand the merge's sequencing to the Coordinator;
   no criterion asks for that change to an authority allocation.
-- **The external review owns all of M1–M5.** That would put the operator's own checkout, its
-  branches and its record root with the party that reviews pull requests, which neither ADR-0003 nor
-  the base text does.
+- **The external review owns all of M1–M5.** That would put the Coordinator's work on the operator's
+  own checkout, its branches and its record root with the party that reviews pull requests, which
+  neither ADR-0003 nor the base text does.
 - **The pull-request body alone as the record.** It would leave four governing ADRs stating replaced
   decisions, and the record would live only in a pull request's text.
 
@@ -247,15 +274,15 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
 
 ### Neutral / Trade-Offs
 
-- The fixed text leaves the documents, and the practice that replaces it lives in the operator's
-  project, not in AutoFlow; no reading site for it is defined.
+- The fixed text leaves the documents, and the practice that replaces it is the Coordinator's,
+  outside AutoFlow; no reading site for it is defined.
 
 ## Relation to other decisions
 
 - **ADR-0003** — consistent; no amendment. It gives the merge — its sequencing, the sub-repo merge
   confirmation, the final readiness checks and its execution — to external reviewers. This decision
-  keeps that allocation and names the operator only for what follows a merge, which ADR-0003 does
-  not allocate. What it removes is AutoFlow's own prescription of the sequence
+  keeps that allocation and names the Coordinator only for what follows a merge, which ADR-0003
+  does not allocate. What it removes is AutoFlow's own prescription of the sequence
   (`docs/external-review-sequencing.md`, the end report's merge order). That is not ADR-0003's
   rejected alternative "Remove external review sequencing and rely only on automation": the
   sequencing stays with the external review, and no automation takes it over.
@@ -271,7 +298,7 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
 - **ADR-0034 D2** — amended: the multi-repo reconcile leaves D2's list of what follows the attempt's
   base, and the cleanup's `git switch --detach origin/<default>` its list of what is left as it is;
   neither is a step of AutoFlow's any longer (M2, M3).
-- **ADR-0036 D6** — amended: the `cleanup:` line stands; what is done on it is the operator's.
+- **ADR-0036 D6** — amended: the `cleanup:` line stands; what is done on it is the Coordinator's.
 - **ADR-0024 D2 and Amendment note (issue #316)** — unchanged: the reserved path and its deletion
   by `cleanup-issue.sh` stand, and the cited heading Post-Merge Cleanup resolves.
 
@@ -282,6 +309,7 @@ Project Information). (3) Hooks and scripts that presuppose a structure: none do
 
 ## Notes
 
-- The boundary and the record function are `docs/git-workflow.md` > Post-Merge Cleanup; the entry
-  that sets a merged or closed attempt aside is `docs/units/preparation.md` > *What is asked*,
-  *Modes*; the end report is `docs/units/review.md` > *End*.
+- The boundary, the Coordinator's definition and the record function are `docs/git-workflow.md` >
+  Post-Merge Cleanup; the entry that sets a merged or closed attempt aside is
+  `docs/units/preparation.md` > *What is asked*, *Modes*; the end report is `docs/units/review.md` >
+  *End*.

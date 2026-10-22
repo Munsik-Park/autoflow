@@ -11,7 +11,7 @@ call). Amends ADR-0030 D5 (`/autoflow:criterion-review` also enters the path) an
 entry `abbreviated` and the pull request read for an attempt with no state file). ADR-0025 D3–D4
 stand for the full cycle (*Relation to other decisions* below). D6 amended by ADR-0037 (issue
 #500): the `cleanup:` line stands, naming an attempt that is not active and whose pull request is
-merged or closed; what is done on it is the operator's practice, not Post-Merge Cleanup at PREFLIGHT.
+merged or closed; what is done on it is the Coordinator's, not Post-Merge Cleanup at PREFLIGHT.
 
 ## Context
 
