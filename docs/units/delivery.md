@@ -226,7 +226,7 @@ upstream) and where issues are filed are read from the project's own information
 ([`core.md`](../core.md) > Project Information).
 
 What follows a sub-repo pull request's merge — whether the host's pointer moves to it, when and
-how — is the operator's practice, outside AutoFlow ([`git-workflow.md`](../git-workflow.md) >
+how — is the Coordinator's, outside AutoFlow ([`git-workflow.md`](../git-workflow.md) >
 Post-Merge Cleanup).
 
 What is asked:

@@ -69,7 +69,7 @@ brings about the following.
 - **An attempt that is over is set aside.** An attempt of this checkout
   — its `checkout` file names this checkout — that is not active and whose pull request is merged
   or closed (`cleanup:`) is cleared, whatever its issue: the entry passes over it (*Modes*). What
-  is then done with its branches and its records, and when, is the operator's practice
+  is then done with its branches and its records, and when, is the Coordinator's
   ([`git-workflow.md`](../git-workflow.md) > Post-Merge Cleanup). An attempt paused with no pull
   request keeps its files in place, and its pending decision is reported.
 - **Another checkout's attempt is reported, not touched.** An attempt whose checkout is still there

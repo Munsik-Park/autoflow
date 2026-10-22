@@ -126,8 +126,17 @@ in what sequence beside the pull requests it depends on, by what method, and wha
 before it — the sub-repo pointer included — are the external review's. What follows a merge or a
 close — how a host pointer is brought up after a sub-repo pull request merges, what becomes of the
 attempt's dev branches on either side, and what is cleaned up, when and how, the record function
-below included — is the operator's practice for the project. AutoFlow defines no step, order or
+below included — is the Coordinator's. AutoFlow defines no step, order or
 timing for either, and none of its steps waits on them.
+
+The **Coordinator** is the role outside AutoFlow that assembles AutoFlow's functional and
+evaluation modules — each takes an input, such as a work branch or an issue number, and produces a
+result — into a pipeline. AutoFlow's text names it the owner of what follows a merge or a close,
+and of nothing else: that work varies by repository and environment, so it is not AutoFlow's.
+Merging stays the external review's, and one party may hold both roles. It is a role's name only:
+AutoFlow names no person, session or repository that holds it, defines no step, order or timing for
+it, and makes no link that reads its procedure. It is not the orchestrator, AutoFlow's own role,
+which runs a cycle and ends at the hand-off.
 
 What AutoFlow keeps there:
 
@@ -165,7 +174,7 @@ entered again. A deletion that fails leaves that attempt unmarked and exits non-
 once the path is removable. A store that is itself a symbolic link keeps its target untouched. It
 touches no git ref.
 
-Whether and when it runs is the operator's practice. An attempt left unmarked:
+Whether and when it runs is the Coordinator's. An attempt left unmarked:
 
 1. stays listed by `cycle-status.sh`;
 2. has its pull request looked up on every `cycle-status.sh` run. A lookup that fails is a fact not

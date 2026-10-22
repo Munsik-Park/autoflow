@@ -15,7 +15,7 @@
 # Its precondition: an attempt that is not active (no state file, or one whose
 # `active` is not `true`) and whose PR is merged or closed. The script does not
 # read the state file, so the caller holds the precondition; whether and when
-# the script runs is the operator's practice. Only THIS checkout's attempt is
+# the script runs is the Coordinator's. Only THIS checkout's attempt is
 # marked — the one whose
 # `checkout` file names this checkout: an attempt whose checkout is gone is
 # left as it is until another checkout takes it over (`autoflow-records claim`),
