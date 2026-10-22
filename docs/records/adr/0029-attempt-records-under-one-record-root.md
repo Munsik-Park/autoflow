@@ -22,6 +22,13 @@ Extended 2026-10-22 by ADR-0036 (issue #493): D4's pull request is looked up for
 state file too — an attempt on the abbreviated path — so its `pr:` line is printed and, once its pull
 request is merged or closed, D5's cleanup reaches it through its `cleanup:` line; D5 is unchanged.
 
+Amended 2026-10-22 by ADR-0037 (issue #500): in D5, the local dev branch's deletion and the cleanup
+as a PREFLIGHT step leave AutoFlow — what follows a merge or a close, and whether and when the
+record function runs, are the operator's practice. `cleanup-issue.sh` and its guard stand, with its
+precondition stated as ADR-0037 K6 states it: an attempt of this checkout that is not active and
+whose pull request is merged or closed, not one whose pull request is merged or closed alone. "No
+remote branch is deleted, no push is made and no PR is changed" stands for AutoFlow's own steps.
+
 ## Context
 
 AI work, unlike a person's, tries one issue in several sessions and puts the results together; each

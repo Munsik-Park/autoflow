@@ -6,7 +6,10 @@ Accepted (issue #490; the criteria settled by the attempt's criterion review, en
 advisor decisions A1 — the pull request's base when the operator names a commit — and A2 — a pull
 request no CI runs for). Amends ADR-0029 D2 (the dev branch's name) and D3, and ADR-0030 D2 (where
 `autoflow-records new` makes the dev branch, and its options); amends ADR-0024 D4 and D5 (what the
-hand-off is bound to — Amendment note (issue #490) there) and ADR-0033 D1's U6 and U7 exits.
+hand-off is bound to — Amendment note (issue #490) there) and ADR-0033 D1's U6 and U7 exits. D2
+amended by ADR-0037 (issue #500): the multi-repo reconcile leaves D2's list of what follows the
+base, and the cleanup's `git switch --detach origin/<default>` its list of what is left as it is —
+neither is a step of AutoFlow's; what follows a merge is the operator's practice.
 
 ## Context
 
