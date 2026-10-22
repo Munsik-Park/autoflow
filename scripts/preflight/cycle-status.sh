@@ -7,9 +7,9 @@
 # Reads and reports. It changes nothing: no fetch, no checkout, no branch or
 # file is created, moved or deleted, no state file is written, and nothing is
 # sent to GitHub but reads. What is done with a fact — how an interrupted
-# attempt resumes, for one — is the orchestrator's (docs/units/preparation.md);
-# which attempt the requested issue enters, and how, follows from the facts
-# alone and is printed as the `entry:` line.
+# attempt resumes, for one — is the orchestrator's
+# (docs/units/preparation.md); which attempt the requested issue enters, and
+# how, follows from the facts alone and is printed as the `entry:` line.
 #
 # Records live under the record root (scripts/lib/records.sh, issue #466): an
 # attempt — one run of an issue — has its directory
@@ -47,7 +47,8 @@
 #   hold <key>             another issue's attempt of this checkout is active
 #   stop multiple-active   this checkout has two or more active attempts
 #   resume <key>           this checkout's attempt of N is active
-#   on the checked-out branch, when it is an attempt of N — taken over first
+#   on the checked-out branch, when it is an attempt of N not cleared (`cleanup:`)
+#   — taken over first
 #   (`claim <key>`) when its checkout is gone:
 #     stop other-checkout <key>   its checkout is still there
 #     start <key>                 no state file, criterion READY, no pull
@@ -294,8 +295,9 @@ done
 [ "$completed" -gt 0 ] && echo "completed attempts: $completed"
 
 # `cleanup:` lines: this checkout's attempts that are not active and whose pull
-# request is merged or closed. An attempt whose checkout is gone is not named
-# here — it is taken over first (issue #466 AC4).
+# request is merged
+# or closed. An attempt whose checkout is gone is not cleared from here — it is
+# taken over first (issue #466 AC4).
 CLEARED=" "
 i=0
 while [ "$i" -lt "${#A_KEY[@]}" ]; do
