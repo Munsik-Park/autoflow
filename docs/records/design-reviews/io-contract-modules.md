@@ -195,4 +195,4 @@ No test today exercises the score thresholds, the planning or implementation spa
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507. | File sub-issue 1 under #507, then settle Q1–Q5. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109` (unit documents, hook and scripts, core and ADRs); created the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508; pushed the branch. | #508: settle Q1–Q5 with the operator. |
