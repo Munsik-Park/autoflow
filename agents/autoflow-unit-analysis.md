@@ -473,11 +473,9 @@ The host's hook (`<autoflow-root>/hooks/check-autoflow-gate.sh`) reads the state
 
 ## Sub-repo pointer
 
-The host's default branch points only at sub-repo commits that are on the sub-repo's default
-branch; while a host pull request is open, its branch may point at the head of the sub-repo pull
-request it depends on. The host reaches that state by the reconcile rule of
-[`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Multi-repo delivery*. The pointer is committed on the
-host branch by the orchestrator ([`core.md`](<autoflow-root>/docs/core.md) > Commit Ownership). Whether a sub-repo's
+While a host pull request is open, its branch may point at the head of the sub-repo pull request
+it depends on ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Multi-repo delivery*). The pointer is
+committed on the host branch by the orchestrator ([`core.md`](<autoflow-root>/docs/core.md) > Commit Ownership). Whether a sub-repo's
 source is a fork or the upstream, and its URL, are the project's information.
 
 ---

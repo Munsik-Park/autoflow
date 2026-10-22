@@ -35,7 +35,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Development Lifecycle — AutoFlow
 
-**PREFLIGHT cannot be skipped.** If its completion conditions (prior-cycle resolved, clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the block first and report.
+**PREFLIGHT cannot be skipped.** If its completion conditions (clean Git state, remote sync) are not met, DIAGNOSE does not begin. Resolve the block first and report.
 
 **An attempt's criteria are settled before DIAGNOSE.** Each attempt's cycle begins with its own criterion review stage, against the target's code and policy; its `[criterion-ready]` ledger entry records the settled decisions, and PREFLIGHT reads only that entry for the current issue body (`<autoflow-root>/docs/criterion-review.md`).
 
@@ -259,7 +259,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 | Feature (implementation and tests, sub-repo) | Build unit (U4) of that scope | Orchestrator |
 | Rules / config / infra / bulk docs | Orchestrator                      | Orchestrator |
 | Comment divergence fix (target code) | Orchestrator (sub-repo: the build unit of that scope) | Orchestrator |
-| Sub-repo pointer (gitlink) commit or reconcile merge | Orchestrator  | Orchestrator |
+| Sub-repo pointer (gitlink) commit | Orchestrator  | Orchestrator |
 
 ## Reference Documents
 
@@ -1192,7 +1192,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 - **The record root** is `record_root` in the operator's `~/.autoflow/config.json` — an absolute path; the file itself never moves with it. No file, no key, or a JSON `null` → the default `~/.autoflow`. A file that cannot be read as JSON (a syntax error, or no `jq`), or a `record_root` that is not an absolute path string (not a string, empty, relative), leaves the record root **undetermined**, never the default in its stead; an error in the same file's `.review` does not touch it. A record root inside the session's checkout, or one that cannot be created or written, is **unusable**. Either way every script that needs it writes nothing and stops with exit `7` and the marker line `record-root: UNDETERMINED <config path> — <error>` or `record-root: UNUSABLE <record root> — <error>`, asking nothing; the next run reads the file anew. Nothing else — no environment variable — names the root, the records or `_metrics/`.
 - **The owner**: the file `checkout` in the record directory names the checkout the attempt belongs to — the one that started it, or the one that took it over (`autoflow-records claim`, once that checkout is gone). Entry, the hook's gates and cleanup read only this checkout's attempts ([`<autoflow-root>/docs/units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *What is asked*).
-- **Completed**: the file `completed` marks an attempt whose Post-Merge Cleanup has run; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
+- **Completed**: the file `completed` marks an attempt that is over, written by the record function `cleanup-issue.sh`; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
 - **Records kept inside the tree before the record root** (`.autoflow/<repo-key>-issue-{N}/`, issues #423 to #465): a state file there is never passed over. The hook refuses the score-gated calls and PREFLIGHT stops (`entry: stop in-tree-records`) until `<autoflow-root>/scripts/migrate/migrate-in-tree-records.sh` moves each such directory whose state file names a dev branch `dev/<stamp>-issue-{N}` to that attempt's record directory, with this checkout as its owner; the cycle then continues from there. One naming no such branch is moved too when it reads `active: false` — to `<record-root>/<repo-key>/in-tree-<date>-<time>-issue-{N}/`, marked `completed`, kept as a record and never entered; when it reads `active: true` it is reported and left for the operator (name the branch in the attempt shape, or set `active: false`), and the script runs again. A directory with no state file (a proposal record, a criterion review of no attempt) is not a cycle and is left in place.
 
 **Companion artifact**: `<attempt-dir>/issue-{N}-ledger.md` — the attempt's append-only decision ledger ([Decision Ledger](<autoflow-root>/docs/core.md)). The hook reads it **advisorily only** and never denies a tool call on what it finds; the ledger is not a gate input — no gate verdict, retry cap or transition reads it.
@@ -1247,7 +1247,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 These gates are wired via PreToolUse on `Bash` (git / gh commands), `Write|Edit|MultiEdit` and `Agent`.
 
-**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT's prior-attempt resolution reads the file (review-response mode) and, once the PR is observed merged or closed, marks the attempt completed; its records stay in its record directory (`<autoflow-root>/docs/units/preparation.md` > *What is asked*).
+**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT reads the file afterwards — review-response while its PR is open, set aside once it is merged or closed (`<autoflow-root>/docs/units/preparation.md` > *Modes*); what follows a merge or a close is outside AutoFlow (`<autoflow-root>/docs/git-workflow.md` > Post-Merge Cleanup).
 **Forced termination**: also set `active` to `false`.
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Evaluation AI -->

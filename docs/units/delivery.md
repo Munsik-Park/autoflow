@@ -61,8 +61,8 @@ orchestrator's, and nothing checks for an item left out.
   ([`state-tracking.md`](../state-tracking.md) > Hook gates). They are not issued through a script or a wrapper
   that would carry them past the hook.
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch or to the
-  attempt's base (`autoflow-records base`); the hook denies them. Merging — including, for multi-repo changes, the sub-repo → pointer → host
-  sequencing — is owned entirely by the external review process.
+  attempt's base (`autoflow-records base`); the hook denies them. Merging is owned entirely by the
+  external review process.
 - **Every pull request the cycle opens is a draft** (`gh pr create --draft …`). The host pull
   request's base is the attempt's base, the branch `autoflow-records base` prints — the dev
   branch's `gh-merge-base`, which `gh pr create` reads when no `--base` is given.
@@ -225,12 +225,9 @@ not classify the project; what the sub-repos are, where each one's pull request 
 upstream) and where issues are filed are read from the project's own information
 ([`core.md`](../core.md) > Project Information).
 
-**The rule.** After a sub-repo pull request merges, the host keeps a clean state by a reconcile
-merge: the host branch that depends on it points at that pull request's merge commit, and stays
-mergeable with its pull request's base. Merging is the operator's, so the request to reconcile after a
-sub-repo merge is the operator's too; the orchestrator reconciles when it is asked. When the
-pointer moves before that point, and how a reconcile is carried out, are the orchestrator's,
-derived from this rule and recorded with their grounds in the ledger.
+What follows a sub-repo pull request's merge — whether the host's pointer moves to it, when and
+how — is the operator's practice, outside AutoFlow ([`git-workflow.md`](../git-workflow.md) >
+Post-Merge Cleanup).
 
 What is asked:
 
@@ -245,17 +242,17 @@ What is asked:
 
 Cautions:
 
-- A merge of the base into a host branch whose pointer still sits where the branch forked
-  resolves the pointer to the base's, not to the sub-repo merge commit. The pointer is set
-  and read back (`git ls-tree HEAD <sub-repo>`) before the push.
-- Another cycle may have moved the base's pointer since this branch forked. When the
-  sub-repo merge commit does not contain that pointer — the base is ahead of it, or the
-  two have diverged — reconciling would move the host's pointer backwards or across histories: the
+- A merge of the base into the host branch — the conflict resolution *Failure and retry* routes
+  here — can resolve the pointer to the base's, not to the sub-repo commit the cycle delivers. The
+  pointer is set to the delivered commit and read back (`git ls-tree HEAD <sub-repo>`) before the
+  push.
+- Another cycle may have moved the base's pointer since this branch forked. When the delivered
+  sub-repo commit does not contain that pointer — the base is ahead of it, or the two have
+  diverged — setting it would move the host's pointer backwards or across histories: the
   orchestrator does not push, and reports to the operator.
 - Every pointer move is a host commit the host review reads again; a pointer moved while the
   sub-repo pull request is still changing under review costs a host re-review per move.
 - A sub-repo nested inside a sub-repo is that sub-repo's own delivery.
 
 Result owed: each pull request's URL and head commit; for the host pull request, the commit each
-changed sub-repo's pointer names. After a reconcile: the pointer read back equal to the merge
-commit, and the CI confirmation on the new head (*CI*).
+changed sub-repo's pointer names.

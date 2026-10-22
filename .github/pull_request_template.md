@@ -51,18 +51,6 @@ Rules / infra PR: write `N/A` if there is no tracking issue.
 Reference: docs/git-workflow.md > Issue Auto-Close.
 -->
 
-## Sub-repo merge dependency
-
-<!--
-A host PR whose sub-repo pointer depends on an unmerged sub-repo PR merges after
-it (docs/external-review-sequencing.md > Per-issue procedure).
--->
-
-- [ ] Sub-repo PR (if any): _link the host's direct sub-repo PR here_.
-- [ ] Sub-repo PR merged, and this branch's pointer equals its merge commit (`git ls-tree HEAD <sub-repo>`).
-
-If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/A — no sub-repo dependency`).
-
 ## AutoFlow
 
 - Issue: <!-- #N or N/A -->
@@ -76,4 +64,4 @@ If this PR has no sub-repo dependency, mark the boxes above N/A (e.g., `- [x] N/
 
 ## Reviewer
 
-Merging is performed **only by the external reviewer**, never by AutoFlow. See `docs/external-review-sequencing.md` for the merge sequence.
+Merging is performed **only by the external reviewer**, never by AutoFlow.

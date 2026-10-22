@@ -15,7 +15,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U7 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: PREFLIGHT cannot be skipped, An attempt's criteria are settled before DIAGNOSE; Development Lifecycle > Flow Control > Any unit: GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY; Development Lifecycle > Unit Document Loading Contract: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every gate, The evaluation contract; Development Lifecycle > Unit references: U1 Preparation, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U6 Delivery; Spawn Model: A unit agent's spawns inherit its gate class; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; AutoFlow State Tracking: verdict rule, The hook's state-file validator admits, Score recording, This object is the value; Evaluation System.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/external-review-sequencing.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/units/build.md` > Unit spawn; `<autoflow-root>/docs/units/build.md` > Re-entry; `<autoflow-root>/docs/units/delivery.md` > CI; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/units/build.md` > Unit spawn; `<autoflow-root>/docs/units/build.md` > Re-entry; `<autoflow-root>/docs/units/delivery.md` > CI; `<autoflow-root>/docs/role-contracts.md` > Role Vocabulary and Spawn Mode > Model tier revert; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/state-tracking.md`; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -78,7 +78,7 @@ When the user files an issue, the flow below executes in order. Each phase auto-
 Seven functional units carry the phases (`ADR-0025` D1, `ADR-0033`). A unit is the unit of prescription — its goal, artifact contract, verification and loop cap — and each has one document (*Unit Document Loading Contract* above). The phase and gate names stay: they are the identifiers the state keys, the ledger headings, the spawn-policy keys and the hook messages carry.
 
 ```
-U7 Review              REVIEW          — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict → review-triage (auto-resolve Medium+ / judge Low) → state inactive once review is clean, with the merge order reported; scripts read and report (reviewer start, triage case), the orchestrator runs the reviews and makes the changes, the aggregator posts the review comment; external review merges out of band
+U7 Review              REVIEW          — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict → review-triage (auto-resolve Medium+ / judge Low) → state inactive once review is clean, with each pull request's facts reported; scripts read and report (reviewer start, triage case), the orchestrator runs the reviews and makes the changes, the aggregator posts the review comment; external review merges out of band
 ```
 
 **Flow Control** — the transitions, grouped by the unit they leave. Each group's unit document is the home of the
@@ -90,7 +90,7 @@ Each unit's body — what it is asked, its artifact contract, its cautions, its 
 
 | Unit | Also on entry |
 |------|------|
-| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; merge order: `<autoflow-root>/docs/external-review-sequencing.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; the build re-run: `<autoflow-root>/docs/units/build.md` > Unit spawn; its re-entry: `<autoflow-root>/docs/units/build.md` > Re-entry; CI: `<autoflow-root>/docs/units/delivery.md` > CI; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
+| U7 Review | reviewers: `<autoflow-root>/docs/reviewer-backend.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comment fixes: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; the build re-run: `<autoflow-root>/docs/units/build.md` > Unit spawn; its re-entry: `<autoflow-root>/docs/units/build.md` > Re-entry; CI: `<autoflow-root>/docs/units/delivery.md` > CI; tier revert: `<autoflow-root>/docs/role-contracts.md` > Model tier revert |
 
 ## Cost Control
 
@@ -181,7 +181,7 @@ For details, see `<autoflow-root>/docs/repo-boundary-rules.md`.
 
 AutoFlow does not classify a project's repository structure and keeps no file of project facts. When work on a repository starts, the AI reads the project's own information and rule files where they exist — a `README.md`, a `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs, such as how the repositories are composed (a host and its sub-repos, forks and upstreams) and where issues are filed. The operator writes those files while setting up the project, and they may already exist. A fact the work needs that no such file states is asked of the operator in conversation, with the request that the operator create the file or record the fact in it.
 
-A project whose information names sub-repos delivers each changed sub-repo on its own pull request and keeps the host clean by its pointer: `<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*.
+A project whose information names sub-repos delivers each changed sub-repo on its own pull request, and the host pull request's pointer names the commit it delivers: `<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*.
 
 ## Team Structure
 
@@ -234,7 +234,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 | Feature (implementation and tests, sub-repo) | Build unit (U4) of that scope | Orchestrator |
 | Rules / config / infra / bulk docs | Orchestrator                      | Orchestrator |
 | Comment divergence fix (target code) | Orchestrator (sub-repo: the build unit of that scope) | Orchestrator |
-| Sub-repo pointer (gitlink) commit or reconcile merge | Orchestrator  | Orchestrator |
+| Sub-repo pointer (gitlink) commit | Orchestrator  | Orchestrator |
 
 ## Reference Documents
 
@@ -281,8 +281,8 @@ routing, cap and *End* for it.
   claim.
 - **Loop cap**: auto-resolution of reviewer findings, 7 attempts ([`core.md`](<autoflow-root>/docs/core.md) > Flow
   Control > Regressions).
-- **Result owed**: the report of *End*, with each PR's URL and head commit, the review verdict and
-  the merge order.
+- **Result owed**: the report of *End*, with each PR's URL and head commit, the review verdict, CI
+  as recorded and, for a host PR whose pointer names a sub-repo PR's commit, that dependency.
 
 ## Transitions
 
@@ -292,7 +292,7 @@ The Flow Control rows that leave this unit; the rows that leave no single unit, 
 |------|------|
 | REVIEW (review-triage) → thin route / design re-entry (auto) | the aggregated review verdict is `max_severity ≥ Medium` → each Medium+ finding is routed by its `remedy_class` (`<autoflow-root>/scripts/gate/remedy-route.sh route`): `design` → a re-entry within the cycle from DIAGNOSE or from ARCHITECT, the orchestrator's judgment recorded in the attempt's `[review-autofix]` ledger entry; `impl` / `test` / `doc` → the thin route; `operator` → the advisor fixes the class. A finding that does not hold is rejected, not routed (`<autoflow-root>/docs/units/review.md` > *Review triage*; the case is `<autoflow-root>/scripts/handoff/review-gate.sh` exit `10`) |
 | REVIEW (review-triage) → advisor / user | auto-resolution hits an advisor criterion (`<autoflow-root>/docs/units/review.md` > *Routing*), or a rebutted finding the next round's aggregation keeps while the two sides still disagree → the advisor decides; the 7-attempt cap (`review-gate.sh` exit `11`) → `active:false`, `phase:"awaiting-user"` |
-| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green, or CI recorded as not run → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports the merge order → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
+| REVIEW → end | every PR's aggregated verdict below Medium + Low triage resolved + CI green, or CI recorded as not run → the orchestrator sets the state `active:false`, `phase:"awaiting-external-review"` and reports each pull request's facts → AutoFlow ends; external review reviews and merges out of band (`<autoflow-root>/docs/units/review.md` > *End*) |
 
 ## Reviewer review
 
@@ -477,29 +477,23 @@ cycle off:
 
 - the state file reads `active: false`, `phase: "awaiting-external-review"`, with nothing else in
   it changed.
-- the report names the order in which the pull requests merge (*Merge order* below).
+- the report names each pull request's URL and head commit, its review verdict and its CI as
+  recorded, and, for a host pull request whose pointer names a sub-repo pull request's commit, that
+  dependency.
 
 Cautions:
 
 - The hand-off is not made while a pull request of the cycle has a `Medium`+ verdict.
 - A pause for the user is the other `active:false` transition (`phase: "awaiting-user"`).
 
-Report: "PR #N open (draft) — aggregated review posted — handed to external review." with
-each PR's URL and head commit, and the merge order. AutoFlow ends; the session may terminate.
+Report: "PR #N open (draft) — aggregated review posted — handed to external review." with the
+facts above. AutoFlow ends; the session may terminate.
 
-The cleanup that follows an external merge or rejection runs at PREFLIGHT of the next cycle in this checkout (or in the live session if it observes the decision before terminating) — the local dev branch's deletion and the attempt's completed mark; its records stay in `<attempt-dir>/`, and its remote branch and pull request are left as they are; see [U1 Preparation](<autoflow-root>/docs/units/preparation.md) > *What is asked*.
+**[MUST]** AutoFlow merges nothing and promotes no draft. The hook denies `gh pr merge` and a push
+to the default branch.
 
-### Merge order
-
-Merging is outside AutoFlow ([`external-review-sequencing.md`](<autoflow-root>/docs/external-review-sequencing.md)).
-The report names the order for the operator: a pull request with no sub-repo dependency in any
-order; a host pull request whose pointer depends on a sub-repo pull request after it — the
-sub-repo pull request merges first, the host is reconciled to its merge commit ([U6
-Delivery](delivery.md) > *Multi-repo delivery*), and the host pull request then merges.
-
-**[MUST]** AutoFlow merges nothing and promotes no draft; of this order it performs only the
-reconcile, on the operator's request. The hook denies `gh pr merge` and a push to the default
-branch.
+What follows an external merge or close — the attempt's branches and records included — is outside
+AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
 
 ## An attempt with no state file
 
@@ -832,27 +826,6 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
   keeps a finding only one of them raised.
 - **Account allowance.** The `claude` review runs on the same account allowance
   as the orchestrator, once per pull request and round.
-
-<!-- From <autoflow-root>/docs/external-review-sequencing.md -->
-
-# External Review -- Merge Sequencing
-
-> Audience: the external reviewer who merges AutoFlow PRs, and the operator. AutoFlow ends at the review's hand-off; this document covers what happens after.
-
-A project's sub-repos, and where each one's pull request goes (a fork, the upstream), are the project's own information ([`core.md`](<autoflow-root>/docs/core.md) > Project Information). The merge order below concerns the PR of the host's direct sub-repo; a sub-repo nested inside it is merged and reconciled by that sub-repo's own procedure, outside host handoff scope. The rule AutoFlow keeps for a host that points at a sub-repo is [`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Multi-repo delivery*.
-
-AutoFlow reports the merge order at the end of a cycle ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *End*). Each PR is reviewed on **its own diff**, over **its own repository** — the host review never substitutes for the sub-repo review, and never judges a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing).
-
-## Per-issue procedure
-
-A host PR with no sub-repo dependency: the reviewer promotes the draft to "Ready for review" and merges it directly.
-
-A host PR whose pointer depends on a sub-repo PR merges after it:
-
-1. The sub-repo PR is reviewed and merged.
-2. The host is reconciled to that merge commit — by whoever owns the host PR's branch, or by AutoFlow when the operator asks it to ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Multi-repo delivery*). A host pointer that has not moved while the sub-repo PR is still under review is not a missed step: the pointer is reconciled once the sub-repo PR has merged.
-3. The operator confirms that the host PR's pointer for that sub-repo equals the merge commit (`git ls-tree HEAD <sub-repo>` on the host PR's head).
-4. The host PR is promoted from draft to "Ready for review" (a manual click) and merged. The literal close-keyword line in its body closes the issue.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 
@@ -1579,7 +1552,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 - **The record root** is `record_root` in the operator's `~/.autoflow/config.json` — an absolute path; the file itself never moves with it. No file, no key, or a JSON `null` → the default `~/.autoflow`. A file that cannot be read as JSON (a syntax error, or no `jq`), or a `record_root` that is not an absolute path string (not a string, empty, relative), leaves the record root **undetermined**, never the default in its stead; an error in the same file's `.review` does not touch it. A record root inside the session's checkout, or one that cannot be created or written, is **unusable**. Either way every script that needs it writes nothing and stops with exit `7` and the marker line `record-root: UNDETERMINED <config path> — <error>` or `record-root: UNUSABLE <record root> — <error>`, asking nothing; the next run reads the file anew. Nothing else — no environment variable — names the root, the records or `_metrics/`.
 - **The owner**: the file `checkout` in the record directory names the checkout the attempt belongs to — the one that started it, or the one that took it over (`autoflow-records claim`, once that checkout is gone). Entry, the hook's gates and cleanup read only this checkout's attempts ([`<autoflow-root>/docs/units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *What is asked*).
-- **Completed**: the file `completed` marks an attempt whose Post-Merge Cleanup has run; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
+- **Completed**: the file `completed` marks an attempt that is over, written by the record function `cleanup-issue.sh`; its records stay where they are ([`<autoflow-root>/docs/git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
 - **Records kept inside the tree before the record root** (`.autoflow/<repo-key>-issue-{N}/`, issues #423 to #465): a state file there is never passed over. The hook refuses the score-gated calls and PREFLIGHT stops (`entry: stop in-tree-records`) until `<autoflow-root>/scripts/migrate/migrate-in-tree-records.sh` moves each such directory whose state file names a dev branch `dev/<stamp>-issue-{N}` to that attempt's record directory, with this checkout as its owner; the cycle then continues from there. One naming no such branch is moved too when it reads `active: false` — to `<record-root>/<repo-key>/in-tree-<date>-<time>-issue-{N}/`, marked `completed`, kept as a record and never entered; when it reads `active: true` it is reported and left for the operator (name the branch in the attempt shape, or set `active: false`), and the script runs again. A directory with no state file (a proposal record, a criterion review of no attempt) is not a cycle and is left in place.
 
 **Companion artifact**: `<attempt-dir>/issue-{N}-ledger.md` — the attempt's append-only decision ledger ([Decision Ledger](<autoflow-root>/docs/core.md)). The hook reads it **advisorily only** and never denies a tool call on what it finds; the ledger is not a gate input — no gate verdict, retry cap or transition reads it.
@@ -1634,7 +1607,7 @@ The state file's detail — its naming, its schema and fields, the hook gates th
 
 These gates are wired via PreToolUse on `Bash` (git / gh commands), `Write|Edit|MultiEdit` and `Agent`.
 
-**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT's prior-attempt resolution reads the file (review-response mode) and, once the PR is observed merged or closed, marks the attempt completed; its records stay in its record directory (`<autoflow-root>/docs/units/preparation.md` > *What is asked*).
+**Completion**: at the end of REVIEW, once the aggregated review is clean (no PR's verdict is Medium+ — Medium+ findings auto-resolved and Low findings triaged), set `active` to `false` and record `phase: "awaiting-external-review"`. PREFLIGHT reads the file afterwards — review-response while its PR is open, set aside once it is merged or closed (`<autoflow-root>/docs/units/preparation.md` > *Modes*); what follows a merge or a close is outside AutoFlow (`<autoflow-root>/docs/git-workflow.md` > Post-Merge Cleanup).
 **Forced termination**: also set `active` to `false`.
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Communication > Result delivery path by spawn mode -->

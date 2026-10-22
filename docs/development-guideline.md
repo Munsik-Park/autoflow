@@ -63,13 +63,11 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 
 ## 5. PR Policy
 
-- Keep the existing host PR template contract, especially `HOST-CLOSE-LINE`,
-  sub-repo dependency checklist, and AutoFlow status fields.
+- Keep the existing host PR template contract, especially `HOST-CLOSE-LINE`
+  and AutoFlow status fields.
 - Do not merge, close issues, or deploy as part of review work.
 - For GitHub PR/issue reviews, use local `gh` CLI rather than public web
   lookup for private or permission-restricted repository data.
-- Host PRs that depend on sub-repo changes must preserve the external review
-  sequencing contract.
 
 ## 6. Refactoring Policy
 
