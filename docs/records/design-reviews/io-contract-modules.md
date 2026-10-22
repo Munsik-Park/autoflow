@@ -117,34 +117,94 @@ input. As module outputs, every evaluation report gets a declared path and forma
 `/autoflow:cycle` and the abbreviated path ([abbreviated-path.md](../../abbreviated-path.md))
 stop being paths the plugin defines. They become two ways of composing the modules.
 
-## 5. Contract shape (illustrative)
+## 5. Contract format and module invocation
 
-The format is not settled. This example only shows what a contract carries.
+*Proposed — pending the operator's confirmation.* Drafts that follow it: the design module
+([`docs/contracts/design.yaml`](../../contracts/design.yaml)) and the plan evaluation module
+([`docs/contracts/plan.yaml`](../../contracts/plan.yaml)). No device reads them yet.
 
-```yaml
-module: design
-inputs:
-  analysis:        { required: true,  schema: analysis-report }
-  issue:           { required: true,  kind: issue-number }
-  prior_findings:  { required: false, schema: evaluation-report }   # supplied by the Coordinator on a re-run
-outputs:
-  feature_design:      { schema: feature-design }       # ## Scope, ## Decision requests
-  verification_design: { schema: verification-design }  # 7-column AC table, ## Tools
-```
+### 5.1 Where contracts live, and how they are read
 
-- The Coordinator passes the output location. Run and round naming is then the Coordinator's,
-  which removes the `c{C}` rename ([units/preparation.md](../../units/preparation.md) >
-  Review-response setup) and the in-place `## Delta — round <n>` append
-  ([units/design.md](../../units/design.md) > Re-entry).
-- Validation pieces that exist today and become one contract validator:
-  - the orchestrator's required-section checks before GATE:HYPOTHESIS and GATE:PLAN
-    ([units/analysis.md](../../units/analysis.md) > Unit spawn,
-    [units/design.md](../../units/design.md) > Unit spawn);
-  - `review-gate.sh` exit `2` on a findings file that breaks its contract;
-  - `criterion-ready.sh`'s binding of `[criterion-ready]` to the issue body's sha256.
-- Existing precedent for a declaration with a generator and a check:
-  `scripts/skills/core-units.tsv` and `role-docs.tsv`, checked by
-  `tests/plugin/verify-skill-bodies.sh`.
+- **One file per module**, `docs/contracts/<module>.yaml`. `CLAUDE.md` > Writing AutoFlow
+  Documents writes an AutoFlow path as `<autoflow-root>/docs/…` or `<autoflow-root>/scripts/…`; a
+  contract under `docs/` keeps that convention and adds no top-level plugin component (ADR-0027 D1
+  lists them).
+- **Authored in YAML, read as JSON.** The README's prerequisites are Claude Code, `jq` and `gh`
+  (`README.md`, **Prerequisites**); jq does not read YAML, and Python's standard library has no YAML
+  parser (`python3 -c 'import yaml'` fails on this machine). A generator writes each contract's
+  JSON beside it and is checked for equality with the committed copy, on the pattern of
+  `scripts/skills/gen-skill-bodies.sh` and `tests/plugin/verify-skill-bodies.sh`. The YAML parser
+  is then a development-time tool only: `yq` (mikefarah) v4 — v4.53.3 here, and 4.54.1 on the
+  Ubuntu 24.04 runner image (`actions/runner-images` > `images/ubuntu/Ubuntu2404-Readme.md`), the
+  image `ubuntu-latest` the workflows run on. The runtime prerequisites do not change.
+- **A `.yaml` file carries an inline SPDX header.** `REUSE.toml` bulk-covers Markdown, JSON, JSONL
+  and plain text and leaves the header-bearing types (`.sh`, `.py`, `.yml`, …) to inline headers.
+
+### 5.2 What a contract carries
+
+| Key | Holds |
+|---|---|
+| `contract` | the format version, `1` |
+| `module`, `kind` | the module's name; `functional`, `evaluation` or `deterministic` (§4) |
+| `goal` | one paragraph: what the output is for |
+| `procedure` | the document the module follows (today's unit document, or the rubric) |
+| `params` | scalar inputs the Coordinator passes: name, type, required, enum |
+| `inputs` | file inputs: name, `required`, and `from` — where such an input comes from: `{module, output}` (another module's output, whose schema the validator then applies), `{ledger: [<marker>…]}` (a decision entry, Q4), or `{path: target}` (a document of the target the Coordinator names) |
+| `outputs` | each output: `file` (its name inside the output directory), `format` and its schema |
+| `reference` | values AutoFlow provides with the output for the Coordinator to apply (Q2) |
+
+**Output schemas**, by the forms today's artifacts already take:
+
+| `format` | Schema keys | Today's example |
+|---|---|---|
+| `markdown` | `sections`: each `heading`, `required`, `empty` (the word an empty section says, `none`); a section may hold `lines` (what each line holds, and a value list). `tables` for a table: `locate` (under a heading, or by its header row), `columns`, per-column `enum` / `pattern` / `required_when`, and `coverage`. `first_line` for a line before the first heading. `forbids` for content the output must not carry | the analysis report's ten sections; the verification design's AC table and `## Tools` |
+| `json` | `keys`: each `type`, `required` / `required_when`, `enum`; `forbidden` keys | the evaluation report ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format) |
+| `ledger-entry` | `marker`, `namespace`, `fields` | `[criterion-ready]` ([criterion-review.md](../../criterion-review.md) > Confirmation) |
+| `validator` | a script that accepts or refuses the file | the findings file, refused by `review-gate.sh` exit `2` |
+
+**Every rule says who checks it**: `check: mechanical` (the contract validator) or
+`check: evaluation` (the evaluation module that scores the output). The split exists today: the
+orchestrator checks that the design documents carry `## Decision requests` and `## Tools`
+([units/design.md](../../units/design.md) > Unit spawn), while whether a `Failure mode` cell can be
+told apart from another's is GATE:PLAN's Scope deduction ([evaluation-system.md](../../evaluation-system.md)
+> GATE:PLAN > Scoring). A contract names both, so the validator never claims what only an
+evaluation can judge.
+
+### 5.3 Invocation
+
+- **The Coordinator writes an invocation file** and starts the module on it:
+  `/autoflow:<module> <invocation.json>` for a session, or the same path in an agent's prompt.
+
+  ```json
+  {
+    "contract": 1,
+    "module": "design",
+    "params": { "issue": 507 },
+    "inputs": { "applied_criteria": "<path>", "analysis": "<path>", "hypothesis_evaluation": "<path>" },
+    "out": "<output directory>"
+  }
+  ```
+
+- **The module checks its inputs first**: `autoflow-contract check-in <invocation.json>` — every
+  required input given, every given input conforms to the schema its `from` names. On a refusal it
+  writes nothing but the result file and stops.
+- **It writes each output to `<out>/<file>`** and ends with `autoflow-contract check-out
+  <invocation.json>`, which checks the outputs against the contract and writes
+  `<out>/result.json`: the module, `accepted` or `refused`, each output's path, and each defect
+  found. The Coordinator reads that file to decide the next run (Q3).
+- **The output directory is the Coordinator's.** A re-run gets a new directory and names the
+  previous outputs as inputs, so nothing is renamed or overwritten.
+- **A module does not know which run it is.** What a re-run's output owes because it is a re-run is
+  derived from its inputs: the design's `## Delta — round <n>` takes `n` from the number of delta
+  sections in the previous document it is given, plus one (`docs/contracts/design.yaml` > `rules`).
+- **The existing commands stay until sub-issue 3**: `/autoflow:cycle-u1` … `cycle-u7` keep their
+  current behaviour on this branch, and sub-issue 3 replaces them with the module commands.
+
+Open within the format, for sub-issue 2: the name `autoflow-contract` and whether it lives in
+`bin/` beside `autoflow-records`; and who writes an evaluation module's output, since the evaluator
+agent has no Write tool (`agents/autoflow-evaluator.md` > `tools: Read, Glob, Grep, Bash`) — the
+draft names the invoking session, writing the returned report verbatim (`docs/contracts/plan.yaml`
+> `outputs.evaluation.writer`).
 
 ## 6. Open decisions
 

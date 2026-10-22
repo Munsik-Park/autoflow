@@ -1,0 +1,167 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Apache-2.0
+#
+# The design module's contract — DRAFT (issue #508, epic #507). Format:
+# docs/records/design-reviews/io-contract-modules.md > 5. Contract format and module invocation.
+# No device reads this file yet.
+
+contract: 1
+module: design
+kind: functional
+goal: >
+  A design the build module can implement and verify: the architecture decisions with the
+  constraints they hold under and the alternatives rejected, and a verification design that says
+  how each acceptance criterion is verified and which failure mode each verification catches.
+procedure: docs/units/design.md
+
+params:
+  issue:
+    type: issue-number
+    required: true
+  rerun_reason:
+    required: false
+    enum:
+      - GATE:PLAN FAIL
+      - advisor answer
+      - BUILD design contradiction
+      - design re-entry
+      - acceptance-criterion decision
+      - gate recommendation
+
+inputs:
+  applied_criteria:
+    required: true
+    from: { module: criteria-apply, output: applied_criteria }
+  analysis:
+    required: true
+    from: { module: analysis, output: report }
+  hypothesis_evaluation:
+    required: true
+    from: { module: hypothesis, output: evaluation }
+  decisions:
+    required: false
+    from: { ledger: [ac-decision, design-point] }
+  target_documents:
+    required: false
+    from: { path: target }
+  # A re-run: the previous documents and the material it is for.
+  previous_feature_design:
+    required: false
+    from: { module: design, output: feature_design }
+  previous_verification_design:
+    required: false
+    from: { module: design, output: verification_design }
+  plan_evaluation:
+    required: false
+    from: { module: plan, output: evaluation }
+  green_blocker:
+    required: false
+    from: { module: build, output: green_blocker }
+  failed_items:
+    required: false
+    from: { module: quality, output: evaluation }
+
+rules:
+  - id: rerun-has-reason
+    check: mechanical
+    rule: a previous document is given if and only if rerun_reason is given
+  - id: delta-not-rewrite
+    check: mechanical
+    rule: >
+      On a re-run, each output document the run changes is the previous document unchanged, then
+      one appended section "## Delta — round <n> (<rerun_reason>)", n being the number of delta
+      sections in the previous document plus one. "## Decision requests" and "## Tools" are the
+      exception: rewritten in place to their current state.
+    source: docs/units/design.md > Re-entry
+  - id: row-grain
+    check: evaluation
+    rule: >
+      One row per verification: a criterion verified more than one way carries one row per
+      verification under the same Issue AC, and a verification that spans rows carries the same
+      label in Method on each of them.
+    source: docs/units/design.md > Output artifacts (the Failure mode bullet, Row grain)
+  - id: scope-rows
+    check: evaluation
+    rule: each problem the feature design's "## Scope" includes gets a row (Issue AC "—", no Reason owed)
+    source: docs/units/design.md > Output artifacts (the Issue AC bullet)
+  - id: no-criterion-applied
+    check: evaluation
+    rule: the design states an acceptance-criterion change as a request and never applies it
+    source: docs/units/design.md > Output artifacts
+
+outputs:
+  feature_design:
+    file: feature-design.md
+    format: markdown
+    sections:
+      - heading: Scope
+        required: true
+        empty: none
+        check: mechanical
+      - heading: Decision requests
+        required: true
+        empty: none
+        check: mechanical
+        entries:
+          - kind: acceptance-criterion content change
+            holds: [criterion, proposed change, fact that shows the need]
+          - kind: design point
+            holds: [options, what each changes]
+    forbids:
+      - what: a change table of files, a per-suite disposition, or an oracle's condition clause
+        check: evaluation
+        source: docs/units/design.md > Output artifacts (the [DENY] clause)
+
+  verification_design:
+    file: verification-design.md
+    format: markdown
+    first_line:
+      what: the risk line — who is harmed and how if this change is wrong
+      required: true
+      check: mechanical
+      source: docs/units/design.md > Verification depth
+    tables:
+      # Today's document fixes this table's columns but no heading above it
+      # (docs/units/design.md > Output artifacts, item 2); the table is found by its header row.
+      # Open for sub-issue 2: whether the contract fixes a heading for it.
+      - locate: the table whose header row is the columns below
+        required: true
+        check: mechanical
+        columns: [Issue AC, Acceptance criterion, Type, Kind, Method, Failure mode, Reason]
+        column_rules:
+          Issue AC:
+            values: an AC id of applied_criteria, or "—"
+          Type:
+            enum: [automated, existing-coverage, delivery-check, manual, environment-dependent, none]
+            # In this repository only, a standing row: "automated / standing: <token>" or
+            # "manual / standing: <token>", the token from ADR-0024 D1's closed list.
+            pattern_this_repository: '^(automated|manual) / standing: \S+$'
+          Kind:
+            enum: [driving, regression, characterization]
+            required_when: Type is automated
+            otherwise: "—"
+          Reason:
+            required_when: Type is not automated and Issue AC is not "—"
+          Failure mode:
+            required_when: Type is automated, existing-coverage, delivery-check or manual
+            otherwise: "—"
+            note: >
+              Also owed on an environment-dependent row resolved to a mock or a manual
+              delegation; that reading, and whether a cell can be told apart from another
+              verification's, is the evaluation's.
+        coverage:
+          rule: every AC id of applied_criteria has at least one row
+          check: mechanical
+          source: docs/evaluation-system.md > GATE:PLAN > AC-authority check
+    sections:
+      - heading: Tools
+        required: true
+        empty: none
+        check: mechanical
+        lines:
+          holds: [tool, the rows it verifies or the design question it serves, availability, ground]
+          availability: ['available', 'target procedure: <document section or script>', 'operator: <what is needed>']
+        note: a "none" carries its ground in one line
+
+result:
+  summary: one line
