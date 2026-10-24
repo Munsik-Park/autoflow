@@ -39,28 +39,23 @@
       "file": "criterion-review.md",
       "format": "markdown",
       "note": "the screen's record brought up to date — a new file, the input left as it is (§5.3)",
-      "first_line": {
-        "what": "the sha256 of the issue body reviewed, as the input record has it",
-        "required": true,
-        "check": "mechanical"
-      },
-      "coverage": {
-        "rule": "every finding of the trace and every in-depth case has its disposition, with its grounds",
-        "check": "evaluation"
-      },
-      "sections": [
+      "checks": [
         {
-          "heading": "Proposed changes",
-          "required": true,
-          "empty": "none",
-          "check": "mechanical"
+          "type": "line",
+          "pattern": "^Issue body sha256: [0-9a-f]{64}$",
+          "note": "the sha256 of the issue body reviewed, on a line of its own"
         },
         {
-          "heading": "Open questions",
-          "required": true,
-          "empty": "none",
-          "check": "mechanical"
+          "type": "section",
+          "heading": "Proposed changes"
+        },
+        {
+          "type": "section",
+          "heading": "Open questions"
         }
+      ],
+      "evaluation": [
+        "every finding of the trace and every in-depth case has its disposition, with its grounds"
       ]
     }
   },

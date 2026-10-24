@@ -74,29 +74,32 @@
   "outputs": {
     "commits": {
       "format": "git",
-      "holds": "the commits the run made on the branch, from the branch's head at the run's start",
-      "check": "mechanical"
+      "checks": [
+        {
+          "type": "git_range",
+          "branch_param": "branch",
+          "note": "the commits the run made on the branch, from its head at check-in"
+        }
+      ]
     },
     "report": {
       "file": "build-report.md",
       "format": "markdown",
-      "tables": [
+      "checks": [
         {
-          "locate": "the table whose header row's first cell is \"Item\"",
-          "required": true,
-          "check": "mechanical",
-          "columns": {
-            "first": "Item",
-            "rest": "the module's own"
-          },
-          "rows": {
-            "rule": "a row carries its outcome — how the item was verified and what the run showed, or why it was not",
-            "check": "mechanical"
-          },
-          "coverage": {
-            "rule": "every Item of verification_design's table has at least one row",
-            "check": "mechanical"
-          }
+          "type": "table",
+          "first": "Item",
+          "rows_disposed": true,
+          "covers": [
+            {
+              "input": "verification_design",
+              "table": {
+                "first": "Item",
+                "outside_delta": true
+              }
+            }
+          ],
+          "note": "every item of the verification design with its outcome — how it was verified and what the run showed, or why it was not"
         }
       ]
     },
@@ -104,7 +107,7 @@
       "file": "green-blocker.md",
       "format": "markdown",
       "required": false,
-      "note": "Written when the design cannot be built as it stands: the decision that blocks and why. The design module takes it as an input on its re-run.\n"
+      "note": "Written when the design cannot be built as it stands: the decision that blocks and why. The design module takes it as an input on its re-run."
     }
   },
   "result": {

@@ -55,69 +55,99 @@
     "evaluation": {
       "file": "evaluation.json",
       "format": "json",
-      "writer": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
-      "keys": {
-        "type": {
-          "type": "string",
-          "required": true,
-          "const": "security_audit"
-        },
-        "issue": {
-          "type": "string",
-          "required": true,
-          "pattern": "^#[0-9]+$"
-        },
-        "test_first": {
-          "type": "string",
-          "required": true,
-          "note": "what the evaluator read and whether it confirms test-first; when it does not, no scores are given"
-        },
-        "scores": {
-          "type": "object",
-          "required_when": "test_first confirms",
-          "keys_exactly": [
-            "Authn/Authz",
-            "Input validation",
-            "Data exposure",
-            "Infra isolation",
-            "Dependencies"
-          ],
-          "value": "a number 0-10, or { score, reason }"
-        },
-        "rescore": {
-          "type": "object",
-          "required_when": "previous_evaluation is given",
-          "keys": [
-            "source",
-            "rescored",
-            "inherited",
-            "prior_findings"
-          ],
-          "rules": [
-            "every rubric item is in exactly one of rescored and inherited",
-            "every finding of previous_evaluation has an entry in prior_findings, with its disposition"
-          ]
-        },
-        "summary": {
-          "type": "string",
-          "required": true
-        },
-        "recommendations": {
-          "type": "array",
-          "required": true,
-          "items": {
-            "keys": [
-              "subject",
-              "item",
-              "finding"
-            ]
+      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "checks": [
+        {
+          "type": "keys",
+          "spec": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "const": "security_audit"
+            },
+            "issue": {
+              "type": "string",
+              "required": true,
+              "pattern": "^#[0-9]+$"
+            },
+            "test_first": {
+              "type": "object",
+              "required": true,
+              "keys_exactly": [
+                "confirmed",
+                "read"
+              ],
+              "note": "what the evaluator read, and whether it confirms that the tests meant to fail before the implementation did; when it does not, no scores are given"
+            },
+            "scores": {
+              "type": "object",
+              "keys_exactly": [
+                "Authn/Authz",
+                "Input validation",
+                "Data exposure",
+                "Infra isolation",
+                "Dependencies"
+              ],
+              "note": "each value a number 0-10, or { score, reason }",
+              "required_when": {
+                "key": ".test_first.confirmed",
+                "equals": true
+              }
+            },
+            "rescore": {
+              "type": "object",
+              "required_when": {
+                "input": "previous_evaluation"
+              }
+            },
+            "summary": {
+              "type": "string",
+              "required": true
+            },
+            "recommendations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "subject",
+                "item",
+                "finding"
+              ]
+            }
           }
+        },
+        {
+          "type": "forbidden_keys",
+          "keys": [
+            "verdict"
+          ],
+          "note": "Q2: applying the pass values is the Coordinator's"
+        },
+        {
+          "type": "partition",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "of_keys": ".scores",
+          "into": [
+            ".rescore.rescored",
+            ".rescore.inherited"
+          ],
+          "note": "every rubric item is scored afresh or inherited"
+        },
+        {
+          "type": "covers",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "source": {
+            "input": "previous_evaluation",
+            "ids": ".recommendations[].finding"
+          },
+          "by": ".rescore.prior_findings[].finding",
+          "disposed_by": ".rescore.prior_findings[].disposition",
+          "note": "every finding of the previous evaluation has its disposition"
         }
-      },
-      "forbidden_keys": [
-        "verdict"
-      ],
-      "check": "mechanical"
+      ]
     }
   },
   "reference": {

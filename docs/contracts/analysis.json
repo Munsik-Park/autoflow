@@ -54,39 +54,35 @@
     "report": {
       "file": "analysis.md",
       "format": "markdown",
-      "sections": [
+      "checks": [
         {
-          "heading": "Acceptance criteria",
-          "required": true,
-          "check": "mechanical",
-          "tables": [
-            {
-              "locate": "the first table under the heading",
-              "columns": [
-                "AC id",
-                "criterion",
-                "source"
-              ],
-              "rows": {
-                "rule": "ids are unique, and every criterion of the issue body has a row",
-                "check": "evaluation"
-              }
-            }
-          ],
-          "note": "criteria-apply reads this table."
+          "type": "section",
+          "heading": "Acceptance criteria"
         },
         {
+          "type": "table",
+          "under": "Acceptance criteria",
+          "header": [
+            "AC id",
+            "criterion",
+            "source"
+          ],
+          "unique_first": true,
+          "note": "criteria-apply reads this table"
+        },
+        {
+          "type": "section",
           "heading": "Necessity",
-          "required": true,
-          "check": "mechanical",
           "note": "whether a change is owed and whether code is the lever, with its grounds"
         },
         {
+          "type": "section",
           "heading": "Decision points",
-          "required": true,
-          "empty": "none",
-          "check": "mechanical"
+          "note": "\"none\" when there is none"
         }
+      ],
+      "evaluation": [
+        "every criterion of the issue body has a row of the Acceptance criteria table"
       ]
     }
   },

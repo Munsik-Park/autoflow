@@ -63,39 +63,55 @@
       "from": {
         "results": "tool_requests"
       },
-      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations the Coordinator deferred or separated."
+      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations the Coordinator deferred or separated. Each is a run's tool-requests.json."
     },
     "deferred": {
       "required": false,
       "from": {
         "path": "coordinator"
-      }
+      },
+      "note": "a JSON array of the recommendations the Coordinator deferred or separated, each {subject, finding}"
     }
   },
   "outputs": {
     "pull_request": {
       "format": "pull-request",
-      "holds": "the pushed branch, its head commit, and the draft pull request on the attempt's base",
-      "body": {
-        "coverage": [
-          {
-            "rule": "every applied criterion is named with its outcome and where its evidence is",
-            "check": "mechanical"
+      "checks": [
+        {
+          "type": "pr_open",
+          "branch_param": "branch",
+          "draft": true
+        },
+        {
+          "type": "pr_body_covers",
+          "source": {
+            "input": "applied_criteria",
+            "ids": ".criteria[].id"
           },
-          {
-            "rule": "every tool request of the run is stated, with what it left unverified",
-            "check": "mechanical"
+          "note": "every applied criterion is named, with its outcome and where its evidence is"
+        },
+        {
+          "type": "pr_body_covers",
+          "source": {
+            "input": "tool_requests",
+            "ids": ".[].missing"
           },
-          {
-            "rule": "every deferred or separated recommendation is stated",
-            "check": "mechanical"
-          }
-        ]
-      },
-      "ci": {
-        "rule": "the head's checks are green, or that no CI ran is recorded on the pull request",
-        "check": "mechanical"
-      }
+          "note": "every tool request of the run is stated, with what it left unverified"
+        },
+        {
+          "type": "pr_body_covers",
+          "source": {
+            "input": "deferred",
+            "ids": ".[].finding"
+          },
+          "note": "every recommendation the Coordinator deferred or separated is stated"
+        },
+        {
+          "type": "pr_checks",
+          "not_run_marker": "CI: not run",
+          "note": "the head's checks are all green, or the body records that no CI ran with the marker line"
+        }
+      ]
     },
     "integration": {
       "file": "integration.md",

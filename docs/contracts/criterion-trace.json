@@ -25,11 +25,9 @@
     "trace": {
       "file": "trace.md",
       "format": "markdown",
-      "rows": {
-        "rule": "each finding with its grounds, and whether the review record already has it",
-        "check": "evaluation"
-      },
-      "empty": "none"
+      "evaluation": [
+        "each finding with its grounds, and whether the review record already has it; \"none\" when there is none"
+      ]
     }
   },
   "result": {

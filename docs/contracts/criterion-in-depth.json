@@ -29,10 +29,9 @@
     "in_depth": {
       "file": "in-depth.md",
       "format": "markdown",
-      "coverage": {
-        "rule": "every case of the target has its verdict, the deciding code and condition, and the grounds",
-        "check": "evaluation"
-      }
+      "evaluation": [
+        "every case of the target has its verdict, the deciding code and condition, and the grounds"
+      ]
     }
   },
   "result": {

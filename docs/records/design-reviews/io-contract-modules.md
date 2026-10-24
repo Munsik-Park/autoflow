@@ -151,24 +151,31 @@ criterion-review modules and criteria-apply). No device reads them yet.
 | `outputs` | each output: `file` (its name inside the output directory), `format` and its schema |
 | `reference` | values AutoFlow provides with the output for the Coordinator to apply (Q2) |
 
-**Output schemas**, by the forms today's artifacts already take:
+**Outputs.** Each output names its `format` and, for a file, its `file` inside the output
+directory (`many` when it is a set of files, `required: false` when it may be absent). What the
+validator checks is the output's `checks` list, each item a check of a fixed `type`; what only an
+evaluation can judge is the output's `evaluation` list, prose the evaluation module reads and the
+validator does not. `scripts/contracts/contract.sh` implements every type below; a type it does not
+know is a defect, not a pass.
 
-| `format` | Schema keys | Today's example |
+| `format` | Check types | Instance |
 |---|---|---|
-| `markdown` | `sections`: each `heading`, `required`, `empty` (the word an empty section says, `none`); a section may hold `lines` (what each line holds, and a value list). `tables` for a table: `locate` (under a heading, or by its header row), `columns` (all of them, or the `first` with the `rest` the module's own), per-column `values` / `pattern` / `required_when`, `rows`, and `coverage`. `first_line` for a line before the first heading. `forbids` for content the output must not carry | the analysis report's ten sections; the verification design's AC table |
-| `json` | `keys`: each `type`, `required` / `required_when`, `enum`; `forbidden` keys | the evaluation report ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format) |
-| `ledger-entry` | `marker`, `namespace`, `fields` | `[criterion-ready]` ([criterion-review.md](../../criterion-review.md) > Confirmation) |
-| `validator` | a script that accepts or refuses the file | the findings file, refused by `review-gate.sh` exit `2` |
-| `git` | the commits a run made on a branch | the build's commits |
-| `pull-request`, `pull-request-comment` | a pull request (its branch, head, base, body and checks), or a comment posted on one | the delivery's PR; the review's aggregated comment |
+| `markdown` | `section` (a `## <heading>` with a non-empty body — `none` when there is nothing), `line` (a line matching a pattern), `table` (a table by its first header cell or its whole header, under a heading, outside the `## Delta — round <n>` sections; `rows_disposed`: every row carries something after its first cell; `unique_first`; `covers`: every id a source names is a first cell) | the verification design's `Item` table covering the applied criteria and the feature design's `## Scope` items |
+| `json` | `keys` (per key: `type`, `required` / `required_when`, `const`, `pattern`, `keys_exactly`, `items_keys`), `forbidden_keys`, `unique`, `partition` (a key set split into two lists), `covers` (every id a source names has an entry, with its disposition) | an evaluation's scores, re-score and recommendations |
+| `git` | `git_range`: the branch gained commits since check-in | the build's commits |
+| `pull-request` | `pr_open` (open, a draft), `pr_body_covers` (the body states every id a source names), `pr_checks` (every check on the head green, or the body's marker line that no CI ran) | the delivery's pull request |
+| `pull-request-comment` | `pr_comment_posted` (the kept comment file is posted) | the review's aggregated comment |
 
-**Every rule says who checks it**: `check: mechanical` (the contract validator) or
-`check: evaluation` (the evaluation module that scores the output). The split exists today: the
-orchestrator checks that the design documents carry `## Decision requests` and `## Tools`
-([units/design.md](../../units/design.md) > Unit spawn), while whether a `Failure mode` cell can be
-told apart from another's is GATE:PLAN's Scope deduction ([evaluation-system.md](../../evaluation-system.md)
-> GATE:PLAN > Scoring). A contract names both, so the validator never claims what only an
-evaluation can judge.
+A `covers` source is an input's JSON at a jq path (`{input, ids}`), or the first column of a table
+in an input or another output (`{input | output, table}`). A `when` limits a check to runs given a
+named input, or to a key's value.
+
+**Every check says who makes it**, by the list it is in: `checks` (the validator) or `evaluation`
+(the evaluation module that scores the output). The split exists today: the orchestrator checks
+that the design documents carry `## Decision requests` ([units/design.md](../../units/design.md) >
+Unit spawn), while whether a verification fits its criterion is GATE:PLAN's `Verification fit`
+([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring). A contract names both,
+so the validator never claims what only an evaluation can judge.
 
 **No rule checks a classification of a module's judgment** (Q8): a closed list of values the
 module must pick its judgment from. A case the list does not fit is forced into the nearest value
@@ -180,7 +187,7 @@ while the same section says "Necessity is a **judgment**, not a classification".
 that branches on these values mechanically is `scripts/gate/verification-layer-check.sh`, over the
 `standing` token, in this repository only; the others are the AUDIT and GATE:QUALITY evaluators and
 the PR body. What the verification design owes mechanically is that every item the work owes has a
-disposition (`docs/contracts/design.json` > `outputs.verification_design.tables`).
+disposition (`docs/contracts/design.json` > `outputs.verification_design.checks`).
 
 **A contract is input, disposition, output** (Q14): it checks that the inputs are there, and that
 the output disposes of every item the work owes — each applied acceptance criterion, and each item
@@ -202,13 +209,17 @@ the module itself added or changed once that is decided. How the work is done is
   }
   ```
 
-- **The module checks its inputs first**: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` — every
-  required input given, every given input conforms to the schema its `from` names. On a refusal it
-  writes nothing but the result file and stops.
+- **The module checks its inputs first**: `bash <autoflow-root>/scripts/contracts/contract.sh check-in
+  <invocation.json>` — every declared param and required input given, every input path present,
+  and an input another module produced coming from a run whose `result.json` beside it says
+  `accepted`: that run's check-out already applied the producer's schema, so it is not applied
+  again. On a refusal it writes nothing but the result file and stops.
 - **It writes each output to `<out>/<file>`** and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out
   <invocation.json>`, which checks the outputs against the contract and writes
   `<out>/result.json`: the module, `accepted` or `refused`, each output's path, each defect
-  found, and the module's tool requests. The Coordinator reads that file to decide the next run (Q3).
+  found, and the module's tool requests — the `<out>/tool-requests.json` every run writes, a JSON
+  array of `{missing, instead}`, `[]` when the run lacked nothing. The Coordinator reads that file to
+  decide the next run (Q3).
 - **A tool the work needs is used; a tool that is missing is requested, and the run still ends**
   (Q10). A module that lacks a tool does what can be done without it — a mock, a verification
   left not run, by its own judgment — and finishes. It records each missing tool as a tool request:

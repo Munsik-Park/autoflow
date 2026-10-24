@@ -23,7 +23,6 @@
   "inputs": {
     "records": {
       "required": false,
-      "note": "the attempt's design artifacts the reviewers may read (analysis, designs, build report)",
       "from": [
         {
           "module": "analysis",
@@ -41,7 +40,8 @@
           "module": "build",
           "output": "report"
         }
-      ]
+      ],
+      "note": "the attempt's design artifacts the reviewers may read (analysis, designs, build report)"
     },
     "previous_findings": {
       "required": false,
@@ -53,26 +53,30 @@
   },
   "outputs": {
     "reviews": {
-      "file": "reviews/<reviewer>.md",
+      "file": "reviews/*.md",
       "format": "markdown",
-      "note": "one per configured reviewer; a reviewer unavailable for the round is named with the reason in findings"
+      "many": true,
+      "note": "one per configured reviewer; a reviewer unavailable for the round is named with the reason in the findings"
     },
     "findings": {
       "file": "findings.md",
       "format": "markdown",
-      "rows": {
-        "rule": "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds\n",
-        "check": "evaluation"
-      },
-      "coverage": {
-        "rule": "every finding of every review is in the file",
-        "check": "evaluation"
-      }
+      "evaluation": [
+        "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
+        "every finding of every review is in the file"
+      ]
     },
     "comment": {
+      "file": "comment.md",
       "format": "pull-request-comment",
-      "holds": "the findings, posted on the pull request for the round",
-      "check": "mechanical"
+      "checks": [
+        {
+          "type": "pr_comment_posted",
+          "pr_param": "pr",
+          "body_file": "comment.md",
+          "note": "the round's aggregated comment, kept as the file and posted on the pull request"
+        }
+      ]
     }
   },
   "result": {

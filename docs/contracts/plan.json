@@ -58,67 +58,86 @@
     "evaluation": {
       "file": "evaluation.json",
       "format": "json",
-      "writer": "the invoking session, writing the report the evaluator returns verbatim — the evaluator holds no Write tool, so its return value is the only delivery path for its scores (docs/role-contracts.md > Evaluation AI). Q7.\n",
-      "keys": {
-        "type": {
-          "type": "string",
-          "required": true,
-          "const": "plan_evaluation"
-        },
-        "target": {
-          "type": "string",
-          "required": true
-        },
-        "issue": {
-          "type": "string",
-          "required": true,
-          "pattern": "^#[0-9]+$"
-        },
-        "scores": {
-          "type": "object",
-          "required": true,
-          "keys_exactly": [
-            "Decision grounds",
-            "Verification fit",
-            "Scope",
-            "Security"
-          ],
-          "value": "a number 0-10, or { score, reason }"
-        },
-        "rescore": {
-          "type": "object",
-          "required_when": "previous_evaluation is given",
-          "keys": [
-            "source",
-            "rescored",
-            "inherited",
-            "prior_findings"
-          ],
-          "rules": [
-            "every rubric item is in exactly one of rescored and inherited",
-            "every finding of previous_evaluation has an entry in prior_findings, with its disposition"
-          ]
-        },
-        "summary": {
-          "type": "string",
-          "required": true
-        },
-        "recommendations": {
-          "type": "array",
-          "required": true,
-          "items": {
-            "keys": [
-              "subject",
-              "item",
-              "finding"
-            ]
+      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "checks": [
+        {
+          "type": "keys",
+          "spec": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "const": "plan_evaluation"
+            },
+            "issue": {
+              "type": "string",
+              "required": true,
+              "pattern": "^#[0-9]+$"
+            },
+            "scores": {
+              "type": "object",
+              "keys_exactly": [
+                "Decision grounds",
+                "Verification fit",
+                "Scope",
+                "Security"
+              ],
+              "note": "each value a number 0-10, or { score, reason }",
+              "required": true
+            },
+            "rescore": {
+              "type": "object",
+              "required_when": {
+                "input": "previous_evaluation"
+              }
+            },
+            "summary": {
+              "type": "string",
+              "required": true
+            },
+            "recommendations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "subject",
+                "item",
+                "finding"
+              ]
+            }
           }
+        },
+        {
+          "type": "forbidden_keys",
+          "keys": [
+            "verdict"
+          ],
+          "note": "Q2: applying the pass values is the Coordinator's"
+        },
+        {
+          "type": "partition",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "of_keys": ".scores",
+          "into": [
+            ".rescore.rescored",
+            ".rescore.inherited"
+          ],
+          "note": "every rubric item is scored afresh or inherited"
+        },
+        {
+          "type": "covers",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "source": {
+            "input": "previous_evaluation",
+            "ids": ".recommendations[].finding"
+          },
+          "by": ".rescore.prior_findings[].finding",
+          "disposed_by": ".rescore.prior_findings[].disposition",
+          "note": "every finding of the previous evaluation has its disposition"
         }
-      },
-      "forbidden_keys": [
-        "verdict"
-      ],
-      "check": "mechanical"
+      ]
     }
   },
   "reference": {
