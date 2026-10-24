@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Munsik-Park
+# SPDX-License-Identifier: Apache-2.0
+#
+# The review module's contract (today's REVIEW: the reviewer runs and their aggregation) — DRAFT (issue #509, epic #507).
+# Format: docs/records/design-reviews/io-contract-modules.md > 5. Contract format and module
+# invocation. No device reads this file yet.
+
+contract: 1
+module: review
+kind: functional
+goal: >
+  The pull request reviewed by every configured reviewer, and one aggregated verdict over their
+  reviews posted on it: each finding once, with its severity and whether it holds.
+procedure: docs/units/review.md
+
+params:
+  issue:
+    type: issue-number
+    required: true
+  pr:
+    type: string
+    required: true
+    pattern: '^[^/]+/[^#]+#[0-9]+$'
+  round:
+    type: integer
+    required: true
+
+inputs:
+  records:
+    required: false
+    note: the attempt's design artifacts the reviewers may read (analysis, designs, build report)
+    from: [{ module: analysis, output: report }, { module: design, output: feature_design }, { module: design, output: verification_design }, { module: build, output: report }]
+  previous_findings:
+    required: false
+    from: { module: review, output: findings }
+
+outputs:
+  reviews:
+    file: reviews/<reviewer>.md
+    format: markdown
+    note: one per configured reviewer; a reviewer unavailable for the round is named with the reason in findings
+  findings:
+    file: findings.md
+    format: markdown
+    rows:
+      rule: >
+        each finding of the reviews once, with the reviewers that raised it, its severity
+        (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with
+        its grounds
+      check: evaluation
+    coverage:
+      rule: every finding of every review is in the file
+      check: evaluation
+  comment:
+    format: pull-request-comment
+    holds: the findings, posted on the pull request for the round
+    check: mechanical
+
+result:
+  summary: one line, with the highest severity among the findings that hold

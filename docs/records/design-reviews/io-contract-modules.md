@@ -120,7 +120,9 @@ stop being paths the plugin defines. They become two ways of composing the modul
 
 **Accepted** by the operator, 2026-10-23: §5.3 ("3 수용"), then §5.1–5.2 ("2 수용") — the contract files' place and reading, not the run's input and output files, whose place is the Coordinator's (§5.3). Drafts that follow it: the design module
 ([`docs/contracts/design.yaml`](../../contracts/design.yaml)) and the plan evaluation module
-([`docs/contracts/plan.yaml`](../../contracts/plan.yaml)). No device reads them yet.
+([`docs/contracts/plan.yaml`](../../contracts/plan.yaml)), then, on Q6–Q16, the other twelve of
+§4 (`docs/contracts/`: analysis, build, delivery, review, hypothesis, audit, quality, the four
+criterion-review modules and criteria-apply). No device reads them yet.
 
 ### 5.1 Where contracts live, and how they are read
 
@@ -148,7 +150,7 @@ stop being paths the plugin defines. They become two ways of composing the modul
 | `goal` | one paragraph: what the output is for |
 | `procedure` | the document the module follows (today's unit document, or the rubric) |
 | `params` | scalar inputs the Coordinator passes: name, type, required, enum |
-| `inputs` | file inputs: name, `required`, and `from` — where such an input comes from: `{module, output}` (another module's output, whose schema the validator then applies), `{ledger: [<marker>…]}` (a decision entry, Q4), or `{path: target}` (a document of the target the Coordinator names) |
+| `inputs` | file inputs: name, `required`, and `from` — where such an input comes from: `{module, output}` (another module's output, whose schema the validator then applies; a list when it may come from more than one), `{ledger: [<marker>…]}` (a decision entry, Q4), `{path: target}` (a document of the target the Coordinator names), `{path: coordinator}` (a record of the Coordinator's, such as the recommendations it deferred), or `{results: tool_requests}` (the tool requests of the run's earlier results, §5.3) |
 | `outputs` | each output: `file` (its name inside the output directory), `format` and its schema |
 | `reference` | values AutoFlow provides with the output for the Coordinator to apply (Q2) |
 
@@ -160,6 +162,8 @@ stop being paths the plugin defines. They become two ways of composing the modul
 | `json` | `keys`: each `type`, `required` / `required_when`, `enum`; `forbidden` keys | the evaluation report ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format) |
 | `ledger-entry` | `marker`, `namespace`, `fields` | `[criterion-ready]` ([criterion-review.md](../../criterion-review.md) > Confirmation) |
 | `validator` | a script that accepts or refuses the file | the findings file, refused by `review-gate.sh` exit `2` |
+| `git` | the commits a run made on a branch | the build's commits |
+| `pull-request`, `pull-request-comment` | a pull request (its branch, head, base, body and checks), or a comment posted on one | the delivery's PR; the review's aggregated comment |
 
 **Every rule says who checks it**: `check: mechanical` (the contract validator) or
 `check: evaluation` (the evaluation module that scores the output). The split exists today: the
