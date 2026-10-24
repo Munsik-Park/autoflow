@@ -430,6 +430,17 @@ No test today exercises the score thresholds, the planning or implementation spa
   the criterion, and added inputs that split a reference to the verification; the Coordinator's
   own reading (revise AC3) was the weaker one.
 
+- **A refusal a re-run cannot fix** (opensre#1 module run, 2026-10-25). The plan evaluation was
+  refused: the evaluator scored the five items of today's GATE:PLAN rubric, `Tools` included, and
+  the contract holds four (Q10). The evaluator's definition carries the rubric, so a re-run scores
+  the same five; Q3's re-run does not reach a refusal whose cause is a procedure that disagrees with
+  its contract. In the test the Coordinator recorded the refusal and its cause, read the scores
+  (all ≥ 8 without `Tools`), and went on to build, whose inputs do not include the plan evaluation.
+  Improvement items: the GATE:PLAN rubric loses `Tools` with the contract (sub-issue 3, §8), and
+  how the Coordinator meets a refusal caused by such a disagreement is left open. Several of the
+  ten Low recommendations read the formats Q8 and Q14 replaced (`Issue AC` for `Item`, `—` for a
+  scope item, the `Kind` label) — the rubric text, like the procedure, brings them back.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
