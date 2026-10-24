@@ -11,7 +11,7 @@ appends to *Handoff log* before it ends.
 
 ## 1. The concept (operator's statement)
 
-- AutoFlow's plugin is a set of **modules**. Each module declares, in a YAML contract, the
+- AutoFlow's plugin is a set of **modules**. Each module declares, in a contract, the
   inputs it needs and the outputs it produces, and the format each output must meet.
 - A module validates its inputs when it starts and refuses to run when one is missing or
   invalid; it makes its outputs meet the declared format. It does not know which run it is, what
@@ -119,27 +119,24 @@ stop being paths the plugin defines. They become two ways of composing the modul
 ## 5. Contract format and module invocation
 
 **Accepted** by the operator, 2026-10-23: §5.3 ("3 수용"), then §5.1–5.2 ("2 수용") — the contract files' place and reading, not the run's input and output files, whose place is the Coordinator's (§5.3). Drafts that follow it: the design module
-([`docs/contracts/design.yaml`](../../contracts/design.yaml)) and the plan evaluation module
-([`docs/contracts/plan.yaml`](../../contracts/plan.yaml)), then, on Q6–Q16, the other twelve of
+([`docs/contracts/design.json`](../../contracts/design.json)) and the plan evaluation module
+([`docs/contracts/plan.json`](../../contracts/plan.json)), then, on Q6–Q16, the other twelve of
 §4 (`docs/contracts/`: analysis, build, delivery, review, hypothesis, audit, quality, the four
 criterion-review modules and criteria-apply). No device reads them yet.
 
 ### 5.1 Where contracts live, and how they are read
 
-- **One file per module**, `docs/contracts/<module>.yaml`. `CLAUDE.md` > Writing AutoFlow
+- **One file per module**, `docs/contracts/<module>.json`. `CLAUDE.md` > Writing AutoFlow
   Documents writes an AutoFlow path as `<autoflow-root>/docs/…` or `<autoflow-root>/scripts/…`; a
   contract under `docs/` keeps that convention and adds no top-level plugin component (ADR-0027 D1
   lists them).
-- **Authored in YAML, read as JSON.** The README's prerequisites are Claude Code, `jq` and `gh`
-  (`README.md`, **Prerequisites**); jq does not read YAML, and Python's standard library has no YAML
-  parser (`python3 -c 'import yaml'` fails on this machine). A generator writes each contract's
-  JSON beside it and is checked for equality with the committed copy, on the pattern of
-  `scripts/skills/gen-skill-bodies.sh` and `tests/plugin/verify-skill-bodies.sh`. The YAML parser
-  is then a development-time tool only: `yq` (mikefarah) v4 — v4.53.3 here, and 4.54.1 on the
-  Ubuntu 24.04 runner image (`actions/runner-images` > `images/ubuntu/Ubuntu2404-Readme.md`), the
-  image `ubuntu-latest` the workflows run on. The runtime prerequisites do not change.
-- **A `.yaml` file carries an inline SPDX header.** `REUSE.toml` bulk-covers Markdown, JSON, JSONL
-  and plain text and leaves the header-bearing types (`.sh`, `.py`, `.yml`, …) to inline headers.
+- **Written in JSON, read with jq** (Q17). The README's prerequisites are Claude Code, `jq` and
+  `gh` (`README.md`, **Prerequisites**), and every file this repository's devices read is JSON
+  (`.claude-plugin/plugin.json`, `hooks/hooks.json`, `.claude/autoflow.local.json`,
+  `.claude/autoflow/spawn-policy.json`, `tests/fixtures/gate-schema.json`). A contract has one
+  source; no generator and no equality check. What a comment would carry goes in a `note` key, or
+  in this document when it is history (why a rule was removed: §6).
+- **No inline licence header.** `REUSE.toml` bulk-covers `**/*.json`.
 
 ### 5.2 What a contract carries
 
@@ -183,7 +180,7 @@ while the same section says "Necessity is a **judgment**, not a classification".
 that branches on these values mechanically is `scripts/gate/verification-layer-check.sh`, over the
 `standing` token, in this repository only; the others are the AUDIT and GATE:QUALITY evaluators and
 the PR body. What the verification design owes mechanically is that every item the work owes has a
-disposition (`docs/contracts/design.yaml` > `outputs.verification_design.tables`).
+disposition (`docs/contracts/design.json` > `outputs.verification_design.tables`).
 
 **A contract is input, disposition, output** (Q14): it checks that the inputs are there, and that
 the output disposes of every item the work owes — each applied acceptance criterion, and each item
@@ -225,7 +222,7 @@ the module itself added or changed once that is decided. How the work is done is
   previous outputs as inputs, so nothing is renamed or overwritten.
 - **A module does not know which run it is.** What a re-run's output owes because it is a re-run is
   derived from its inputs: the design's `## Delta — round <n>` takes `n` from the number of delta
-  sections in the previous document it is given, plus one (`docs/contracts/design.yaml` > `rules`).
+  sections in the previous document it is given, plus one (`docs/contracts/design.json` > `rules`).
 - **The existing commands stay until sub-issue 3**: `/autoflow:cycle-u1` … `cycle-u7` keep their
   current behaviour on this branch, and sub-issue 3 replaces them with the module commands.
 
@@ -246,13 +243,14 @@ issue-body edit.
 | Q7 | Who writes an evaluation module's output | **Settled by the existing rule** (2026-10-24): the session that runs the evaluation module, writing the report the evaluator returns verbatim. "The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores" ([role-contracts.md](../../role-contracts.md) > Evaluation AI), and the spawning side records it verbatim (`agents/autoflow-evaluator.md`, Hard rules). Only the place changes: the state file's `scores` become `<out>/evaluation.json`. Giving the evaluator a Write tool would change that rule with no defect observed under it. This also names the writer §7 item 9 found missing for `issue-{N}-audit.md`. |
 | Q8 | The verification design's table | **Settled** (operator, 2026-10-24): the classification is removed — `Type`, `Kind`, the per-column rules of `Reason` and `Failure mode`, and the `standing` token; what the table owes is a disposition for every applied criterion (§5.2, *No rule checks a classification*). The table is found by its header row's first cell (`Item`, Q14), outside every `## Delta — round <n>` section: a re-run appends a delta and leaves the first run's text as it stands ([units/design.md](../../units/design.md) > Re-entry), so no heading is fixed for it — issue #500's verification design carries two tables with the same header row, the second inside `## Delta — round 2`. The other columns are the module's. Removing the classification from the documents, rubrics and scripts that carry it is sub-issue 3's (§8, §9). |
 | Q9 | Whether the issue-body edit becomes a deterministic module | **Settled** (operator, 2026-10-24): no. The edit stays the Coordinator's, as the review session's today ([criterion-review.md](../../criterion-review.md) > Authority, "the session edits the issue body to match"). A module, or a re-read of the edited body against the decisions, would guard against an edit that departs from the decisions; no such defect is on record (issue search "issue body": #467, #466, #305, none of them this), so neither is added. |
-| Q10 | Tools | **Settled** (operator, 2026-10-24): a module uses the tools its work needs; when one is missing it finds what can be done without it, finishes the run, and records the missing tool as a request in its result and report, which the PR body states for the operator (§5.3). The verification design's `## Tools` section and its availability list go (`docs/contracts/design.yaml`), and with it GATE:PLAN's `Tools` item ([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring; `docs/contracts/plan.yaml`), removed by the operator on its own ground: it scored the form of the declaration — each tool, its availability and its ground, and a reason owed only by a row verified by a person or on a mock — not whether a tool fits the criterion, so declaring a tool scored safer than not; whether the verification, its tool included, fits the criterion is `Verification fit`'s. No run checks the tools: today's per-cycle `preflight.local_checks[]`, which stops the cycle on a failed check ([units/preparation.md](../../units/preparation.md) > Target-declared local checks), and the pause for a missing tool ([core.md](../../core.md) > Flow Control, "tool or referenced material → user") go in sub-issue 3. Withdrawn on the way: a module stopping on a missing tool with a `blocked` result, and AutoFlow naming one place for a project's tool declarations — the operator decides from the PR what to do about a missing tool. |
+| Q10 | Tools | **Settled** (operator, 2026-10-24): a module uses the tools its work needs; when one is missing it finds what can be done without it, finishes the run, and records the missing tool as a request in its result and report, which the PR body states for the operator (§5.3). The verification design's `## Tools` section and its availability list go (`docs/contracts/design.json`), and with it GATE:PLAN's `Tools` item ([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring; `docs/contracts/plan.json`), removed by the operator on its own ground: it scored the form of the declaration — each tool, its availability and its ground, and a reason owed only by a row verified by a person or on a mock — not whether a tool fits the criterion, so declaring a tool scored safer than not; whether the verification, its tool included, fits the criterion is `Verification fit`'s. No run checks the tools: today's per-cycle `preflight.local_checks[]`, which stops the cycle on a failed check ([units/preparation.md](../../units/preparation.md) > Target-declared local checks), and the pause for a missing tool ([core.md](../../core.md) > Flow Control, "tool or referenced material → user") go in sub-issue 3. Withdrawn on the way: a module stopping on a missing tool with a `blocked` result, and AutoFlow naming one place for a project's tool declarations — the operator decides from the PR what to do about a missing tool. |
 | Q11 | `remedy_class` | **Settled** (operator, 2026-10-24): no contract carries it. Today the evaluator tags each failed item, and each `Medium`+ recommendation, with one of `doc`, `test`, `impl`, `design` or `operator`, and `scripts/gate/remedy-route.sh` routes the re-entry from the tags ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing; [evaluation-system.md](../../evaluation-system.md) > Remedy class). A fix can be large or small, and where it is made cannot be fixed in advance: the AI acting on a finding judges at which stage it is made, and asks the advisor when it cannot. A contract states the least it can: it names no class and no destination, and the one way out of an uncertain judgment is to ask the advisor. This narrows Q2: the evaluation outputs scores and grounds, and no `remedy_class`. A fix no module owns — today's `doc` route, the orchestrator's own doc commit — needs no module either: the coordinating session runs it as a one-off session or judges it itself. |
 | Q12 | `fail_hypothesis` | **Settled** (operator, 2026-10-24): not an output contract's. It records the evaluator's pre-scoring search for the strongest FAIL case — the rule that, when everything reads as right, the opposite case is looked for first ([evaluation-system.md](../../evaluation-system.md) > Evaluator conduct > *Pre-scoring FAIL hypothesis*). That is the evaluation procedure, a rule of the rubric's evaluation, and stays binding there; as output, "nothing reads it programmatically and no gate consumes it" (*ibid.* > Evaluation Output Format). The plan contract drops the key and its `disposition` list. |
 | Q13 | `rerun_reason` | **Settled** (operator, 2026-10-24): removed from the design contract, with its six values and the rule tying it to a previous document. Nothing reads it or branches on it: today it is the text in a delta heading's parentheses ([units/design.md](../../units/design.md) > Re-entry, the only place the list appears), and what a re-run works from reaches it as inputs of its own — the previous documents, the plan evaluation, the build's blocker, the failed items. A re-run is known by a previous document being given; the delta heading keeps `## Delta — round <n>`, which the table's locate reads (Q8). |
 | Q14 | What a contract checks | **Settled** (operator, 2026-10-24): a module is input, the work it does, and output; its contract checks the inputs and that the output disposes of every item the work owes. Acceptance criteria are the required behaviour; an item the design adds or changes, once decided, is owed the same way. So the coverage check spans both: every applied criterion and every item the feature design's `## Scope` includes has a row with its disposition, the included items carrying an id the table names — today they are `—` rows that no check pairs with the `## Scope` section, though [units/design.md](../../units/design.md) > Output artifacts owes each a row. The verification design's risk line ([units/design.md](../../units/design.md) > Verification depth) and the feature design's `[DENY]` on content the build derives (*ibid.* > Output artifacts) are how the work is done, so they leave the contract and stay in the procedure, as `fail_hypothesis` did (Q12). |
 | Q15 | The plan and design contracts' remaining rules | **Applied by Q11, Q12 and Q14** (2026-10-24; the operator asked that what the principles settle be applied, and only the rest be asked). `blocking_issues` goes: no reader is named for it, and its cap of three ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, `"items ≤ 3"`) cut a list the rule "surface every issue found" (*ibid.* > Evaluator conduct) wants whole; each item's score and reason carries what blocks. A recommendation's `severity` leaves the contract's checks with `remedy_class` (Q11) — the levels and the procedure's rule that every finding states one stay: today it splits triage into the orchestrator's own judgment on `Low` and a class-routed attempt on `Medium`+ ([units/completion-evaluation.md](../../units/completion-evaluation.md) > Recommendation triage), and with routing the acting AI's judgment, nothing branches on it. The re-score keeps what it owes (Q14) — every rubric item scored afresh or inherited, and every prior finding dispositioned — and which items it scores afresh is the procedure's (Q12). The design's "never applies an acceptance-criterion change" goes: the applied criteria are criteria-apply's output and the design's input (Q5), so a change can only be requested. |
 | Q16 | How a procedure is written | **Settled** (operator, 2026-10-24): a procedure gives the AI the goal of its work, and the AI judges how to meet it — for a review, "state the severity of every finding". It does not prescribe a form that must be present and then check that it is: that turns the work into a fixed procedure carried out mechanically instead of judged toward a goal. The contract checks inputs and dispositions (Q14); the procedure documents sub-issue 3 rewrites state goals. |
+| Q17 | The contracts' format | **Settled** (operator, 2026-10-24): JSON, read with `jq`; this replaces §5.1's "authored in YAML, read as JSON" as accepted on 2026-10-23. Where the reader is a shell script with `jq` the usual practice is one JSON source; a YAML source with generated JSON is the less common case, for files people write at length and must comment, and it keeps two sources in step. Every file this repository's devices read is already JSON (§5.1). `yq` is not a runtime prerequisite (README > Prerequisites), is installed on its own where it is present (`/opt/homebrew/bin/yq` here, while `jq` is the system's `/usr/bin/jq`), and two different tools carry the name (`mikefarah/yq`, `kislyuk/yq`). The generator and its equality check leave #509's scope. |
 
 Operator's words:
 
@@ -264,6 +262,7 @@ Operator's words:
 - Q6: "그러면 1번은 선택할 문제인가요?" (the operator's question, on the place following from the existing split).
 - Q8: "분류 체계는 AI의 작업을 제한하는 검사입니다. 다 걷어내야 돼요. 실제로 필요한 것은 AC가 있고 그 AC에 대한 처분이 있느냐 뿐입니다." Then: "시안 수정으로 합니다. 적용하세요."
 - Q9: "문제가 발생한 적도 발생하지도 않았는데 룰을 추가하자는 것이죠?"
+- Q17: "JSON으로 합니다."
 - Q16: "목표는 리뷰를 하면 발견한 항목마다 심각도를 적는다 라는 목표를 주는 건데, 그러면 AI가 그 목표에 맞춰서 작업을 하겠죠." On the form-and-check way: "그것은 AI에게 작업의 목표를 주고 하도록 하는 그런 방식이 아니라 그냥 정해진 절차를 하게 하는 기계적인 행위를 유도해요."
 - Q14: "모듈이라는 것은 입력이 있고 내부에 처리하는 프로세스가 있고 그 처리를 모두 한 이후에 출력이 있는가를 확인하는 거예요. 입력, 처분, 출력 단순합니다. AC는 기본적으로 요구되는 기능이고 설계나 아키텍트에서 추가하거나 변경한 것이 결정이 되면 그 사항들을 출력 형식에 맞게 처분하고 작업을 하는 거예요."
 - Q13: "빼주세요."
@@ -302,7 +301,7 @@ rather than reading a declared output.
 
 ## 8. New work
 
-- One YAML contract per module: inputs, outputs, each output's schema.
+- One JSON contract per module: inputs, outputs, each output's schema (Q17).
 - One contract validator, `scripts/contracts/contract.sh` (Q6): input check at module start, output
   check at module end.
 - A check that the contracts and the documents agree, on the `core-units.tsv` →
@@ -377,11 +376,11 @@ No test today exercises the score thresholds, the planning or implementation spa
   `each_item_at_least` unless the Coordinator routes it differently.
 - `reuse lint` run locally (`reuse[charset-normalizer]` through `uvx`) reports
   `scripts/resync-submodules.sh` as carrying no licensing information, though its second and third
-  lines are the SPDX header; the two new `.yaml` files are counted compliant. Not investigated: the
+  lines are the SPDX header; the contract files are counted compliant. Not investigated: the
   file is not touched by this work.
 
 ## Handoff log
 
 | Session | Date | What was done | Next |
 |---|---|---|---|
-| 1 | 2026-10-23 | Surveyed `main` at `a2ff109`; created and pushed the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). Then, the operator away and proposals taken on the recommended option by the operator's instruction: the criterion review as four modules (§4), the contract format and invocation (§5), the drafts `docs/contracts/design.yaml` and `docs/contracts/plan.yaml`. The committed checks pass locally (the `run:` steps of `contract-suites.yml`, `plugin-package.yml`, `e2e-dummy-target.yml`). | Done after the row: #508 closed (its work committed on this branch directly, `d53ffa1`…`aba1d0f`, so it has no PR); sub-issue 2 filed as #509. | #509: branch off this branch, settle its four open points, then the contracts, the generator and checks, the validator and criteria-apply; PR into this branch. |
+| 1 | 2026-10-23 | Surveyed `main` at `a2ff109`; created and pushed the branch; wrote this document; filed the epic #507 and its sub-issue 1, #508. Settled with the operator: Q1 withdrawn, Q2–Q5 settled (§6). Then, the operator away and proposals taken on the recommended option by the operator's instruction: the criterion review as four modules (§4), the contract format and invocation (§5), the drafts `docs/contracts/design.json` and `docs/contracts/plan.json`. The committed checks pass locally (the `run:` steps of `contract-suites.yml`, `plugin-package.yml`, `e2e-dummy-target.yml`). | Done after the row: #508 closed (its work committed on this branch directly, `d53ffa1`…`aba1d0f`, so it has no PR); sub-issue 2 filed as #509. | #509: branch off this branch, settle its four open points, then the contracts, the generator and checks, the validator and criteria-apply; PR into this branch. |

@@ -1,0 +1,70 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-reconcile",
+  "kind": "functional",
+  "goal": "The review record reconciled with the trace and the in-depth verdicts: every case where they differ settled in the code, and the record's findings, proposed changes and open questions brought to match.\n",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "review_record": {
+      "required": true,
+      "from": {
+        "module": "criterion-screen",
+        "output": "review_record"
+      }
+    },
+    "trace": {
+      "required": true,
+      "from": {
+        "module": "criterion-trace",
+        "output": "trace"
+      }
+    },
+    "in_depth": {
+      "required": false,
+      "from": {
+        "module": "criterion-in-depth",
+        "output": "in_depth"
+      }
+    }
+  },
+  "outputs": {
+    "review_record": {
+      "file": "criterion-review.md",
+      "format": "markdown",
+      "note": "the screen's record brought up to date — a new file, the input left as it is (§5.3)",
+      "first_line": {
+        "what": "the sha256 of the issue body reviewed, as the input record has it",
+        "required": true,
+        "check": "mechanical"
+      },
+      "coverage": {
+        "rule": "every finding of the trace and every in-depth case has its disposition, with its grounds",
+        "check": "evaluation"
+      },
+      "sections": [
+        {
+          "heading": "Proposed changes",
+          "required": true,
+          "empty": "none",
+          "check": "mechanical"
+        },
+        {
+          "heading": "Open questions",
+          "required": true,
+          "empty": "none",
+          "check": "mechanical"
+        }
+      ]
+    }
+  },
+  "result": {
+    "summary": "one line"
+  }
+}

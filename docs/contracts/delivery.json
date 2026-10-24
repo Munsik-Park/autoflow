@@ -1,0 +1,109 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "delivery",
+  "kind": "functional",
+  "goal": "The cycle's branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
+  "procedure": "docs/units/delivery.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "branch": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "inputs": {
+    "commits": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "commits"
+      }
+    },
+    "applied_criteria": {
+      "required": true,
+      "from": {
+        "module": "criteria-apply",
+        "output": "applied_criteria"
+      }
+    },
+    "feature_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
+    "verification_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "verification_design"
+      }
+    },
+    "build_report": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "report"
+      }
+    },
+    "quality_evaluation": {
+      "required": true,
+      "from": {
+        "module": "quality",
+        "output": "evaluation"
+      }
+    },
+    "tool_requests": {
+      "required": false,
+      "from": {
+        "results": "tool_requests"
+      },
+      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations the Coordinator deferred or separated."
+    },
+    "deferred": {
+      "required": false,
+      "from": {
+        "path": "coordinator"
+      }
+    }
+  },
+  "outputs": {
+    "pull_request": {
+      "format": "pull-request",
+      "holds": "the pushed branch, its head commit, and the draft pull request on the attempt's base",
+      "body": {
+        "coverage": [
+          {
+            "rule": "every applied criterion is named with its outcome and where its evidence is",
+            "check": "mechanical"
+          },
+          {
+            "rule": "every tool request of the run is stated, with what it left unverified",
+            "check": "mechanical"
+          },
+          {
+            "rule": "every deferred or separated recommendation is stated",
+            "check": "mechanical"
+          }
+        ]
+      },
+      "ci": {
+        "rule": "the head's checks are green, or that no CI ran is recorded on the pull request",
+        "check": "mechanical"
+      }
+    },
+    "integration": {
+      "file": "integration.md",
+      "format": "markdown",
+      "note": "how the change was shown working above its own tests, and what that showed"
+    }
+  },
+  "result": {
+    "summary": "one line, with the pull request's URL and head"
+  }
+}

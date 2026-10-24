@@ -1,0 +1,86 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criteria-apply",
+  "kind": "deterministic",
+  "goal": "The acceptance criteria the cycle works to: the analysis report's criteria with every settled acceptance-criterion decision applied (Q5).\n",
+  "procedure": "scripts/contracts/criteria-apply.sh",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "analysis": {
+      "required": true,
+      "from": {
+        "module": "analysis",
+        "output": "report"
+      }
+    },
+    "decisions": {
+      "required": false,
+      "from": {
+        "ledger": [
+          "ac-decision"
+        ]
+      },
+      "fields": {
+        "AC": {
+          "required": true
+        },
+        "Operation": {
+          "required": true,
+          "enum": [
+            "excluded",
+            "revised",
+            "split",
+            "added"
+          ]
+        },
+        "Text": {
+          "required_when": "Operation is revised or added"
+        },
+        "Into": {
+          "required_when": "Operation is split",
+          "holds": [
+            "id",
+            "text"
+          ]
+        }
+      },
+      "note": "Each entry carries what a script needs to apply it (Q5): the AC id, the operation and, for an operation that writes text, the new text. Today's grammar has no text field (docs/decision-ledger.md > Acceptance-criterion decisions); sub-issue 3 adds it."
+    }
+  },
+  "rules": [
+    {
+      "id": "every-decision-applied",
+      "check": "mechanical",
+      "rule": "Each decision is applied once, in ledger order: excluded removes the criterion, revised replaces its text, split replaces it by the criteria Into names, added appends one. A decision naming an AC id that is not present at its turn is refused.\n"
+    }
+  ],
+  "outputs": {
+    "applied_criteria": {
+      "file": "applied-criteria.json",
+      "format": "json",
+      "keys": {
+        "criteria": {
+          "type": "array",
+          "required": true,
+          "items": {
+            "keys": [
+              "id",
+              "text"
+            ],
+            "rule": "ids are unique"
+          }
+        }
+      },
+      "check": "mechanical"
+    }
+  },
+  "result": {
+    "summary": "one line"
+  }
+}

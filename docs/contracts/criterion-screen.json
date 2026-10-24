@@ -1,0 +1,69 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-screen",
+  "kind": "functional",
+  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and the cases that need an in-depth look handed on without any verdict.\n",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "target_documents": {
+      "required": false,
+      "from": {
+        "path": "target"
+      }
+    }
+  },
+  "outputs": {
+    "review_record": {
+      "file": "criterion-review.md",
+      "format": "markdown",
+      "first_line": {
+        "what": "the sha256 of the issue body reviewed",
+        "required": true,
+        "check": "mechanical"
+      },
+      "coverage": {
+        "rule": "every criterion of the issue body is reviewed and screened, its cases with their grounds",
+        "check": "evaluation"
+      },
+      "sections": [
+        {
+          "heading": "Proposed changes",
+          "required": true,
+          "empty": "none",
+          "check": "mechanical"
+        },
+        {
+          "heading": "Open questions",
+          "required": true,
+          "empty": "none",
+          "check": "mechanical"
+        }
+      ]
+    },
+    "targets": {
+      "file": "targets/<criterion>.md",
+      "format": "markdown",
+      "required": false,
+      "note": "one per criterion with an in-depth target; the record names each criterion that has none",
+      "holds_only": [
+        "the issue body",
+        "the criterion's text",
+        "the target cases",
+        "each case's code locations (path:line)",
+        "the commit read"
+      ],
+      "rule": "No verdict, ground or conclusion of this review — the in-depth module judges the cases in a context that never saw them (docs/criterion-review.md > In-depth analysis and reconciliation).\n",
+      "check": "evaluation"
+    }
+  },
+  "result": {
+    "summary": "one line"
+  }
+}
