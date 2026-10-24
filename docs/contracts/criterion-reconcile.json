@@ -3,7 +3,7 @@
   "contract": 1,
   "module": "criterion-reconcile",
   "kind": "functional",
-  "goal": "The review record reconciled with the trace and the in-depth verdicts: every case where they differ settled in the code, and the record's findings, proposed changes and open questions brought to match.\n",
+  "goal": "The review record reconciled with the trace and the in-depth verdicts: every case where they differ settled in the code, and the record's dispositions brought to match — the review's result, an item and its disposition each.",
   "procedure": "docs/criterion-review.md",
   "params": {
     "issue": {
@@ -47,15 +47,20 @@
         },
         {
           "type": "section",
-          "heading": "Proposed changes"
+          "heading": "Dispositions"
         },
         {
-          "type": "section",
-          "heading": "Open questions"
+          "type": "table",
+          "under": "Dispositions",
+          "first": "Item",
+          "rows_disposed": true,
+          "unique_first": true,
+          "note": "one row per item the review found — each criterion, and each problem found beyond them — with the disposition the module decided and its grounds"
         }
       ],
       "evaluation": [
-        "every finding of the trace and every in-depth case has its disposition, with its grounds"
+        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence says so and states the question for the advisor (Q18) — the one way out, not a second list.",
+        "every finding of the trace and every in-depth case is reflected in the dispositions, with its grounds"
       ]
     }
   },

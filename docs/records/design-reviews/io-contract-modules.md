@@ -101,9 +101,11 @@ review record and one target file per criterion), criterion-trace (stage 2), cri
 - Stage 1 is carried today by that session itself (*When and by whom* > *Reviewer*); with the
   session becoming the Coordinator, stage 1 has to become a module of its own.
 
-What follows the four — putting an open question to the advisor, editing the issue body to the
-settled decisions, and the `[criterion-ready]` entry (an `O` entry the main session writes,
-*Confirmation*) — is the Coordinator's, being decisions and their record (Q4). The issue-body edit
+The review decides the disposition of every item it finds (Q18). What follows the four — putting
+to the advisor an item the review could not decide with confidence, recording the dispositions as
+`[ac-decision]` entries, editing the issue body to them, and the `[criterion-ready]` entry (an `O`
+entry the main session writes, *Confirmation*) — is the Coordinator's, being decisions and their
+record (Q4). The issue-body edit
 stays the Coordinator's and does not become a deterministic module (Q9).
 
 This split is the one ADR-0037 D2 already names ("functional and evaluation modules"). It also
@@ -262,6 +264,7 @@ issue-body edit.
 | Q15 | The plan and design contracts' remaining rules | **Applied by Q11, Q12 and Q14** (2026-10-24; the operator asked that what the principles settle be applied, and only the rest be asked). `blocking_issues` goes: no reader is named for it, and its cap of three ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, `"items ≤ 3"`) cut a list the rule "surface every issue found" (*ibid.* > Evaluator conduct) wants whole; each item's score and reason carries what blocks. A recommendation's `severity` leaves the contract's checks with `remedy_class` (Q11) — the levels and the procedure's rule that every finding states one stay: today it splits triage into the orchestrator's own judgment on `Low` and a class-routed attempt on `Medium`+ ([units/completion-evaluation.md](../../units/completion-evaluation.md) > Recommendation triage), and with routing the acting AI's judgment, nothing branches on it. The re-score keeps what it owes (Q14) — every rubric item scored afresh or inherited, and every prior finding dispositioned — and which items it scores afresh is the procedure's (Q12). The design's "never applies an acceptance-criterion change" goes: the applied criteria are criteria-apply's output and the design's input (Q5), so a change can only be requested. |
 | Q16 | How a procedure is written | **Settled** (operator, 2026-10-24): a procedure gives the AI the goal of its work, and the AI judges how to meet it — for a review, "state the severity of every finding". It does not prescribe a form that must be present and then check that it is: that turns the work into a fixed procedure carried out mechanically instead of judged toward a goal. The contract checks inputs and dispositions (Q14); the procedure documents sub-issue 3 rewrites state goals. |
 | Q17 | The contracts' format | **Settled** (operator, 2026-10-24): JSON, read with `jq`; this replaces §5.1's "authored in YAML, read as JSON" as accepted on 2026-10-23. Where the reader is a shell script with `jq` the usual practice is one JSON source; a YAML source with generated JSON is the less common case, for files people write at length and must comment, and it keeps two sources in step. Every file this repository's devices read is already JSON (§5.1). `yq` is not a runtime prerequisite (README > Prerequisites), is installed on its own where it is present (`/opt/homebrew/bin/yq` here, while `jq` is the system's `/usr/bin/jq`), and two different tools carry the name (`mikefarah/yq`, `kislyuk/yq`). The generator and its equality check leave #509's scope. |
+| Q18 | What the criterion review returns | **Settled** (operator, 2026-10-25): every item the review finds, disposed of by the review itself, with its grounds — the work any issue analysis does: no criteria, so they are established; a criterion wrong, so it is revised; one missing, so it is added; a problem found beside them, so it is included in this issue or separated from it. The first run of criterion-screen on opensre#1 returned two revisions and three "open questions" ([criterion-review.md](../../criterion-review.md) > Review record, `## Open questions`, put to the advisor): which `<…>` are tags (a criterion the issue lacks), whether the gateway path is in scope (the body states it wrongly), and whether a raw `&` that drops text is (a problem found beside the criteria). Each is one of the dispositions above, so the review decides it. The criterion-screen and criterion-reconcile contracts require one `## Dispositions` table, an item and its disposition per row, in place of `## Proposed changes` and `## Open questions`; an item the module cannot decide with confidence says so and states the question for the advisor — the one way out (Q11), not a second list. |
 
 Operator's words:
 
@@ -273,6 +276,7 @@ Operator's words:
 - Q6: "그러면 1번은 선택할 문제인가요?" (the operator's question, on the place following from the existing split).
 - Q8: "분류 체계는 AI의 작업을 제한하는 검사입니다. 다 걷어내야 돼요. 실제로 필요한 것은 AC가 있고 그 AC에 대한 처분이 있느냐 뿐입니다." Then: "시안 수정으로 합니다. 적용하세요."
 - Q9: "문제가 발생한 적도 발생하지도 않았는데 룰을 추가하자는 것이죠?"
+- Q18: "이슈를 분석하고 각 분석된 내용에 대해서 처분을 하고 출력을 각각 항목들에 대해서 검토 결과를 내는 것. 이게 목적인데 그 중간 과정을 AI가 지금 자율적으로 하도록 유도를 했는데 지금은 전부 다 질문으로 돌아왔단 말이죠. 이 부분이 개선이 돼야 될 것 같아요."
 - Q17: "JSON으로 합니다."
 - Q16: "목표는 리뷰를 하면 발견한 항목마다 심각도를 적는다 라는 목표를 주는 건데, 그러면 AI가 그 목표에 맞춰서 작업을 하겠죠." On the form-and-check way: "그것은 AI에게 작업의 목표를 주고 하도록 하는 그런 방식이 아니라 그냥 정해진 절차를 하게 하는 기계적인 행위를 유도해요."
 - Q14: "모듈이라는 것은 입력이 있고 내부에 처리하는 프로세스가 있고 그 처리를 모두 한 이후에 출력이 있는가를 확인하는 거예요. 입력, 처분, 출력 단순합니다. AC는 기본적으로 요구되는 기능이고 설계나 아키텍트에서 추가하거나 변경한 것이 결정이 되면 그 사항들을 출력 형식에 맞게 처분하고 작업을 하는 거예요."
@@ -343,6 +347,10 @@ rather than reading a declared output.
   ([evaluation-system.md](../../evaluation-system.md) > Remedy class), the FAIL routing table
   ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing) and
   `scripts/gate/remedy-route.sh`.
+- The criterion review deciding its items (Q18), in sub-issue 3: [criterion-review.md](../../criterion-review.md)
+  states the goal as every item disposed of with its grounds, its record carries `## Dispositions`
+  in place of `## Proposed changes` and `## Open questions`, and the advisor is asked only for an
+  item the review could not decide.
 - Narrowing the evaluation output format (Q15), in sub-issue 3: `blocking_issues` leaves
   [evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, and Recommendation
   triage ([units/completion-evaluation.md](../../units/completion-evaluation.md)) is worded without

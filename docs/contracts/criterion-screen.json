@@ -3,7 +3,7 @@
   "contract": 1,
   "module": "criterion-screen",
   "kind": "functional",
-  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and the cases that need an in-depth look handed on without any verdict.\n",
+  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on without any verdict.",
   "procedure": "docs/criterion-review.md",
   "params": {
     "issue": {
@@ -31,15 +31,20 @@
         },
         {
           "type": "section",
-          "heading": "Proposed changes"
+          "heading": "Dispositions"
         },
         {
-          "type": "section",
-          "heading": "Open questions"
+          "type": "table",
+          "under": "Dispositions",
+          "first": "Item",
+          "rows_disposed": true,
+          "unique_first": true,
+          "note": "one row per item the review found — each criterion, and each problem found beyond them — with the disposition the module decided and its grounds"
         }
       ],
       "evaluation": [
-        "every criterion of the issue body is reviewed and screened, its cases with their grounds, and the record names each criterion that has no in-depth target"
+        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence says so and states the question for the advisor (Q18) — the one way out, not a second list.",
+        "the record names each criterion that has no in-depth target"
       ]
     },
     "targets": {
