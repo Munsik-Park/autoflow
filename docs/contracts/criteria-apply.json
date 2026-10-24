@@ -26,29 +26,29 @@
           "ac-decision"
         ]
       },
-      "note": "Each entry carries what a script needs to apply it (Q5): the AC id, the operation and, for an operation that writes text, the new text. Today's grammar has no text field (docs/decision-ledger.md > Acceptance-criterion decisions); sub-issue 3 adds it.",
+      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, applied in ledger order. AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
       "fields": {
         "AC": {
-          "required": true
-        },
-        "Operation": {
           "required": true,
-          "enum": [
+          "note": "the criterion the decision is on; for added, the id it takes"
+        },
+        "Disposition": {
+          "required": true,
+          "values": [
             "excluded",
             "revised",
             "split",
             "added"
-          ]
+          ],
+          "note": "the operation a script applies — a value a device reads, not a classification of a judgment"
         },
         "Text": {
-          "required_when": "Operation is revised or added"
+          "required_when": "Disposition is revised or added",
+          "note": "the criterion's text as decided"
         },
         "Into": {
-          "required_when": "Operation is split",
-          "holds": [
-            "id",
-            "text"
-          ]
+          "required_when": "Disposition is split",
+          "note": "one line per criterion the split makes: \"- Into: <id> — <text>\""
         }
       }
     }
@@ -75,7 +75,8 @@
           "type": "unique",
           "path": ".criteria[].id"
         }
-      ]
+      ],
+      "note": "criteria: the criteria as applied, in order; applied: the identifiers of the entries applied, in order"
     }
   },
   "result": {

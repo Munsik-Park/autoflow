@@ -35,8 +35,23 @@
 #             <out>/result.json: the module, accepted or refused, each
 #             output's path, each defect found, and the tool requests.
 #
-# Exit: 0 accepted (check-in: the module may run) · 1 refused (result.json
-#       names each defect) · 2 the invocation or the contract cannot be read.
+# lint      — the contracts agree with each other and with the documents
+#             they name (no invocation; §8, the contract–document check):
+#
+#   bash <autoflow-root>/scripts/contracts/contract.sh lint [<contract.json>...]
+#
+#             each contract's module is its file name and its kind one of
+#             three; its procedure, and every "source" it cites, resolves to
+#             a file and, after each " > ", to a heading in it; every input
+#             another module produces names a contract and an output it has;
+#             every output's format and check types are ones this script
+#             implements; every param, input and output a check names is
+#             declared. It prints each disagreement.
+#
+# Exit: 0 accepted (check-in: the module may run; lint: every contract
+#       agrees) · 1 refused (result.json names each defect; lint: the
+#       disagreements are printed) · 2 the invocation or the contract cannot
+#       be read.
 # Requires jq; git for a "git" output; gh for a pull-request output.
 set -uo pipefail
 
@@ -45,46 +60,8 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 die() { printf 'contract.sh: %s\n' "$*" >&2; exit 2; }
 command -v jq >/dev/null 2>&1 || die "jq is required"
 
-# --- the markdown model ------------------------------------------------------
-# A markdown file is read as: its lines outside code fences, its level-2
-# sections (a "## Delta — round <n>" section flagged as a delta), and its
-# tables (header cells, rows, the section each sits under).
-MD_JQ='
-def cells: sub("^\\s*\\|"; "") | sub("\\|\\s*$"; "")
-  | [splits("(?<!\\\\)\\|")] | map(gsub("^\\s+|\\s+$"; ""));
-def norm: gsub("`"; "") | gsub("^\\s+|\\s+$"; "");
-def model:
-  split("\n") as $L
-  | reduce range(0; $L | length) as $i (
-      {fence: false, sec: null, delta: false, lines: [], sections: [], tables: [], intable: false};
-      ($L[$i]) as $l
-      | if ($l | test("^\\s*(```|~~~)")) then .fence = (.fence | not) | .intable = false
-        elif .fence then .
-        elif ($l | test("^## ")) then
-          ($l | sub("^## +"; "") | sub("\\s+$"; "")) as $h
-          | .sec = $h | .delta = ($h | test("^Delta — round"))
-          | .sections += [{heading: $h, delta: .delta, body: []}] | .intable = false
-        else
-          .lines += [$l]
-          | (if (.sections | length) > 0 then .sections[-1].body += [$l] else . end)
-          | if ($l | test("^\\s*\\|")) then
-              if .intable then
-                if (.tables[-1].sep | not) and ($l | test("^\\s*\\|?\\s*:?-{3,}")) then .tables[-1].sep = true
-                else .tables[-1].rows += [$l | cells | map(norm)] end
-              else .intable = true
-                | .tables += [{under: .sec, delta: .delta, header: ($l | cells | map(norm)), sep: false, rows: []}]
-              end
-            else .intable = false end
-        end)
-  | {lines, sections, tables: [.tables[] | select(.sep)]};
-# the first table matching a check'"'"'s first / header / under / outside_delta
-def pick($c):
-  [.tables[]
-   | select(($c.first == null) or (.header[0] == $c.first))
-   | select(($c.header == null) or (.header == $c.header))
-   | select(($c.under == null) or (.under == $c.under))
-   | select((($c.outside_delta // false) | not) or (.delta | not))] | first;
-'
+# --- the markdown model (markdown.jq) -----------------------------------------
+MD_JQ=$(cat "$ROOT/scripts/contracts/markdown.jq") || die "cannot read markdown.jq"
 
 md_model() { jq -Rs "$MD_JQ model" "$1"; }
 
@@ -450,8 +427,83 @@ check_out() {
   write_result accepted
 }
 
+# --- lint ---------------------------------------------------------------------
+# The check types each format implements above; lint refuses any other.
+KNOWN_TYPES='{"markdown": ["section", "line", "table"],
+  "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
+  "git": ["git_range"], "pull-request": ["pr_open", "pr_body_covers", "pr_checks"],
+  "pull-request-comment": ["pr_comment_posted"]}'
+
+# does "<path> > <heading> > <heading>…" resolve under ROOT?
+ref_resolves() { # <reference>
+  local ref=$1 path rest h line=0 n
+  ref=$(sed -E 's/ \([^)]*\)$//' <<<"$ref")
+  path=${ref%% > *}
+  [ -e "$ROOT/$path" ] || { echo "no file $path"; return 1; }
+  [ "$path" = "$ref" ] && return 0
+  rest=${ref#* > }
+  while [ -n "$rest" ]; do
+    h=${rest%% > *}
+    [ "$h" = "$rest" ] && rest="" || rest=${rest#* > }
+    h=$(sed -E 's/ \([^)]*\)$//' <<<"$h")
+    n=$(awk -v h="$h" -v from="$line" 'NR > from && /^#+ / { t = $0; sub(/^#+ +/, "", t); sub(/ +$/, "", t); if (t == h) { print NR; exit } }' "$ROOT/$path")
+    [ -n "$n" ] || { echo "no heading '$h' in $path after line $line"; return 1; }
+    line=$n
+  done
+}
+
+lint() {
+  local files=("$@") f c m why bad=0
+  [ ${#files[@]} -gt 0 ] || files=("$ROOT"/docs/contracts/*.json)
+  local all; all=$(for f in "$ROOT"/docs/contracts/*.json; do jq -c . "$f" 2>/dev/null; done | jq -sc 'map({key: .module, value: .}) | from_entries')
+  say() { printf '%s: %s\n' "$(basename "$f")" "$*"; bad=1; }
+  for f in "${files[@]}"; do
+    c=$(jq -c . "$f" 2>/dev/null) || { say "not JSON"; continue; }
+    m=$(jq -r '.module // ""' <<<"$c")
+    [ "$m.json" = "$(basename "$f")" ] || say "module '$m' is not the file's name"
+    jq -e '.contract == 1' <<<"$c" >/dev/null || say "contract is not 1"
+    jq -e '.kind | IN("functional", "evaluation", "deterministic")' <<<"$c" >/dev/null || say "kind is not functional, evaluation or deterministic"
+    jq -e '(.goal // "") | test("\\S")' <<<"$c" >/dev/null || say "no goal"
+    why=$(ref_resolves "$(jq -r '.procedure // ""' <<<"$c")") || say "procedure: $why"
+    while IFS= read -r r; do
+      [ -n "$r" ] || continue
+      why=$(ref_resolves "$r") || say "source '$r': $why"
+    done < <(jq -r '.. | objects | .source? // empty | strings | split("; ")[]' <<<"$c")
+    # inputs another module produces
+    local found
+    found=$(jq -r --argjson all "$all" '
+      .inputs // {} | to_entries[] | .key as $k | ([.value.from] | flatten[])
+      | . as $f
+      | if type != "object" then "input \($k): from is not an object"
+        elif has("module") then
+          if ($all[$f.module] | not) then "input \($k): no contract for module \($f.module)"
+          elif ($all[$f.module].outputs | has($f.output) | not) then "input \($k): module \($f.module) has no output \($f.output)"
+          else empty end
+        elif has("ledger") then empty
+        elif has("path") then (if .path | IN("target", "coordinator") then empty else "input \($k): path is not target or coordinator" end)
+        elif has("results") then (if .results == "tool_requests" then empty else "input \($k): results is not tool_requests" end)
+        else "input \($k): from names no module, ledger, path or results" end' <<<"$c") || say "inputs cannot be read"
+    while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    # outputs: formats, check types, and what each check names
+    found=$(jq -r --argjson known "$KNOWN_TYPES" '
+      . as $c | .outputs // {} | to_entries[] | .key as $o | .value as $v
+      | if ($known | has($v.format) | not) then "output \($o): format \($v.format) is not one the validator reads"
+        else
+          ($v.checks // [])[] as $ch
+          | (if ($known[$v.format] | index($ch.type)) == null then "output \($o): check type \($ch.type) is not one the validator implements for \($v.format)" else empty end),
+            ([$ch.branch_param, $ch.pr_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
+            ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input][] | select(. != null)
+              | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
+            ([($ch.covers // [])[].output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared")
+        end' <<<"$c") || say "outputs cannot be read"
+    while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+  done
+  return $bad
+}
+
 case "${1:-}" in
   check-in)  [ $# -eq 2 ] || die "usage: contract.sh check-in <invocation.json>";  load "$2"; check_in ;;
   check-out) [ $# -eq 2 ] || die "usage: contract.sh check-out <invocation.json>"; load "$2"; check_out ;;
-  *) die "usage: contract.sh check-in|check-out <invocation.json>" ;;
+  lint)      shift; lint "$@"; exit $? ;;
+  *) die "usage: contract.sh check-in|check-out <invocation.json> | lint [<contract.json>...]" ;;
 esac

@@ -314,11 +314,21 @@ rather than reading a declared output.
 
 - One JSON contract per module: inputs, outputs, each output's schema (Q17).
 - One contract validator, `scripts/contracts/contract.sh` (Q6): input check at module start, output
-  check at module end.
-- A check that the contracts and the documents agree, on the `core-units.tsv` →
-  `verify-skill-bodies.sh` pattern.
+  check at module end — written in #509, with the markdown model it shares with criteria-apply
+  (`scripts/contracts/markdown.jq`).
+- A check that the contracts and the documents agree — written in #509 as `contract.sh lint`, a
+  step of `contract-suites.yml` (a declared inventory agreeing with the tree it describes, the
+  `manifest` kind that workflow carries): each contract's module and kind, its procedure and every
+  source it cites resolving to a file and heading, every input from another module naming an output
+  that module's contract has, and every format and check type one the validator implements. Not yet
+  checked: that an evaluation contract's score keys equal its rubric's items — they differ on
+  purpose until sub-issue 3 rewrites the rubrics (GATE:PLAN's `Tools`, Q10), and the check is added
+  with that rewrite.
 - A script that computes the applied acceptance criteria from the analysis report's table and the
-  `[ac-decision]` entries, and the grammar field it needs (Q5).
+  `[ac-decision]` entries (Q5) — written in #509 as `scripts/contracts/criteria-apply.sh`. It reads
+  today's `- AC:` and `- Disposition:` lines and the two Q5 needs, `- Text: <text>` (revised,
+  added) and `- Into: <id> — <text>` (split, one per criterion); sub-issue 3 adds the two to
+  [decision-ledger.md](../../decision-ledger.md) > Decision-point entries.
 - Removing the verification design's classification (Q8), in sub-issue 3: `Type`, `Kind` and the
   `standing` token in [units/design.md](../../units/design.md) > Output artifacts and Test
   necessity, ADR-0024 D1's closed list and its `Type`-cell declaration, the rubric items that read
