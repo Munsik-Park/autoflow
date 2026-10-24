@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 #
-# The design module's contract — DRAFT (issue #508, epic #507). Format:
+# The design module's contract — DRAFT (issues #508, #509, epic #507). Format:
 # docs/records/design-reviews/io-contract-modules.md > 5. Contract format and module invocation.
 # No device reads this file yet.
 
@@ -18,15 +18,6 @@ params:
   issue:
     type: issue-number
     required: true
-  rerun_reason:
-    required: false
-    enum:
-      - GATE:PLAN FAIL
-      - advisor answer
-      - BUILD design contradiction
-      - design re-entry
-      - acceptance-criterion decision
-      - gate recommendation
 
 inputs:
   applied_criteria:
@@ -62,33 +53,21 @@ inputs:
     from: { module: quality, output: evaluation }
 
 rules:
-  - id: rerun-has-reason
-    check: mechanical
-    rule: a previous document is given if and only if rerun_reason is given
   - id: delta-not-rewrite
     check: mechanical
     rule: >
       On a re-run, each output document the run changes is the previous document unchanged, then
-      one appended section "## Delta — round <n> (<rerun_reason>)", n being the number of delta
-      sections in the previous document plus one. "## Decision requests" and "## Tools" are the
-      exception: rewritten in place to their current state.
+      one appended section "## Delta — round <n>", n being the number of delta sections in the
+      previous document plus one; what the round is for, the module states from its inputs (Q13).
+      "## Decision requests" is the exception: rewritten in place to its current state.
     source: docs/units/design.md > Re-entry
-  - id: row-grain
-    check: evaluation
-    rule: >
-      One row per verification: a criterion verified more than one way carries one row per
-      verification under the same Issue AC, and a verification that spans rows carries the same
-      label in Method on each of them.
-    source: docs/units/design.md > Output artifacts (the Failure mode bullet, Row grain)
-  - id: scope-rows
-    check: evaluation
-    rule: each problem the feature design's "## Scope" includes gets a row (Issue AC "—", no Reason owed)
-    source: docs/units/design.md > Output artifacts (the Issue AC bullet)
-  - id: no-criterion-applied
-    check: evaluation
-    rule: the design states an acceptance-criterion change as a request and never applies it
-    source: docs/units/design.md > Output artifacts
 
+# Q14: a contract checks the inputs and that the output disposes of every item the work owes —
+# each applied acceptance criterion and each item the design adds. How the work is done (the
+# verification design's risk line, what the feature design leaves to the build) is the
+# procedure's, not this contract's. No rule that the design never applies an acceptance-criterion
+# change (Q15): the applied criteria are criteria-apply's output, an input here, so the design can
+# only request one ("## Decision requests").
 outputs:
   feature_design:
     file: feature-design.md
@@ -98,6 +77,10 @@ outputs:
         required: true
         empty: none
         check: mechanical
+        entries:
+          - kind: included item
+            holds: [id, the item]
+            note: the id names the item in the verification design's table
       - heading: Decision requests
         required: true
         empty: none
@@ -107,61 +90,35 @@ outputs:
             holds: [criterion, proposed change, fact that shows the need]
           - kind: design point
             holds: [options, what each changes]
-    forbids:
-      - what: a change table of files, a per-suite disposition, or an oracle's condition clause
-        check: evaluation
-        source: docs/units/design.md > Output artifacts (the [DENY] clause)
 
   verification_design:
     file: verification-design.md
     format: markdown
-    first_line:
-      what: the risk line — who is harmed and how if this change is wrong
-      required: true
-      check: mechanical
-      source: docs/units/design.md > Verification depth
     tables:
-      # Today's document fixes this table's columns but no heading above it
-      # (docs/units/design.md > Output artifacts, item 2); the table is found by its header row.
-      # Open for sub-issue 2: whether the contract fixes a heading for it.
-      - locate: the table whose header row is the columns below
+      # Every item the work owes has a disposition: each applied acceptance criterion and each
+      # item the feature design's "## Scope" includes (Q8, Q14). How an item is verified, or why it
+      # is not, is the module's judgment in its own words; no classification of it is checked.
+      # The table the first run wrote is the one outside every "## Delta — round <n>" section: a
+      # re-run appends a delta and leaves that table as it stands (docs/units/design.md > Re-entry).
+      - locate: >
+          the table whose header row's first cell is "Item", outside every
+          "## Delta — round <n>" section
         required: true
         check: mechanical
-        columns: [Issue AC, Acceptance criterion, Type, Kind, Method, Failure mode, Reason]
-        column_rules:
-          Issue AC:
-            values: an AC id of applied_criteria, or "—"
-          Type:
-            enum: [automated, existing-coverage, delivery-check, manual, environment-dependent, none]
-            # In this repository only, a standing row: "automated / standing: <token>" or
-            # "manual / standing: <token>", the token from ADR-0024 D1's closed list.
-            pattern_this_repository: '^(automated|manual) / standing: \S+$'
-          Kind:
-            enum: [driving, regression, characterization]
-            required_when: Type is automated
-            otherwise: "—"
-          Reason:
-            required_when: Type is not automated and Issue AC is not "—"
-          Failure mode:
-            required_when: Type is automated, existing-coverage, delivery-check or manual
-            otherwise: "—"
-            note: >
-              Also owed on an environment-dependent row resolved to a mock or a manual
-              delegation; that reading, and whether a cell can be told apart from another
-              verification's, is the evaluation's.
-        coverage:
-          rule: every AC id of applied_criteria has at least one row
+        columns:
+          first: Item
+          rest: the module's own
+        rows:
+          rule: a row carries its disposition — at least one cell after Item is not empty
           check: mechanical
-          source: docs/evaluation-system.md > GATE:PLAN > AC-authority check
-    sections:
-      - heading: Tools
-        required: true
-        empty: none
-        check: mechanical
-        lines:
-          holds: [tool, the rows it verifies or the design question it serves, availability, ground]
-          availability: ['available', 'target procedure: <document section or script>', 'operator: <what is needed>']
-        note: a "none" carries its ground in one line
+        coverage:
+          rule: >
+            every AC id of applied_criteria, and every id of an included item of the feature
+            design's "## Scope", has at least one row
+          check: mechanical
+          source: docs/evaluation-system.md > GATE:PLAN > AC-authority check; docs/units/design.md > Output artifacts (the Issue AC bullet)
+    # No "## Tools" section (Q10): a tool the run lacked is a tool request in the result
+    # (docs/records/design-reviews/io-contract-modules.md > 5.3).
 
 result:
   summary: one line

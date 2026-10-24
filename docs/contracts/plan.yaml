@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 #
-# The plan evaluation module's contract (today's GATE:PLAN) — DRAFT (issue #508, epic #507).
+# The plan evaluation module's contract (today's GATE:PLAN) — DRAFT (issues #508, #509, epic #507).
 # Format: docs/records/design-reviews/io-contract-modules.md > 5. Contract format and module
 # invocation. No device reads this file yet.
 
@@ -10,8 +10,8 @@ module: plan
 kind: evaluation
 goal: >
   Scores of the design's intent — whether each decision is grounded, whether each criterion's
-  verification fits it, whether the scope is right and whether the tools are secured — never the
-  method by which the design was reached.
+  verification fits it and whether the scope is right — never the method by which the design was
+  reached.
 procedure: docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN
 evaluator:
   agent: autoflow-evaluator
@@ -40,52 +40,47 @@ inputs:
     required: false
     from: { module: plan, output: evaluation }
 
-rules:
-  - id: narrowed-rescore
-    check: evaluation
-    rule: >
-      With previous_evaluation given, the evaluator re-scores the items the design's delta sections
-      touch and inherits the others by citation; rescore.source names previous_evaluation.
-    source: docs/evaluation-system.md > GATE:PLAN > Re-entry re-score
+# No rules of procedure (Q15): which items a re-score scores afresh is the evaluation procedure's
+# (docs/evaluation-system.md > GATE:PLAN > Re-entry re-score); the contract checks only that the
+# re-score disposes of every item it owes (outputs.evaluation.keys.rescore).
 
 outputs:
   evaluation:
     file: evaluation.json
     format: json
     writer: >
-      the invoking session, writing the report the evaluator returns verbatim — the evaluator agent
-      has no Write tool (agents/autoflow-evaluator.md). Open: sub-issue 2.
+      the invoking session, writing the report the evaluator returns verbatim — the evaluator holds
+      no Write tool, so its return value is the only delivery path for its scores
+      (docs/role-contracts.md > Evaluation AI). Q7.
     keys:
       type:            { type: string, required: true, const: plan_evaluation }
       target:          { type: string, required: true }
       issue:           { type: string, required: true, pattern: '^#[0-9]+$' }
-      fail_hypothesis:
-        type: object
-        required: true
-        keys:
-          case:         { type: string, required: true, non_empty: true }
-          disposition:  { type: string, required: true, enum: [refuted, survived, none_found] }
-          reflected_in: { type: array, required: true, items: rubric item name }
+      # No fail_hypothesis (Q12): the pre-scoring search for the opposite case is the evaluation
+      # procedure's rule (docs/evaluation-system.md > Evaluator conduct), not an output's format.
       scores:
         type: object
         required: true
-        keys_exactly: [Decision grounds, Verification fit, Scope, Tools, Security]
+        # No Tools item (Q10): it scored the design's "## Tools" section, which is removed.
+        keys_exactly: [Decision grounds, Verification fit, Scope, Security]
         value: a number 0-10, or { score, reason }
       rescore:
         type: object
         required_when: previous_evaluation is given
-        keys: [source, rescored, inherited, prior_findings, new_findings]
-        rule: every rubric item is in exactly one of rescored and inherited
+        keys: [source, rescored, inherited, prior_findings]
+        rules:
+          - every rubric item is in exactly one of rescored and inherited
+          - every finding of previous_evaluation has an entry in prior_findings, with its disposition
       summary:         { type: string, required: true }
-      blocking_issues: { type: array, required: true, max_items: 3 }
+      # No blocking_issues (Q15): nothing reads it, and its cap of three cut what the scores'
+      # reasons carry in full.
       recommendations:
         type: array
         required: true
         items:
-          keys: [subject, item, severity, finding]
-          remedy_class:
-            required_when: severity is Medium or above
-            enum: [doc, test, impl, design, operator]
+          keys: [subject, item, finding]
+          # No remedy_class (Q11) and no severity (Q15): what to do with a finding is decided by
+          # whoever acts on it.
     forbidden_keys:
       - verdict  # Q2: the evaluation outputs scores; applying the pass values is the Coordinator's
     check: mechanical

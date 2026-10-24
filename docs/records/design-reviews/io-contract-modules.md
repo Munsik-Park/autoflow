@@ -64,7 +64,7 @@ Facts the survey established:
 | **Move to the Coordinator** | the Flow Control table, the caps, the shared counters | [core.md](../../core.md) > Flow Control |
 | **Move to the Coordinator** | every unit document's `## Transitions` and `## Re-entry` | `docs/units/*.md` |
 | **Move to the Coordinator** | Modes, Review-response setup, Resume, PR Wait Rule | [units/preparation.md](../../units/preparation.md) |
-| **Move to the Coordinator** | route selection by `remedy_class`, recommendation triage, the attempt caps | `scripts/gate/remedy-route.sh`; [units/completion-evaluation.md](../../units/completion-evaluation.md) > Recommendation triage, FAIL routing; `review-gate.sh` cap |
+| **Move to the Coordinator** | route selection (by `remedy_class` today; by the judgment of the AI acting on a finding, Q11), recommendation triage, the attempt caps | `scripts/gate/remedy-route.sh`; [units/completion-evaluation.md](../../units/completion-evaluation.md) > Recommendation triage, FAIL routing; `review-gate.sh` cap |
 | **Move to the Coordinator** | the orchestrator role itself | ADR-0025 D5; [core.md](../../core.md) > Team Structure > AI Orchestrator |
 | **Keep in the module, as contract** | the output formats: analysis report sections, design AC table and `## Tools`, build report sections, evaluator report JSON, findings file | [units/analysis.md](../../units/analysis.md) > Analysis report; [units/design.md](../../units/design.md) > Output artifacts; [units/build.md](../../units/build.md) > Build report; [evaluation-system.md](../../evaluation-system.md) (report JSON); [units/review.md](../../units/review.md) |
 | **Keep in the module** | what each unit's work owes | each unit document's *What the … owes* |
@@ -78,8 +78,8 @@ separate modules:
 
 - **Functional modules** produce artifacts: the criterion review's four modules (below),
   analysis, design, build, delivery, review.
-- **Evaluation modules** take artifacts and produce an evaluation report (scores,
-  `remedy_class`, findings): hypothesis, plan, audit, quality.
+- **Evaluation modules** take artifacts and produce an evaluation report (scores and
+  findings; no `remedy_class`, Q11): hypothesis, plan, audit, quality.
 - **Deterministic modules** are scripts with no model: criteria-apply, which computes the applied
   acceptance criteria (Q5).
 
@@ -103,8 +103,8 @@ review record and one target file per criterion), criterion-trace (stage 2), cri
 
 What follows the four — putting an open question to the advisor, editing the issue body to the
 settled decisions, and the `[criterion-ready]` entry (an `O` entry the main session writes,
-*Confirmation*) — is the Coordinator's, being decisions and their record (Q4). Whether the issue-body
-edit becomes a deterministic module like criteria-apply is left to the contracts of sub-issue 2.
+*Confirmation*) — is the Coordinator's, being decisions and their record (Q4). The issue-body edit
+stays the Coordinator's and does not become a deterministic module (Q9).
 
 This split is the one ADR-0037 D2 already names ("functional and evaluation modules"). It also
 closes a gap the survey found: only AUDIT's report has a fixed path
@@ -156,7 +156,7 @@ stop being paths the plugin defines. They become two ways of composing the modul
 
 | `format` | Schema keys | Today's example |
 |---|---|---|
-| `markdown` | `sections`: each `heading`, `required`, `empty` (the word an empty section says, `none`); a section may hold `lines` (what each line holds, and a value list). `tables` for a table: `locate` (under a heading, or by its header row), `columns`, per-column `enum` / `pattern` / `required_when`, and `coverage`. `first_line` for a line before the first heading. `forbids` for content the output must not carry | the analysis report's ten sections; the verification design's AC table and `## Tools` |
+| `markdown` | `sections`: each `heading`, `required`, `empty` (the word an empty section says, `none`); a section may hold `lines` (what each line holds, and a value list). `tables` for a table: `locate` (under a heading, or by its header row), `columns` (all of them, or the `first` with the `rest` the module's own), per-column `values` / `pattern` / `required_when`, `rows`, and `coverage`. `first_line` for a line before the first heading. `forbids` for content the output must not carry | the analysis report's ten sections; the verification design's AC table |
 | `json` | `keys`: each `type`, `required` / `required_when`, `enum`; `forbidden` keys | the evaluation report ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format) |
 | `ledger-entry` | `marker`, `namespace`, `fields` | `[criterion-ready]` ([criterion-review.md](../../criterion-review.md) > Confirmation) |
 | `validator` | a script that accepts or refuses the file | the findings file, refused by `review-gate.sh` exit `2` |
@@ -168,6 +168,23 @@ orchestrator checks that the design documents carry `## Decision requests` and `
 told apart from another's is GATE:PLAN's Scope deduction ([evaluation-system.md](../../evaluation-system.md)
 > GATE:PLAN > Scoring). A contract names both, so the validator never claims what only an
 evaluation can judge.
+
+**No rule checks a classification of a module's judgment** (Q8): a closed list of values the
+module must pick its judgment from. A case the list does not fit is forced into the nearest value
+or into `none`, and the judgment it stands for is lost without a trace. Today's verification design
+is the instance: `Type` is "one of" six dispositions ([units/design.md](../../units/design.md) >
+Output artifacts, Test necessity), `Kind` one of three, and a committed check names one of two
+`standing` tokens ([ADR-0024](../adr/0024-two-layer-verification-and-target-owned-tests.md) D1),
+while the same section says "Necessity is a **judgment**, not a classification". The only reader
+that branches on these values mechanically is `scripts/gate/verification-layer-check.sh`, over the
+`standing` token, in this repository only; the others are the AUDIT and GATE:QUALITY evaluators and
+the PR body. What the verification design owes mechanically is that every item the work owes has a
+disposition (`docs/contracts/design.yaml` > `outputs.verification_design.tables`).
+
+**A contract is input, disposition, output** (Q14): it checks that the inputs are there, and that
+the output disposes of every item the work owes — each applied acceptance criterion, and each item
+the module itself added or changed once that is decided. How the work is done is the procedure's
+(`procedure`), never the contract's.
 
 ### 5.3 Invocation
 
@@ -184,13 +201,22 @@ evaluation can judge.
   }
   ```
 
-- **The module checks its inputs first**: `autoflow-contract check-in <invocation.json>` — every
+- **The module checks its inputs first**: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` — every
   required input given, every given input conforms to the schema its `from` names. On a refusal it
   writes nothing but the result file and stops.
-- **It writes each output to `<out>/<file>`** and ends with `autoflow-contract check-out
+- **It writes each output to `<out>/<file>`** and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out
   <invocation.json>`, which checks the outputs against the contract and writes
-  `<out>/result.json`: the module, `accepted` or `refused`, each output's path, and each defect
-  found. The Coordinator reads that file to decide the next run (Q3).
+  `<out>/result.json`: the module, `accepted` or `refused`, each output's path, each defect
+  found, and the module's tool requests. The Coordinator reads that file to decide the next run (Q3).
+- **A tool the work needs is used; a tool that is missing is requested, and the run still ends**
+  (Q10). A module that lacks a tool does what can be done without it — a mock, a verification
+  left not run, by its own judgment — and finishes. It records each missing tool as a tool request:
+  what is missing, and what it did instead, including each verification that failed or did not run
+  for the lack. The requests go in its result and its report (`none` when there are none); the
+  delivery module states every request of the run in the pull-request body, so the operator sees
+  them and decides — install the tool and re-run, close the PR and set up the tool apart, or merge
+  and add the tool. Which file declares a project's tools, and when it is checked, is the target's
+  environment setup, checked when the environment is built, not on every run.
 - **The output directory is the Coordinator's.** A re-run gets a new directory and names the
   previous outputs as inputs, so nothing is renamed or overwritten.
 - **A module does not know which run it is.** What a re-run's output owes because it is a re-run is
@@ -199,11 +225,9 @@ evaluation can judge.
 - **The existing commands stay until sub-issue 3**: `/autoflow:cycle-u1` … `cycle-u7` keep their
   current behaviour on this branch, and sub-issue 3 replaces them with the module commands.
 
-Open within the format, for sub-issue 2: the name `autoflow-contract` and whether it lives in
-`bin/` beside `autoflow-records`; and who writes an evaluation module's output, since the evaluator
-agent has no Write tool (`agents/autoflow-evaluator.md` > `tools: Read, Glob, Grep, Bash`) — the
-draft names the invoking session, writing the returned report verbatim (`docs/contracts/plan.yaml`
-> `outputs.evaluation.writer`).
+The points this section left open for sub-issue 2 are settled as Q6–Q9 (§6): the validator's
+place, the writer of an evaluation module's output, the verification design's table, and the
+issue-body edit.
 
 ## 6. Open decisions
 
@@ -214,6 +238,17 @@ draft names the invoking session, writing the returned report verbatim (`docs/co
 | Q3 | The line between a module's own repetition and an external loop | **Settled** (operator, 2026-10-23): an output that falls short of its format is re-run by the Coordinator; a module runs once and does not loop. Re-running on an evaluation result is the Coordinator's as well. Today's re-spawn on a missing report section is already the orchestrator's ([units/analysis.md](../../units/analysis.md) > Unit spawn), so it moves to the Coordinator with the rest of the orchestrator's routing. The criterion review's stages: four modules, accepted (§4). |
 | Q4 | The ledger's standing | **Settled** (operator, 2026-10-23): the ledger holds only decisions — entries that settle what a module cannot settle itself (`[criterion-ready]`, `[ac-decision]`, `[checklist-decision]`, a design point), under their authority: `operator decision` and the main session's own decision in the `O` namespace, `advisor decision` in the `A` namespace ([decision-ledger.md](../../decision-ledger.md) > Entry identifier). In this model the main session that writes `O` is the Coordinator's. A module contract may name such an entry as an input ("the ledger decision with marker X"). What a module can produce itself is its own output file. The orchestrator's entries leave the ledger: the attempt records counted for the caps (`[gate-autofix]`, `[review-autofix]`), the cap-window reset (`[reentry-decision]`) and `[rebuttal]` are the Coordinator's records; the gate verdict entries ([decision-ledger.md](../../decision-ledger.md) > Entries, *Writers*) are replaced by the evaluation output files. The hook's append-only and authorship denies stay as they are and keep guarding these entries. The contradiction between [state-tracking.md](../../state-tracking.md) ("the ledger is not a gate input") and the REVIEW cap counted from `[review-autofix]` entries goes with both: the first document is removed, the count moves to the Coordinator. |
 | Q5 | How an acceptance-criterion change is applied | **Settled** (operator, 2026-10-23): the applied criteria are an output of their own. A deterministic script computes them from the analysis report's first AC table and the `[ac-decision]` entries; every later module takes that output as its input. The request is already a module output (the design's `## Decision requests`, the build report, an evaluation recommendation — [units/design.md](../../units/design.md) > Report routing) and the decision a ledger entry (Q4); only the edit the orchestrator makes today to the analysis report's table ([units/analysis.md](../../units/analysis.md) > Re-entry) is replaced. It needs the `[ac-decision]` grammar ([decision-ledger.md](../../decision-ledger.md) > Decision-point entries, *Acceptance-criterion decisions*) to carry the criterion's new text for `revised`, `split` and `added` — today the entry has `- AC:`, `- Disposition:` and one Decision line, which a script cannot apply. Rejected: re-running analysis on the entries (a full analysis run for a table edit, and other content may move); each consuming module applying the entries itself (one application in five places). |
+| Q6 | Where the contract validator lives | **Settled by the existing rule** (2026-10-24): `scripts/contracts/contract.sh`, run as `bash <autoflow-root>/scripts/contracts/contract.sh check-in\|check-out <invocation.json>`. `bin/` is the plugin's component that is on the Bash `PATH` of every session and subagent ([ADR-0027](../adr/0027-plugin-only-delivery.md) > Context, M1; D1); its two entries are the commands a context with no root declaration must still run — `autoflow-root` prints the root (D3), `autoflow-records` names every record path (`bin/autoflow-records`, header). The validator's callers, a module's command body and its agent definition, carry the root declaration (D3), so it is a file a role runs by path, under `scripts/`. It would belong in `bin/` only if the Coordinator ran it with no root declaration; in §5.3 the Coordinator reads `result.json` and does not run it. The name follows `scripts/`' `<noun>.sh <subcommand>` form (`criterion-ready.sh status`, `spawn-policy.sh model`). |
+| Q7 | Who writes an evaluation module's output | **Settled by the existing rule** (2026-10-24): the session that runs the evaluation module, writing the report the evaluator returns verbatim. "The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores" ([role-contracts.md](../../role-contracts.md) > Evaluation AI), and the spawning side records it verbatim (`agents/autoflow-evaluator.md`, Hard rules). Only the place changes: the state file's `scores` become `<out>/evaluation.json`. Giving the evaluator a Write tool would change that rule with no defect observed under it. This also names the writer §7 item 9 found missing for `issue-{N}-audit.md`. |
+| Q8 | The verification design's table | **Settled** (operator, 2026-10-24): the classification is removed — `Type`, `Kind`, the per-column rules of `Reason` and `Failure mode`, and the `standing` token; what the table owes is a disposition for every applied criterion (§5.2, *No rule checks a classification*). The table is found by its header row's first cell (`Item`, Q14), outside every `## Delta — round <n>` section: a re-run appends a delta and leaves the first run's text as it stands ([units/design.md](../../units/design.md) > Re-entry), so no heading is fixed for it — issue #500's verification design carries two tables with the same header row, the second inside `## Delta — round 2`. The other columns are the module's. Removing the classification from the documents, rubrics and scripts that carry it is sub-issue 3's (§8, §9). |
+| Q9 | Whether the issue-body edit becomes a deterministic module | **Settled** (operator, 2026-10-24): no. The edit stays the Coordinator's, as the review session's today ([criterion-review.md](../../criterion-review.md) > Authority, "the session edits the issue body to match"). A module, or a re-read of the edited body against the decisions, would guard against an edit that departs from the decisions; no such defect is on record (issue search "issue body": #467, #466, #305, none of them this), so neither is added. |
+| Q10 | Tools | **Settled** (operator, 2026-10-24): a module uses the tools its work needs; when one is missing it finds what can be done without it, finishes the run, and records the missing tool as a request in its result and report, which the PR body states for the operator (§5.3). The verification design's `## Tools` section and its availability list go (`docs/contracts/design.yaml`), and with it GATE:PLAN's `Tools` item ([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring; `docs/contracts/plan.yaml`), removed by the operator on its own ground: it scored the form of the declaration — each tool, its availability and its ground, and a reason owed only by a row verified by a person or on a mock — not whether a tool fits the criterion, so declaring a tool scored safer than not; whether the verification, its tool included, fits the criterion is `Verification fit`'s. No run checks the tools: today's per-cycle `preflight.local_checks[]`, which stops the cycle on a failed check ([units/preparation.md](../../units/preparation.md) > Target-declared local checks), and the pause for a missing tool ([core.md](../../core.md) > Flow Control, "tool or referenced material → user") go in sub-issue 3. Withdrawn on the way: a module stopping on a missing tool with a `blocked` result, and AutoFlow naming one place for a project's tool declarations — the operator decides from the PR what to do about a missing tool. |
+| Q11 | `remedy_class` | **Settled** (operator, 2026-10-24): no contract carries it. Today the evaluator tags each failed item, and each `Medium`+ recommendation, with one of `doc`, `test`, `impl`, `design` or `operator`, and `scripts/gate/remedy-route.sh` routes the re-entry from the tags ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing; [evaluation-system.md](../../evaluation-system.md) > Remedy class). A fix can be large or small, and where it is made cannot be fixed in advance: the AI acting on a finding judges at which stage it is made, and asks the advisor when it cannot. A contract states the least it can: it names no class and no destination, and the one way out of an uncertain judgment is to ask the advisor. This narrows Q2: the evaluation outputs scores and grounds, and no `remedy_class`. A fix no module owns — today's `doc` route, the orchestrator's own doc commit — needs no module either: the coordinating session runs it as a one-off session or judges it itself. |
+| Q12 | `fail_hypothesis` | **Settled** (operator, 2026-10-24): not an output contract's. It records the evaluator's pre-scoring search for the strongest FAIL case — the rule that, when everything reads as right, the opposite case is looked for first ([evaluation-system.md](../../evaluation-system.md) > Evaluator conduct > *Pre-scoring FAIL hypothesis*). That is the evaluation procedure, a rule of the rubric's evaluation, and stays binding there; as output, "nothing reads it programmatically and no gate consumes it" (*ibid.* > Evaluation Output Format). The plan contract drops the key and its `disposition` list. |
+| Q13 | `rerun_reason` | **Settled** (operator, 2026-10-24): removed from the design contract, with its six values and the rule tying it to a previous document. Nothing reads it or branches on it: today it is the text in a delta heading's parentheses ([units/design.md](../../units/design.md) > Re-entry, the only place the list appears), and what a re-run works from reaches it as inputs of its own — the previous documents, the plan evaluation, the build's blocker, the failed items. A re-run is known by a previous document being given; the delta heading keeps `## Delta — round <n>`, which the table's locate reads (Q8). |
+| Q14 | What a contract checks | **Settled** (operator, 2026-10-24): a module is input, the work it does, and output; its contract checks the inputs and that the output disposes of every item the work owes. Acceptance criteria are the required behaviour; an item the design adds or changes, once decided, is owed the same way. So the coverage check spans both: every applied criterion and every item the feature design's `## Scope` includes has a row with its disposition, the included items carrying an id the table names — today they are `—` rows that no check pairs with the `## Scope` section, though [units/design.md](../../units/design.md) > Output artifacts owes each a row. The verification design's risk line ([units/design.md](../../units/design.md) > Verification depth) and the feature design's `[DENY]` on content the build derives (*ibid.* > Output artifacts) are how the work is done, so they leave the contract and stay in the procedure, as `fail_hypothesis` did (Q12). |
+| Q15 | The plan and design contracts' remaining rules | **Applied by Q11, Q12 and Q14** (2026-10-24; the operator asked that what the principles settle be applied, and only the rest be asked). `blocking_issues` goes: no reader is named for it, and its cap of three ([evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, `"items ≤ 3"`) cut a list the rule "surface every issue found" (*ibid.* > Evaluator conduct) wants whole; each item's score and reason carries what blocks. A recommendation's `severity` leaves the contract's checks with `remedy_class` (Q11) — the levels and the procedure's rule that every finding states one stay: today it splits triage into the orchestrator's own judgment on `Low` and a class-routed attempt on `Medium`+ ([units/completion-evaluation.md](../../units/completion-evaluation.md) > Recommendation triage), and with routing the acting AI's judgment, nothing branches on it. The re-score keeps what it owes (Q14) — every rubric item scored afresh or inherited, and every prior finding dispositioned — and which items it scores afresh is the procedure's (Q12). The design's "never applies an acceptance-criterion change" goes: the applied criteria are criteria-apply's output and the design's input (Q5), so a change can only be requested. |
+| Q16 | How a procedure is written | **Settled** (operator, 2026-10-24): a procedure gives the AI the goal of its work, and the AI judges how to meet it — for a review, "state the severity of every finding". It does not prescribe a form that must be present and then check that it is: that turns the work into a fixed procedure carried out mechanically instead of judged toward a goal. The contract checks inputs and dispositions (Q14); the procedure documents sub-issue 3 rewrites state goals. |
 
 Operator's words:
 
@@ -222,6 +257,15 @@ Operator's words:
 - Q3: "참고로 추가하면 현재 만약에 출력의 형식이 부족하다라고 하면 조율자가 다시 실행을 시킬 거예요. 즉 루프로 재실행하는 구조로 만들면 이 문제는 해결이 됩니다."
 - Q4: "c" (option C: the ledger holds only decisions).
 - Q5: "B로 진행하세요." (option B: the applied criteria as an output of their own, computed by a script).
+- Q6: "그러면 1번은 선택할 문제인가요?" (the operator's question, on the place following from the existing split).
+- Q8: "분류 체계는 AI의 작업을 제한하는 검사입니다. 다 걷어내야 돼요. 실제로 필요한 것은 AC가 있고 그 AC에 대한 처분이 있느냐 뿐입니다." Then: "시안 수정으로 합니다. 적용하세요."
+- Q9: "문제가 발생한 적도 발생하지도 않았는데 룰을 추가하자는 것이죠?"
+- Q16: "목표는 리뷰를 하면 발견한 항목마다 심각도를 적는다 라는 목표를 주는 건데, 그러면 AI가 그 목표에 맞춰서 작업을 하겠죠." On the form-and-check way: "그것은 AI에게 작업의 목표를 주고 하도록 하는 그런 방식이 아니라 그냥 정해진 절차를 하게 하는 기계적인 행위를 유도해요."
+- Q14: "모듈이라는 것은 입력이 있고 내부에 처리하는 프로세스가 있고 그 처리를 모두 한 이후에 출력이 있는가를 확인하는 거예요. 입력, 처분, 출력 단순합니다. AC는 기본적으로 요구되는 기능이고 설계나 아키텍트에서 추가하거나 변경한 것이 결정이 되면 그 사항들을 출력 형식에 맞게 처분하고 작업을 하는 거예요."
+- Q13: "빼주세요."
+- Q12: "실패 가설을 찾는 것은 계약, 출력 계약이 아니고 평가 절차죠. 평가 절차에서 다만 강제해야 되는 건 맞아요. … 루브릭의 루브릭 평가에서의 룰이죠."
+- Q11: "계약으로 정할수 없어요, 계약으로 쓰는 것은 최소한이어야 합니다 … 일부 수정이 대형일수도 부분일수도 잇어요 미리 정할수 있나요? AI 는 충분히 어느 단계에서 할지 정하거나 어려울 경우 advisor 를 요청할수 있어요 … 탈출구가 어디라고 하는 것이 아니라 탈출하는 방법만 최소로 정하면 됩니다" On a fix no module owns: "조율 세션이 충분히 세션 실행해서 1회성 실행할수 있거나 판단할수 있어요 결정할 문제가 아닙니다"
+- Q10: "도구가 필요하면 쓴다. 없으면 요구해라. 반드시 기록해서 운영자한테 요구해라. 그리고 도구가 없더라도 할 수 있는 것을 방법을 찾아서 수행은 끝낸다." And: "매 사이트마다 검사하는 건 없앱니다." On GATE:PLAN's `Tools` item: "뺍니다."
 
 ## 7. Couplings to resolve
 
@@ -246,7 +290,8 @@ rather than reading a declared output.
    ([units/build.md](../../units/build.md) > Re-entry), while U6's PR body and U7's reviewer
    read that report.
 9. No writer is named for `issue-{N}-audit.md`: the evaluator has no Write tool
-   (`agents/autoflow-evaluator.md`, `tools: Read, Glob, Grep, Bash`).
+   (`agents/autoflow-evaluator.md`, `tools: Read, Glob, Grep, Bash`). Q7 names it for every
+   evaluation output.
 10. The unit commands' entry check ("confirm from cycle-status.sh that the cycle stands at Uk's
     entry", `skills/cycle-u3/SKILL.md`) has no definition, because `cycle-status.sh` names no phase
     ([units/preparation.md](../../units/preparation.md) > Resume).
@@ -254,11 +299,42 @@ rather than reading a declared output.
 ## 8. New work
 
 - One YAML contract per module: inputs, outputs, each output's schema.
-- One contract validator: input check at module start, output check at module end.
+- One contract validator, `scripts/contracts/contract.sh` (Q6): input check at module start, output
+  check at module end.
 - A check that the contracts and the documents agree, on the `core-units.tsv` →
   `verify-skill-bodies.sh` pattern.
 - A script that computes the applied acceptance criteria from the analysis report's table and the
   `[ac-decision]` entries, and the grammar field it needs (Q5).
+- Removing the verification design's classification (Q8), in sub-issue 3: `Type`, `Kind` and the
+  `standing` token in [units/design.md](../../units/design.md) > Output artifacts and Test
+  necessity, ADR-0024 D1's closed list and its `Type`-cell declaration, the rubric items that read
+  them ([evaluation-system.md](../../evaluation-system.md): AUDIT's test-first reads `Kind`,
+  GATE:QUALITY's layer violation reads the token) and `scripts/gate/verification-layer-check.sh`.
+- Replacing the tool checks by tool requests (Q10), in sub-issue 3: the verification design's
+  `## Tools` and [units/design.md](../../units/design.md) > Tools, GATE:PLAN's `Tools` item,
+  the per-cycle `preflight.local_checks[]` run and its stop, the Flow Control pause for a missing
+  tool, and the PR body's place for the run's tool requests
+  ([units/delivery.md](../../units/delivery.md) > Push and pull request).
+- Removing `remedy_class` (Q11), in sub-issue 3: the evaluator's tagging rules
+  ([evaluation-system.md](../../evaluation-system.md) > Remedy class), the FAIL routing table
+  ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing) and
+  `scripts/gate/remedy-route.sh`.
+- Narrowing the evaluation output format (Q15), in sub-issue 3: `blocking_issues` leaves
+  [evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, and Recommendation
+  triage ([units/completion-evaluation.md](../../units/completion-evaluation.md)) is worded without
+  the `Low` / `Medium`+ split. The severity levels stay, and so does the procedure's rule that each
+  finding states its severity (*ibid.* > Evaluator conduct): the contract stops checking the field,
+  the evaluator still states it, and the AI acting on the finding reads it.
+- Moving `fail_hypothesis` out of the output format (Q12), in sub-issue 3: the key leaves
+  [evaluation-system.md](../../evaluation-system.md) > Evaluation Output Format, and the search
+  stays a [MUST] of *Evaluator conduct*, worded without the orchestrator's reject-and-re-spawn on
+  an empty key.
+- GATE:PLAN's rubric text, in sub-issue 3: `Tools` goes (Q10), and `Verification fit` and `Scope`
+  are worded without the `Failure mode` column they read today
+  ([evaluation-system.md](../../evaluation-system.md) > GATE:PLAN > Scoring, and the paragraph
+  under it on the `Failure mode` cell; Q8).
+- Rewriting the procedure documents as goals (Q16), in sub-issue 3: each rule a document keeps
+  states what the work must achieve, not a form that must be present.
 - An ADR that supersedes the decisions below.
 
 ## 9. Decisions this supersedes
@@ -270,6 +346,7 @@ rather than reading a declared output.
 | 0025 | D1 (a unit ends at a recorded gate) | work and gate split into separate modules |
 | [0029](../adr/0029-attempt-records-under-one-record-root.md) | D4 (entry is a fact, printed by `cycle-status.sh`), D6 (the hook gates per checkout) | no entry evaluation, no state gates |
 | [0036](../adr/0036-the-abbreviated-path-beside-the-full-cycle.md) | D6 (`cycle-status.sh` reports an attempt with no state file), D7 (which checks bind which path) | the paths become compositions |
+| [0024](../adr/0024-two-layer-verification-and-target-owned-tests.md) | D1 (the closed `standing` list, declared in the `Type` cell) | the verification design carries no classification (Q8) |
 | [0037](../adr/0037-autoflow-keeps-no-after-work-procedure.md) | D2's scope (the Coordinator owns what follows a merge or a close, "and of nothing else") | the Coordinator's scope widens to the whole lifecycle |
 
 The list is the survey's reading; the ADR that supersedes them checks each against its text.
