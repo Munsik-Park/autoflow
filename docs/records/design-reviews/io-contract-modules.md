@@ -226,10 +226,7 @@ the module itself added or changed once that is decided. How the work is done is
   (Q10). A module that lacks a tool does what can be done without it — a mock, a verification
   left not run, by its own judgment — and finishes. It records each missing tool as a tool request:
   what is missing, and what it did instead, including each verification that failed or did not run
-  for the lack. A tool the module stood in for by another means is a request too — what was missing,
-  what stood in for it, and what that leaves unconfirmed — since what the operator decides on is
-  what the run could not confirm, not whether it found a way round. The requests go in its result
-  and its report (`none` when there are none); the
+  for the lack. The requests go in its result and its report (`none` when there are none); the
   delivery module states every request of the run in the pull-request body, so the operator sees
   them and decides — install the tool and re-run, close the PR and set up the tool apart, or merge
   and add the tool. Which file declares a project's tools, and when it is checked, is the target's
@@ -416,8 +413,10 @@ No test today exercises the score thresholds, the planning or implementation spa
   output by reading tdlib's `parse_html` (fetched with `gh api`) instead of sending through the Bot
   API. The trace recorded a tool request; the in-depth run recorded none, though its own notes say
   the stand-in checks tag structure only. The instruction said "a tool the work needed and did not
-  have", which a module that found a stand-in reads as not needed. §5.3 now names the stand-in
-  case; the module instructions (and, in sub-issue 3, the procedure documents) are to say the same.
+  have", which a module that found a stand-in reads as not needed. Being tried: the next runs'
+  instructions mention the stand-in case in passing, and what the modules then record is observed
+  before any document fixes a wording (the operator, 2026-10-25: "문구 보완과 같은 것은 룰처럼 강하게
+  규정하는 방식은 지양하세요. 조금씩 개선해서 관찰하며 개선합니다").
 
 ## Handoff log
 
