@@ -441,6 +441,12 @@ No test today exercises the score thresholds, the planning or implementation spa
   ten Low recommendations read the formats Q8 and Q14 replaced (`Issue AC` for `Item`, `—` for a
   scope item, the `Kind` label) — the rubric text, like the procedure, brings them back.
 
+- **A `git` output has no path to hand on** (same run). The audit, quality and delivery contracts
+  take the build's `commits` as an input, and an invocation names inputs by path; the commits
+  are recorded only as a range in the build's `result.json` (`outputs.commits`: branch, from, to).
+  In the test the build's `result.json` was named as that input: it holds the range, and check-in's
+  accepted-producer check reads it. How an input names a non-file output is left to settle.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
