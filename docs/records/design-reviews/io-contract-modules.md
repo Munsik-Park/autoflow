@@ -418,6 +418,18 @@ No test today exercises the score thresholds, the planning or implementation spa
   before any document fixes a wording (the operator, 2026-10-25: "문구 보완과 같은 것은 룰처럼 강하게
   규정하는 방식은 지양하세요. 조금씩 개선해서 관찰하며 개선합니다").
 
+- **The procedure documents bring the classification back** (opensre#1 module run, 2026-10-25).
+  The design module's verification table met the contract — first column `Item`, a disposition
+  per row, every applied criterion and scope item covered — and its other columns were today's
+  `Type`, `Kind`, `Method`, `Failure mode`, `Reason`: the contract leaves those columns to the
+  module, and the module took them from [units/design.md](../../units/design.md), its procedure.
+  What Q8 removes from the contract comes back through the procedure until sub-issue 3 rewrites it.
+- **Modules dispose of what they are given** (same run). The hypothesis evaluation recorded AC3's
+  `&am` observation as a criterion defect (Low). With no hint in its instruction, the design
+  module judged it non-discriminating rather than false — true before and after the fix — kept
+  the criterion, and added inputs that split a reference to the verification; the Coordinator's
+  own reading (revise AC3) was the weaker one.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
