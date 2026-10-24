@@ -447,6 +447,15 @@ No test today exercises the score thresholds, the planning or implementation spa
   In the test the build's `result.json` was named as that input: it holds the range, and check-in's
   accepted-producer check reads it. How an input names a non-file output is left to settle.
 
+- **A re-run cannot reach the previous run's working files** (same run). The build keeps its test
+  scripts and run logs under its output directory (`local/`), which its contract does not declare
+  as an output; the re-run, given the previous report and the audit's findings, recorded a tool
+  request for the previous run's `local/` as an input. Its commit range is its own delta
+  (`666c3c0a0 → f7c85e48e`), so an evaluation of the whole change needs every build run's range.
+- **The re-score's dispositions checked** (same run). The audit re-score put all five items under
+  `rescored`, gave the one previous finding the disposition `cleared`, and scored Input validation
+  9 (was 6); the validator's `partition` and `covers` checks passed on it.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
