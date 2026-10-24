@@ -226,7 +226,10 @@ the module itself added or changed once that is decided. How the work is done is
   (Q10). A module that lacks a tool does what can be done without it — a mock, a verification
   left not run, by its own judgment — and finishes. It records each missing tool as a tool request:
   what is missing, and what it did instead, including each verification that failed or did not run
-  for the lack. The requests go in its result and its report (`none` when there are none); the
+  for the lack. A tool the module stood in for by another means is a request too — what was missing,
+  what stood in for it, and what that leaves unconfirmed — since what the operator decides on is
+  what the run could not confirm, not whether it found a way round. The requests go in its result
+  and its report (`none` when there are none); the
   delivery module states every request of the run in the pull-request body, so the operator sees
   them and decides — install the tool and re-run, close the PR and set up the tool apart, or merge
   and add the tool. Which file declares a project's tools, and when it is checked, is the target's
@@ -407,6 +410,14 @@ No test today exercises the score thresholds, the planning or implementation spa
   `scripts/resync-submodules.sh` as carrying no licensing information, though its second and third
   lines are the SPDX header; the contract files are counted compliant. Not investigated: the
   file is not touched by this work.
+
+- **Tool requests left out when a module found a way round** (opensre#1 module run, 2026-10-25).
+  criterion-trace and criterion-in-depth AC1 both judged whether Telegram accepts the truncated
+  output by reading tdlib's `parse_html` (fetched with `gh api`) instead of sending through the Bot
+  API. The trace recorded a tool request; the in-depth run recorded none, though its own notes say
+  the stand-in checks tag structure only. The instruction said "a tool the work needed and did not
+  have", which a module that found a stand-in reads as not needed. §5.3 now names the stand-in
+  case; the module instructions (and, in sub-issue 3, the procedure documents) are to say the same.
 
 ## Handoff log
 
