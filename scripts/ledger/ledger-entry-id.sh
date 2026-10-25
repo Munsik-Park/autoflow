@@ -54,9 +54,10 @@ EOF
 }
 
 # Heading grammar shared by both subcommands: a settled-decision entry is a
-# LEVEL-2 heading `## <NS><serial> — <title> (cycle <C>, <PHASE>)`. Level-3
-# headings are record entries (preflight-plugin, preflight-local-checks,
-# preflight-review-config) and carry no identifier by design, so both
+# LEVEL-2 heading `## <NS><serial> — <title>`, a marker at its end when its kind
+# has one (a heading written before ADR-0038 may carry `(cycle <C>, <PHASE>)`
+# after its title). Level-3 headings carry no identifier and are not entries
+# (ledgers written before ADR-0038 hold preflight records under them), so both
 # subcommands ignore them.
 
 # next <ledger-path> <namespace>

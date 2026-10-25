@@ -25,8 +25,8 @@
 # decisions*): the advisor's first judgment, or the operator's override
 # (ADR-0025 D7):
 #
-#   ## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (advisor)
-#   ## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (operator)
+#   ## A<n> — <title> [checklist-decision]   (advisor)
+#   ## O<n> — <title> [checklist-decision]   (operator)
 #   - Checklist: <the declared path at HEAD, or none>
 #   - Blob: <git rev-parse HEAD:<path>, or none>
 #   - Disposition: accepted | rejected

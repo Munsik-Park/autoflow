@@ -845,24 +845,25 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md`: what an entry records, how it is
 identified, and the grammar of the entries a decision point produces — the advisor's first judgment
-and the operator's override. The ledger's standing constraints —
+and the operator's override. The ledger holds decisions: entries that settle what a module cannot
+settle itself, under their authority ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's standing constraints —
 append-only, no re-litigation without a new verified fact, host ownership, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
 ## Entries
 
-- Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `orchestrator decision`, `advisor decision`, `GATE:PLAN PASS (avg 8.2)`, `operator decision`), and the cycle/phase.
-- **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a gate verdict by a fresh Evaluation AI re-scoring that item, an ARCHITECT design decision — recorded in the feature design, not the ledger — by a U3 Design unit re-run naming its heading there (an ARCHITECT re-entry, consuming that counter, unless the design has not yet reached GATE:PLAN), an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the U3 re-run's delta item, as `supersedes <heading>` ([`units/design.md`](<autoflow-root>/docs/units/design.md) > *Re-entry*). A change of preference or a re-interpretation of the same material is not an error and stays barred.
+- Each entry records: the decision (one line), its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence), its **authority** (what settled it — `orchestrator decision`, `advisor decision`, `operator decision`).
+- **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the re-opening is **judged by the decision's original authority** — a design decision — recorded in the feature design, not the ledger — by a design run naming its heading there, an advisor decision by a fresh advisor, an operator decision by the operator — and when that authority cannot say with confidence that the error changes the decision, it asks the advisor ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the design run's delta item, as `supersedes <heading>` ([`units/design.md`](<autoflow-root>/docs/units/design.md)). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
-**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); the ARCHITECT design unit and the BUILD unit append nothing — their decisions and records are their own artifacts ([`units/design.md`](<autoflow-root>/docs/units/design.md), [`units/build.md`](<autoflow-root>/docs/units/build.md) > Build report); the orchestrator appends each gate's verdict after the gate, each auto-resolution attempt and rebuttal round at a gate or at REVIEW, its own decision at a point it settles without the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Decision points and harness-level blocks*; an acceptance-criterion change: *Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and — before the issue's first cycle, by the criterion review session taking the orchestrator's part — the `[criterion-ready]` entry recording the review's settled decisions (*Criterion-readiness confirmations* below).
+**Writers**. The advisor appends its answer to a decision point under the authority `advisor decision`, and it alone writes that authority (*Advisor decisions and operator overrides* below); a module appends nothing — its decisions and records are its own outputs ([`units/design.md`](<autoflow-root>/docs/units/design.md), [`units/build.md`](<autoflow-root>/docs/units/build.md) > Build report); the main session — the Coordinator's ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D2) — appends its own decision at a point it settles without the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Decision points and harness-level blocks*; an acceptance-criterion change: *Acceptance-criterion decisions* below), an operator override of an advisor decision when the operator gives one, and the `[criterion-ready]` entry recording the criterion review's settled decisions (*Criterion-readiness confirmations* below). The Coordinator's own records — an evaluation's result, the attempts it counts for a cap and the reset of that count, a rebuttal round, the checks it runs when it builds the environment — are not ledger entries (*ibid.* D8).
 
 ## Entry identifier
 
-A settled-decision entry is headed `## <ID> — <title> (cycle <C>, <PHASE>)`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only. An auto-triggered review-response entry carries its REVIEW marker in the same grammar: `## O<n> — <title> (cycle <C>, REVIEW) [review-autofix]` — the marker stays at the end of the heading. The operator's decision to continue after an attempt-cap pause is an `O` entry under `operator decision` whose heading ends in `[reentry-decision]`; the attempt count restarts after it ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Routing* > Attempt cap). An entry written before the attempt's state file — in its criterion review stage, the criterion-readiness confirmation included — carries `cycle 0`. Record entries (`preflight-plugin`, `preflight-local-checks`, `preflight-review-config` — [`units/preparation.md`](<autoflow-root>/docs/units/preparation.md)) are level-3 headings and carry no identifier.
+A settled-decision entry is headed `## <ID> — <title>`, where `<ID>` is a one-letter **writer namespace** followed by a serial that counts within that namespace only; an entry of a kind that has a marker ends its heading with it — `## <ID> — <title> [<marker>]`. The heading names no cycle or phase. A heading written before this grammar may carry `(cycle <C>, <PHASE>)` after its title, and a ledger written before it may carry level-3 record headings with no identifier; no reader reads either.
 
 | Writer | Namespace |
 |---|---|
-| Orchestrator | `O` |
+| Main session (the Coordinator's) | `O` |
 | Advisor | `A` |
 | Pre-protocol legacy entries (readable, never issued) | `E` |
 | Legacy facilitator-delegate entries (readable, never issued) | `F` |
@@ -881,7 +882,7 @@ This table is the mapping's only documentary home; other documents cite it rathe
 advisor writes that authority or an `A` heading, and the advisor never writes `operator decision` or
 an `O` / `F` / `E` heading — the gate hook denies both
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor > *Independence*). The operator may
-override an advisor's entry: the orchestrator — the main session, the
+override an advisor's entry: the main session — the
 only writer the gate hook admits for an `O` entry or the `operator decision` authority — records the
 override as an `O<n>` entry under the authority `operator decision`, with the same marker and fields
 and an `- Overrides: A<n>` line. An override supersedes the advisor's entry without a new verified
@@ -899,37 +900,54 @@ only the operator replaces. The same conclusion recorded twice is not a conflict
 already share is read as *Identifier collision* above says, never repaired by editing either entry.
 
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
-never the design's or a unit's to apply: the **orchestrator** decides it first, on the grounds the
+never the design's or a module's to apply: the **main session** decides it first, on the grounds the
 raising report or recommendation carries, and puts it to the **advisor** only where those grounds
 do not settle it or it is not confident ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor >
 *Decision points and harness-level blocks*); the **operator** may override. The change stands only
 as the entries below ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1); choosing how a
 criterion is *verified* is the design's, provided the row states its reason, which the
 reviewers then judge at REVIEW (the three-tier guard — [`units/design.md`](<autoflow-root>/docs/units/design.md) >
-*Report routing*). A content change reaches the orchestrator from wherever it surfaces: the ARCHITECT design
-unit's `## Decision requests` section, before GATE:PLAN; a problem the BUILD unit meets and raises in
-its report; or a gate recommendation that records a criterion defect, or whose
-triage hits the acceptance-criterion pause criterion ([`units/design.md`](<autoflow-root>/docs/units/design.md) > *Report routing*,
-[`units/completion-evaluation.md`](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*). The change excludes, revises or splits a criterion, or adds one. The
+*Report routing*). A content change reaches the main session from wherever it surfaces: the design's
+`## Decision requests` section; a problem the build meets and raises in its report; or an
+evaluation recommendation that records a criterion defect ([`units/design.md`](<autoflow-root>/docs/units/design.md) >
+*Report routing*). The change excludes, revises or splits a criterion, or adds one. The
 decision is recorded as one entry per decided AC, in the same trailing-marker grammar:
-the heading `## O<n> — <title> (cycle <C>, <PHASE>) [ac-decision]` (the advisor's: `## A<n> — …`; an override: `## O<n> — …`),
-`<PHASE>` being the phase the change surfaced in, followed by the entry's own `- AC: <ac id>` line (for
-an added criterion, the id it takes), a `- Disposition:` line valued `excluded` / `revised` / `split` /
-`added`, and the ordinary Decision / Grounds / Authority lines with the authority value
-`orchestrator decision` (the advisor's: `advisor decision`; an override: `operator decision`).
+the heading `## O<n> — <title> [ac-decision]` (the advisor's: `## A<n> — …`; an override: `## O<n> — …`),
+followed by the entry's own `- AC: <ac id>` line (for an added criterion, the id it takes), a
+`- Disposition:` line valued `excluded` / `revised` / `split` / `added`, the criterion's text as
+decided — `- Text: <text>` for `revised` and `added`, and for `split` one `- Into: <id> — <text>`
+line per criterion it makes, in order —, and the ordinary Decision / Grounds / Authority lines with
+the authority value `orchestrator decision` (the advisor's: `advisor decision`; an override:
+`operator decision`):
 
-**A criterion can be wrong; from ARCHITECT on, the work tests it**. DIAGNOSE takes the criteria as written — it
+```markdown
+## O4 — split AC2 [ac-decision]
+- AC: AC2
+- Disposition: split
+- Into: AC2a — <the first criterion's text>
+- Into: AC2b — <the second criterion's text>
+- Decision: <the decision, one line>
+- Grounds: <the grounds>
+- Authority: orchestrator decision
+```
+
+`<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
+analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+analysis report's table is not edited.
+
+**A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it
 analyzes the problem as the issue states it and runs no test of the criteria of its own. That says how
-DIAGNOSE works, not when a defect may be raised: a defect observed as a fact is raised wherever it is
-observed, a gate before ARCHITECT included. From ARCHITECT on — the design, the build
-and every gate after them — a criterion is a hypothesis the work tests, not a truth the
+the analysis works, not when a defect may be raised: a defect observed as a fact is raised wherever it is
+observed, an evaluation before the design included. From the design on — the design, the build
+and every evaluation after them — a criterion is a hypothesis the work tests, not a truth the
 work is bent to fit: wherever the work and a criterion disagree, *is the criterion wrong?* is one of the
 answers the judgment weighs, beside *how is it satisfied?* A criterion is **defective** when (a) a fact
 it presumes does not hold — a device, a phase or a state it takes for granted; or (b) the scope it draws does not fit the problem — too
 narrow, when the same cause reaches past what it names, and the question is then whether the issue saw
 the problem as local and the approach itself must change, not only whether to include the rest (a
 widening: `revised` / `added`); or too wide, when it binds in a problem separate from this issue (a
-split: `split` / `excluded`). A defect so judged is raised for a decision — the orchestrator's first, the advisor's where it cannot settle it;
+split: `split` / `excluded`). A defect so judged is raised for a decision — the main session's first, the advisor's where it cannot settle it;
 it is never resolved by keeping the criterion's letter. One signal of a defect: a document has to add a rule the criterion did
 not state in order to keep the criterion's letter. This paragraph is the principle's single home;
 the unit documents and agent definitions cite it.
@@ -937,20 +955,17 @@ the unit documents and agent definitions cite it.
 The marker sits at the **end** of the heading. The authority over an acceptance criterion maps to
 these literals and nothing else: the entry's authority **value** is `advisor decision` on an `A<n>`
 entry, or `orchestrator decision` or `operator decision` on an `O<n>` entry, and the entry is **located** by the `[ac-decision]`
-heading marker. The two gate backstops key on the marker. When the entries for one AC disagree, an `operator decision` entry wins. When the
-disposition is `revised`, `split` or `added`, the analysis report's acceptance-criterion table
-(`<attempt-dir>/issue-{N}-analysis.md`) is edited to
-match before re-entry, and this entry is the record of who authorized the edit. An `added` entry
-covers no difference in either gate backstop: the criterion it adds is owed its verification-design
-row and its discharging site like any other.
+heading marker. When the entries for one AC disagree, an `operator decision` entry wins. A criterion
+the entries add or change is owed its verification-design row and its discharging site like any
+other.
 
 **Security-checklist decisions** (`[checklist-decision]`). The security checklist AUDIT scores
 against is the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist`,
-and a cycle's AUDIT reads it as of the cycle's base commit ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). Changing it inside a cycle — the file, or the
-declaration that points at it — is never the cycle's own to accept: the **advisor** decides first
+and AUDIT reads it as of the attempt's base commit ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). Changing it within the attempt — the file, or the
+declaration that points at it — is never the attempt's own to accept: the **advisor** decides first
 and the **operator** may override. When `<autoflow-root>/scripts/gate/security-checklist.sh status` reports the
-change at AUDIT entry, the orchestrator spawns the advisor, and the answer is recorded in the same
-trailing-marker grammar: the heading `## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]` (an
+change, the question is put to the advisor, and the answer is recorded in the same
+trailing-marker grammar: the heading `## A<n> — <title> [checklist-decision]` (an
 override: `## O<n> — …`), followed by a `- Checklist:` line (the declared path at HEAD, or `none` when
 the declaration is dropped), a `- Blob:` line (the `git rev-parse HEAD:<path>` of the approved
 version, or `none`), a `- Disposition:` line valued `accepted` / `rejected`, and the ordinary
@@ -962,12 +977,11 @@ script counts an entry only when its Decision and Grounds lines are non-empty, i
 the checklist is a new change owed its own decision. An entry stands unless a later counted entry
 replaces it by name (*Replacement is explicit* above; an advisor entry never replaces an operator
 entry). The standing entries decide only when they agree: all `accepted` → the change is covered; all
-`rejected` → it is not, and the change is reverted before AUDIT; both → a conflict, reported as
+`rejected` → it is not, and the change is reverted before AUDIT reads it; both → a conflict, reported as
 `conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
 
-**Criterion-readiness confirmations** (`[criterion-ready]`). In the first stage of an attempt's
-cycle, before its state file, the attempt's own review checks the issue's acceptance criteria and
-the decisions the review settles are recorded ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*). The review session
+**Criterion-readiness confirmations** (`[criterion-ready]`). The attempt's criterion review checks
+the issue's acceptance criteria and the decisions the review settles are recorded ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*). The review session
 judges and records its dispositions, a point it cannot settle is decided by the advisor as at any
 decision point — the answer is itself the decision and does not wait on the operator's review —
 and the operator overrides either when they choose. Once every decision is settled, the review
@@ -975,21 +989,17 @@ session records them in one entry, with no operator confirmation asked: the entr
 the decisions made under the policy the operator set for the review, under the authority
 `operator decision` — the same authority over acceptance content as an override
 ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
-`## O<n> — <title> (cycle 0, CRITERION-REVIEW) [criterion-ready]`, followed by a `- Decision:`
+`## O<n> — <title> [criterion-ready]`, followed by a `- Decision:`
 line, a `- Record:` line (the review record's file name in the attempt's own record directory, by name
 alone), an
 `- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
 for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
-`operator decision`. No `A<n>` entry carries the marker, and an attempt that has a state file takes
-none. `<autoflow-root>/scripts/preflight/criterion-ready.sh
+`operator decision`. No `A<n>` entry carries the marker. `<autoflow-root>/scripts/preflight/criterion-ready.sh
 status` reads the **last** entry carrying the marker in the attempt's own ledger — never another
 attempt's — and counts it only when it is an `O` entry
 under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
-the body is confirmed by a new entry, never by editing this one. The entry is the criterion review
-stage's exit, and PREFLIGHT reads that status on the attempt's start
-([`units/preparation.md`](<autoflow-root>/docs/units/preparation.md) > *The criterion review stage*, Stop conditions >
-*Criterion readiness*); nothing after the state file reads the entry, and a criterion change from
-then on stays an `[ac-decision]`.
+the body is confirmed by a new entry, never by editing this one. A criterion change after the
+review is an `[ac-decision]`.
 
 <!-- From <autoflow-root>/docs/issue-proposal.md -->
 
