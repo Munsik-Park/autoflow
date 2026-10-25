@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "criterion-screen",
   "kind": "functional",
+  "reads_records": true,
   "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on without any verdict.",
   "procedure": "docs/criterion-review.md",
   "params": {

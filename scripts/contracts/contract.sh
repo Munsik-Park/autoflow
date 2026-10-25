@@ -11,11 +11,14 @@
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-in  <invocation.json>
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>
 #
-# The invocation names the module, its params, its inputs by path and its
-# output directory:
+# The invocation names the module, its params, its inputs — a file by its
+# path, the build's commits by their range — the attempt's record directory
+# when the module reads it, and the run's output directory inside it:
 #
 #   { "contract": 1, "module": "design", "params": { "issue": 507 },
-#     "inputs": { "applied_criteria": "<path>", ... }, "out": "<directory>" }
+#     "inputs": { "applied_criteria": "<path>", ... },
+#     "records": "<directory>", "out": "<directory>/design-1" }
+#   "commits": { "branch": "<branch>", "from": "<commit>", "to": "<commit>" }
 #
 # The module's contract is <autoflow-root>/docs/contracts/<module>.json. This
 # script applies only the checks the contract lists under an output's "checks"
@@ -24,10 +27,14 @@
 # item the work owes).
 #
 # check-in  — the params and inputs the contract declares are given and well
-#             formed, every input path exists, and an input another module
-#             produced comes from a run whose result was accepted. It records
-#             what check-out needs (a branch's head) in <out>/.check-in.json.
-#             On a refusal it writes <out>/result.json and nothing else.
+#             formed (Q19): an input file exists and, when another module
+#             produces it, passes the checks of that module's output that need
+#             nothing but the file; a commit range's commits exist, in order,
+#             on its branch. Where an input came from is not checked. The run's
+#             directory is named <module>[-<qualifier>]-<n>, inside the record
+#             directory a module that reads it is given (Q20). It records what
+#             check-out needs (a branch's head) in <out>/.check-in.json. On a
+#             refusal it writes <out>/result.json and nothing else.
 # check-out — every output the contract declares is there and passes its
 #             checks, and the run's tool requests are recorded
 #             (<out>/tool-requests.json: a JSON array of {missing, instead},
@@ -46,7 +53,8 @@
 #             another module produces names a contract and an output it has;
 #             every output's format and check types are ones this script
 #             implements; every param, input and output a check names is
-#             declared. It prints each disagreement.
+#             declared; reads_records is true or false. It prints each
+#             disagreement.
 #
 # Exit: 0 accepted (check-in: the module may run; lint: every contract
 #       agrees) · 1 refused (result.json names each defect; lint: the
@@ -85,8 +93,8 @@ load() {
   CONTRACT=$(jq -c . "$CFILE") || die "the contract is not JSON: $CFILE"
 }
 
-# the path(s) an input names, one per line
-input_paths() { jq -r --arg n "$1" '.inputs[$n] // empty | if type == "array" then .[] else . end' "$INV"; }
+# the value(s) an input names, one per line: a path, or a commit range as JSON
+input_paths() { jq -r --arg n "$1" '.inputs[$n] // empty | if type == "array" then .[] else . end | if type == "object" then tojson else . end' "$INV"; }
 has_input() { [ -n "$(input_paths "$1")" ]; }
 param() { jq -r --arg n "$1" '.params[$n] // empty' "$INV"; }
 
@@ -105,6 +113,41 @@ finish() { # <stage>
     jq -r '.[] | "refused: " + .' <<<"$DEFECTS" >&2
     exit 1
   fi
+}
+
+# every contract, by module
+all_contracts() { for f in "$ROOT"/docs/contracts/*.json; do jq -c . "$f" 2>/dev/null; done | jq -sc 'map({key: .module, value: .}) | from_entries'; }
+
+# The checks of an output that need nothing but its file: a "covers" compares
+# it with the producer's own inputs or outputs, and a "when" on an input reads
+# the producer's invocation — both were the producer's check-out's (Q19).
+SELF_CONTAINED='map(select(.type != "covers" and ((.when // {}) | has("input") | not))
+  | if .type == "table" then del(.covers) else . end
+  | if .type == "keys" then .spec |= map_values(if (.required_when // {}) | has("input") then del(.required_when) else . end) else . end)'
+
+form_defects() { # <format> <file> <checks json>: the defects, as a JSON array
+  local saved=$DEFECTS out
+  DEFECTS='[]'
+  case "$1" in
+    markdown) check_markdown form "$2" "$3" '{}' ;;
+    json) check_json form "$2" "$3" ;;
+  esac
+  out=$DEFECTS; DEFECTS=$saved
+  printf '%s' "$out"
+}
+
+check_range() { # <input name> <range json>: the commits exist, in order, on the branch
+  local n=$1 r=$2 br from to
+  br=$(jq -r '.branch // empty' <<<"$r" 2>/dev/null); from=$(jq -r '.from // empty' <<<"$r" 2>/dev/null); to=$(jq -r '.to // empty' <<<"$r" 2>/dev/null)
+  [ -n "$br" ] && [ -n "$from" ] && [ -n "$to" ] || { defect "input '$n': a commit range is {branch, from, to}: $r"; return; }
+  git rev-parse --verify --quiet "refs/heads/$br^{commit}" >/dev/null || { defect "input '$n': branch '$br' does not exist"; return; }
+  local c ok=true
+  for c in "$from" "$to"; do
+    git cat-file -e "$c^{commit}" 2>/dev/null || { defect "input '$n': no commit $c"; ok=false; }
+  done
+  [ "$ok" = true ] || return
+  git merge-base --is-ancestor "$from" "$to" 2>/dev/null || defect "input '$n': $from is not an ancestor of $to"
+  git merge-base --is-ancestor "$to" "refs/heads/$br" 2>/dev/null || defect "input '$n': $to is not on branch '$br'"
 }
 
 # --- check-in -----------------------------------------------------------------
@@ -132,26 +175,46 @@ check_in() {
     fi
   done < <(jq -r '.params // {} | to_entries[] | [.key, (.value.required // false | tostring), (.value.type // ""), (.value.pattern // "")] | join("\u001f")' <<<"$CONTRACT")
 
-  # inputs
+  # the run's directory (Q20)
+  local recs base reads
+  recs=$(jq -r '.records // empty' "$INV"); base=$(basename -- "$OUT")
+  reads=$(jq -r '.reads_records // false' <<<"$CONTRACT")
+  [[ "$base" =~ ^$MODULE(-[A-Za-z0-9._]+)*-[0-9]+$ ]] || defect "the output directory is not named $MODULE-<n> or $MODULE-<qualifier>-<n>: $base"
+  if [ "$reads" = true ]; then
+    if [ -z "$recs" ]; then defect "the module reads the attempt's record directory, and the invocation names no records"
+    elif [ ! -d "$recs" ]; then defect "records is not a directory: $recs"
+    elif [ "$(cd -P -- "$(dirname -- "$OUT")" && pwd)" != "$(cd -P -- "$recs" && pwd)" ]; then defect "the output directory is not inside records ($recs): $OUT"
+    fi
+  elif [ -n "$recs" ]; then
+    defect "the module judges from its declared inputs, and the invocation names records"
+  fi
+
+  # inputs: each of the form the contract asks, wherever it came from (Q19)
   for n in $(jq -r '.inputs // {} | keys[]' "$INV"); do
     jq -e --arg n "$n" '.inputs | has($n)' <<<"$CONTRACT" >/dev/null || defect "input '$n' is not one the contract declares"
   done
+  local all; all=$(all_contracts)
   while IFS=$'\x1f' read -r n req; do
     [ -n "$n" ] || continue
     if ! has_input "$n"; then [ "$req" = true ] && defect "input '$n' is required"; continue; fi
-    local srcmods
-    srcmods=$(jq -r --arg n "$n" '[.inputs[$n].from] | flatten | map(select(type == "object" and has("module")) | .module) | join(" ")' <<<"$CONTRACT")
+    # the outputs this input may be: [{module, output, format, file, checks}]
+    local prods
+    prods=$(jq -c --arg n "$n" --argjson all "$all" '[[.inputs[$n].from] | flatten[] | select(type == "object" and has("module"))
+              | . as $f | ($all[$f.module].outputs[$f.output] // {}) as $o
+              | {module: $f.module, output: $f.output, format: ($o.format // ""), checks: ($o.checks // [])}]' <<<"$CONTRACT")
     while IFS= read -r p; do
       [ -n "$p" ] || continue
+      if jq -e 'any(.[]; .format == "git")' <<<"$prods" >/dev/null; then check_range "$n" "$p"; continue; fi
       if [ ! -e "$p" ]; then defect "input '$n': no such file: $p"; continue; fi
-      [ -n "$srcmods" ] || continue
-      # Q3: the Coordinator re-runs a refused module; its output is never an input.
-      local r; r="$(dirname -- "$p")/result.json"
-      if [ -f "$r" ]; then
-        jq -e '.status == "accepted"' "$r" >/dev/null 2>&1 || defect "input '$n': the run that produced it was not accepted ($r)"
-        local m; m=$(jq -r '.module // ""' "$r")
-        [[ " $srcmods " == *" $m "* ]] || defect "input '$n': produced by module '$m', not by $srcmods"
-      fi
+      jq -e 'length > 0' <<<"$prods" >/dev/null || continue
+      [ -f "$p" ] || { defect "input '$n': not a file: $p"; continue; }
+      local pr why="" d
+      while IFS= read -r pr; do
+        d=$(form_defects "$(jq -r .format <<<"$pr")" "$p" "$(jq -c ".checks | $SELF_CONTAINED" <<<"$pr")")
+        if [ "$(jq length <<<"$d")" -eq 0 ]; then why=""; break; fi
+        why="$why; as $(jq -r '"\(.module) \(.output)"' <<<"$pr"): $(jq -r 'map(sub("^form: "; "")) | join(", ")' <<<"$d")"
+      done < <(jq -c '.[]' <<<"$prods")
+      [ -z "$why" ] || defect "input '$n': $p is not of the form the contract asks${why}"
     done < <(input_paths "$n")
   done < <(jq -r '.inputs // {} | to_entries[] | [.key, (.value.required // false | tostring)] | join("\u001f")' <<<"$CONTRACT")
 
@@ -319,13 +382,28 @@ check_json() { # <output name> <file> <checks json>
   done < <(jq -c '.[]' <<<"$checks")
 }
 
-check_git() { # <output name> <check json>
-  local n=$1 c=$2 bp br from to
+check_git() { # <output name> <check json> <files map>
+  local n=$1 c=$2 files=$3 bp br from to
   bp=$(jq -r .branch_param <<<"$c"); br=$(param "$bp")
   from=$(jq -r --arg b "$br" '.start_heads[$b] // empty' "$OUT/.check-in.json")
   to=$(git rev-parse --verify --quiet "refs/heads/$br^{commit}") || { defect "$n: branch '$br' does not exist"; return; }
   [ -n "$from" ] || { defect "$n: check-in recorded no head for branch '$br'"; return; }
-  if [ "$from" = "$to" ]; then defect "$n: no commit on '$br' since check-in"; return; fi
+  if [ "$from" = "$to" ]; then
+    # Q19: no commit is not a defect when the run says why
+    local ar rf h
+    ar=$(jq -c '.absent_reason // empty' <<<"$c")
+    if [ -n "$ar" ]; then
+      rf=$(jq -r --arg o "$(jq -r .output <<<"$ar")" '.[$o] // empty' <<<"$files"); h=$(jq -r .section <<<"$ar")
+      if [ -f "$rf" ] && md_model "$rf" | jq -e --arg h "$h" 'any(.sections[] | select(.heading == $h) | .body[]; test("\\S"))' >/dev/null; then
+        record_output "$n" "$(jq -n --arg b "$br" --arg f "$from" '{branch: $b, from: $f, to: $f}')"
+        return
+      fi
+      defect "$n: no commit on '$br' since check-in, and no '## $h' section in $(basename -- "${rf:-the report}") says why"
+    else
+      defect "$n: no commit on '$br' since check-in"
+    fi
+    return
+  fi
   git merge-base --is-ancestor "$from" "$to" 2>/dev/null || defect "$n: '$br' no longer contains its head at check-in ($from)"
   record_output "$n" "$(jq -n --arg b "$br" --arg f "$from" --arg t "$to" '{branch: $b, from: $f, to: $t}')"
 }
@@ -402,7 +480,7 @@ check_out() {
   while IFS=$'\x1f' read -r n fmt file req many; do
     local checks; checks=$(jq -c --arg n "$n" '.outputs[$n].checks // []' <<<"$CONTRACT")
     case "$fmt" in
-      git) check_git "$n" "$(jq -c '.[] | select(.type == "git_range")' <<<"$checks")"; continue ;;
+      git) check_git "$n" "$(jq -c '.[] | select(.type == "git_range")' <<<"$checks")" "$files"; continue ;;
       pull-request) check_pr "$n" "$checks"; continue ;;
       pull-request-comment) check_comment "$n" "$checks"; continue ;;
     esac
@@ -455,7 +533,7 @@ ref_resolves() { # <reference>
 lint() {
   local files=("$@") f c m why bad=0
   [ ${#files[@]} -gt 0 ] || files=("$ROOT"/docs/contracts/*.json)
-  local all; all=$(for f in "$ROOT"/docs/contracts/*.json; do jq -c . "$f" 2>/dev/null; done | jq -sc 'map({key: .module, value: .}) | from_entries')
+  local all; all=$(all_contracts)
   say() { printf '%s: %s\n' "$(basename "$f")" "$*"; bad=1; }
   for f in "${files[@]}"; do
     c=$(jq -c . "$f" 2>/dev/null) || { say "not JSON"; continue; }
@@ -464,6 +542,7 @@ lint() {
     jq -e '.contract == 1' <<<"$c" >/dev/null || say "contract is not 1"
     jq -e '.kind | IN("functional", "evaluation", "deterministic")' <<<"$c" >/dev/null || say "kind is not functional, evaluation or deterministic"
     jq -e '(.goal // "") | test("\\S")' <<<"$c" >/dev/null || say "no goal"
+    jq -e '.reads_records | type == "boolean"' <<<"$c" >/dev/null || say "reads_records is not true or false"
     why=$(ref_resolves "$(jq -r '.procedure // ""' <<<"$c")") || say "procedure: $why"
     while IFS= read -r r; do
       [ -n "$r" ] || continue
@@ -494,7 +573,8 @@ lint() {
             ([$ch.branch_param, $ch.pr_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
             ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input][] | select(. != null)
               | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
-            ([($ch.covers // [])[].output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared")
+            ([($ch.covers // [])[].output, $ch.absent_reason.output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared"),
+            (if $ch.absent_reason and ($c.outputs[$ch.absent_reason.output].format // "") != "markdown" then "output \($o): absent_reason names an output that is not markdown" else empty end)
         end' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
   done

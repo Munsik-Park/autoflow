@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "quality",
   "kind": "evaluation",
+  "reads_records": false,
   "goal": "Scores of the built change against the acceptance criteria, the design and the build's own records — complete, correct, verified, within the cycle's scope, committed and documented.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:QUALITY",
   "evaluator": {

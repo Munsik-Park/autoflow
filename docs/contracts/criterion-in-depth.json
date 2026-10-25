@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "criterion-in-depth",
   "kind": "functional",
+  "reads_records": false,
   "goal": "A verdict on each target case of one criterion, resting on the code that decides whether and how the required behaviour occurs and the condition applied there.\n",
   "procedure": "docs/criterion-review.md",
   "params": {

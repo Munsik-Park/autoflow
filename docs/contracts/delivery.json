@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "delivery",
   "kind": "functional",
+  "reads_records": true,
   "goal": "The cycle's branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
   "procedure": "docs/units/delivery.md",
   "params": {

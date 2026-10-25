@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "design",
   "kind": "functional",
+  "reads_records": true,
   "goal": "A design the build module can implement and verify: the architecture decisions with the constraints they hold under and the alternatives rejected, and a verification design that says how each acceptance criterion is verified and which failure mode each verification catches.\n",
   "procedure": "docs/units/design.md",
   "params": {
@@ -77,12 +78,19 @@
         "output": "green_blocker"
       }
     },
-    "failed_items": {
+    "findings": {
       "required": false,
-      "from": {
-        "module": "quality",
-        "output": "evaluation"
-      }
+      "from": [
+        {
+          "module": "quality",
+          "output": "evaluation"
+        },
+        {
+          "module": "review",
+          "output": "findings"
+        }
+      ],
+      "note": "the findings a re-run answers: the quality evaluation's failed items, or the review's findings (a finding that moves a decision the design settled)"
     }
   },
   "outputs": {

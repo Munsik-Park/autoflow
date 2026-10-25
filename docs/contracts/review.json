@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "review",
   "kind": "functional",
+  "reads_records": true,
   "goal": "The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews posted on it: each finding once, with its severity and whether it holds.\n",
   "procedure": "docs/units/review.md",
   "params": {
@@ -21,28 +22,6 @@
     }
   },
   "inputs": {
-    "records": {
-      "required": false,
-      "from": [
-        {
-          "module": "analysis",
-          "output": "report"
-        },
-        {
-          "module": "design",
-          "output": "feature_design"
-        },
-        {
-          "module": "design",
-          "output": "verification_design"
-        },
-        {
-          "module": "build",
-          "output": "report"
-        }
-      ],
-      "note": "the attempt's design artifacts the reviewers may read (analysis, designs, build report)"
-    },
     "previous_findings": {
       "required": false,
       "from": {

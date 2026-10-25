@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "criterion-trace",
   "kind": "functional",
+  "reads_records": true,
   "goal": "How far each cause the review confirmed reaches beyond the points the issue reports, and whether each behaviour a criterion requires conflicts with the rules the code already has — assuming no fix.\n",
   "procedure": "docs/criterion-review.md",
   "params": {

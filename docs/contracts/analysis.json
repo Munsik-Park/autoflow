@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "analysis",
   "kind": "functional",
+  "reads_records": true,
   "goal": "The request understood well enough to be evaluated: the affected structure as it stands, the gap between it and the requested behaviour, whether a change is owed and whether code is the lever, and the decision points, each conclusion with its grounds.\n",
   "procedure": "docs/units/analysis.md",
   "params": {

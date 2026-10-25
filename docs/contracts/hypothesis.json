@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "hypothesis",
   "kind": "evaluation",
+  "reads_records": false,
   "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS",
   "evaluator": {

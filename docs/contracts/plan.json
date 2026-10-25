@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "plan",
   "kind": "evaluation",
+  "reads_records": false,
   "goal": "Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN",
   "evaluator": {

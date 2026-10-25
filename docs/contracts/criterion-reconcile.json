@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "criterion-reconcile",
   "kind": "functional",
+  "reads_records": true,
   "goal": "The review record reconciled with the trace and the in-depth verdicts: every case where they differ settled in the code, and the record's dispositions brought to match — the review's result, an item and its disposition each.",
   "procedure": "docs/criterion-review.md",
   "params": {

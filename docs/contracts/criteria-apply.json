@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "criteria-apply",
   "kind": "deterministic",
+  "reads_records": false,
   "goal": "The acceptance criteria the cycle works to: the analysis report's criteria with every settled acceptance-criterion decision applied (Q5).\n",
   "procedure": "scripts/contracts/criteria-apply.sh",
   "params": {

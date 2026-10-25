@@ -3,6 +3,7 @@
   "contract": 1,
   "module": "build",
   "kind": "functional",
+  "reads_records": true,
   "goal": "The design implemented within the cycle's scope on the cycle's branch, and every item of the verification design verified as it says — or, where it cannot be, the reason recorded.\n",
   "procedure": "docs/units/build.md",
   "params": {
@@ -78,7 +79,11 @@
         {
           "type": "git_range",
           "branch_param": "branch",
-          "note": "the commits the run made on the branch, from its head at check-in"
+          "absent_reason": {
+            "output": "report",
+            "section": "No commit"
+          },
+          "note": "the commits the run made on the branch, from its head at check-in; a run that makes none says why in the report's ## No commit section (Q19)"
         }
       ]
     },
