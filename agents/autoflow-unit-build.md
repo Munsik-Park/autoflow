@@ -427,8 +427,8 @@ the output carries `test_first`, the summary and the findings.
 AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores — the fresh
 evaluator, the five items below, the reference values — and the target owns what each item is
 judged by. Which version AUDIT reads is the one the record line of
-`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names. The Coordinator, which composes the invocation
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --base origin/<base> --ledger <attempt-dir>/issue-{N}-ledger.md`
+names, `<base>` the branch the pull request merges into. The Coordinator, which composes the invocation
 ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D2), writes the checklist
 at that version (`git show <score>`) to a file in the record directory and names it as the
 `security_checklist` input:

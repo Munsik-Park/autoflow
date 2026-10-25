@@ -43,13 +43,29 @@
       "checks": [
         {
           "type": "line",
-          "pattern": "^pr: [^/\\s]+/[^#\\s]+#[0-9]+$",
-          "note": "the reviewed pull request, as <owner>/<name>#<N>; that it names params.pr is not expressible as a check"
+          "pattern": "^pr: ([^/\\s]+/[^#\\s]+#[0-9]+)$",
+          "equals_param": "pr",
+          "note": "the reviewed pull request, as <owner>/<name>#<N>: params.pr"
         },
         {
           "type": "line",
           "pattern": "^max_severity: (Critical|High|Medium|Low Confidence|Low|None)$",
-          "note": "the highest level among the findings that hold, None when none remains; that there is exactly one such line, and that it equals the highest row that holds, is not expressible as a check"
+          "once": true,
+          "note": "exactly one line: the highest level among the findings that hold, None when none remains"
+        },
+        {
+          "type": "rank",
+          "pattern": "^max_severity: (Critical|High|Medium|Low Confidence|Low|None)$",
+          "order": [
+            "Low Confidence",
+            "Low",
+            "Medium",
+            "High",
+            "Critical"
+          ],
+          "none": "None",
+          "exclude_last_cell": "rejected",
+          "note": "max_severity is the highest severity among the finding rows — | <Severity> | <path>:<line> | <finding> | <source> | <disposition> | — whose disposition, the last cell, is not rejected (docs/units/review.md > Review aggregation)"
         }
       ],
       "evaluation": [

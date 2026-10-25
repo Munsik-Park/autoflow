@@ -7,7 +7,7 @@
 # The security checklist AUDIT scores against is the TARGET's: what its service
 # must satisfy is its own security requirement. AutoFlow ships no checklist and
 # names no item; it owns how AUDIT scores (a fresh Evaluation AI, the five
-# rubric items, the PASS thresholds). A target declares where its checklist
+# rubric items, the reference values). A target declares where its checklist
 # lives in the target-owned scaffold `.claude/autoflow.local.json`:
 #
 #   { "audit": { "security_checklist": "docs/security-checklist.md" } }
@@ -16,10 +16,10 @@
 # `.audit.security_checklist` → none declared: AUDIT scores the five rubric
 # items against the change without a checklist and records that it had none.
 #
-# This script decides WHICH VERSION of the declared checklist a cycle's AUDIT
-# reads. A target-owned checklist could be loosened by the cycle it grades —
+# This script decides WHICH VERSION of the declared checklist an attempt's AUDIT
+# reads. A target-owned checklist could be loosened by the attempt it grades —
 # self-certification (docs/core.md > Rule Scope, principle 1). So AUDIT reads the
-# checklist as of the cycle's base commit, and a change the cycle makes to it —
+# checklist as of the attempt's base commit, and a change the attempt makes to it —
 # the file, or the declaration that points at it — is read only on a decision
 # recorded in the issue ledger (docs/decision-ledger.md > *Security-checklist
 # decisions*): the advisor's first judgment, or the operator's override
@@ -57,10 +57,12 @@
 #       changed-undecided  changed, no covering entry, or standing     exit 3
 #                          entries that disagree (`conflict=<ids>`)
 #     `score=` names what AUDIT reads (`<rev>:<path>`, or `none`); on exit 3 it
-#     is `pending` — the orchestrator spawns the advisor before AUDIT.
-#     --base  the base is `git merge-base HEAD <rev>` (default: the checked-out
-#             branch's base — its `gh-merge-base` on origin, issue #490 — then
-#             origin/HEAD's branch, then origin/main, then main).
+#     is `pending` — the Coordinator puts the change to the advisor before
+#     AUDIT (ADR-0038 D2).
+#     --base  the base is `git merge-base HEAD <rev>`: <rev> is the branch the
+#             pull request merges into, which the Coordinator names (ADR-0038
+#             D4; `origin/<base>`). Without it: origin/HEAD's branch, then
+#             origin/main, then main.
 #     --ledger  the issue ledger; without it no change is covered.
 #
 # Exit codes: 0 = resolved; 3 = a change needs a decision (the advisor's first);
@@ -113,17 +115,14 @@ blob_at() {
 }
 
 resolve_base() {
-  local r cand def br gb
+  local r cand def
   if [ -n "$1" ]; then
     git rev-parse -q --verify "$1^{commit}" >/dev/null || die "--base '$1' does not resolve to a commit"
     git merge-base HEAD "$1" || die "no merge-base between HEAD and '$1'"
     return 0
   fi
   def="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  br="$(git symbolic-ref -q --short HEAD 2>/dev/null || true)"
-  gb=""
-  [ -z "$br" ] || gb="$(git config "branch.$br.gh-merge-base" 2>/dev/null || true)"
-  for cand in ${gb:+"origin/$gb"} "$def" origin/main main; do
+  for cand in "$def" origin/main main; do
     [ -n "$cand" ] || continue
     if git rev-parse -q --verify "$cand^{commit}" >/dev/null; then
       r="$(git merge-base HEAD "$cand" 2>/dev/null)" && { printf '%s\n' "$r"; return 0; }

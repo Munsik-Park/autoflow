@@ -1772,7 +1772,6 @@ Cautions:
 
 - The module does not write its own poll loop, and does not read an empty status as green. A
   `CONFLICTING` PR may receive no check at all; that is exit `10`, not a missed webhook.
-- Exits `10` and `14` carry the script's reserved `HANDOFF-INTERNAL-RETRY` token on stderr.
 
 **Added test files.** On exit `0`, each test file the change added to the target's tree (the build
 report's `## Test files kept`) is confirmed to have actually run in the PR head's CI. The criterion
@@ -2076,7 +2075,8 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
   comment, posted on the pull request (*Review aggregation*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms the findings file's `pr:` and `max_severity:` lines and that the
+- **Checks**: check-out confirms that the findings file's `pr:` line names the reviewed pull request,
+  that its one `max_severity:` line is the highest severity among the rows that hold, and that the
   comment is posted on the pull request (`review.json`); the reviews and their aggregation stand
   outside the work they review.
 - **Result owed**: the report of *End* below.

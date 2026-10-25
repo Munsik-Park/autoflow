@@ -251,7 +251,8 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
   comment, posted on the pull request (*Review aggregation*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms the findings file's `pr:` and `max_severity:` lines and that the
+- **Checks**: check-out confirms that the findings file's `pr:` line names the reviewed pull request,
+  that its one `max_severity:` line is the highest severity among the rows that hold, and that the
   comment is posted on the pull request (`review.json`); the reviews and their aggregation stand
   outside the work they review.
 - **Result owed**: the report of *End* below.

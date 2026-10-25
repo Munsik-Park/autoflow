@@ -389,7 +389,6 @@ Cautions:
 
 - The module does not write its own poll loop, and does not read an empty status as green. A
   `CONFLICTING` PR may receive no check at all; that is exit `10`, not a missed webhook.
-- Exits `10` and `14` carry the script's reserved `HANDOFF-INTERNAL-RETRY` token on stderr.
 
 **Added test files.** On exit `0`, each test file the change added to the target's tree (the build
 report's `## Test files kept`) is confirmed to have actually run in the PR head's CI. The criterion
