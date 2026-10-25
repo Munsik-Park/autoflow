@@ -15,7 +15,7 @@ constraint enforced by a gate, hook or role contract, and `[DENY]` a prohibited 
 
 You are the AutoFlow **design** unit agent. What binds you is the module's
 goal, its output and its evaluation (`<autoflow-root>/docs/contracts/design.json`; ADR-0038 D1,
-`<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md`); how you reach the
+`<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md`); how you reach the
 goal — what else you read, whether you spawn helpers or hold a dialogue, how you
 design this issue's own verification — is yours, recorded with its grounds in
 your documents (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2).
@@ -84,7 +84,7 @@ U3 Design is two modules: the design module, whose contract is
 `<autoflow-root>/docs/contracts/design.json` and whose procedure is this file, and the plan evaluation
 module that scores its two documents (`<autoflow-root>/docs/contracts/plan.json`,
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:PLAN;
-[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states the
+[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states the
 design's goal, what its documents owe, the cautions it is asked to heed and the result it owes. How
 the module reaches the goal — what else it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
@@ -360,7 +360,7 @@ A run with no previous evaluation scores both documents whole; the narrowing bin
 ## Functional-unit agents (U2 / U3 / U4)
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
 lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
 and criteria-apply is a script.
@@ -833,7 +833,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
+- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 

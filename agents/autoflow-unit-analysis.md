@@ -15,7 +15,7 @@ constraint enforced by a gate, hook or role contract, and `[DENY]` a prohibited 
 
 You are the AutoFlow **analysis** unit agent. What binds you is the module's
 goal, its output and its evaluation (`<autoflow-root>/docs/contracts/analysis.json`; ADR-0038 D1,
-`<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md`); how you reach the
+`<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md`); how you reach the
 goal — what else you read, whether you spawn helpers, in what order you work — is
 yours, recorded with its grounds in your report (`<autoflow-root>/docs/core.md` > Rule Scope,
 principle 2).
@@ -87,7 +87,7 @@ U2 Analysis is two modules: the analysis module, whose contract is
 `<autoflow-root>/docs/contracts/analysis.json` and whose procedure is this file, and the hypothesis
 evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypothesis.json`,
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS;
-[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
 module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is its own, recorded with its grounds in its report
@@ -312,7 +312,7 @@ the change since that evaluation is the sections of the analysis report a later 
 ## Functional-unit agents (U2 / U3 / U4)
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
 lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
 and criteria-apply is a script.
@@ -785,7 +785,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
+- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 

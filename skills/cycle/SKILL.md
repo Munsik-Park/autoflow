@@ -549,7 +549,7 @@ U2 Analysis is two modules: the analysis module, whose contract is
 `<autoflow-root>/docs/contracts/analysis.json` and whose procedure is this file, and the hypothesis
 evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypothesis.json`,
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS;
-[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
 module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is its own, recorded with its grounds in its report
@@ -737,7 +737,7 @@ Code behavior produces a **false "absent / stub" reading**:
 ## Functional-unit agents (U2 / U3 / U4)
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
 lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
 and criteria-apply is a script.
@@ -781,7 +781,7 @@ U3 Design is two modules: the design module, whose contract is
 `<autoflow-root>/docs/contracts/design.json` and whose procedure is this file, and the plan evaluation
 module that scores its two documents (`<autoflow-root>/docs/contracts/plan.json`,
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:PLAN;
-[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states the
+[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states the
 design's goal, what its documents owe, the cautions it is asked to heed and the result it owes. How
 the module reaches the goal — what else it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
@@ -1014,7 +1014,7 @@ U4 Build and verify is two modules: the build module, whose contract is
 `<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
 evaluation module that judges test-first and audits the change
 (`<autoflow-root>/docs/contracts/audit.json`, [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) >
-*Gate rubrics* > AUDIT; [`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md)
+*Gate rubrics* > AUDIT; [`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md)
 D1). This file states the build's goal, what it owes, the cautions it is asked to heed and the
 report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
 how it divides test and implementation work, how it runs its checks and when it stops iterating
@@ -1465,7 +1465,7 @@ U5 Completion evaluation is one module, the quality evaluation, whose contract i
 `<autoflow-root>/docs/contracts/quality.json` and whose procedure is
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
 items, its known blind-spot checks and its re-score
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the module's goal, how the recommendations of every evaluation are disposed of, and how a comment in
 a target's code is treated.
 
@@ -1495,7 +1495,7 @@ and the finding ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system
 are disposed of as a reviewer's findings are: whether each holds is weighed first
 ([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
 grounds. Where a fix is made is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). The severity is information for that
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
@@ -1585,7 +1585,7 @@ AutoFlow's mission ends by handing off an open pull request — opened, with CI 
 
 U6 Delivery is one module, the delivery module, whose contract is
 `<autoflow-root>/docs/contracts/delivery.json` and whose procedure is this file
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). It has no unit
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). It has no unit
 agent: the session that runs it pushes, runs the integration checks, opens the pull requests and
 confirms that each added test file ran in CI (*CI* > *Added test files*); a script only reads and
 reports. One reading is made by a spawned role — what a failed CI check shows (*CI failure* below).
@@ -2021,7 +2021,7 @@ feat(#231): 소진 내역 탭 프론트 — 기간 필터 + 검색   ← 커밋
 
 U7 Review is one module, the review module, whose contract is
 `<autoflow-root>/docs/contracts/review.json` and whose procedure is this file
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1,
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1,
 [`ADR-0033`](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)): one round of a pull request's
 review. It has no unit agent: the session that runs it runs the reviewers, and the aggregation of the
 round's reviews into one verdict is made by a spawned role. A script only reads and reports.
@@ -2145,7 +2145,7 @@ it leaves behind is fixed:
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
 
 ### Whether a finding holds
@@ -2427,7 +2427,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 
 It is a script for setting up the environment, and the review module reads its
 `reviewers:` line; its result is no ledger entry
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D4, D8). An absent
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
 CLI does **not** stop a run: the review runs the other reviewers without it and
 the aggregated comment names the omission
 ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*). With an unreadable
@@ -2491,7 +2491,7 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the
 invocation names: what an entry records, how it is identified, and the grammar of the entries a
 decision point produces. The ledger holds decisions: entries that settle what a module cannot settle
-itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's
+itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8). The ledger's
 standing constraints — append-only, no re-litigation without a new verified fact, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
@@ -2567,7 +2567,7 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8); the
 analysis report's table is not edited.
 
 **A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it
@@ -2903,7 +2903,7 @@ verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recom
 verdict ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
-against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 

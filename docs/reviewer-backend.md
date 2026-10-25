@@ -233,7 +233,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 
 It is a script for setting up the environment, and the review module reads its
 `reviewers:` line; its result is no ledger entry
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4, D8). An absent
+([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
 CLI does **not** stop a run: the review runs the other reviewers without it and
 the aggregated comment names the omission
 ([`units/review.md`](units/review.md) > *Reviewer review*). With an unreadable

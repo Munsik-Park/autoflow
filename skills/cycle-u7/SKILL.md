@@ -232,7 +232,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 
 U7 Review is one module, the review module, whose contract is
 `<autoflow-root>/docs/contracts/review.json` and whose procedure is this file
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1,
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1,
 [`ADR-0033`](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)): one round of a pull request's
 review. It has no unit agent: the session that runs it runs the reviewers, and the aggregation of the
 round's reviews into one verdict is made by a spawned role. A script only reads and reports.
@@ -356,7 +356,7 @@ it leaves behind is fixed:
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
 
 ### Whether a finding holds
@@ -638,7 +638,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 
 It is a script for setting up the environment, and the review module reads its
 `reviewers:` line; its result is no ledger entry
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D4, D8). An absent
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
 CLI does **not** stop a run: the review runs the other reviewers without it and
 the aggregated comment names the omission
 ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*). With an unreadable
@@ -869,7 +869,7 @@ carry, never routes the cycle.
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the
 invocation names: what an entry records, how it is identified, and the grammar of the entries a
 decision point produces. The ledger holds decisions: entries that settle what a module cannot settle
-itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's
+itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8). The ledger's
 standing constraints — append-only, no re-litigation without a new verified fact, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
@@ -945,7 +945,7 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8); the
 analysis report's table is not edited.
 
 **A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it

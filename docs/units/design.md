@@ -8,7 +8,7 @@ U3 Design is two modules: the design module, whose contract is
 `<autoflow-root>/docs/contracts/design.json` and whose procedure is this file, and the plan evaluation
 module that scores its two documents (`<autoflow-root>/docs/contracts/plan.json`,
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN;
-[`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states the
+[`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states the
 design's goal, what its documents owe, the cautions it is asked to heed and the result it owes. How
 the module reaches the goal — what else it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is

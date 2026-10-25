@@ -235,7 +235,7 @@ AutoFlow's mission ends by handing off an open pull request — opened, with CI 
 
 U6 Delivery is one module, the delivery module, whose contract is
 `<autoflow-root>/docs/contracts/delivery.json` and whose procedure is this file
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). It has no unit
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). It has no unit
 agent: the session that runs it pushes, runs the integration checks, opens the pull requests and
 confirms that each added test file ran in CI (*CI* > *Added test files*); a script only reads and
 reports. One reading is made by a spawned role — what a failed CI check shows (*CI failure* below).
@@ -803,7 +803,7 @@ The evaluator records each such finding in the item's `reason` and in `recommend
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the
 invocation names: what an entry records, how it is identified, and the grammar of the entries a
 decision point produces. The ledger holds decisions: entries that settle what a module cannot settle
-itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's
+itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8). The ledger's
 standing constraints — append-only, no re-litigation without a new verified fact, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
@@ -879,7 +879,7 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8); the
 analysis report's table is not edited.
 
 **A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it

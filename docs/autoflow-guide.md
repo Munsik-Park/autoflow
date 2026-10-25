@@ -1,7 +1,7 @@
 # AutoFlow Guide — Modules and Their Contracts
 
 > AutoFlow is a set of modules for AI-assisted software engineering with Claude Code, each with a
-> contract ([`ADR-0038`](records/adr/0038-contract-modules-run-by-the-coordinator.md)).
+> contract ([`ADR-0038`](records/adr/0038-contract-modules-with-no-state-file.md)).
 > This guide is the **index of the modules**: each module's goal, what its work owes, its output
 > and its cautions live in its procedure document (*Modules* below), and its inputs and outputs in
 > its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the

@@ -55,7 +55,7 @@ verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recom
 verdict ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
-against ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+against ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 
@@ -189,7 +189,7 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 ## Functional-unit agents (U2 / U3 / U4)
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+and its evaluation ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
 lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
 and criteria-apply is a script.

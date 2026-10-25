@@ -8,7 +8,7 @@ U2 Analysis is two modules: the analysis module, whose contract is
 `<autoflow-root>/docs/contracts/analysis.json` and whose procedure is this file, and the hypothesis
 evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypothesis.json`,
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS;
-[`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+[`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
 module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is its own, recorded with its grounds in its report

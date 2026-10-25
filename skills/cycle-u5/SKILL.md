@@ -239,7 +239,7 @@ U5 Completion evaluation is one module, the quality evaluation, whose contract i
 `<autoflow-root>/docs/contracts/quality.json` and whose procedure is
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
 items, its known blind-spot checks and its re-score
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the module's goal, how the recommendations of every evaluation are disposed of, and how a comment in
 a target's code is treated.
 
@@ -269,7 +269,7 @@ and the finding ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system
 are disposed of as a reviewer's findings are: whether each holds is weighed first
 ([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
 grounds. Where a fix is made is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). The severity is information for that
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
@@ -531,7 +531,7 @@ git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the
 invocation names: what an entry records, how it is identified, and the grammar of the entries a
 decision point produces. The ledger holds decisions: entries that settle what a module cannot settle
-itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's
+itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8). The ledger's
 standing constraints — append-only, no re-litigation without a new verified fact, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
@@ -607,7 +607,7 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8); the
 analysis report's table is not edited.
 
 **A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it
@@ -943,7 +943,7 @@ verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recom
 verdict ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
-against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 

@@ -36,7 +36,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
+- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 

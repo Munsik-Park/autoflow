@@ -39,7 +39,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
   the run's `<out>/result.json` (`autoflow`), which
   `<autoflow-root>/scripts/contracts/contract.sh` writes at check-in's refusal
   and at check-out (ADR-0027 D4); it is not a ledger entry
-  ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D8).
+  ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D8).
 - **[MUST]** The tool never records the target's version. The dependency stays
   one-way, target → tool.
 - An unpinned (`latest`) plugin version is not a supported configuration; the

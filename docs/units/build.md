@@ -8,7 +8,7 @@ U4 Build and verify is two modules: the build module, whose contract is
 `<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
 evaluation module that judges test-first and audits the change
 (`<autoflow-root>/docs/contracts/audit.json`, [`evaluation-system.md`](../evaluation-system.md) >
-*Gate rubrics* > AUDIT; [`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md)
+*Gate rubrics* > AUDIT; [`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md)
 D1). This file states the build's goal, what it owes, the cautions it is asked to heed and the
 report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
 how it divides test and implementation work, how it runs its checks and when it stops iterating

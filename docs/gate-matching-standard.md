@@ -229,7 +229,7 @@ perform via the agent's tools (`gh pr merge`, a push to the remote default
 branch, `gh issue create`, a ledger rewrite, a spawn without `model`, a
 backgrounded suite run). None reads a state: each holds in every session, in
 every repository the plugin is installed in
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D5).
+([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D5).
 
 Behavioural consequence: the agent's Bash
 tool can never run `gh pr merge` or a default-branch push in a governed

@@ -8,7 +8,7 @@ U5 Completion evaluation is one module, the quality evaluation, whose contract i
 `<autoflow-root>/docs/contracts/quality.json` and whose procedure is
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY — its input, its ten
 items, its known blind-spot checks and its re-score
-([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+([`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the module's goal, how the recommendations of every evaluation are disposed of, and how a comment in
 a target's code is treated.
 
@@ -38,7 +38,7 @@ and the finding ([`evaluation-system.md`](../evaluation-system.md) > Evaluation 
 are disposed of as a reviewer's findings are: whether each holds is weighed first
 ([U7 Review](review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
 grounds. Where a fix is made is the judgment of the AI acting on the finding
-([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). The severity is information for that
+([`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,

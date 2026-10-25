@@ -107,7 +107,7 @@ The rules that apply these principles to running and confirming tests and to sec
 > reference values set on its scale, and the output it returns. The evaluator's agent definition carries it and the sections it names for every gate
 > (*The evaluator's standard* > *What it reads*). An evaluation outputs its scores, their grounds
 > and its recommendations, with the reference values
-> ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+> ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 
@@ -134,7 +134,7 @@ git grep -n -i -E "evaluator's standard|\*What it reads\*|proportional depth|con
 
 A functional module is prescribed by its goal and its contract, and how it reaches the goal is its
 own ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2;
-[ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). That latitude does
+[ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). That latitude does
 not extend to the evaluator: what it confirms, the evidence a confirmation rests on and how far it
 goes are set here, and the evaluator applies them.
 
@@ -243,7 +243,7 @@ A change passes two independent quality procedures, and neither stands in for th
 AutoFlow provides these reference values with the rubrics, on the scale above; each evaluation
 contract carries them (`<autoflow-root>/docs/contracts/<module>.json` > `reference`), and an
 evaluation outputs them with its scores
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6):
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6):
 
 - average ≥ 7.5;
 - each item ≥ 7;
@@ -371,7 +371,7 @@ finds.
 ## Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY
 
 The rubric each gate scores on. Each gate is an evaluation module of its own, separate from the
-work it evaluates ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1):
+work it evaluates ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1):
 GATE:HYPOTHESIS evaluates the analysis, GATE:PLAN the design, AUDIT the build, and GATE:QUALITY the
 completed change. Each gate's section below is its contract's `procedure`. Every gate is scored by
 an Evaluation AI, never by the agent that did the work, so its rubric lives here, in the
@@ -685,7 +685,7 @@ not lower the item.
 
 The evaluator returns one JSON object; it holds no Write tool, so the session that runs the
 evaluation module writes the object, verbatim, to `<out>/evaluation.json`
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D3). The keys are the
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D3). The keys are the
 evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`), with
 `test_first` at AUDIT and `refine_observations` at GATE:QUALITY:
 
@@ -732,7 +732,7 @@ id; `item` — the rubric item it was found under; `severity` — a level of
 `<autoflow-root>/docs/review/review.md` > Severity; and `finding`. Whether and where a finding is
 fixed is the judgment of the AI acting on it, which puts it to the advisor when it cannot judge with
 confidence and follows the decision
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 <!-- From <autoflow-root>/docs/units/analysis.md > What the analysis owes -->
 

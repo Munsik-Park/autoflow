@@ -8,7 +8,7 @@ AutoFlow's mission ends by handing off an open pull request — opened, with CI 
 
 U6 Delivery is one module, the delivery module, whose contract is
 `<autoflow-root>/docs/contracts/delivery.json` and whose procedure is this file
-([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). It has no unit
+([`ADR-0038`](../records/adr/0038-contract-modules-with-no-state-file.md) D1). It has no unit
 agent: the session that runs it pushes, runs the integration checks, opens the pull requests and
 confirms that each added test file ran in CI (*CI* > *Added test files*); a script only reads and
 reports. One reading is made by a spawned role — what a failed CI check shows (*CI failure* below).

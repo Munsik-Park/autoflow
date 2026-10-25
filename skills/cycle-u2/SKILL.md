@@ -241,7 +241,7 @@ U2 Analysis is two modules: the analysis module, whose contract is
 `<autoflow-root>/docs/contracts/analysis.json` and whose procedure is this file, and the hypothesis
 evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypothesis.json`,
 [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS;
-[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+[`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). This file states
 the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
 module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is its own, recorded with its grounds in its report
@@ -429,7 +429,7 @@ Code behavior produces a **false "absent / stub" reading**:
 ## Functional-unit agents (U2 / U3 / U4)
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
 lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
 and criteria-apply is a script.
@@ -471,7 +471,7 @@ and the finding ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system
 are disposed of as a reviewer's findings are: whether each holds is weighed first
 ([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
 grounds. Where a fix is made is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). The severity is information for that
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
@@ -557,7 +557,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 The per-attempt decision ledger, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the
 invocation names: what an entry records, how it is identified, and the grammar of the entries a
 decision point produces. The ledger holds decisions: entries that settle what a module cannot settle
-itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8). The ledger's
+itself ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8). The ledger's
 standing constraints — append-only, no re-litigation without a new verified fact, and identifier
 allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
@@ -633,7 +633,7 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D8); the
+later module takes ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D8); the
 analysis report's table is not edited.
 
 **A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it
@@ -969,7 +969,7 @@ verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recom
 verdict ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
-against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 
