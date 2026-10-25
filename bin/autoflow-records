@@ -3,37 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # autoflow-records — where AutoFlow's records are (issue #466). The plugin's
 # bin/ is on the Bash PATH of the main session and of every subagent (ADR-0027
-# > Context, M1), so every document, agent definition and script names a record
-# path through this command or the library it wraps (scripts/lib/records.sh).
+# > Context, M1), so every document, agent definition and script names the
+# record root through this command or the library it wraps
+# (scripts/lib/records.sh). An attempt's record directory is the Coordinator's:
+# it builds the directory under the record root, with the worktree and the
+# branch, and names it in each invocation (ADR-0038 D4).
 #
 #   autoflow-records root
-#       the record root, created when absent
-#   autoflow-records dir [--branch <dev branch>]
-#       the attempt's record directory of <dev branch> (default: the checked-out
-#       branch) in this checkout's repository
-#   autoflow-records new --issue <N> [--base <branch>] [--commit <commit>]
-#       a new attempt of issue N in this checkout — made by /autoflow:cycle on
-#       the entry `new`, before its criterion review stage writes anything (issue
-#       #465): on a clean tree with no active attempt of this checkout, fetches
-#       origin, creates the record directory with this checkout as its owner,
-#       and switches to a new dev branch `dev-<stamp>-issue-<N>` at the base's
-#       latest commit on origin, or at <commit> (issue #490). The base — the
-#       branch its pull request merges into — is <branch>, or the remote default
-#       branch; it is kept as the dev branch's `gh-merge-base` (which
-#       `gh pr create` reads) and in the record directory's file `base`, and
-#       <commit> as its `autoflow-start`. Prints `attempt:`, `branch:`, `base:`,
-#       `start:`, `dir:`, and `not-in-base: <n>` when the start has commits the
-#       base does not (the pull request would carry them).
-#   autoflow-records base [--branch <dev branch>]
-#       the base of <dev branch> (default: the checked-out branch) — its
-#       `gh-merge-base`, or the remote default branch for a branch with none
-#   autoflow-records claim
-#       takes the attempt of the checked-out dev branch over for this checkout —
-#       only when the checkout it belongs to is gone; the base its record
-#       directory names becomes the branch's `gh-merge-base` here too
+#       the record root, created when absent (ADR-0029 D1)
 #   autoflow-records drafts
 #       the issue-draft directory of this checkout's repository, created when
-#       absent
+#       absent (scripts/issue/create-issue.sh)
 #
 # Exit codes:
 #   0   printed / done
@@ -51,43 +31,21 @@ SELF_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 . "$SELF_DIR/../scripts/lib/records.sh" || { echo "[$TAG] cannot load scripts/lib/records.sh" >&2; exit 64; }
 
 usage() {
-  echo "Usage: $TAG {root | dir [--branch B] | new --issue N [--base B] [--commit C] | base [--branch B] | claim | drafts}" >&2
+  echo "Usage: $TAG {root | drafts}" >&2
   exit 64
 }
 refuse() { echo "[$TAG] $1" >&2; exit 1; }
-# default_branch — the remote default branch, as `origin/HEAD` names it, else main
-default_branch() {
-  _d="$(git -C "$TOP" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" || _d="origin/main"
-  printf '%s\n' "${_d#origin/}"
-}
 
 SUB="${1:-}"
 [ "$#" -gt 0 ] && shift
-BRANCH=""
-ISSUE=""
-BASE=""
-COMMIT=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --branch) [ $# -ge 2 ] || usage; BRANCH="$2"; shift 2 ;;
-    --issue)  [ $# -ge 2 ] || usage; ISSUE="${2#\#}"; shift 2 ;;
-    --base)   [ $# -ge 2 ] || usage; BASE="$2"; shift 2 ;;
-    --commit) [ $# -ge 2 ] || usage; COMMIT="$2"; shift 2 ;;
-    *) usage ;;
-  esac
-done
-case "$SUB" in root|dir|new|base|claim|drafts) ;; -h|--help) echo "Usage: $TAG {root | dir [--branch B] | new --issue N [--base B] [--commit C] | base [--branch B] | claim | drafts}"; exit 0 ;; *) usage ;; esac
+[ "$#" -eq 0 ] || usage
+case "$SUB" in root|drafts) ;; -h|--help) echo "Usage: $TAG {root | drafts}"; exit 0 ;; *) usage ;; esac
 
 # `root` answers outside a checkout too (the metrics run from any directory);
 # inside one, a root in its tree is unusable.
 TOP="$(af_checkout_top .)" || TOP=""
 [ -n "$TOP" ] || [ "$SUB" = root ] || refuse "not inside a git checkout"
 
-if [ "$SUB" = base ]; then
-  [ -n "$BRANCH" ] || BRANCH="$(git -C "$TOP" symbolic-ref --quiet --short HEAD 2>/dev/null)" || refuse "no branch is checked out (detached HEAD) — name one with --branch"
-  git -C "$TOP" config "branch.$BRANCH.gh-merge-base" || default_branch
-  exit 0
-fi
 if ! af_record_root "$TOP" || ! af_record_root_ensure; then
   af_record_root_marker >&2
   exit "$AF_RECORD_ROOT_EXIT"
@@ -106,98 +64,3 @@ if [ "$SUB" = drafts ]; then
   printf '%s\n' "$d"
   exit 0
 fi
-
-# write_owner <dir> — the checkout file, published whole by a rename.
-write_owner() {
-  printf '%s\n' "$TOP" > "$1/.checkout.tmp" 2>/dev/null && mv -f "$1/.checkout.tmp" "$1/checkout" 2>/dev/null
-}
-
-if [ "$SUB" = new ]; then
-  case "$ISSUE" in ''|*[!0-9]*) usage ;; esac
-  command -v jq >/dev/null 2>&1 || refuse "jq is not installed — this checkout's state files cannot be read"
-  for sf in "$R"/*/*-issue-*/issue-*.json; do
-    [ -f "$sf" ] || continue
-    d="${sf%/*}"
-    [ -f "$d/checkout" ] || continue
-    IFS= read -r owner < "$d/checkout" || owner=""
-    [ "$owner" = "$TOP" ] || continue
-    if [ "$(jq -r '.active // false' "$sf" 2>/dev/null)" = true ]; then
-      refuse "this checkout's attempt ${d##*/} is active — one attempt runs at a time in a checkout; finish or pause it first"
-    fi
-  done
-  [ -z "$(git -C "$TOP" status --porcelain 2>/dev/null)" ] || refuse "the working tree has uncommitted changes or untracked files — a new attempt starts on a clean tree"
-  # --prune: a remote-tracking `origin/dev/…` left from a deleted branch would
-  # keep a remote `dev` from being fetched (issue #490).
-  git -C "$TOP" fetch --quiet --prune origin 2>/dev/null || refuse "git fetch --prune origin failed — the attempt starts at the base's latest commit on origin"
-  [ -n "$BASE" ] || BASE="$(default_branch)"
-  git -C "$TOP" rev-parse --verify --quiet "refs/remotes/origin/$BASE" >/dev/null || refuse "no remote-tracking ref origin/$BASE"
-  START="origin/$BASE"
-  if [ -n "$COMMIT" ]; then
-    START="$(git -C "$TOP" rev-parse --verify --quiet "$COMMIT^{commit}")" || refuse "no commit $COMMIT in this checkout after the fetch"
-  fi
-  mkdir -p "$R/$KEY" 2>/dev/null || { AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$R/$KEY cannot be created"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"; }
-  # The name is the creation time to the second. Two attempts begun in the same
-  # second — in two checkouts sharing the record root — meet at the directory,
-  # whose `mkdir` (no -p) succeeds for one of them only; the other takes the
-  # next second's name.
-  tries=0
-  while :; do
-    # No `/`: a branch `dev` — the base among them — and `dev/…` cannot both
-    # exist in one repository (issue #490).
-    B="dev-$(date +%Y-%m-%d-%H%M%S)-issue-$ISSUE"
-    A="$(af_attempt_key "$B")"
-    D="$R/$KEY/$A"
-    if ! git -C "$TOP" show-ref --quiet "refs/heads/$B" && ! git -C "$TOP" show-ref --quiet "refs/remotes/origin/$B" \
-       && mkdir "$D" 2>/dev/null; then
-      break
-    fi
-    tries=$((tries + 1))
-    [ "$tries" -lt 5 ] || refuse "no free attempt name after $tries tries ($B)"
-    sleep 1
-  done
-  if ! write_owner "$D" || ! { printf '%s\n' "$B" > "$D/branch" && printf '%s\n' "$BASE" > "$D/base"; } 2>/dev/null; then
-    rm -rf "$D"
-    AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$D cannot be written"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"
-  fi
-  if ! err="$(git -C "$TOP" switch --quiet --no-track -c "$B" "$START" 2>&1)"; then
-    rm -f "$D/checkout" "$D/branch" "$D/base"; rmdir "$D" 2>/dev/null
-    refuse "git switch -c $B $START failed — no attempt was created: $err"
-  fi
-  git -C "$TOP" config "branch.$B.gh-merge-base" "$BASE"
-  [ -z "$COMMIT" ] || git -C "$TOP" config "branch.$B.autoflow-start" "$START"
-  printf 'attempt: %s\nbranch: %s\nbase: %s\nstart: %s\ndir: %s\n' "$A" "$B" "$BASE" "$(git -C "$TOP" rev-parse HEAD)" "$D"
-  n="$(git -C "$TOP" rev-list --count "origin/$BASE..HEAD")"
-  [ "$n" = 0 ] || printf 'not-in-base: %s\n' "$n"
-  exit 0
-fi
-
-# dir / claim — claim takes over only the checked-out branch's attempt
-[ "$SUB" = claim ] && [ -n "$BRANCH" ] && usage
-[ -n "$BRANCH" ] || BRANCH="$(git -C "$TOP" symbolic-ref --quiet --short HEAD 2>/dev/null)" || refuse "no branch is checked out (detached HEAD) — name one with --branch"
-A="$(af_attempt_key "$BRANCH")" || refuse "'$BRANCH' is not an attempt's dev branch (dev-YYYY-MM-DD-HHMMSS-issue-N)"
-D="$R/$KEY/$A"
-[ -d "$D" ] || refuse "no attempt record at $D — '$BRANCH' is not an attempt of this record root"
-
-if [ "$SUB" = dir ]; then
-  printf '%s\n' "$D"
-  exit 0
-fi
-
-# claim
-owner=""
-[ -f "$D/checkout" ] && { IFS= read -r owner < "$D/checkout" || owner=""; }
-if [ "$owner" = "$TOP" ]; then
-  echo "attempt $A already belongs to this checkout ($TOP)"
-  exit 0
-fi
-if af_checkout_live "$owner" "$KEY"; then
-  refuse "attempt $A belongs to the checkout $owner, which is still there — it is entered from that checkout"
-fi
-write_owner "$D" || { AF_RECORD_ROOT_STATE=unusable; AF_RECORD_ROOT_ERROR="$D/checkout cannot be written"; af_record_root_marker >&2; exit "$AF_RECORD_ROOT_EXIT"; }
-# The base is kept in this repository's git configuration (issue #490); a checkout
-# that takes the attempt over gets it from the record.
-if [ -f "$D/base" ] && IFS= read -r base < "$D/base" && [ -n "$base" ]; then
-  git -C "$TOP" config "branch.$BRANCH.gh-merge-base" "$base"
-fi
-echo "attempt $A taken over by this checkout ($TOP); its checkout ${owner:-(none recorded)} is gone"
-exit 0

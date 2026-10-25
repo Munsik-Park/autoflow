@@ -85,7 +85,7 @@ The path's independent checks are three: the attempt's `[criterion-ready]` entry
 issue body — its start, and the only way a criterion's content changes on it (*A criterion
 change*); CI as it is (*End and rework*); and the aggregated review and its verdict.
 The hook's state-independent denies bind it as they bind every attempt
-([`state-tracking.md`](state-tracking.md) > *Hook gates*) — among them `gh pr merge` (the merge
+([`core.md`](core.md) > *Records and the hook*) — among them `gh pr merge` (the merge
 prohibition; merging is external), a push to the default branch or to the dev branch's base,
 `gh issue create`, and a ledger write that changes the ledger's earlier text or adds an entry under
 an authority the writer does not hold. The gate score thresholds, the score-gated `git push` /

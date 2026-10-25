@@ -27,16 +27,18 @@
 # wrapper prints the fixed marker line `user-config: UNREADABLE <path> —
 # <error>`, starts no claude and exits 6.
 #
-# `--records <dir>` names the attempt's record directory, where claude reads
-# the cycle's design artifacts; it and the AutoFlow tree are added to claude's
-# working directories (`--add-dir`).
+# `--records <dir>` names the attempt's record directory — the one the
+# invocation names (`records`, ADR-0038 D4) —, where claude reads the earlier
+# runs' work; it and the AutoFlow tree are added to claude's working
+# directories (`--add-dir`).
 #
 # Per-PR review: `--repo owner/name` reviews a sub-repo PR (the prompt tells
 # claude to pass `--repo` to every gh command); without it the PR is the
 # current repository's.
 #
-# The record file is an absolute path outside the checkout's tree — the
-# attempt's record directory (`autoflow-records dir`).
+# The record file is an absolute path outside the checkout's tree — in the
+# run's output directory under the attempt's record directory, which the
+# caller names (`--out`).
 #
 # Usage: scripts/review/claude-review-pr.sh --pr <number> --out <record file>
 #                                           [--repo <owner/name>] [--expected-head <branch>]

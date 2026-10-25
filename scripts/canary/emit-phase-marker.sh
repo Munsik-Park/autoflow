@@ -6,33 +6,32 @@
 # Issue #35 — per-phase-transition marker emitter.
 # Serializes ONE JSON record per phase transition (feature design §4.2) and
 # APPENDS it (append-only, never truncates) to the attempt's file
-# issue-<N>-phases.jsonl in the record directory of the dev branch checked out
-# in the current checkout (`autoflow-records dir`; issues #423, #466). Prints
-# an absolute path:line anchor on stdout; the record body is never printed.
+# issue-<N>-phases.jsonl in the attempt's record directory, which the caller
+# names with --records (ADR-0038 D4). Prints an absolute path:line anchor on
+# stdout; the record body is never printed.
 #
 # Out of scope (issue #35): wiring this emitter into any phase transition. It is
-# a standalone CLI only.
+# a standalone CLI only; its one reader is scripts/metrics/cycle-metrics.py,
+# which reads the records left before ADR-0038 (D10).
 #
 # The timestamp has exactly ONE producer and no environment override — there is
 # deliberately no PHASE_MARKER_TS escape hatch (feature design §4.2, settled).
 # Format: UTC with a Z suffix, portable across BSD and GNU date.
 #
 # Usage:
-#   scripts/canary/emit-phase-marker.sh --issue <N> --cycle <C> --phase <NAME> --event <enter|exit>
+#   scripts/canary/emit-phase-marker.sh --issue <N> --cycle <C> --phase <NAME> --event <enter|exit> --records <dir>
 #     --issue <N>     issue number, canonical positive integer (no leading zeros)
 #     --cycle <C>     cycle number, canonical positive integer
 #     --phase <NAME>  free-form non-empty phase label (e.g. BUILD, GATE:PLAN)
 #     --event <E>     exactly one of: enter exit
+#     --records <dir> the attempt's record directory, an existing directory
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 usage() {
   cat >&2 <<'EOF'
-usage: scripts/canary/emit-phase-marker.sh --issue <N> --cycle <C> --phase <NAME> --event <enter|exit>
-emit-phase-marker: all four flags are required; each takes its value as the next argument.
+usage: scripts/canary/emit-phase-marker.sh --issue <N> --cycle <C> --phase <NAME> --event <enter|exit> --records <dir>
+emit-phase-marker: all five flags are required; each takes its value as the next argument.
 EOF
   exit 2
 }
@@ -46,6 +45,7 @@ ISSUE=""
 CYCLE=""
 PHASE=""
 EVENT=""
+RECORDS=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -53,6 +53,7 @@ while [ "$#" -gt 0 ]; do
     --cycle) [ "$#" -ge 2 ] || usage; CYCLE="$2"; shift 2 ;;
     --phase) [ "$#" -ge 2 ] || usage; PHASE="$2"; shift 2 ;;
     --event) [ "$#" -ge 2 ] || usage; EVENT="$2"; shift 2 ;;
+    --records) [ "$#" -ge 2 ] || usage; RECORDS="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -61,6 +62,8 @@ done
 [ -n "$CYCLE" ] || die "--cycle is required"
 [ -n "$PHASE" ] || die "--phase is required"
 [ -n "$EVENT" ] || die "--event is required"
+[ -n "$RECORDS" ] || die "--records is required"
+[ -d "$RECORDS" ] || die "--records is not a directory: $RECORDS"
 
 require_canonical_positive_int() {
   case "$2" in
@@ -83,8 +86,7 @@ LINE="$(jq -c -n \
   --arg phase "$PHASE" --arg event "$EVENT" --arg ts "$TS" \
   '{schema_version:$sv, issue:$issue, cycle:$cycle, phase:$phase, event:$event, ts:$ts}')"
 
-DIR="$("$REPO_ROOT/bin/autoflow-records" dir)" || exit $?
-case "$(basename "$DIR")" in *-issue-"$ISSUE") ;; *) die "the checked-out dev branch is not an attempt of issue #$ISSUE ($DIR)" ;; esac
+DIR="$(cd -P "$RECORDS" && pwd)"
 TARGET="$DIR/issue-${ISSUE}-phases.jsonl"
 
 # Append-only write (never a truncating redirect).

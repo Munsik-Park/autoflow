@@ -2,9 +2,13 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# PREFLIGHT target check — the target-owned files agree with the AutoFlow that
-# runs them (ADR-0027 D4; docs/units/preparation.md > Stop conditions)
+# Target check — the target-owned files agree with the AutoFlow that runs them
+# (ADR-0027 D4)
 # =============================================================================
+# A check of the environment, run by the Coordinator when it builds it — the
+# worktree, the branch and the record directory of an attempt — not on every
+# run, and a condition of no module (ADR-0038 D4, Q21).
+#
 # Run from the AutoFlow root the session loads: the definitions, the readout,
 # the selector and the default policy are the ones beside this script, and the
 # target is the git toplevel of the working directory. It reads the target's
@@ -28,7 +32,8 @@
 #       target that has not opted in PASSes without the selector being
 #       consulted; a declaration that is present but unreadable is a FAIL.
 #
-# Exit: 0 every leg passed; 1 any FAIL (a PREFLIGHT stop condition); 64 usage.
+# Exit: 0 every leg passed; 1 any FAIL (the environment is not ready — the
+# Coordinator's to act on); 64 usage.
 #
 # Usage: bash <autoflow-root>/scripts/preflight/target-check.sh
 # =============================================================================

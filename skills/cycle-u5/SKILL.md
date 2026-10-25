@@ -10,7 +10,7 @@ argument-hint: "<issue-number>"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: `<N>`) — unit U5, Completion evaluation (GATE:QUALITY), of issue #N's cycle alone: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at U5's entry (otherwise report the situation and stop), run U5 from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`: `<N>`) — unit U5, Completion evaluation (GATE:QUALITY), of issue #N's cycle alone: confirm from the attempt's records that the cycle stands at U5's entry (otherwise report the situation and stop), run U5 from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U5 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Push and PR creation; Development Lifecycle > Unit Document Loading Contract: U1 Criterion review, U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery, U7 Review; Development Lifecycle > Unit references: U1 Criterion review, U2 Analysis, U3 Design, U4 Build and verify, U6 Delivery, U7 Review; Project Information: A project whose information names sub-repos; Team Structure: Build unit (U4), Functional-unit agents.
 
@@ -503,7 +503,7 @@ The evaluator records each such finding in the item's `reason` and in `recommend
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
     rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
     `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
     `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
     (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a

@@ -11,7 +11,7 @@ argument-hint: "[<issue-number>]"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit U7, Review (REVIEW), of a cycle alone: read where the cycle stands from the current state — `bash <autoflow-root>/scripts/preflight/cycle-status.sh`, with `--issue <N>` when given — run U7 from there to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit U7, Review (REVIEW), of a cycle alone: read where the cycle stands from the attempt's records, run U7 from there to its exit transition, and end the session with the report the invoking prompt asks for.
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U7 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Unit Document Loading Contract: The reference values, U1 Criterion review, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Unit references: U1 Criterion review, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U6 Delivery; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; Evaluation System.
 

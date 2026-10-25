@@ -511,7 +511,7 @@ reference value. Each violation caps the named item at 6, below the each-item re
   - *Normative documents* — the one definition, cited from everywhere else — are what an agent
     or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
     rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/state-tracking.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
     `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
     `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
     (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a

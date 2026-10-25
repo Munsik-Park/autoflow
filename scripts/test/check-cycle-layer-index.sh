@@ -31,8 +31,8 @@
 # all, so the match is over the path itself, for every byte a path may carry.
 #
 # THE SCOPE IS THE FORMER PREFIX, not `.autoflow/` as a whole: this repository
-# legitimately tracks `.autoflow/.gitkeep`, and the ledger and the state file
-# are cycle-spanning artifacts, not cycle-layer assets.
+# legitimately tracks `.autoflow/.gitkeep`, and the ledger is a
+# cycle-spanning artifact, not a cycle-layer asset.
 #
 # Usage:
 #   bash scripts/test/check-cycle-layer-index.sh [--root <dir>]
@@ -105,5 +105,5 @@ fi
 echo "check-cycle-layer-index: $TRACKED_COUNT cycle-layer asset(s) tracked under $CYCLE_LAYER_PREFIX in $TOP"
 printf '%s' "$TRACKED" | sed 's/^/  /'
 echo "  A cycle-layer asset is uncommitted by rule (ADR-0024 D2): it is executed once from the attempt's record directory under the record root, outside the tree."
-echo "  Remove it from the index ('git rm --cached <path>'); an in-tree record of a cycle in progress moves to the record root with scripts/migrate/migrate-in-tree-records.sh."
+echo "  Remove it from the index ('git rm --cached <path>'); a record still needed is moved to the attempt's record directory under the record root."
 exit 1

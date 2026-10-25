@@ -34,8 +34,9 @@
 # sub-repo PR (the wrapper then tells Codex to pass `--repo` to every gh
 # command); omit `--repo` to review the host PR (the current repository).
 #
-# The record file is an absolute path outside the checkout's tree — the
-# attempt's record directory (`autoflow-records dir`; issue #466). codex may
+# The record file is an absolute path outside the checkout's tree — in the
+# run's output directory under the attempt's record directory, which the
+# caller names (`--out`; issue #466, ADR-0038 D4). codex may
 # write that directory beside its working directory (`--add-dir`), so it writes
 # the review to a scratch file there, which this wrapper moves to the record
 # file once codex exits and removes on every exit: nothing it or codex writes
