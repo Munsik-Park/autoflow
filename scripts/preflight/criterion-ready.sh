@@ -2,80 +2,75 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# Criterion readiness — the exit condition of an attempt's criterion review
-# stage, read by PREFLIGHT before the state file (issues #430, #465;
-# docs/criterion-review.md)
+# Criterion readiness — whether the [criterion-ready] entry of an attempt's
+# criterion review holds for the issue body as it stands now (issues #430,
+# #465; docs/criterion-review.md, docs/decision-ledger.md)
 # =============================================================================
 # Reads and reports (ADR-0025 D8). It changes nothing: no ledger entry, no
 # file, no issue edit. Whether an issue's acceptance criteria are right is not
 # judged here — that is the criterion review's (docs/criterion-review.md).
 # This script reads only whether the review's [criterion-ready] entry — the
 # record of the decisions settled under the policy the operator set — is on
-# record for the issue body as it stands now.
+# record for the issue body as it stands now. What follows a READY or a NOT
+# READY is the Coordinator's (ADR-0038 D2).
 #
-# Readiness belongs to one attempt (issue #466): each attempt's cycle starts
-# with its own criterion review stage, and its entry is read from its own
-# record directory —
-# never from another attempt's, of this checkout or another. The attempt is the
-# one of the dev branch named with --branch, by default the checked-out branch:
-# `<record-root>/<repo-key>/<stamp>-issue-<N>/` (scripts/lib/records.sh).
+# Readiness belongs to one attempt: its entry is read from the attempt's own
+# record directory, the one the Coordinator builds and names with --records
+# (ADR-0038 D4) — never from another attempt's.
 #
 # The entry read is the LAST level-2 ledger entry whose heading ends in the
 # marker `[criterion-ready]`, in the attempt's ledger `issue-<N>-ledger.md`. It
 # counts only when:
 #   - its identifier is in the `O` namespace and its `- Authority:` line reads
 #     `operator decision` (the gate hook admits both from the main session
-#     only — docs/state-tracking.md > Hook gates);
-#   - its `- Record:` line names a review record that exists — a file name in
-#     the attempt's own directory (no `/`: another attempt's record never counts);
+#     only — docs/decision-ledger.md, docs/core.md > Records and the hook);
+#   - its `- Record:` line names a review record that exists — a path relative
+#     to the attempt's record directory, a run's subdirectory included
+#     (`criterion-reconcile-<n>/criterion-review.md`); an absolute path or one
+#     with a `..` component never counts, so another attempt's record does not;
 #   - its `- Issue body sha256:` line equals the sha256 of the issue body read
 #     from GitHub now, so an issue edited after the entry is not ready.
-# and only while the attempt has no state file: an attempt that has started
-# takes no [criterion-ready] entry (a criterion change inside a cycle is an
-# [ac-decision]). Another attempt's state file or records under the record
-# root are no reason for NOT READY.
 #
 # Subcommands:
-#   hash   --issue N                 print the sha256 of the issue body as it
-#                                    stands now — the value an entry records
-#   status --issue N [--branch B]    READY / NOT READY, with the reason
+#   hash   --issue N                       print the sha256 of the issue body
+#                                          as it stands now — the value an
+#                                          entry records
+#   status --issue N --records <dir>       READY / NOT READY, with the reason
 #
 # Exit codes:
 #   0   hash printed | READY
-#   1   NOT READY — not an attempt of issue N, no [criterion-ready] entry, a
-#       malformed one, a missing record, an issue body changed since the entry,
-#       or an attempt that has started; the line says which
+#   1   NOT READY — no ledger, no [criterion-ready] entry, a malformed one, a
+#       missing record, or an issue body changed since the entry; the line
+#       says which
 #   3   a fact could not be read — the issue body lookup failed
-#   7   the record root is undetermined or unusable (the marker line says why)
 #   64  usage
 #
-# Usage: scripts/preflight/criterion-ready.sh {hash|status} --issue N [--branch B]
+# Usage: scripts/preflight/criterion-ready.sh hash --issue N
+#        scripts/preflight/criterion-ready.sh status --issue N --records <attempt-dir>
 # =============================================================================
 
 set -uo pipefail
 
 TAG="criterion-ready"
-usage() { echo "Usage: $0 {hash|status} --issue N [--branch B]" >&2; exit 64; }
+usage() { echo "Usage: $0 hash --issue N | $0 status --issue N --records <attempt-dir>" >&2; exit 64; }
 
 SUB="${1:-}"
 [ "$#" -gt 0 ] && shift
-case "$SUB" in hash|status) ;; -h|--help) echo "Usage: $0 {hash|status} --issue N [--branch B]"; exit 0 ;; *) usage ;; esac
+case "$SUB" in hash|status) ;; -h|--help) echo "Usage: $0 hash --issue N | $0 status --issue N --records <attempt-dir>"; exit 0 ;; *) usage ;; esac
 ISSUE=""
-BRANCH=""
+DIR=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --issue) [ $# -ge 2 ] || usage; ISSUE="${2#\#}"; shift 2 ;;
-    --branch) [ $# -ge 2 ] || usage; BRANCH="$2"; shift 2 ;;
+    --records) [ $# -ge 2 ] || usage; DIR="$2"; shift 2 ;;
     *) echo "[$TAG] unknown argument: $1" >&2; usage ;;
   esac
 done
 case "$ISSUE" in ''|*[!0-9]*) echo "[$TAG] --issue takes an issue number: '$ISSUE'" >&2; usage ;; esac
 
-SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+# The issue is read from the repository of the working directory (gh).
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "[$TAG] not inside a git repository" >&2; exit 64; }
 cd "$ROOT" || exit 64
-# shellcheck source=scripts/lib/records.sh
-. "$SELF_DIR/../lib/records.sh"
 
 sha256_stdin() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'
@@ -97,18 +92,10 @@ fi
 
 not_ready() { echo "$TAG: issue #$ISSUE NOT READY — $1"; exit 1; }
 
-TOP="$(af_checkout_top "$ROOT")"
-if ! af_record_root "$TOP"; then
-  af_record_root_marker
-  exit "$AF_RECORD_ROOT_EXIT"
-fi
-[ -n "$BRANCH" ] || BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" || BRANCH=""
-KEYA="$(af_attempt_key "$BRANCH")" || not_ready "'${BRANCH:-(detached HEAD)}' is not an attempt's dev branch — a new attempt is created by /autoflow:cycle $ISSUE, whose criterion review stage records the entry"
-[ "$(af_attempt_issue "$KEYA")" = "$ISSUE" ] || not_ready "'$BRANCH' is an attempt of issue #$(af_attempt_issue "$KEYA"), not #$ISSUE"
-DIR="$AF_RECORD_ROOT/$(autoflow_repo_key "$ROOT")/$KEYA"
+[ -n "$DIR" ] || { echo "[$TAG] status takes the attempt's record directory: --records <attempt-dir>" >&2; usage; }
+[ -d "$DIR" ] || { echo "[$TAG] --records is not a directory: $DIR" >&2; exit 64; }
+DIR="$(cd -P "$DIR" && pwd)"
 LEDGER="$DIR/issue-$ISSUE-ledger.md"
-[ -d "$DIR" ] || not_ready "no attempt record at $DIR — a new attempt is created by /autoflow:cycle $ISSUE, whose criterion review stage records the entry"
-[ -f "$DIR/issue-$ISSUE.json" ] && not_ready "the attempt $KEYA has started ($DIR/issue-$ISSUE.json) — an attempt takes its [criterion-ready] entry before its state file, and a criterion change inside a cycle is an [ac-decision]"
 
 [ -f "$LEDGER" ] || not_ready "no ledger ($LEDGER), so no [criterion-ready] entry"
 
@@ -140,13 +127,13 @@ auth="$(trim "${auth:-}")"; rec="$(trim "${rec:-}")"; rec="${rec#\`}"; rec="${re
 [[ "$id" =~ ^O[0-9]+$ ]] || not_ready "entry $id is not an O entry (O<digits>) — a [criterion-ready] entry is an O entry under 'operator decision'"
 [ "$auth" = "operator decision" ] || not_ready "entry $id: '- Authority:' is '$auth', not 'operator decision'"
 [ -n "$rec" ] || not_ready "entry $id: no '- Record:' line"
-case "$rec" in */*) not_ready "entry $id: '- Record:' is '$rec' — the review record is a file name in the attempt's own directory" ;; esac
+case "/$rec/" in //*|*/../*|*/./*|*//*) not_ready "entry $id: '- Record:' is '$rec' — the review record is a path relative to the attempt's record directory, with no '.' or '..' component" ;; esac
 recp="$DIR/$rec"
 [ -f "$recp" ] || not_ready "entry $id: review record '$rec' does not exist ($recp)"
 printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$' || not_ready "entry $id: '- Issue body sha256:' is not a sha256 ('$sha')"
 
 now="$(body_hash)" || { echo "[$TAG] issue #$ISSUE: body lookup failed (gh issue view)" >&2; exit 3; }
-[ "$now" = "$sha" ] || not_ready "entry $id records body sha256=$sha, the issue body now is sha256=$now — the issue changed since the entry; the attempt's criterion review stage records a new entry for the edited body"
+[ "$now" = "$sha" ] || not_ready "entry $id records body sha256=$sha, the issue body now is sha256=$now — the issue changed since the entry; a new entry records the edited body"
 
-echo "$TAG: issue #$ISSUE READY — attempt $KEYA, entry $id, record $rec, body sha256=$sha"
+echo "$TAG: issue #$ISSUE READY — attempt $DIR, entry $id, record $rec, body sha256=$sha"
 exit 0

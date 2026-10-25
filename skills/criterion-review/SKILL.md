@@ -350,7 +350,7 @@ confirmations*):
 ```markdown
 ## O<n> — criteria settled [criterion-ready]
 - Decision: the acceptance criteria of #N, as the issue body now states them, are settled
-- Record: <the review record in the attempt's record directory>
+- Record: <the review record's path in the attempt's record directory: criterion-reconcile-<n>/criterion-review.md>
 - Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
 - Grounds: the decisions recorded — the dispositions, the advisor answers (their A entries), any operator decision
 - Authority: operator decision
@@ -359,7 +359,7 @@ confirmations*):
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger).
 
-**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
+**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N --records <attempt-dir>`
 reads the last `[criterion-ready]` entry in the attempt's own ledger — never another attempt's —
 and reports `READY` only when the entry is an `O` entry under `operator decision`, its record
 exists, and its `- Issue body sha256:` equals the sha256 of the issue body read from GitHub now. Any
@@ -534,12 +534,13 @@ the decisions made under the policy the operator set for the review, under the a
 `operator decision` — the same authority over acceptance content as an override
 ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1). It is recorded in the trailing-marker grammar: the heading
 `## O<n> — <title> [criterion-ready]`, followed by a `- Decision:`
-line, a `- Record:` line (the review record's file name in the attempt's own record directory, by name
-alone), an
+line, a `- Record:` line (the review record's path relative to the attempt's record directory — the
+criterion-reconcile run's `criterion-reconcile-<n>/criterion-review.md` —, never an absolute path or
+one with a `.` or `..` component), an
 `- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
 for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
 `operator decision`. No `A<n>` entry carries the marker. `<autoflow-root>/scripts/preflight/criterion-ready.sh
-status` reads the **last** entry carrying the marker in the attempt's own ledger — never another
+status --issue N --records <attempt-dir>` reads the **last** entry carrying the marker in the attempt's own ledger — never another
 attempt's — and counts it only when it is an `O` entry
 under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
 the body is confirmed by a new entry, never by editing this one. A criterion change after the

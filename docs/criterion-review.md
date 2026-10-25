@@ -267,7 +267,7 @@ confirmations*):
 ```markdown
 ## O<n> — criteria settled [criterion-ready]
 - Decision: the acceptance criteria of #N, as the issue body now states them, are settled
-- Record: <the review record in the attempt's record directory>
+- Record: <the review record's path in the attempt's record directory: criterion-reconcile-<n>/criterion-review.md>
 - Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
 - Grounds: the decisions recorded — the dispositions, the advisor answers (their A entries), any operator decision
 - Authority: operator decision
@@ -276,7 +276,7 @@ confirmations*):
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger).
 
-**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N`
+**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N --records <attempt-dir>`
 reads the last `[criterion-ready]` entry in the attempt's own ledger — never another attempt's —
 and reports `READY` only when the entry is an `O` entry under `operator decision`, its record
 exists, and its `- Issue body sha256:` equals the sha256 of the issue body read from GitHub now. Any
