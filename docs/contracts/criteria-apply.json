@@ -27,7 +27,7 @@
           "ac-decision"
         ]
       },
-      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes or Overrides line is not applied (ibid., Replacement is explicit); standing entries on one AC id whose conclusions differ are a conflict that refuses the run unless the operator entries among them agree, which then win (ibid., Acceptance-criterion decisions). AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
+      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes line (or an Overrides line, which an earlier ledger may carry) is not applied (ibid., Replacement is explicit); standing entries on one AC id whose conclusions differ, none naming another, are a conflict that refuses the run. Who wrote an entry is not read: every entry has the same effect, and an identifier is any capital letter and number. AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
       "fields": {
         "AC": {
           "required": true,
@@ -51,14 +51,11 @@
           "required_when": "Disposition is split",
           "note": "one line per criterion the split makes: \"- Into: <id> — <text>\""
         },
-        "Authority": {
-          "note": "read for operator decision: an advisor entry never replaces an operator entry, and an override is an operator entry's"
-        },
         "Supersedes": {
           "note": "on an entry that replaces an earlier [ac-decision] entry: its identifier"
         },
         "Overrides": {
-          "note": "on an operator entry that replaces an advisor entry: A<n>"
+          "note": "an earlier ledger's line, read as Supersedes"
         }
       }
     }

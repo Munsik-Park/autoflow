@@ -26,27 +26,27 @@
 #   - Disposition: excluded | revised | split | added
 #   - Text: <text>          revised, added: the criterion as decided
 #   - Into: <id> — <text>   split: one line per criterion it makes
-#   - Authority: <value>    read for operator decision
-#   - Supersedes: <id>  |  Overrides: A<n>   (only on an entry that replaces one)
+#   - Supersedes: <id>      (only on an entry that replaces one)
 # Text and Into are the lines Q5 adds; today's grammar has only AC and
-# Disposition, which say what changes but not into what.
+# Disposition, which say what changes but not into what. An entry's identifier
+# is the heading's leading capital letter and number (O<n>, A<n>, …); the
+# letter carries no meaning here, and who wrote an entry (an Authority line)
+# is not read: every entry has the same effect.
 #
 # An entry stands unless a later [ac-decision] entry names it on a
-# `- Supersedes:` or `- Overrides:` line (docs/decision-ledger.md > Decision-point
-# entries, *Replacement is explicit*); a name two earlier entries share
-# replaces both (*ibid.*, *Identifier collision*). Only the standing entries
-# are applied. A name that is no earlier [ac-decision] entry, an advisor entry
-# (A<n>) naming an operator entry (Authority: operator decision), or an
-# Overrides that is not an operator entry's naming an A<n>, or a line naming no
-# entry refuses the run.
+# `- Supersedes:` line (docs/decision-ledger.md > Decision-point entries,
+# *Replacement is explicit*); a `- Overrides:` line, which an earlier ledger
+# may carry, is read the same. A name two earlier entries share replaces both
+# (*ibid.*, *Identifier collision*). Only the standing entries are applied. A
+# name that is no earlier [ac-decision] entry, or a line naming no entry,
+# refuses the run.
 #
 # Standing entries on one AC id whose conclusions (Disposition, and Text or
-# Into) differ are a conflict, never settled by recency (*ibid.*, *Replacement
-# is explicit*): when the operator entries among them agree, the first of them
-# alone is applied ("an `operator decision` entry wins", *ibid.*,
-# *Acceptance-criterion decisions*); otherwise the run is refused. The same
+# Into) differ, none naming another, are a conflict, never settled by recency
+# (*ibid.*, *Replacement is explicit*): the run is refused. The same
 # conclusion recorded twice is not a conflict, and the first of the entries
-# alone is applied. A decision on an id a split makes is on another AC id.
+# alone is applied. A decision on an id a split makes is on another AC id,
+# applied in order.
 #
 # excluded removes the criterion; revised replaces its text; split replaces
 # it, in place, by the criteria its Into lines name; added appends one. A
@@ -93,9 +93,9 @@ if [ -n "$LEDGER" ]; then
         if ($l | test("^## ")) then
           (if .cur then .out += [.cur] else . end)
           | .cur = (if ($l | test("\\[ac-decision\\]\\s*$")) then
-                      {entry: ($l | capture("^## (?<id>[AO][0-9]+)").id // $l), into: [], replaces: []}
+                      {entry: ($l | capture("^## (?<id>[A-Z][0-9]+)").id // $l), into: [], replaces: []}
                     else null end)
-        elif .cur and ($l | test("^- (AC|Disposition|Text|Authority):")) then
+        elif .cur and ($l | test("^- (AC|Disposition|Text):")) then
           ($l | capture("^- (?<k>[A-Za-z]+):\\s*(?<v>.*)$")) as $m | .cur[$m.k] = ($m.v | gsub("\\s+$"; ""))
         elif .cur and ($l | test("^- (Supersedes|Overrides):")) then
           ($l | capture("^- (?<k>[A-Za-z]+):(?<v>.*)$")) as $m
@@ -108,10 +108,8 @@ if [ -n "$LEDGER" ]; then
     | (if .cur then .out + [.cur] else .out end)' "$LEDGER") || die "cannot read the ledger: $LEDGER"
 fi
 
-OPERATOR='def operator: (.Authority // "" | gsub("`"; "") | sub("\\.$"; "")) == "operator decision";'
-
 # the standing entries: an entry a later one names is replaced, never applied
-REPLACED=$(jq -c "$OPERATOR"'
+REPLACED=$(jq -c '
   to_entries as $E
   | reduce $E[] as $x ({gone: [], defects: []};
       $x.value as $d
@@ -119,27 +117,20 @@ REPLACED=$(jq -c "$OPERATOR"'
           [$E[:$x.key][] | select(.value.entry == $r.id)] as $t
           | if $r.id == null then .defects += ["\($d.entry): a \($r.how) line names no entry"]
             elif ($t | length) == 0 then .defects += ["\($d.entry): \($r.how) \($r.id), which is no earlier [ac-decision] entry"]
-            elif $r.how == "Overrides" and ((($d | operator) and ($r.id | test("^A[0-9]+$"))) | not) then
-              .defects += ["\($d.entry): Overrides \($r.id), but an override is an operator entry (Authority: operator decision) naming an advisor entry (A<n>)"]
-            elif ($d.entry | test("^A[0-9]+$")) and any($t[]; .value | operator) then
-              .defects += ["\($d.entry): \($r.how) \($r.id), an operator entry, which an advisor entry never replaces"]
             else .gone += [$t[].key] end))
   | .gone as $g | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not) | .value], defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
 
-# conflicts: standing entries on one AC id whose conclusions differ. The operator
-# entries win when they agree; a conflict keeps every entry, so the application
-# below still names what fails at its turn.
-REPLACED=$(jq -c "$OPERATOR"'
+# conflicts: standing entries on one AC id whose conclusions differ. A conflict
+# keeps every entry, so the application below still names what fails at its turn.
+REPLACED=$(jq -c '
   def concl: {d: .Disposition, t: (if .Disposition == "revised" or .Disposition == "added" then .Text else null end),
                i: (if .Disposition == "split" then .into else null end)};
   . as $r
   | [$r.standing | to_entries[] | select((.value.AC // "") != "")] | group_by(.value.AC)
   | reduce .[] as $g ({keep: [], defects: $r.defects};
-      [$g[] | select(.value | operator)] as $ops
-      | if ($g | map(.value | concl) | unique | length) == 1 then .keep += [$g[0].key]
-        elif ($ops | map(.value | concl) | unique | length) == 1 then .keep += [$ops[0].key]
-        else .keep += [$g[].key]
-          | .defects += ["\($g[0].value.AC): \($g | map(.value.entry) | join(", ")) disagree and none names another, a conflict never settled by recency"] end)
+      if ($g | map(.value | concl) | unique | length) == 1 then .keep += [$g[0].key]
+      else .keep += [$g[].key]
+        | .defects += ["\($g[0].value.AC): \($g | map(.value.entry) | join(", ")) disagree and none names another, a conflict never settled by recency"] end)
   | .keep as $k
   | {standing: [$r.standing | to_entries[] | select((.value.AC // "") == "" or (.key as $i | any($k[]; . == $i))) | .value], defects}' <<<"$REPLACED") \
   || die "cannot resolve the conflicts"
