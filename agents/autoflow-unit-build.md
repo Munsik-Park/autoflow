@@ -443,65 +443,59 @@ The fields go in the file's leading comment block at column 1, before its first 
 
 ### AUDIT
 
-A project-specific security audit of the change the BUILD unit returned, after a test-first
-judgment on its evidence. Complements GATE:QUALITY's `Security` item with 5 dedicated,
-project-specific items; GATE:QUALITY's `Security` item references the AUDIT result.
+A project-specific security audit of the change the build made, after a test-first judgment on
+its evidence. Complements GATE:QUALITY's `Security` item with 5 dedicated, project-specific items;
+GATE:QUALITY's `Security` item references the AUDIT result.
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: the U4 artifact set — the change diff with the cycle's commits, the build report
-(`<attempt-dir>/issue-{N}-build-report.md`) and the verification design
-(`<attempt-dir>/issue-{N}-verification-design.md`) — + the target's security checklist at the version the
-checklist status names (*Security checklist* below), or none when none is declared. In a **review-response cycle**,
-additionally the previous cycle's AUDIT report (`<attempt-dir>/issue-{N}-c{C-1}-audit.md`, preserved at
-PREFLIGHT) — its `## Low findings` list is the re-score's starting set.
+**Input** (`<autoflow-root>/docs/contracts/audit.json`): the change — the build's commits, as a
+range (`commits`) —, the build report (`build_report`), the verification design
+(`verification_design`), the target's security checklist at the version *Security checklist* below
+names, when the target declares one (`security_checklist`), and on a re-score the previous
+evaluation (`previous_evaluation`).
 
 #### Test-first
 
-Judged before scoring. For each `driving` / `regression` row of the verification
-design, the evaluator reads the build report's `## Test-first` row and the evidence it cites, and
-judges whether the Red run precedes the implementation commit and its failure is shown by its log
-([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What the build owes* > *Test-first*). It finds that evidence where this
-project's composition puts it, and records in its report, under `## Test-first`, what it read for
-each row and its verdict — `confirmed`, or `not confirmed` with what is missing or contradicts the
-record. On any `not confirmed` row it scores nothing and returns that section. That return is a
-routed result, not a report defect ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Verification —
-AUDIT*).
+Judged before scoring. The goal: a test that verifies a required behavior is seen failing before
+the implementation it verifies ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What the build owes* >
+*Test-first*). For each such test the build report's `## Test-first` record names, the evaluator
+reads the evidence it cites and judges whether the failing run precedes the implementation commit
+and its failure is shown by its log. It finds that evidence where this project's composition puts
+it, and records in the output's `test_first` what it read for each test and what it found —
+`confirmed: true` when every test's failing run is shown before its implementation, `false` with
+what is missing or contradicts the record. When it is not confirmed the evaluator scores nothing:
+the output carries `test_first`, the summary and the findings.
 
 #### Security checklist
 
 AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores — the fresh
-evaluator, the five items below, the PASS thresholds — and the target owns what each item is judged
-by. Which version AUDIT reads is the record line of
-`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`, which the
-orchestrator runs at AUDIT entry ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Security checklist*):
+evaluator, the five items below, the reference values — and the target owns what each item is
+judged by. Which version AUDIT reads is the one the record line of
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
+names, and the `security_checklist` input is the checklist at that version:
 
-- `none-declared` → no checklist: the five items are scored from the change alone, and the report
-  records that none was declared;
-- `unchanged` → the checklist as of the cycle's base commit (`score=<base>:<path>`);
+- `none-declared` → no checklist: the five items are scored from the change alone, and the output
+  says that none was declared;
+- `unchanged` → the checklist as of the base commit (`score=<base>:<path>`);
 - `changed-decided` → the changed version a `[checklist-decision]` entry accepted
   (`score=HEAD:<path>`, or `none` for a dropped declaration).
 
-**The evaluator reads the named version.** The spawn prompt carries the record line; the evaluator
-re-runs the same status (it only reads), reads the checklist at the `score=` spec with `git show`,
-never the working-tree file, and copies the line into its report. A report whose line differs from
-the one the orchestrator recorded is a report defect: reject and re-spawn.
+**The evaluator reads the version it is given**, never the working-tree file, and states in its
+output which checklist version it scored against.
 
 #### Report
 
-The evaluator's report is written to `<attempt-dir>/issue-{N}-audit.md` and carries a
-`## Test-first` section (*Test-first* above), a `## Security checklist` section (the status record
-line) and a
-`## Low findings` section (each Low item with `path:line` at the audited commit and a one-line claim; `none` when empty).
-The state file keeps only the scores.
+The output is the evaluation object (*Evaluation Output Format* below) with its `test_first` key
+(*Test-first* above); each `Low` finding is a `recommendations` item with its `path:line` at the
+audited commit.
 
-#### Review-response re-score
+#### Re-entry re-score
 
-The fresh evaluator does not re-derive the whole audit.
-It judges test-first for the rows this cycle added or rewrote, re-scores **the change surface of this
-cycle** (the review-response diff) against the checklist,
-re-checks each prior Low finding only where that diff touches its file, and inherits the rest by
-citation — the same narrowed-input rule as GATE:QUALITY's re-entry re-score, using the same
-`rescore` output field. Fresh spawn is unchanged; the input is.
+Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
+sets and does not re-derive the whole audit. The change since that evaluation is the commits made
+after the ones it audited: it judges test-first for the tests that change added or rewrote,
+re-scores that change against the checklist, re-checks each prior finding only where that change
+touches its file, and inherits the rest.
 
 #### Scoring (5 items × 10 points)
 

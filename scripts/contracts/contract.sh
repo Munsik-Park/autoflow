@@ -53,8 +53,12 @@
 #             another module produces names a contract and an output it has;
 #             every output's format and check types are ones this script
 #             implements; every param, input and output a check names is
-#             declared; reads_records is true or false. It prints each
-#             disagreement.
+#             declared; reads_records is true or false; an evaluation
+#             contract's score keys are its rubric's items — the Items cell
+#             of its row (by the Contract column) in the procedure document's
+#             "Evaluation | Gate | Contract | Items" table, and the first
+#             column of the "Item" table in its procedure section, when that
+#             section has one. It prints each disagreement.
 #
 # Exit: 0 accepted (check-in: the module may run; lint: every contract
 #       agrees) · 1 refused (result.json names each defect; lint: the
@@ -526,6 +530,50 @@ ref_resolves() { # <reference>
   done
 }
 
+# the first column of the "Item" table in the section a reference names, or
+# nothing when the section has none
+section_items() { # <reference>
+  local ref path rest h line=0 level n
+  ref=$(sed -E 's/ \([^)]*\)$//' <<<"$1"); path=${ref%% > *}; rest=${ref#* > }
+  while [ -n "$rest" ]; do
+    h=${rest%% > *}
+    [ "$h" = "$rest" ] && rest="" || rest=${rest#* > }
+    h=$(sed -E 's/ \([^)]*\)$//' <<<"$h")
+    n=$(awk -v h="$h" -v from="$line" 'NR > from && /^#+ / { t = $0; sub(/^#+ +/, "", t); sub(/ +$/, "", t); if (t == h) { print NR; exit } }' "$ROOT/$path")
+    [ -n "$n" ] || return 0
+    line=$n
+  done
+  level=$(sed -n "${line}p" "$ROOT/$path" | sed -E 's/^(#+).*/\1/' | tr -d '\n' | wc -c)
+  awk -v from="$line" -v lv="$level" 'NR > from && /^#+ / { l = $0; sub(/ .*/, "", l); if (length(l) <= lv) exit } NR > from' "$ROOT/$path" \
+    | jq -Rsc "$MD_JQ model | pick({first: \"Item\"}) | if . == null then empty else [.rows[][0]] end"
+}
+
+# an evaluation contract's score keys against its rubric's items (§8)
+rubric_disagreements() { # <contract json>
+  local c=$1 keys path items
+  keys=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.keys_exactly // empty] | first // empty' <<<"$c")
+  [ -n "$keys" ] || { echo "no scores keys_exactly to check against the rubric"; return; }
+  path=$(jq -r '.procedure // "" | sub(" > .*$"; "")' <<<"$c")
+  [ -f "$ROOT/$path" ] || return 0
+  items=$(md_model "$ROOT/$path" | jq -c --arg m "$(jq -r .module <<<"$c")" "$MD_JQ"'
+    pick({header: ["Evaluation", "Gate", "Contract", "Items"]})
+    | if . == null then null else ([.rows[] | select(.[2] == $m) | .[3] | split(", ")] | first) end')
+  if [ -z "$items" ]; then
+    echo "cannot read the rubric's items from $path"
+  elif [ "$items" = null ]; then
+    echo "no row for $(jq -r .module <<<"$c") in the Evaluation | Gate | Contract | Items table of $path"
+  else
+    jq -r --argjson k "$keys" --argjson i "$items" --arg w "$path > Evaluation Types" '
+      (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
+      (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+  fi
+  items=$(section_items "$(jq -r '.procedure // ""' <<<"$c")")
+  [ -n "$items" ] && jq -r --argjson k "$keys" --argjson i "$items" --arg w "$(jq -r .procedure <<<"$c")" '
+    (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
+    (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+  return 0
+}
+
 lint() {
   local files=("$@") f c m why bad=0
   [ ${#files[@]} -gt 0 ] || files=("$ROOT"/docs/contracts/*.json)
@@ -573,6 +621,11 @@ lint() {
             (if $ch.absent_reason and ($c.outputs[$ch.absent_reason.output].format // "") != "markdown" then "output \($o): absent_reason names an output that is not markdown" else empty end)
         end' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    # an evaluation's score keys are its rubric's items
+    if jq -e '.kind == "evaluation"' <<<"$c" >/dev/null; then
+      found=$(rubric_disagreements "$c")
+      while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    fi
   done
   return $bad
 }

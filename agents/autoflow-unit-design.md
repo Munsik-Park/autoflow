@@ -454,37 +454,37 @@ Development Lifecycle).
 ### GATE:PLAN
 
 **Evaluator**: fresh-spawned Evaluation AI.
-**Input**: the two documents the U3 Design unit wrote ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output
-artifacts*) — the feature design and the verification design — the issue's acceptance-criterion
-list (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`), and the issue decision ledger
-(`<attempt-dir>/issue-{N}-ledger.md`).
+**Input** (`<autoflow-root>/docs/contracts/plan.json`): the two documents the design wrote
+([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts*) — the feature design (`feature_design`) and the
+verification design (`verification_design`) —, the applied acceptance criteria
+(`applied_criteria`, the criteria-apply module's output), the `[ac-decision]` entries when there
+are any (`decisions`), and on a re-score the previous evaluation (`previous_evaluation`).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each
-criterion's verification fits it, whether the scope is right and whether the tools are secured —
+criterion's verification fits it and whether the scope is right —
 never the method by which the unit reached it: no item asks which roles took part, whether a
 dialogue was held, or in what order the documents were written (ADR-0025 D2).
 
-#### Scoring (5 items × 10 points)
+#### Scoring (4 items × 10 points)
 
 | Item | Criterion |
 |------|-----------|
 | Decision grounds | Is each architecture decision grounded in the actual mechanisms it changes (not a misread), with the constraints it holds under and the alternatives it rejected, each rejection with its ground? Can the design be implemented with the current structure? |
-| Verification fit | Does each verification-design row verify the property the AC it names states, not a weaker or different proposition, by a method that can fail on the defect its `Failure mode` cell names? Where the design changes shared state — state that outlives a single call and that more than one decision reads or writes — that a settled decision (a governing ADR, a prior issue's agreed design, an entry in this issue's ledger) also names, does at least one verification drive that contact through the real execution environment rather than a double, or does the design state a design-change request because none can be built? |
+| Verification fit | Does each verification-design row verify the property of the item it names, not a weaker or different proposition, by a method that can fail when that property does not hold? Where the design changes shared state — state that outlives a single call and that more than one decision reads or writes — that a settled decision (a governing ADR, a prior issue's agreed design, an entry in this issue's ledger) also names, does at least one verification drive that contact through the real execution environment rather than a double, or does the design state a design-change request because none can be built? |
 | Scope         | Appropriate — not too broad, not missing requirements? (no redundant new mechanism where an extension suffices — over-engineering fails here; the feature design's `## Scope` section judges each problem the confirmed cause carries under Change Surface Rules > *Scope judgment*, and a directly related problem left out owes a separation reason) |
-| Tools         | Does the `## Tools` section name, for each row that needs one, the tool, its availability and the ground for it — and does each `manual` row executed by a person, and each row resolved to a mock, state in its `Reason` why no tool could be secured ([U3 Design](<autoflow-root>/docs/units/design.md) > *Tools*)? |
 | Security      | Any security implications introduced? |
 
 **Affected files and side effects are not scored here**. The gate scores the
 *decision* layer; which files a change touches and which tests it requires are **derived**, not
-predicted — by the build unit at BUILD, from the change delta and the way the
-target runs its tests, and from the files it opens anyway. A dependency miss surfaces at BUILD
-or HANDOFF's CI and routes by the class rules, consuming no ARCHITECT re-entry.
+predicted — by the build, from the change delta and the way the
+target runs its tests, and from the files it opens anyway. A dependency miss surfaces at the build
+or in CI.
 
-`Decision grounds` and `Scope` absorb the structural-fit concern that GATE:HYPOTHESIS deliberately does not score: a plan not grounded in the actual structure fails Decision grounds; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that carries no unique failure mode fails Scope on the same clause. On a row that owes the `Failure mode` cell ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts*, the column's bullet), the cell fails Scope when it is empty — `—` on such a row counts as empty — or when it cannot be told apart from the cell of another distinct verification anywhere in the design, or from a named existing mechanism; rows that share a `Method` label are one verification and are not compared with each other. The deduction rides this clause and adds no scored item, cap or `scores` key.
+`Decision grounds` and `Scope` absorb the structural-fit concern that GATE:HYPOTHESIS deliberately does not score: a plan not grounded in the actual structure fails Decision grounds; a plan **or its verification design** that duplicates an existing mechanism or over-engineers a new one where an extension suffices fails Scope — the over-engineering half applies symmetrically to both, so a verification that can fail on no defect another verification in the design, or a named existing mechanism, would not already catch fails Scope on the same clause.
 
 #### ADR-conformance check (scored within Decision grounds / Scope)
 
-This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no PASS threshold**; a violation caps the named item at 6, failing via the each-item ≥ 7 rule (identical mechanism to GATE:QUALITY's *Known blind-spot checks* below). A **governing ADR** for the change surface is an ADR in the repository's ADR directory (`docs/records/adr/` in this repository; a consuming target's own ADR location) with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a **trigger area** of `<autoflow-root>/docs/development-guideline.md` > ADR Policy > *When to create an ADR* — the list is defined there, in a shipped usage document, and nowhere else.
+This named check makes the ADR-conformance concern explicit inside the two items that already absorb structural fit — it adds **no scored item** and changes **no reference value**; a violation caps the named item at 6, below the each-item reference value (identical mechanism to GATE:QUALITY's *Known blind-spot checks* below). A **governing ADR** for the change surface is an ADR in the repository's ADR directory (`docs/records/adr/` in this repository; a consuming target's own ADR location) with status `Accepted`/`Proposed` whose Decision scope intersects the change surface, **or** a change hitting a **trigger area** of `<autoflow-root>/docs/development-guideline.md` > ADR Policy > *When to create an ADR* — the list is defined there, in a shipped usage document, and nowhere else.
 
 - **Trigger → cap**: divergence from a governing ADR, **or** an architecture-impacting change with no governing ADR/owner decision → cap.
 - **Per-item cap distribution**: `Decision grounds` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
@@ -492,44 +492,32 @@ This named check makes the ADR-conformance concern explicit inside the two items
 
 #### AC-authority check (scored within Scope)
 
-Same mechanism as the ADR-conformance check above: **no added scored item, no threshold change**; a
-violation caps `Scope` at 6, which fails the gate through the each-item ≥ 7 rule.
+Same mechanism as the ADR-conformance check above: **no added scored item, no reference-value change**; a
+violation caps `Scope` at 6, below the each-item reference value.
 
-- **The comparison** is a key join, both sides keyed: every `AC id` in the issue's
-  `## Acceptance criteria` table against the `Issue AC` column of the verification design's
-  acceptance-criteria table. A **difference** is one of exactly two states: the design carries no row for the criterion
-  (`dropped`); or it carries the
-  criterion with a disposition other than `automated` and states no reason (`unreasoned`). A row
-  whose proposition differs from the issue's is **not** a difference here — that is a semantic
-  reading, scored under `Verification fit`. A reduced disposition **with**
-  a stated reason is not a difference — it is a verification-method choice the design is
-  authorized to make ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts*, the `Issue AC` bullet), and its **reason quality** is
-  scored by `Scope` under the existing verification-depth clause ([U3 Design](<autoflow-root>/docs/units/design.md) > *Verification depth*), adding no scored item.
-- **Trigger → cap**: any difference **not** covered by a `[ac-decision]`-marked ledger entry whose
-  `- AC:` line names that same id caps `Scope` at 6. The marker is what the gate matches on;
-  `orchestrator decision`, `advisor decision` or `operator decision` is that entry's authority
-  **value** and is not itself the match key. An entry
-  whose `- Disposition:` is `added` covers nothing: the criterion it adds is owed its row like any
-  other ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
-- **An unresolvable check also caps.** An absent, empty or unparseable `## Acceptance criteria`
-  table caps `Scope` at 6.
-- **N/A by default** applies only to the difference set, never to the source: no difference and a
-  readable AC table → no cap, the item scores normally.
+- **The comparison** is a key join, both sides keyed: every criterion id of the applied criteria
+  (`applied_criteria`) against the `Item` column of the verification design's table. A
+  **difference** is one of exactly two states: the design carries no row for the criterion
+  (`dropped`); or its row neither verifies the criterion nor states why it does not
+  (`unreasoned`). A row whose proposition differs from the criterion's is **not** a difference
+  here — that is a semantic reading, scored under `Verification fit`. A row that states why it
+  verifies less is not a difference — it is a verification-method choice the design is authorized
+  to make, and its **reason quality** is scored by `Scope` under the existing verification-depth
+  clause ([U3 Design](<autoflow-root>/docs/units/design.md) > *Verification depth*), adding no scored item.
+- **Trigger → cap**: any difference caps `Scope` at 6. An acceptance-criterion change reaches the
+  design already applied — the applied criteria carry every `[ac-decision]` entry
+  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) —, so no entry
+  covers a difference.
+- **N/A by default**: no difference → no cap, the item scores normally.
 
 #### Re-entry re-score
 
-A re-entry's re-score is a **fresh spawn with a narrowed input**, on the same rule
-GATE:QUALITY's re-entry re-score states. The evaluator reads the design documents' **delta sections** for this round — the `## Delta — round <n>` sections the re-entry appended —
-plus every previously-passing item whose anchor the delta touched, and re-scores exactly those; the
-remaining items inherit their prior score by citation. The report states the re-scored item list
-and the inheritance source (the prior report's path) in its `rescore` field
-(*Evaluation Output Format* below). The state file still
-receives all five scores, inherited ones copied
-verbatim from the cited report. An inherited item whose anchor the delta touched and which is
-missing from the re-scored list is a report defect: reject and re-spawn.
+Given the previous evaluation, the gate re-scores as *Evaluator conduct* > *Re-score* above sets.
+The change since that evaluation is the design documents' **delta sections** — the
+`## Delta — round <n>` sections a later design run appended; the evaluator reads them and the
+anchors of every item it re-scores.
 
-A first evaluation of a cycle (no prior report to inherit from) scores both documents whole;
-the narrowing binds re-entries only.
+A run with no previous evaluation scores both documents whole; the narrowing binds re-scores only.
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Functional-unit agents -->
 

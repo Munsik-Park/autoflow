@@ -368,19 +368,19 @@ Code behavior produces a **false "absent / stub" reading**:
 It scores what the analysis report shows, never the method the unit took to produce it (ADR-0025
 D2).
 
-**Evaluator**: one independent Evaluation AI, fresh-spawned per entry. It scores one form for
+**Evaluator**: one independent Evaluation AI, fresh-spawned per run. It scores one form for
 every issue — bug / incident or not, code or documentation — and returns one output object
-(*Evaluation Output Format* below), which the orchestrator records under `phases.gate_hypothesis`
-in `<attempt-dir>/issue-{N}.json`.
-**Input**: the analysis report (`<attempt-dir>/issue-{N}-analysis.md`), the trigger target and the decision ledger.
+(*Evaluation Output Format* below).
+**Input** (`<autoflow-root>/docs/contracts/hypothesis.json`): the analysis report (`analysis`), the
+`[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous evaluation
+(`previous_evaluation`); the evaluator reads the anchors in the target the report cites.
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
 ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *What the analysis owes*); they are grounds like any other, and
 the evaluator reads them against the trigger target and the branch it finds. The form scores whether the
 conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
-scores as high as a well-grounded `code change`, and the conclusion — not a low item — routes the
-cycle ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *Verification — GATE:HYPOTHESIS*). Nor does it score how
+scores as high as a well-grounded `code change`. Nor does it score how
 the analysis was done — how many explanations it weighed or which checks it ran — only whether what
 the report concludes is shown. It is reuse-neutral: a resolution that reuses existing code is not
 marked down. Plan feasibility, structural fit and over-engineering are GATE:PLAN's (Decision
@@ -391,14 +391,12 @@ grounds, Scope) and GATE:QUALITY's (Minimal implementation, Fit).
 | Conclusion grounds | Does the evidence the report cites — re-derived from the source, not taken from the report's account — support its conclusion: the current structure as stated, the gap, whether a change is owed and whether code is the lever, and, where the request reports a defect, the cause? A conclusion that a code change is required where the cause it rests on is not established, or where data, configuration, the environment or an earlier fix is not ruled out on evidence, scores low here. |
 | Goal coverage | Does the report answer everything the analysis owes ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *What the analysis owes*, *Analysis report*) — the gap per resolution approach, the lever, the conclusion, the acceptance-criterion table, the referenced materials, the scope judgments and the decision points — for the whole request, not a part of it? |
 
-**PASS**: each ≥ 7, avg ≥ 7.5. The hook gates the ARCHITECT spawn on this PASS for a bug /
-incident issue; for any other issue the orchestrator judges it against the same line.
+**Reference values**: each ≥ 7, average ≥ 7.5 (*PASS Criteria* above).
 
 #### Re-entry re-score
 
-After a U2 re-run the gate re-scores the failed items — after a recommendation attempt, the items
-the recommendation was listed under — and any other item whose sections the re-run changed; the
-rest is inherited and reported in `rescore` (*Evaluation Output Format* below).
+Given the previous evaluation, the gate re-scores as *Evaluator conduct* > *Re-score* above sets;
+the change since that evaluation is the sections of the analysis report a later run changed.
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Functional-unit agents -->
 
