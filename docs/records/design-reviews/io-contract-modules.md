@@ -345,8 +345,10 @@ rather than reading a declared output.
   ([units/delivery.md](../../units/delivery.md) > Push and pull request).
 - Removing `remedy_class` (Q11), in sub-issue 3: the evaluator's tagging rules
   ([evaluation-system.md](../../evaluation-system.md) > Remedy class), the FAIL routing table
-  ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing) and
-  `scripts/gate/remedy-route.sh`.
+  ([units/completion-evaluation.md](../../units/completion-evaluation.md) > FAIL routing),
+  `scripts/gate/remedy-route.sh`, and the aggregator's tagging of every Medium+ finding
+  ([units/review.md](../../units/review.md) > Review aggregation) with the findings-file check
+  that refuses a Medium+ row without the tag (`scripts/handoff/review-gate.sh:162`).
 - The criterion review deciding its items (Q18), in sub-issue 3: [criterion-review.md](../../criterion-review.md)
   states the goal as every item disposed of with its grounds, its record carries `## Dispositions`
   in place of `## Proposed changes` and `## Open questions`, and the advisor is asked only for an
@@ -455,6 +457,34 @@ No test today exercises the score thresholds, the planning or implementation spa
 - **The re-score's dispositions checked** (same run). The audit re-score put all five items under
   `rescored`, gave the one previous finding the disposition `cleared`, and scored Input validation
   9 (was 6); the validator's `partition` and `covers` checks passed on it.
+
+- **The review module, run after delivery** (opensre#1 module run, 2026-10-25, session 3). Accepted
+  on its first run: `claude` and `codex` reviewed PR #25, the aggregation wrote the findings file
+  and posted the round's comment, and the `pr_comment_posted` check passed — its first real run.
+- **The review procedure brings `remedy_class` back** (same run). The findings file carries a
+  `remedy_class` column and tags the Medium row `design`, as
+  [units/review.md](../../units/review.md) > Review aggregation requires; the contract does not
+  check the field (Q11), so the run was accepted. The same path as the design module's
+  classification above; §8's Q11 item now names the review procedure and `review-gate.sh`.
+- **A tool that takes a directory, given a set of files** (same run). The `claude` reviewer reads
+  the attempt's records through `--records <dir>` (`scripts/review/claude-review-pr.sh`); the
+  invocation names four record files. The module copied them into a scratchpad directory, passed
+  that, and recorded a tool request. Of a kind with *A `git` output has no path to hand on*: how a
+  module hands its inputs to a script whose interface predates the contracts.
+- **The model of a spawn the module makes** (same run). The aggregation is a spawn, and the hook
+  refuses a spawn without an explicit `model` ([core.md](../../core.md) > Spawn Model). The
+  procedure says "on the model the policy names for `handoff-review-triage`" but not where the
+  policy is read (`spawn-policy.sh model <phase-key>`, core.md > Spawn Model), and the module does
+  not carry the core. After the refusal it searched the disk from `/` — macOS asked, on cmux's
+  behalf, for access to other apps' data, not granted — then found
+  `.claude/autoflow/spawn-policy.json` and spawned on `sonnet`. No contract names the model of the
+  spawns a module makes, nor where the module reads it; left to settle.
+- **A deferred recommendation raised again, with a measurement** (same run). audit-2's Low
+  Confidence recommendation — the truncation reads the tags of the whole uncut input — was deferred
+  by the Coordinator (`deferred.json`). Both reviewers raised it; the aggregation measured it
+  (`"<b>x</b>" * 1_000_000`, `max_len=4096`: 1.63 s and 366 MB at `f7c85e48e`, 0.0015 s and
+  0.02 MB at the base) and kept it at Medium. It rejected a Low Confidence finding with the parser
+  source as grounds (td `decode_html_entity`, `end_pos - pos >= 10`).
 
 ## Handoff log
 
