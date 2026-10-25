@@ -518,6 +518,47 @@ No test today exercises the score thresholds, the planning or implementation spa
   0.02 MB at the base) and kept it at Medium. It rejected a Low Confidence finding with the parser
   source as grounds (td `decode_html_entity`, `end_pos - pos >= 10`).
 
+- **A second round, re-entered from the review** (opensre#1 module run, round 2, 2026-10-25, on
+  the Q19/Q20 validator). review-1's Medium moves design D1, so the Coordinator re-entered from
+  design: design-2, plan-2, design-3, plan-3, build-3, audit-3, quality-2, delivery-2, review-2,
+  on the same branch and PR #25. Eight were accepted; review-2 was refused by a validator defect
+  (below). The operator kept PR #25 open across the round: the fork is neither merged nor synced.
+- **Earlier runs read from the record directory** (same run; Q20). build-3 found build-2's td
+  parser port, the td sources and the T0–T4 tests in `build-2/local/` and copied them unchanged,
+  recording their sha256 — the second build of round 1 had rebuilt the same assets (*A re-run
+  cannot reach the previous run's working files*). design-2 read the reviewers' own records and
+  build-2's scope judgment that the finding overturned.
+- **The commits as one range** (same run; Q19). audit-3, quality-2 and delivery-2 took
+  `0c56f8823..f45ead6c0` — build-1's start to build-3's end — and check-in found the commits on the
+  branch; the Coordinator composed the range from the build runs' `result.json`.
+- **The spawn model, once named** (same run). review-2's instruction named
+  `spawn-policy.sh model handoff-review-triage`, and the aggregation was spawned on `sonnet` at the
+  first try, with no search of the disk (*The model of a spawn the module makes*).
+- **A gate that names one case after another** (same run). plan-2 recorded a Medium: the time half
+  of S2's bound had no verification that can fail. design-3 added two CPU-time checks, T7 and T8;
+  plan-3 re-scored, gave the Medium "remains, narrowed" and recorded a new Medium for one more
+  input shape T8 does not reach (the whitespace skip after `=`). The same property with a new
+  witness each round is the loop [units/review.md](../../units/review.md) > *A repeated complaint*
+  describes for reviews; here it came from a gate, and the design already bounds every search by
+  its rule. The operator left it a known gap and sent the work on to build. plan-2 was not refused
+  this time: its instruction gave the evaluator the contract's keys, where round 1's named the
+  Evaluation Output Format and the rubric brought `Tools` back (*A refusal a re-run cannot fix*).
+- **`pr_comment_posted` matched only the first comment** (same run). review-2 posted its comment,
+  and check-out refused the run as "not posted". The check split the output of
+  `gh api … --jq '.[].body + "\u0000"'` on NUL, and gh ends each value with a newline, so every
+  comment after the first was compared with a leading newline; review-1's was the PR's first
+  comment, so it passed. Fixed (`8aee794`): the bodies are read as one JSON array and compared with
+  the file, whitespace at either end aside. The one-shot test's stub `gh` printed no such newline
+  and now prints pages as `gh api --paginate` does. The run directory, re-checked on a copy with
+  the fixed validator, is accepted; the record keeps the run's own result, refused.
+- **Known gaps stated verbatim grow the PR body** (same run). delivery's `pr_body_covers` on the
+  deferred recommendations checks that the body contains each finding's text
+  (`docs/contracts/delivery.json`, ids `.[].finding`). With eleven deferred findings, each a
+  paragraph with its measurements, PR #25's body reached 26,162 characters. The Coordinator also
+  removed duplicates by hand: two of audit-3's Lows restated what quality-2 recorded. How the body
+  states a known gap — the finding whole, a summary, or a reference to the evaluation — is left to
+  settle.
+
 ## Handoff log
 
 | Session | Date | What was done | Next |
