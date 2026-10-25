@@ -452,8 +452,12 @@ check_comment() { # <output name> <checks json>
     body="$OUT/$(jq -r .body_file <<<"$c")"
     [ -f "$body" ] || { defect "$n: no $(jq -r .body_file <<<"$c")"; continue; }
     repo=${pr%#*}; num=${pr##*#}
-    jq -e -Rs --rawfile b "$body" 'split("\u0000") | any(.[]; (. | gsub("\\s+$"; "")) == ($b | gsub("\\s+$"; "")))' \
-      < <(gh api --paginate "repos/$repo/issues/$num/comments" --jq '.[].body + "\u0000"' 2>/dev/null) >/dev/null \
+    # the bodies as one JSON array (each page is an array); compared with the
+    # file, leading and trailing whitespace aside
+    local bodies
+    bodies=$(gh api --paginate "repos/$repo/issues/$num/comments" 2>/dev/null | jq -sc 'add // [] | map(.body // "")' 2>/dev/null) || bodies='[]'
+    jq -e -n --argjson bs "${bodies:-[]}" --rawfile b "$body" \
+      'def t: gsub("^\\s+|\\s+$"; ""); ($b | t) as $want | any($bs[]; t == $want)' >/dev/null \
       || defect "$n: $(jq -r .body_file <<<"$c") is not posted on $pr"
     record_output "$n" "$(jq -n --arg p "$pr" --arg f "$body" '{pr: $p, file: $f}')"
   done < <(jq -c '.[] | select(.type == "pr_comment_posted")' <<<"$checks")
