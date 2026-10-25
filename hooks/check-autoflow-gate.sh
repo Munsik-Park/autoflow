@@ -11,8 +11,8 @@
 #   - P1: denies match with the shared CMD_BOUNDARY prefix + word boundary,
 #         never a bare `^` (which `cd x && git push` would bypass).
 #   - P2: every deny is unconditional.
-#   - P3: who acts is read from structural fields only — the caller's
-#         `agent_type` and an Agent call's own `model`, never prompt keywords.
+#   - P3: a spawn is read from its structural fields only — an Agent call's
+#         own `model` and `subagent_type`, never prompt keywords.
 #
 # Denies:
 #   - Bash(gh pr merge)             → DENIED (AutoFlow never merges)
@@ -28,11 +28,8 @@
 #                                     (docs/issue-proposal.md)
 #   - Agent (any spawn)             → explicit `model` parameter required
 #                                     (docs/core.md > Spawn Model)
-#   - Write/Edit/MultiEdit on a ledger → append-only (prior text kept); only
-#                                     autoflow-advisor adds `advisor decision` /
-#                                     A<n>; only the main session adds `operator
-#                                     decision` / O<n>; the advisor adds no
-#                                     O,F,E (Section 1e, ADR-0025 D7)
+#   - Write/Edit/MultiEdit on a ledger → append-only: the prior text kept
+#                                     (Section 1e)
 #   - (no jq) → the denies above but the ledger's, read from the raw input
 #                                     (Section 0); a ledger write passes unchecked
 #
@@ -141,13 +138,6 @@ CMD_BOUNDARY='(^|[;&|]|&&|\|\|)[[:space:]]*'
 #   2. delete single- and double-quoted substrings (inline --body "...").
 SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 
-
-# ── Caller identity ──
-# The hook input's `agent_type` names the sub-agent that made the call; the
-# harness sets it on a sub-agent's calls and omits it on the main loop's (Claude
-# Code CHANGELOG 2.1.69: "Added `agent_id` (for subagents) and `agent_type` …
-# to hook events"). Section 1e (ledger authorship) reads it.
-CALLER_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || true)
 
 
 # ── _fold_continuations (issue #134 c2) ────────────────────────────────────
@@ -584,41 +574,19 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   fi
 fi
 
-# ── Section 1e: decision-ledger integrity (P2; ADR-0025 D7) ──
-# The ledger carries two authorities at a decision point — the advisor's first
-# judgment and the operator's override — and each is worth only its writer and
-# its record staying as written. On a Write / Edit / MultiEdit of an
-# issue-*-ledger.md:
-#   1. Append-only: the write is applied to the file on disk here, and the
-#      result must keep the whole prior content as its prefix — an entry is
-#      never rewritten or removed; a decision changes by a new entry that names
-#      the one it replaces (docs/decision-ledger.md).
-#   2. Authorship of the added text: an `advisor decision` authority or an
-#      `A<n>` heading only from the advisor (caller agent_type
-#      autoflow-advisor); an `operator decision` authority or an `O<n>` heading
-#      only from the main session (no caller agent_type); the advisor adds no
-#      O / F / E heading.
-# The threat is an agent overstepping in routine work, not a determined evasion
-# (docs/role-contracts.md > Advisor > Independence): shell writes and malformed
-# text are outside this check.
-is_advisor_type() {
-  case "$1" in autoflow-advisor|*:autoflow-advisor) return 0 ;; esac
-  return 1
-}
+# ── Section 1e: decision-ledger integrity (P2) ──
+# A decision in the ledger is worth its record staying as written. On a Write /
+# Edit / MultiEdit of an issue-*-ledger.md the write is applied to the file on
+# disk here, and the result must keep the whole prior content as its prefix —
+# an entry is never rewritten or removed; a decision changes by a new entry that
+# names the one it supersedes (docs/decision-ledger.md). The threat is an agent
+# overstepping in routine work, not a determined evasion (docs/role-contracts.md
+# > Advisor > Independence): shell writes and malformed text are outside this
+# check.
 ledger_deny() {
-  echo "BLOCKED: decision ledger — $1 (ADR-0025 D7; $(af_path docs/role-contracts.md) > Advisor > Independence; $(af_path docs/decision-ledger.md))." >&2
-  echo "The ledger is append-only: add a new entry that names the entry it supersedes or overrides. The advisor writes A entries only; O entries and the operator's authority are the main session's." >&2
+  echo "BLOCKED: decision ledger — $1 ($(af_path docs/core.md) > Decision Ledger; $(af_path docs/decision-ledger.md))." >&2
+  echo "The ledger is append-only: add a new entry that names the entry it supersedes on a '- Supersedes:' line." >&2
   exit 2
-}
-# _ledger_has <adv|opr|nonadv>: stdin text; true when a line carries the mark.
-_ledger_has() {
-  local _re
-  case "$1" in
-    adv)    _re='^- Authority: advisor decision|^## A[0-9]+ ' ;;
-    opr)    _re='^- Authority: operator decision|^## O[0-9]+ ' ;;
-    nonadv) _re='^- Authority: operator decision|^## [OFE][0-9]+ ' ;;
-  esac
-  grep -qE -- "$_re"
 }
 # _lit_replace <text> <old> <new> <all>: literal replacement, portable to
 # /bin/bash 3.2 (whose ${v/"$o"/"$n"} keeps the quotes of the replacement).
@@ -657,20 +625,6 @@ case "$TOOL_NAME" in
         done
       fi
       [[ "$_res" == "$_cur"* ]] || ledger_deny "a write that changes or removes text already in the ledger"
-      _added="${_res#"$_cur"}"
-      if [ -n "$_added" ]; then
-        if is_advisor_type "$CALLER_TYPE"; then
-          printf '%s\n' "$_added" | _ledger_has nonadv \
-            && ledger_deny "the advisor adds no 'operator decision' authority and no O / F / E entry"
-        else
-          printf '%s\n' "$_added" | _ledger_has adv \
-            && ledger_deny "only the advisor (subagent_type autoflow-advisor) adds an 'advisor decision' authority or an A entry"
-          if [ -n "$CALLER_TYPE" ]; then
-            printf '%s\n' "$_added" | _ledger_has opr \
-              && ledger_deny "only the main session adds an 'operator decision' authority or an O entry — caller '$CALLER_TYPE' is a sub-agent"
-          fi
-        fi
-      fi
     fi
     ;;
 esac

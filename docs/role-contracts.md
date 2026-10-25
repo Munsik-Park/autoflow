@@ -17,7 +17,7 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) and CI-failure reader ([`units/delivery.md`](units/delivery.md) > *CI failure*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, or reads the failing check's output and records where its fix is made with its grounds, and returns |
 | Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
-| Advisor (a decision point in any module's work — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its `A`-namespace ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
+| Advisor (a decision point in any module's work — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
 The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and review modules are run by their session, which spawns the CI-failure reader and the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
@@ -147,10 +147,9 @@ This section is the procedure's single home; [`core.md`](core.md) > Development 
    concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
    `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
-   `A`-namespace entry per decision to the ledger under the authority `advisor decision`, carrying a
-   `- Record:` line to the answer file and the marker and fields the decision's kind requires
-   ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
-   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> A`, called immediately before the append; the
+   entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
+   fields the decision's kind requires ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the append; the
    call reserves the identifier, so advisors spawned together receive distinct ones
    ([`decision-ledger.md`](decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
@@ -162,41 +161,24 @@ This section is the procedure's single home; [`core.md`](core.md) > Development 
 
 ### Independence
 
-The advisor is never the author of what it judges: it is a fresh spawn per decision, not the unit
-agent, role spawn or Coordinator whose work raised the point, and its record carries its own grounds.
-Its authority is worth only that separation, and the operator's override only its own — so each
-is written by its own writer alone and stays as written. Three locks:
+The advisor is never the author of what it judges: it is a fresh spawn per decision, not the agent
+or session whose work raised the point, and its record carries its own grounds. The record stays as
+written:
 
-- **Authorship — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
-  state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
-  authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
-  text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
-  the main session (no `agent_type` — the Coordinator's session, recording its own decision, an
-  operator override or instruction, or the criterion review's `[criterion-ready]` entry); the advisor
-  adds no `operator decision` and no `O` / `F` / `E` heading.
-- **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
-  on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
-  A decision changes only by a new entry that names the one it replaces
-  (`<autoflow-root>/docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
-- **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
-  `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
-  `- Supersedes:` / `- Overrides:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
+- **Append-only — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): a `Write` / `Edit` / `MultiEdit` to an `issue-*-ledger.md` is applied to the
+  file on disk and must keep the whole prior content as its prefix, so no entry is rewritten or
+  removed. A decision changes only by a new entry that names the one it replaces
+  (`<autoflow-root>/docs/decision-ledger.md` > *Replacement is explicit*).
+- **The record convention**: a consumer lets an entry replace another only by an explicit
+  `- Supersedes:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
   `<autoflow-root>/scripts/contracts/criteria-apply.sh`, which locates an entry by its `[ac-decision]`
-  marker and reads the authority as recorded).
+  marker).
 
-The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
-meant to append to, or writing an authority that is not its own — not a determined evasion (the
-same model as `<autoflow-root>/docs/issue-proposal.md`). Outside the hook's surface: a shell write to a ledger
-(redirect, `tee`, `sed -i`, a script), and text that only imitates an entry (a heading-less field
-line, a malformed heading, a variant spelling of an authority).
-
-### Operator override
-
-An operator override of an advisor decision is recorded by the Coordinator's main session as an `O`
-entry under the authority `operator decision`, with the marker of the entry it overrides and a line
-naming that `A` identifier. It supersedes the advisor's entry without a new verified fact — the
-override is the authority ([`decision-ledger.md`](decision-ledger.md) > *Advisor decisions and
-operator overrides*). Which module runs again on it is the Coordinator's.
+The threat the hook answers is an agent overstepping in routine work — rewriting a ledger it meant to
+append to — not a determined evasion (the same model as `<autoflow-root>/docs/issue-proposal.md`).
+Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
+that only imitates an entry (a heading-less field line, a malformed heading).
 
 ### Claude Code's advisor tool (`advisorModel`)
 

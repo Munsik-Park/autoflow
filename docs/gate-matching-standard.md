@@ -238,27 +238,19 @@ external review through GitHub, not through the agent.
 
 ## Rule P3 — A Role Is Read From Structural Fields Only
 
-Hook gates MUST NOT classify an `Agent` spawn, or the writer of a file, by
-prompt-keyword inference. Where a deny depends on who acts, it reads a
-structural field the harness sets: the caller's `agent_type` on a sub-agent's
-calls (none on the main session's), and an `Agent` call's own `model`. The
-role an AutoFlow spawn fills is its `subagent_type`
-(`<autoflow-root>/agents/`; under a plugin install `autoflow:autoflow-<role>`,
-the hook matching both forms), and the ledger's authorship reads it on the
-writing side as the caller's `agent_type`. No deny maps a role to a gate or
-denies an undeclared spawn.
+Hook gates MUST NOT classify an `Agent` spawn by prompt-keyword inference. A
+deny that reads a spawn reads a structural field of the `Agent` call: its own
+`model`. The role an AutoFlow spawn fills is its `subagent_type`
+(`<autoflow-root>/agents/`; under a plugin install `autoflow:autoflow-<role>`),
+which the non-gating spawn-policy advisory reads. No deny maps a role to a
+gate, denies an undeclared spawn, or depends on which session or sub-agent
+makes a call.
 
-**Decision-ledger integrity** (ADR-0025 D7), on a write into
-an `issue-*-ledger.md`:
+**Decision-ledger integrity**, on a write into an `issue-*-ledger.md`:
 
 - *Append-only.* A `Write` / `Edit` / `MultiEdit` is applied to the file on
   disk (a literal replacement portable to `/bin/bash` 3.2) and must keep the
   whole prior content as its prefix.
-- *Authorship of the added text.* A `- Authority: advisor decision` line or an
-  `## A<n> ` heading only from caller `autoflow-advisor`; a
-  `- Authority: operator decision` line or an `## O<n> ` heading only from the
-  main session (no caller `agent_type`); the advisor adds no `operator decision`
-  and no `O` / `F` / `E` heading.
 
 A shell write to a ledger and text that only imitates an entry are outside the
 matched surface: the threat is routine overstepping, not a determined evasion.

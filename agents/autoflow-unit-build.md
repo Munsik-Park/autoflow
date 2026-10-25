@@ -330,28 +330,26 @@ in the target-owned scaffold `.claude/autoflow.local.json`
 (`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
 the one the record line of
 `bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names; the Coordinator, which composes the audit's invocation, runs it, writes the checklist at that
-version to a file and names it as the audit's `security_checklist` input
-([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Security checklist*):
+names; the audit takes the checklist at that version, written to a file (`git show <score>`), as its
+`security_checklist` input ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Security checklist*):
 
 | Exit | Verdict | The version the audit reads |
 |------|---------|-------------|
 | 0 | `none-declared` | none — the five items are scored from the change alone |
 | 0 | `unchanged` | the checklist as of the base commit (`score=<base>:<path>`) |
 | 0 | `changed-decided` | the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
-| 3 | `changed-undecided` | none yet: the change is a decision for the advisor, put to it situation-first ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and the status is run again on its answer |
+| 3 | `changed-undecided` | none yet: the change is a decision for the advisor, which the module whose work made it spawns ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and the status is run again on its answer |
 | 2 | — | none — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; it is repaired and the status run again |
 
 **A change the work makes to the checklist.** A change to the file, or to the declaration that
-points at it, has no effect on the audit of that change until it is accepted — by the advisor first, and
-by the operator's override, recorded as an entry that names the advisor's (`- Overrides: A<n>`).
-Standing entries that disagree with neither naming the other are a conflict: the record is
-undecided with `conflict=<ids>`, and a new entry resolves it. The answer is a `[checklist-decision]`
-ledger entry ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*):
-`accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
-the authority `advisor decision` on an `A<n>` entry (an override: `operator decision` on an `O<n>`
-entry) → the status re-run reports `changed-decided`;
-`rejected` → the change is reverted and the status re-run.
+points at it, has no effect on the audit of that change until the advisor accepts it: the build, whose
+work made the change, runs the status and puts a `changed-undecided` change to the advisor
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). Standing entries that disagree with neither
+naming the other are a conflict: the record is undecided with `conflict=<ids>`, and a new entry
+resolves it. The answer is a `[checklist-decision]` ledger entry
+([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*): `accepted`, carrying
+the committed version's blob and non-empty Decision and Grounds lines → the status re-run reports
+`changed-decided`; `rejected` → the change is reverted and the status re-run.
 
 ## Re-entry
 

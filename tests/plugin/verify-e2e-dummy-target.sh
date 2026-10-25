@@ -186,7 +186,7 @@ printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
 LEDGER="$SD/issue-7-ledger.md"
 in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
 body_sha="$(cat "$WORK/e2c.out")"
-printf '# ledger\n\n## O1 — criteria settled [criterion-ready]\n- Decision: settled\n- Record: criterion-reconcile-1/criterion-review.md\n- Issue body sha256: %s\n- Grounds: e2e\n- Authority: operator decision\n' \
+printf '# ledger\n\n## A1 — criteria settled [criterion-ready]\n- Decision: settled\n- Record: criterion-reconcile-1/criterion-review.md\n- Issue body sha256: %s\n- Grounds: e2e\n' \
   "$body_sha" > "$LEDGER"
 if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ]; then
   pass "E2c: criterion-ready.sh, run from a subdirectory, prints the sha256 of the issue body"
@@ -216,11 +216,11 @@ fi
 ledger_now="$(cat "$LEDGER")"
 jq -n --arg f "$LEDGER" '{tool_name:"Write",tool_input:{file_path:$f,content:"# rewritten\n"}}' \
   | run_hook "$T" >/dev/null 2>"$WORK/e3c0.err"; rc0=$?
-jq -n --arg f "$LEDGER" --arg c "$ledger_now"$'\n\n## O2 — e2e\n- Authority: operator decision\n' \
+jq -n --arg f "$LEDGER" --arg c "$ledger_now"$'\n\n## A2 — e2e\n- Decision: e2e\n- Grounds: e2e\n' \
   '{tool_name:"Write",tool_input:{file_path:$f,content:$c}}' | run_hook "$T" >/dev/null 2>"$WORK/e3c1.err"; rc1=$?
 if [ "$rc0" -eq 2 ] && grep -qF "$ROOT/docs/decision-ledger.md" "$WORK/e3c0.err" && [ "$rc1" -eq 0 ] \
    && [ ! -e "$T/.autoflow" ] && [ ! -e "$RECORD_ROOT/.ledger-check-cache" ]; then
-  pass "E3c: with no state anywhere, the ledger's rewrite is denied and an append by the main session admitted"
+  pass "E3c: with no state anywhere, the ledger's rewrite is denied and an append admitted"
 else
   failc "E3c" "rc-rewrite=$rc0 rc-append=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3c0.err" "$WORK/e3c1.err")"
 fi

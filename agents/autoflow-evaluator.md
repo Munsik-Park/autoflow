@@ -50,9 +50,9 @@ Hard rules:
 - **[MUST]** At AUDIT, the target's security checklist is likewise a declared
   input (`security_checklist`), given at the version
   `bash <autoflow-root>/scripts/gate/security-checklist.sh status` names —
-  never the working-tree file — and never judged on its merit. Changing it is
-  the advisor's to accept first and the operator's by override, recorded as a
-  `[checklist-decision]` ledger entry. State in your `summary` which checklist
+  never the working-tree file — and never judged on its merit. A change to it
+  is decided by the advisor, recorded as a `[checklist-decision]` ledger
+  entry. State in your `summary` which checklist
   version you scored against (`<autoflow-root>/docs/evaluation-system.md` > AUDIT).
 - **[MUST]** A row the AI verified by observation is confirmed by its observation
   record: read the record and open the artifacts it cites (a screenshot is read

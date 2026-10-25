@@ -27,7 +27,7 @@ These documents are the operating source of truth.
 | [AutoFlow Guide](autoflow-guide.md) | Index of the modules: each one's kind, procedure document, and what it takes and gives. |
 | Module contracts (`<autoflow-root>/docs/contracts/<module>.json`) | Each module's parameters, inputs and outputs, checked by `<autoflow-root>/scripts/contracts/contract.sh` (ADR-0038 D1). |
 | [U2 Analysis](units/analysis.md) | The analysis module: goal, cautions and analysis report; the other modules are listed in the AutoFlow Guide. |
-| [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
+| [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`, `[criterion-ready]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through the carrier each role starts with (command bodies, agent definitions, reviewers' rule files), target-identity separation, the packaging check and the target check, and the target's own spawn policy. |
 | [Reviewer Contract](reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, and the reviews of the target's side, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |

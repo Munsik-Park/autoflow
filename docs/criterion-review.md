@@ -256,24 +256,20 @@ those decisions left it, and the review record is the evidence they were made on
 
 ## Confirmation
 
-The confirmation — the `[criterion-ready]` entry — is the record of the decisions made under the
-policy the operator set (*Authority* above), written by the Coordinator once every decision is
-settled, as a decision-ledger entry in the attempt's ledger `<attempt-dir>/issue-{N}-ledger.md` —
-an `O<n>` entry under the authority `operator decision`, which the gate hook admits from the main
-session only ([`core.md`](core.md) > Records and the hook; grammar:
-[`decision-ledger.md`](decision-ledger.md) > Decision-point entries > *Criterion-readiness
-confirmations*):
+The confirmation — the `[criterion-ready]` entry — is the record of the review's decisions once every
+item is decided (*Authority* above), a decision-ledger entry in the attempt's ledger
+`<attempt-dir>/issue-{N}-ledger.md` (grammar: [`decision-ledger.md`](decision-ledger.md) >
+Decision-point entries > *Criterion-readiness confirmations*):
 
 ```markdown
-## O<n> — criteria settled [criterion-ready]
+## A<n> — criteria settled [criterion-ready]
 - Decision: the acceptance criteria of #N, as the issue body now states them, are settled
 - Record: <the review record's path in the attempt's record directory: criterion-reconcile-<n>/criterion-review.md>
 - Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
-- Grounds: the decisions recorded — the dispositions, the advisor answers (their A entries), any operator decision
-- Authority: operator decision
+- Grounds: the decisions recorded — the dispositions and the advisor's decisions (their entries)
 ```
 
-The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
+The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger).
 
 **The confirmation is bound to the attempt and to the body.** The entry that stands is the last
