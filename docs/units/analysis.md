@@ -53,7 +53,7 @@ The analysis is asked for four things, each conclusion with its grounds:
   reports a defect, the cause the gap comes from;
 - whether a change is owed and, if so, whether a code change is the lever that closes the gap, or
   data, configuration or operations are;
-- the decision points — the judgments the working AI is not the one to make.
+- the decision points — the judgments that settle what follows the analysis, each with its decision.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
 ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
@@ -99,7 +99,7 @@ The rules below are the ones other documents cite; everything else about the wor
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
   as the body the `[criterion-ready]` entry records states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
-  a fact is still raised as a decision point ([`decision-ledger.md`](../decision-ledger.md) >
+  a fact it puts to the advisor ([`decision-ledger.md`](../decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
   item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
   with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
@@ -126,16 +126,16 @@ The rules below are the ones other documents cite; everything else about the wor
   and its grounds ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design's `## Scope` section; the analysis does not decide it alone.
-- **Decision points.** A judgment the working AI is not the one to make is recorded under
-  `## Decision points` with its grounds, and what follows it is the Coordinator's: a planning,
-  design or ADR prerequisite clearly required before the issue can be implemented (when in doubt,
-  none); a request the as-is already satisfies; a gap or a cause whose lever is not code; on a
-  reviewer finding, one that repeats an earlier round's complaint with a different witness case
-  ([U7 Review](review.md) > *A repeated complaint*). A decision point the module is not confident
-  of states the question for the advisor ([`core.md`](../core.md) > Rule Scope, principle 3). A
-  suggested split of the issue stays a suggestion: it is filed only on the operator's request,
-  through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
-  ([`issue-proposal.md`](../issue-proposal.md)).
+- **Decision points.** The analysis decides each judgment that settles what follows it, and records
+  it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
+  required before the issue can be implemented (when in doubt, none); a request the as-is already
+  satisfies; on a reviewer finding, one that repeats an earlier round's complaint with a different
+  witness case ([U7 Review](review.md) > *A repeated complaint*). A gap or a cause whose lever is not
+  code, and — on a re-run that answers the hypothesis evaluation — a judgment that no report will meet
+  what the evaluation asks, it puts to the advisor, as any point it doubts, and records the advisor's
+  decision with its ledger entry ([`role-contracts.md`](../role-contracts.md) > Advisor). A suggested
+  split of the issue stays a suggestion in the report; an issue is filed through a draft and
+  `<autoflow-root>/scripts/issue/create-issue.sh` ([`issue-proposal.md`](../issue-proposal.md)).
 
 ## Analysis report
 
@@ -154,7 +154,7 @@ below is present; a section with nothing to record says `none`.
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Affected documents` | the documents the change is expected to update | the design and build modules |
-| `## Decision points` | each decision point with its grounds, or `none` | the Coordinator |
+| `## Decision points` | each decision point with its decision and grounds — for one put to the advisor, the advisor's decision and its ledger entry — or `none` | the design module |
 
 Anything else the module records is its own, written where it judges useful.
 
@@ -172,7 +172,7 @@ the reference values — is the Coordinator's.
 ## Spot-check & escalation discipline (incomplete-output guard)
 
 A spot-check is a read that confirms a finding of a module's output — the analysis report or any
-other — before it feeds a decision, a blocker, or a question to the operator. A Claude
+other — before it feeds a decision, a blocker, or a harness-level block. A Claude
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
@@ -181,9 +181,9 @@ Code behavior produces a **false "absent / stub" reading**:
   at runtime — these rules are the procedure it points to.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is
-  **reproduced with a fresh read before it feeds a routing decision or a
-  user escalation**. A single read is never sufficient grounds.
-- **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
+  **reproduced with a fresh read before it feeds a decision or a
+  harness-level block**. A single read is never sufficient grounds.
+- **[MUST]** A blocker-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool.
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not

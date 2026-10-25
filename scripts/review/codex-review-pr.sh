@@ -13,7 +13,7 @@
 # to the record file only: it posts no PR comment and changes no label — the
 # aggregation of every review of the PR posts the one comment.
 #
-# The orchestrator launches this wrapper once per pull request and round when
+# The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's
 # `~/.autoflow/config.json` — names codex or names no reviewer. Model, effort,
 # rule file and lenses file come from the shared resolver
@@ -24,8 +24,8 @@
 # When the user file cannot be read as configured, nothing in it applies: the
 # wrapper prints the fixed marker line `user-config: UNREADABLE <path> —
 # <error>`, starts no codex and exits 6. The marker line, not the exit code,
-# tells this result from a codex exit; the orchestrator asks the operator
-# whether to proceed without this reviewer.
+# tells this result from a codex exit; the review round goes on without this
+# reviewer (docs/units/review.md > Reviewer review).
 #
 # Per-PR review (Model A): every PR — the host PR AND each sub-repo PR — is
 # reviewed on its OWN diff, over its OWN repository's tree — a submodule's
@@ -117,7 +117,7 @@ trap 'rm -f "$SCRATCH"' EXIT
 resolve_reviewer_settings codex-review codex
 review_readout
 if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
-  echo "[codex-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — codex was not started. Fix the file and run again to apply it, or proceed without this reviewer — the operator's choice." >&2
+  echo "[codex-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — codex was not started. Fix the file and run again to apply it; the review round goes on without this reviewer." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 build_review_backend_args

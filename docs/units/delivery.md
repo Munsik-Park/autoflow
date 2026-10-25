@@ -176,10 +176,11 @@ the failing check's output (`gh run view <run-id> --log-failed`, or the check's 
 `<out>/ci-failure.md` with the failing check, the first failing assertion or error, where the fix
 that clears it is made — the implementation, a test asset, a document, or the design when clearing
 it would discard or change a decision the design settled — and the grounds for that judgment, and
-returns the path and a one-line summary. Where it cannot judge with confidence, or the failure output
-is unobtainable, it says so and states the question for the advisor, never a guess
-([`core.md`](../core.md) > Rule Scope, principle 3). The run ends with the record; which module runs
-next is the Coordinator's.
+returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
+to the advisor and records the advisor's decision with its ledger entry
+([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope,
+principle 3); a failure output it cannot obtain is a tool request ([`core.md`](../core.md) >
+Development Lifecycle > *Tools*). The run ends with the record.
 
 ## Multi-repo delivery
 

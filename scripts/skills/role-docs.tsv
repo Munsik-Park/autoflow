@@ -40,11 +40,13 @@ agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Whether 
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### A repeated complaint
 agents/autoflow-analyzer.md	docs/units/delivery.md	## CI > ### CI failure
 agents/autoflow-analyzer.md	docs/review/review.md	## Severity
+agents/autoflow-analyzer.md	docs/role-contracts.md	## Advisor
 
 agents/autoflow-criterion-tracer.md	docs/criterion-review.md	## Cause reach and rule conflict
 agents/autoflow-criterion-analyzer.md	docs/criterion-review.md	## In-depth analysis and reconciliation
 agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## In-depth analysis and reconciliation
 agents/autoflow-criterion-reconciler.md	docs/criterion-review.md	## Review record
+agents/autoflow-criterion-reconciler.md	docs/role-contracts.md	## Advisor
 
 agents/autoflow-evaluator.md	docs/evaluation-system.md
 agents/autoflow-evaluator.md	docs/units/analysis.md	## What the analysis owes
@@ -59,6 +61,7 @@ agents/autoflow-evaluator.md	docs/development-guideline.md	## 4. ADR Policy > ##
 agents/autoflow-unit-analysis.md	docs/units/analysis.md
 agents/autoflow-unit-analysis.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:HYPOTHESIS
 agents/autoflow-unit-analysis.md	docs/role-contracts.md	## Functional-unit agents
+agents/autoflow-unit-analysis.md	docs/role-contracts.md	## Advisor
 agents/autoflow-unit-analysis.md	docs/submodule-common-rules.md
 agents/autoflow-unit-analysis.md	docs/role-common-rules.md
 agents/autoflow-unit-analysis.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding
@@ -66,6 +69,7 @@ agents/autoflow-unit-analysis.md	docs/units/review.md	## Review triage > ### Whe
 agents/autoflow-unit-design.md	docs/units/design.md
 agents/autoflow-unit-design.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:PLAN
 agents/autoflow-unit-design.md	docs/role-contracts.md	## Functional-unit agents
+agents/autoflow-unit-design.md	docs/role-contracts.md	## Advisor
 agents/autoflow-unit-design.md	docs/submodule-common-rules.md
 agents/autoflow-unit-design.md	docs/role-common-rules.md
 agents/autoflow-unit-design.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding
@@ -76,6 +80,7 @@ agents/autoflow-unit-build.md	docs/units/build.md
 agents/autoflow-unit-build.md	docs/evaluation-system.md	## Gate rubrics > ### AUDIT
 agents/autoflow-unit-build.md	docs/role-contracts.md	## Functional-unit agents
 agents/autoflow-unit-build.md	docs/role-contracts.md	## Build unit in a target scope
+agents/autoflow-unit-build.md	docs/role-contracts.md	## Advisor
 agents/autoflow-unit-build.md	docs/submodule-common-rules.md
 agents/autoflow-unit-build.md	docs/role-common-rules.md
 agents/autoflow-unit-build.md	docs/units/review.md	## Review triage > ### Whether a finding holds	Handling a finding

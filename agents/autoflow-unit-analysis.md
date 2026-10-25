@@ -37,20 +37,22 @@ principle 2).
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores one form
   for every issue: whether your conclusion is supported by its grounds and
   whether the analysis met its goal (`<autoflow-root>/docs/units/analysis.md` >
-  *Evaluation — GATE:HYPOTHESIS*). What follows its scores is the Coordinator's.
+  *Evaluation — GATE:HYPOTHESIS*).
 
 The authority rules hold unchanged (ADR-0025 D3): you never score your own
-artifact, never edit the decision ledger, never push, merge or file an issue
-directly, and a run's evidence is its log. A judgment that is not yours to make is
-stated in your report as the question for the advisor
-(`<autoflow-root>/docs/role-contracts.md` > Advisor); a tool the work lacks is a tool
-request, and a call blocked at the harness level is reported. Return only your
+artifact, never push, merge or file an issue directly, and a run's evidence is its
+log. You decide what you can. A decision of the kinds the advisor makes — a lever
+or cause that is not code, a hypothesis PASS you judge unreachable, a criterion you
+find defective — and any point you doubt, you put to a fresh `autoflow-advisor` and
+follow, naming its ledger entry under `## Decision points`
+(`<autoflow-root>/docs/role-contracts.md` > Advisor). A tool the work lacks is a tool
+request, and a call blocked at the harness level is recorded in your report. Return only your
 artifact paths and a one-line summary
 (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format).
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/analysis.md`; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:HYPOTHESIS; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/submodule-common-rules.md`; `<autoflow-root>/docs/role-common-rules.md`; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds > *Handling a finding*.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/analysis.md`; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:HYPOTHESIS; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/submodule-common-rules.md`; `<autoflow-root>/docs/role-common-rules.md`; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds > *Handling a finding*.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -68,7 +70,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -130,7 +132,7 @@ The analysis is asked for four things, each conclusion with its grounds:
   reports a defect, the cause the gap comes from;
 - whether a change is owed and, if so, whether a code change is the lever that closes the gap, or
   data, configuration or operations are;
-- the decision points — the judgments the working AI is not the one to make.
+- the decision points — the judgments that settle what follows the analysis, each with its decision.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
 ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
@@ -176,7 +178,7 @@ The rules below are the ones other documents cite; everything else about the wor
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
   as the body the `[criterion-ready]` entry records states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
-  a fact is still raised as a decision point ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+  a fact it puts to the advisor ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
   item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
   with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
@@ -203,16 +205,16 @@ The rules below are the ones other documents cite; everything else about the wor
   and its grounds ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design's `## Scope` section; the analysis does not decide it alone.
-- **Decision points.** A judgment the working AI is not the one to make is recorded under
-  `## Decision points` with its grounds, and what follows it is the Coordinator's: a planning,
-  design or ADR prerequisite clearly required before the issue can be implemented (when in doubt,
-  none); a request the as-is already satisfies; a gap or a cause whose lever is not code; on a
-  reviewer finding, one that repeats an earlier round's complaint with a different witness case
-  ([U7 Review](<autoflow-root>/docs/units/review.md) > *A repeated complaint*). A decision point the module is not confident
-  of states the question for the advisor ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). A
-  suggested split of the issue stays a suggestion: it is filed only on the operator's request,
-  through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
-  ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)).
+- **Decision points.** The analysis decides each judgment that settles what follows it, and records
+  it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
+  required before the issue can be implemented (when in doubt, none); a request the as-is already
+  satisfies; on a reviewer finding, one that repeats an earlier round's complaint with a different
+  witness case ([U7 Review](<autoflow-root>/docs/units/review.md) > *A repeated complaint*). A gap or a cause whose lever is not
+  code, and — on a re-run that answers the hypothesis evaluation — a judgment that no report will meet
+  what the evaluation asks, it puts to the advisor, as any point it doubts, and records the advisor's
+  decision with its ledger entry ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). A suggested
+  split of the issue stays a suggestion in the report; an issue is filed through a draft and
+  `<autoflow-root>/scripts/issue/create-issue.sh` ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)).
 
 ## Analysis report
 
@@ -231,7 +233,7 @@ below is present; a section with nothing to record says `none`.
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Affected documents` | the documents the change is expected to update | the design and build modules |
-| `## Decision points` | each decision point with its grounds, or `none` | the Coordinator |
+| `## Decision points` | each decision point with its decision and grounds — for one put to the advisor, the advisor's decision and its ledger entry — or `none` | the design module |
 
 Anything else the module records is its own, written where it judges useful.
 
@@ -249,7 +251,7 @@ the reference values — is the Coordinator's.
 ## Spot-check & escalation discipline (incomplete-output guard)
 
 A spot-check is a read that confirms a finding of a module's output — the analysis report or any
-other — before it feeds a decision, a blocker, or a question to the operator. A Claude
+other — before it feeds a decision, a blocker, or a harness-level block. A Claude
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
@@ -258,9 +260,9 @@ Code behavior produces a **false "absent / stub" reading**:
   at runtime — these rules are the procedure it points to.
 
 - **[MUST]** A blocker / "absent" / "dependency missing" finding is
-  **reproduced with a fresh read before it feeds a routing decision or a
-  user escalation**. A single read is never sufficient grounds.
-- **[MUST]** A blocker/escalation-feeding spot-check reads via **shell**
+  **reproduced with a fresh read before it feeds a decision or a
+  harness-level block**. A single read is never sufficient grounds.
+- **[MUST]** A blocker-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool.
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
@@ -329,9 +331,9 @@ and criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
-- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never writes
-  the ledger, never pushes, merges or files an issue, and a decision point it meets is stated in its
-  output as the question for the advisor.
+- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
+  pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
+  it puts to the advisor and follows (*Advisor* above).
 - **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
   held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
   GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows
@@ -341,6 +343,101 @@ and criteria-apply is a script.
   ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Dividing the work*). A helper receives in its prompt
   the AutoFlow root and the text of the rules its work follows
   ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What crosses a boundary*).
+
+---
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Advisor -->
+
+## Advisor (decisions a module puts to it)
+
+ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
+meets the decision spawns it and follows its decision. This section is the procedure's single home;
+[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
+module* route to it, and the module documents cite it.
+
+### Decisions the advisor makes
+
+- **The working AI decides what it can**, and records each decision with its grounds in its output
+  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
+  analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
+- **The module puts to the advisor**, and follows the advisor's decision:
+  - a change to an acceptance criterion's content that the work after the criterion review shows
+    (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
+  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
+    meet what the hypothesis evaluation asks;
+  - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
+    of a build meet differently;
+  - a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal the
+    re-score or the reviewer keeps while the two sides still disagree;
+  - an item the criterion review could not decide with confidence
+    ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
+  - every change to the target's security checklist (`[checklist-decision]`;
+    [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+- **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
+  denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
+  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  tool, credential, installation or material the environment does not provide — for a tool it has,
+  what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
+  request: the run does what it can without it and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development
+  Lifecycle > *Tools*).
+
+### Procedure
+
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
+   domain terms, the decision with each option and what it changes, the module's reading — the
+   option it leans to, its grounds, and the point where those grounds stop settling it — and the
+   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
+   from that reading rather than gathering the material anew.
+2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
+   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
+   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue. Where two or more decisions are open and
+   none depends on another's answer, their advisors may be spawned together, and a decision that
+   depends on another's answer is spawned after that answer is recorded; whether to spawn them
+   together or one after another is the module's judgment, within the concurrent-spawn limit
+   (`<autoflow-root>/docs/core.md` > Cost Control).
+3. **Decide and record.** The advisor weighs the material itself, writes its answer to
+   `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
+   entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
+   fields the decision's kind requires ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)). Its identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the append; the
+   call reserves the identifier, so advisors spawned together receive distinct ones
+   ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
+   the file on disk and checks (*Independence* below), so the prior content is never re-written. It
+   returns the identifier and the answer in one line.
+4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
+   follows the decision in its work, and names the entry by its identifier in its output. An advisor
+   that reports the decision blocked at the harness level turns it into a harness-level block.
+
+### Independence
+
+The advisor is never the author of what it judges: it is a fresh spawn per decision, not the agent
+or session whose work raised the point, and its record carries its own grounds. The record stays as
+written:
+
+- **Append-only — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): a `Write` / `Edit` / `MultiEdit` to an `issue-*-ledger.md` is applied to the
+  file on disk and must keep the whole prior content as its prefix, so no entry is rewritten or
+  removed. A decision changes only by a new entry that names the one it replaces
+  (`<autoflow-root>/docs/decision-ledger.md` > *Replacement is explicit*).
+- **The record convention**: a consumer lets an entry replace another only by an explicit
+  `- Supersedes:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
+  `<autoflow-root>/scripts/contracts/criteria-apply.sh`, which locates an entry by its `[ac-decision]`
+  marker).
+
+The threat the hook answers is an agent overstepping in routine work — rewriting a ledger it meant to
+append to — not a determined evasion (the same model as `<autoflow-root>/docs/issue-proposal.md`).
+Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
+that only imitates an entry (a heading-less field line, a malformed heading).
+
+### Claude Code's advisor tool (`advisorModel`)
+
+Distinct from the advisor sub-agent above: Claude Code's advisor tool
+(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
+mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
+is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
 
 ---
 
@@ -416,8 +513,8 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
 - **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
-- **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here and raised in the report with the criterion, the proposed change and the fact that shows it, and the Coordinator decides it, putting it to the advisor where those grounds do not settle it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
-- A role that is not confident, or whose inclusion would change a design decision, raises the question instead of deciding it (principle 3).
+- **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
+- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
 - **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule

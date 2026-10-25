@@ -18,7 +18,7 @@
 # and changes no label — the aggregation of every review of the PR posts the
 # one comment.
 #
-# The orchestrator launches this wrapper once per pull request and round when
+# The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's
 # `~/.autoflow/config.json` — names claude or names no reviewer. Model, effort,
 # rule file and lenses file come from the shared resolver
@@ -100,7 +100,7 @@ trap 'rm -f "$SCRATCH"' EXIT
 resolve_reviewer_settings claude-review claude
 review_readout
 if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
-  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it, or proceed without this reviewer — the operator's choice." >&2
+  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it; the review round goes on without this reviewer." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 build_review_backend_args

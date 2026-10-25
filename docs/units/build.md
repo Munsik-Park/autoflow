@@ -102,11 +102,11 @@ These are the rules other documents cite; everything else about the work is the 
   subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
   measurement that reproduces the conflict, and `path:line` anchors at the run's commit. The design
   module takes it as an input on its re-run.
-- **Acceptance-criterion change.** Work that shows a criterion defective ([`decision-ledger.md`](../decision-ledger.md)
-  > *Acceptance-criterion decisions*) is raised in the report with the criterion, the proposed change
-  and the fact that shows the need — never worked around by keeping the criterion's letter
-  ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
-  cycle*).
+- **Acceptance-criterion change.** A criterion the work shows defective ([`decision-ledger.md`](../decision-ledger.md)
+  > *Acceptance-criterion decisions*) the module puts to the advisor with the proposed change and the
+  fact that shows the need, and it follows the decision — never working around the defect by keeping
+  the criterion's letter ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change
+  shown later*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
@@ -158,7 +158,7 @@ worth and where it loses.
   Bash Execution Mode — since a `general-purpose` helper has no AutoFlow definition of its own
   (`<autoflow-root>/docs/core.md` > Context Injection). Requirements of two areas that
   cannot both hold take the design-contradiction path above; a design point two areas meet
-  differently is a decision point.
+  differently the unit puts to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor).
 - **A deterministic run is a command, not a context.** Running tests, lint and builds, and
   committing, take no judgment; what they cost is their output carried in the context that reads
   it. A run goes through a command that bounds its time, keeps the full output in a log under
@@ -199,6 +199,7 @@ it up to date rather than rewriting it (*Re-entry* below). Every section below i
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
 | `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
+| `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
 | `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
 Anything else the module records — how it divided the work, the checks it chose to run and what

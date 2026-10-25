@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment filled by spawning — by the session that runs a module, or, for the advisor, by the Coordinator — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment filled by spawning — by a module, through the session or the unit agent that runs it — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
 
 ### Spawn mode by role lifetime
 
@@ -17,7 +17,7 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) and CI-failure reader ([`units/delivery.md`](units/delivery.md) > *CI failure*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, or reads the failing check's output and records where its fix is made with its grounds, and returns |
 | Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
-| Advisor (a decision point in any module's work — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`) | single-shot — answers one decision from its request file, writes its answer record and its ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
+| Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides one decision from its request file, writes its answer record and its ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
 | Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
 The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and review modules are run by their session, which spawns the CI-failure reader and the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
@@ -93,59 +93,57 @@ sub-repo's branch, which the delivery module pushes and opens its pull request f
 
 ---
 
-## Advisor (first judgment at a decision point)
+## Advisor (decisions a module puts to it)
 
-ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
-This section is the procedure's single home; [`core.md`](core.md) > Development Lifecycle >
-*A decision that is not the module's own* routes to it and the module documents cite it.
+ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
+meets the decision spawns it and follows its decision. This section is the procedure's single home;
+[`core.md`](core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
+module* route to it, and the module documents cite it.
 
-### Decision points and harness-level blocks
+### Decisions the advisor makes
 
-- **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
-  confident of ([`core.md`](core.md) > Rule Scope, principle 3). An acceptance-criterion
-  change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
-  analysis records, a finding that repeats an earlier complaint, and a hypothesis evaluation whose
-  PASS looks unreachable are where such a decision arises, not decision points by their kind: the
-  Coordinator judges each first, and where the grounds the raising report, finding or evaluation
-  carries settle it, it decides and records the decision with those grounds in an `O` ledger entry
-  under `orchestrator decision` — for an acceptance-criterion change, its `[ac-decision]` entries
-  ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*). An un-agreed
-  design point, a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal
-  the re-score or the reviewer keeps while the two sides still disagree are already decisions the
-  working AI could not settle; the module states each in its output as the question for the
-  advisor. A security-checklist change (`[checklist-decision]`) is the one decision point by its
-  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator
-  entry ([`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*). In the
-  criterion review, an item the review could not decide with confidence is one as well, its
-  question stated in the item's `## Dispositions` row ([`criterion-review.md`](criterion-review.md) >
-  *Authority*). Each decision point is answered by the advisor first.
+- **The working AI decides what it can**, and records each decision with its grounds in its output
+  ([`core.md`](core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
+  analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
+- **The module puts to the advisor**, and follows the advisor's decision:
+  - a change to an acceptance criterion's content that the work after the criterion review shows
+    (`[ac-decision]`; [`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*);
+  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
+    meet what the hypothesis evaluation asks;
+  - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
+    of a build meet differently;
+  - a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal the
+    re-score or the reviewer keeps while the two sides still disagree;
+  - an item the criterion review could not decide with confidence
+    ([`criterion-review.md`](criterion-review.md) > *Authority*);
+  - every change to the target's security checklist (`[checklist-decision]`;
+    [`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*);
+  - any other point the module doubts ([`core.md`](core.md) > Rule Scope, principle 3).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial). It is reported to the operator situation-first ([`core.md`](core.md) > Execution
-  Principles > Human-decision presentation). A tool, credential, installation or material the
-  environment does not provide — for a tool it has, what using it lacks (access, a purpose and
-  permitted scope, a permission setting) — is a tool request: the run does what it can without it
-  and ends ([`core.md`](core.md) > Development Lifecycle > *Tools*). What follows a decision that
-  can end the work — a non-code lever or cause, a prerequisite that comes first, a hypothesis PASS
-  not reachable, the last closing the issue only on the operator's confirmation — is the
-  Coordinator's. The reference values and the caps are not decision points
-  ([`core.md`](core.md) > Rule Scope, principle 1).
+  denial). The run records it in its output situation-first ([`core.md`](core.md) > Execution
+  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  tool, credential, installation or material the environment does not provide — for a tool it has,
+  what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
+  request: the run does what it can without it and ends ([`core.md`](core.md) > Development
+  Lifecycle > *Tools*).
 
 ### Procedure
 
-1. **Request.** The Coordinator writes `<attempt-dir>/issue-{N}-advisor-request-<k>.md`
-   situation-first: the situation in domain terms, the decision asked with each option and what it
-   changes, the reading of the module that raised it — the option it leans to, its grounds, and the
-   point where those grounds stop settling it — and the anchors (the output paths, the report or
-   finding the decision surfaced in). The advisor starts from that reading rather than gathering the
-   material anew.
-2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
+   domain terms, the decision with each option and what it changes, the module's reading — the
+   option it leans to, its grounds, and the point where those grounds stop settling it — and the
+   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
+   from that reading rather than gathering the material anew.
+2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
    `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
-   `effort:` line). The prompt names the request file, the ledger and the issue. Where two or more
-   decisions are open and none depends on another's answer, their advisors may be spawned together,
-   and a decision that depends on another's answer is spawned after that answer is recorded; whether
-   to spawn them together or one after another is the Coordinator's judgment, within the
-   concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
-3. **Answer and record.** The advisor weighs the material itself, writes its answer to
+   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue. Where two or more decisions are open and
+   none depends on another's answer, their advisors may be spawned together, and a decision that
+   depends on another's answer is spawned after that answer is recorded; whether to spawn them
+   together or one after another is the module's judgment, within the concurrent-spawn limit
+   (`<autoflow-root>/docs/core.md` > Cost Control).
+3. **Decide and record.** The advisor weighs the material itself, writes its answer to
    `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
    fields the decision's kind requires ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
@@ -154,10 +152,9 @@ This section is the procedure's single home; [`core.md`](core.md) > Development 
    ([`decision-ledger.md`](decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
    returns the identifier and the answer in one line.
-4. **Apply.** The Coordinator verifies the anchor — the ledger heading and the record file exist —
-   and applies the answer; which module runs next on it is its own
-   ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2). An advisor that
-   reports the decision blocked at the harness level turns it into a harness-level block.
+4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
+   follows the decision in its work, and names the entry by its identifier in its output. An advisor
+   that reports the decision blocked at the harness level turns it into a harness-level block.
 
 ### Independence
 
@@ -184,9 +181,8 @@ that only imitates an entry (a heading-less field line, a malformed heading).
 
 Distinct from the advisor sub-agent above: Claude Code's advisor tool
 (<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow neither enables it nor directs its use. It cannot carry a
-decision point: its model is configurable and its effort is not, and Claude decides when to call it,
-which is why the first judgment is the sub-agent's (ADR-0025 D7).
+mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
+is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
 
 ---
 
@@ -210,9 +206,9 @@ and criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](core.md) > Context Injection).
-- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never writes
-  the ledger, never pushes, merges or files an issue, and a decision point it meets is stated in its
-  output as the question for the advisor.
+- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
+  pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
+  it puts to the advisor and follows (*Advisor* above).
 - **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
   held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
   GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows

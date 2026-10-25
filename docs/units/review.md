@@ -67,11 +67,9 @@ aggregation*). Whether to wait for one that has not yet arrived is the module's 
 **An unreadable operator file.** When the operator's `~/.autoflow/config.json` cannot be read as
 configured, `check-review-backend.sh` exits `6` and each wrapper starts no reviewer and exits `6`;
 each prints the marker line `user-config: UNREADABLE <path> — <error>`, which
-`review-start-check.sh` reports as exit `4`. The session asks the operator, situation-first,
-with the path and the error, whether to proceed without those reviewers. Proceeding runs the round
-on the reviews of the target's side alone, and the aggregation names the missing reviewers with
-that reason. Stopping pauses the round until the operator has fixed the file; the step then runs
-again and reads it anew.
+`review-start-check.sh` reports as exit `4`. The round goes on without those reviewers, on the
+reviews of the target's side: the aggregation names the missing reviewers with that reason, and the
+run records the unreadable file — its path and the error — as a tool request.
 
 Each review lands in a **review record**, `<out>/reviews/<reviewer>.md` — `<reviewer>` the
 reviewer's name (`claude`, `codex`).
@@ -85,15 +83,14 @@ wrapper's completion marker:
 | `0` | started, or already completed with exit 0 | the session ends its turn and waits for the run's completion notification ([`core.md`](../core.md) > Execution Principles > *Wait discipline*) |
 | `1` | no signal within the window (30 s) | the review is launched again, or the reviewer is named unavailable for the round with the reason — the module's judgment |
 | `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | the same |
-| `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the operator is asked (*An unreadable operator file* above); no relaunch |
+| `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the round goes on without those reviewers (*An unreadable operator file* above); no relaunch |
 
 A reviewer that is unavailable for a round — its CLI absent (`check-review-backend.sh` reports it),
-its run failing, or the operator's choice to proceed past an unreadable operator file — does not
-hold the round: the aggregation runs on the reviews that exist, and its comment names the reviewer
-that is missing and why. A round in which no configured reviewer left a record, other than by that
-choice of the operator's, does not go on: it is a review-infrastructure failure, a harness-level
-block the run states in its result for the operator, situation-first ([`core.md`](../core.md) >
-Execution Principles > *Human-decision presentation*).
+its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
+on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
+no review at all — no configured reviewer left a record, and the target's side left none — is a
+review-infrastructure failure, a harness-level block the run records in its result, situation-first
+([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
 
 Cautions:
 
@@ -140,7 +137,7 @@ It returns `{max_severity, findings}`.
 
 Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the question goes to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope, principle 3); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope, principle 3); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -159,9 +156,9 @@ and comments, and the earlier evaluations in the record directory, are what it c
 says so where it writes the finding: in the finding's cell of the findings file, under the analysis
 report's `## Decision points`, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property
-a known gap — is the Coordinator's, the advisor's where the grounds do not settle it
-([`role-contracts.md`](../role-contracts.md) > Advisor); a redefined criterion is recorded as
-`[ac-decision]` entries. A complaint already decided is not decided again without a new verified
+a known gap — the module acting on the finding decides; a change to the criterion, and a choice it
+doubts, it puts to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), and a
+redefined criterion is recorded as `[ac-decision]` entries. A complaint already decided is not decided again without a new verified
 fact ([`core.md`](../core.md) > Decision Ledger). The same finding with the same witness — a fix
 that did not take — is not this case.
 

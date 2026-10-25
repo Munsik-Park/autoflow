@@ -26,7 +26,7 @@
 ## Development Lifecycle	**AutoFlow is a set of modules, run by the Coordinator.**	all
 ## Development Lifecycle	**A module runs once, on its invocation.**	all
 ## Development Lifecycle	**A module's procedure states the goal of its work.**	all
-## Development Lifecycle	**A decision that is not the module's own.**	all
+## Development Lifecycle	**Decisions within a module.**	all
 ## Development Lifecycle	**Tools.**	all
 ## Development Lifecycle	**Scripts**	all
 ## Development Lifecycle	**Push and PR creation**	U6 U7

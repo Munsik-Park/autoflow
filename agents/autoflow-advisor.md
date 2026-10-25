@@ -67,7 +67,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -86,63 +86,61 @@ A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md` in the rec
 
 <!-- From <autoflow-root>/docs/core.md > Execution Principles > Human-decision presentation -->
 
-- **[MUST] Human-decision presentation**: when a run asks the human for a decision or answer — `AskUserQuestion`, or a report that names a harness-level block such as a tool or referenced-material request — and in every advisor request and advisor answer record (`<autoflow-root>/docs/role-contracts.md` > Advisor), the presentation is **situation-first**, in this order: ① the situation in domain / behavior terms — what is wrong or being decided, and for whom (e.g. "auth state is not retained across pages from the user's entry point", **not** "module A's anchor-format constraint at the A↔B↔C consistency boundary"); ② the decision being asked, plus each option and what it changes; ③ anchors demoted to supporting evidence for drill-down, never the lead — a commit SHA with `path:line` for a fact of this tree, or the document, section heading and quoted sentence for a provision of a long-lived document. This register is distinct from the machine **Reporting Format** (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format), which is anchor-first. The body the human is pointed to is written in this same situation-first order — *Context discipline*'s "anchor + one-line summary" governs what a spawn **returns**, not how a human decision is **framed**.
+- **[MUST] Human-decision presentation**: in every advisor request and advisor answer record (`<autoflow-root>/docs/role-contracts.md` > Advisor), and in a run's record of a harness-level block or a tool or referenced-material request, the presentation is **situation-first**, in this order: ① the situation in domain / behavior terms — what is wrong or being decided, and for whom (e.g. "auth state is not retained across pages from the user's entry point", **not** "module A's anchor-format constraint at the A↔B↔C consistency boundary"); ② the decision, plus each option and what it changes; ③ anchors demoted to supporting evidence for drill-down, never the lead — a commit SHA with `path:line` for a fact of this tree, or the document, section heading and quoted sentence for a provision of a long-lived document. This register is distinct from the machine **Reporting Format** (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format), which is anchor-first. The body a person reads is written in this same situation-first order — *Context discipline*'s "anchor + one-line summary" governs what a spawn **returns**, not how a decision is **framed**.
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Advisor -->
 
-## Advisor (first judgment at a decision point)
+## Advisor (decisions a module puts to it)
 
-ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
-This section is the procedure's single home; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
-*A decision that is not the module's own* routes to it and the module documents cite it.
+ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
+meets the decision spawns it and follows its decision. This section is the procedure's single home;
+[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
+module* route to it, and the module documents cite it.
 
-### Decision points and harness-level blocks
+### Decisions the advisor makes
 
-- **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
-  confident of ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). An acceptance-criterion
-  change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
-  analysis records, a finding that repeats an earlier complaint, and a hypothesis evaluation whose
-  PASS looks unreachable are where such a decision arises, not decision points by their kind: the
-  Coordinator judges each first, and where the grounds the raising report, finding or evaluation
-  carries settle it, it decides and records the decision with those grounds in an `O` ledger entry
-  under `orchestrator decision` — for an acceptance-criterion change, its `[ac-decision]` entries
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). An un-agreed
-  design point, a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal
-  the re-score or the reviewer keeps while the two sides still disagree are already decisions the
-  working AI could not settle; the module states each in its output as the question for the
-  advisor. A security-checklist change (`[checklist-decision]`) is the one decision point by its
-  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator
-  entry ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*). In the
-  criterion review, an item the review could not decide with confidence is one as well, its
-  question stated in the item's `## Dispositions` row ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) >
-  *Authority*). Each decision point is answered by the advisor first.
+- **The working AI decides what it can**, and records each decision with its grounds in its output
+  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
+  analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
+- **The module puts to the advisor**, and follows the advisor's decision:
+  - a change to an acceptance criterion's content that the work after the criterion review shows
+    (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
+  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
+    meet what the hypothesis evaluation asks;
+  - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
+    of a build meet differently;
+  - a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal the
+    re-score or the reviewer keeps while the two sides still disagree;
+  - an item the criterion review could not decide with confidence
+    ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
+  - every change to the target's security checklist (`[checklist-decision]`;
+    [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial). It is reported to the operator situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
-  Principles > Human-decision presentation). A tool, credential, installation or material the
-  environment does not provide — for a tool it has, what using it lacks (access, a purpose and
-  permitted scope, a permission setting) — is a tool request: the run does what it can without it
-  and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). What follows a decision that
-  can end the work — a non-code lever or cause, a prerequisite that comes first, a hypothesis PASS
-  not reachable, the last closing the issue only on the operator's confirmation — is the
-  Coordinator's. The reference values and the caps are not decision points
-  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1).
+  denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
+  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  tool, credential, installation or material the environment does not provide — for a tool it has,
+  what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
+  request: the run does what it can without it and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development
+  Lifecycle > *Tools*).
 
 ### Procedure
 
-1. **Request.** The Coordinator writes `<attempt-dir>/issue-{N}-advisor-request-<k>.md`
-   situation-first: the situation in domain terms, the decision asked with each option and what it
-   changes, the reading of the module that raised it — the option it leans to, its grounds, and the
-   point where those grounds stop settling it — and the anchors (the output paths, the report or
-   finding the decision surfaced in). The advisor starts from that reading rather than gathering the
-   material anew.
-2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
+   domain terms, the decision with each option and what it changes, the module's reading — the
+   option it leans to, its grounds, and the point where those grounds stop settling it — and the
+   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
+   from that reading rather than gathering the material anew.
+2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
    `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
-   `effort:` line). The prompt names the request file, the ledger and the issue. Where two or more
-   decisions are open and none depends on another's answer, their advisors may be spawned together,
-   and a decision that depends on another's answer is spawned after that answer is recorded; whether
-   to spawn them together or one after another is the Coordinator's judgment, within the
-   concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
-3. **Answer and record.** The advisor weighs the material itself, writes its answer to
+   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue. Where two or more decisions are open and
+   none depends on another's answer, their advisors may be spawned together, and a decision that
+   depends on another's answer is spawned after that answer is recorded; whether to spawn them
+   together or one after another is the module's judgment, within the concurrent-spawn limit
+   (`<autoflow-root>/docs/core.md` > Cost Control).
+3. **Decide and record.** The advisor weighs the material itself, writes its answer to
    `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
    entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
    fields the decision's kind requires ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)). Its identifier comes from
@@ -151,10 +149,9 @@ This section is the procedure's single home; [`core.md`](<autoflow-root>/docs/co
    ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
    returns the identifier and the answer in one line.
-4. **Apply.** The Coordinator verifies the anchor — the ledger heading and the record file exist —
-   and applies the answer; which module runs next on it is its own
-   ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D2). An advisor that
-   reports the decision blocked at the harness level turns it into a harness-level block.
+4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
+   follows the decision in its work, and names the entry by its identifier in its output. An advisor
+   that reports the decision blocked at the harness level turns it into a harness-level block.
 
 ### Independence
 
@@ -181,9 +178,8 @@ that only imitates an entry (a heading-less field line, a malformed heading).
 
 Distinct from the advisor sub-agent above: Claude Code's advisor tool
 (<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow neither enables it nor directs its use. It cannot carry a
-decision point: its model is configurable and its effort is not, and Claude decides when to call it,
-which is why the first judgment is the sub-agent's (ADR-0025 D7).
+mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
+is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
 
 ---
 

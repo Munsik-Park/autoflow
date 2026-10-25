@@ -59,7 +59,7 @@
 # resolved, and the consumer prints the fixed marker line
 # `user-config: UNREADABLE <path> — <error>` and exits
 # REVIEW_USER_UNREADABLE_EXIT (6) without launching a reviewer; the
-# orchestrator asks the operator whether to proceed without those reviewers.
+# review round goes on without those reviewers (docs/units/review.md).
 #
 # Effort vocabularies (edit here — nowhere else — when a CLI's set evolves):
 #   claude : the values `claude --effort` accepts (Claude Code 2.1.304) —

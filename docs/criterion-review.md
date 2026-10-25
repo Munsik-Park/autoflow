@@ -6,11 +6,9 @@ record directory — begins with its own criterion review and stays independent 
 attempt from that review to its pull request. The review is four modules — criterion-screen,
 criterion-trace, criterion-in-depth and criterion-reconcile, each with its contract
 (`<autoflow-root>/docs/contracts/criterion-*.json`), this document the procedure of all four — and
-it disposes of every item it finds, with its grounds. What follows the four — the advisor's answer
-to an item the review could not decide with confidence, the `[ac-decision]` entries, the edit of the
-issue body to the dispositions and the `[criterion-ready]` entry that records them — is the
-Coordinator's ([`ADR-0038`](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2, D8;
-*Authority* below). This is the Definition of Ready of backlog refinement: a criterion that presumes
+it disposes of every item it finds, with its grounds. The dispositions that change a criterion are
+recorded as `[ac-decision]` entries, and the review's decisions as its `[criterion-ready]` entry
+(*Authority* below). This is the Definition of Ready of backlog refinement: a criterion that presumes
 a fact that does not hold, that conflicts with a policy already in force, or that leaves a term
 undefined is found while it is still cheap to change — before a re-run, a re-score and an advisor
 spawn each find it one at a time in the later work.
@@ -48,11 +46,10 @@ The review makes that premise hold more often; it does not change it.
   take theirs from `.claude/autoflow/spawn-policy.json` like every other spawn
   ([`core.md`](core.md) > Spawn Model), the effort the one each agent definition carries. The
   record's `## Inputs` names the model and effort each module ran on.
-- **What a review module never does.** It never edits the issue body or a criterion, never writes
-  the ledger, and never asks the operator to confirm, approve or re-check a disposition or waits on
-  the operator for one (*Authority* below).
-- **Result owed**: the record's path and a one-line summary naming each item the module could not
-  decide with confidence.
+- **What a review module writes.** Its record, and criterion-screen its target files; a decision a
+  module puts to the advisor is the advisor's ledger entry (*Authority* below).
+- **Result owed**: the record's path and a one-line summary naming each decision the module put to
+  the advisor, by its ledger identifier.
 
 ## Inputs
 
@@ -118,9 +115,9 @@ where it shows rather than on the code that decides it (issue #442). Stage 2 the
 from the session that wrote stage 1, so the places that session looked do not bound where stage 2
 looks; it is handed the record as its starting point, and asks a question the record did not. The
 in-depth analysis receives the cases and their code locations but no earlier verdict or grounds.
-Each module's inputs are what keeps it independent; when each runs is the Coordinator's — stage 2
-and a criterion's in-depth analysis can run once the screen's record is written, alongside each
-other, and the reconciliation needs both.
+Each module's inputs are what keeps it independent: stage 2 takes the screen's record, a
+criterion's in-depth analysis its target file, and the reconciliation the record, the trace and
+every in-depth file.
 
 ## Review items (stage 1)
 
@@ -192,7 +189,8 @@ condition, and the grounds — and returns that path and a one-line summary.
 again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
 2 finding or an in-depth verdict differs from the record, it confirms in the code which one holds and
 settles it. A criterion that does not hold in a case it applies to is a finding for that case,
-recorded with the rule or condition that prevents it — never summarized as holding conditionally. It
+recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
+item it cannot decide with confidence it puts to the advisor (*Authority* below). It
 updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
 `## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
 `<out>/criterion-review.md`, and returns its path and a one-line summary.
@@ -222,37 +220,30 @@ line of its own, and every section below; a section with nothing to record says 
 | `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
 | `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
 | `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module could not decide with confidence says so in its row and states the question for the advisor — the behavior it concerns, why the code and policy do not settle it, and each option with what it changes in the criteria. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
+| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and its row names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
 
-The record is situation-first where the operator reads it — to follow what was decided and to
-override any of it ([`core.md`](core.md) > Execution Principles > *Human-decision presentation*):
-what each finding means for the issue's behavior comes before its anchors.
+The record is situation-first where a person reads it — to follow what was decided and why
+([`core.md`](core.md) > Execution Principles > *Human-decision presentation*): what each finding means
+for the issue's behavior comes before its anchors.
 
 ## Authority
 
-The review follows the same authority over acceptance-criterion content as the rest of the work,
-under the policy the operator set for it: the review disposes of every item, the advisor decides an
-item the review could not decide with confidence, and the operator overrides when they choose
-([`core.md`](core.md) > Rule Scope, principles 1 and 3). An item the code or a policy settles, or one
-the review can reasonably choose, the review decides and records with its grounds; there is no
-second list of questions besides the dispositions.
+The review decides the disposition of every item it finds: an item the code or a policy settles, or
+one the review can reasonably choose, it decides and records with its grounds, and the dispositions
+are the only list it writes. An item a module of the review cannot decide with confidence — in the
+record it writes, criterion-screen's or criterion-reconcile's — the module puts to a fresh advisor and
+decides as the advisor decided ([`role-contracts.md`](role-contracts.md) > Advisor;
+[`core.md`](core.md) > Rule Scope, principle 3); the row names the advisor's ledger entry, and an
+advisor decision on a criterion's content is an `[ac-decision]` entry
+([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
-The Coordinator puts each item the review could not decide to a fresh advisor, by the advisor's
-procedure ([`role-contracts.md`](role-contracts.md) > Advisor); the answer is an `A` entry, an answer
-that decides a criterion's content an `[ac-decision]` entry
-([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*), and it is applied as
-recorded without waiting on the operator's review. An operator override of an advisor answer or of a
-disposition is recorded as any override is ([`decision-ledger.md`](decision-ledger.md) > *Advisor
-decisions and operator overrides*).
-
-Once every item is decided — each disposition, each advisor answer and each operator decision
-given — the Coordinator records each disposition that changes a criterion as its `[ac-decision]`
-entry, edits the issue body to match, and records the `[criterion-ready]` entry (*Confirmation*
-below), without waiting on an operator response or confirmation. The operator is asked only for a
-harness-level block ([`role-contracts.md`](role-contracts.md) > Advisor > *Decision points and
-harness-level blocks*). The criteria the later work starts from are therefore the issue body as
-those decisions left it, and the review record is the evidence they were made on.
+The dispositions that change a criterion are recorded as `[ac-decision]` entries, one per criterion,
+and once every item is decided the `[criterion-ready]` entry records the decisions (*Confirmation*
+below). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
+analysis report restates them, with the `[ac-decision]` entries applied
+([`core.md`](core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
+were made on.
 
 ## Confirmation
 
@@ -275,16 +266,15 @@ immediately before the append ([`core.md`](core.md) > Decision Ledger).
 **The confirmation is bound to the attempt and to the body.** The entry that stands is the last
 `[criterion-ready]` entry in the attempt's own ledger — never another attempt's —, and it confirms
 the body its `- Issue body sha256:` names. A body edited after the entry is not the one it confirms
-until its review runs again and a new entry records the edited body. Whether the review runs again, and over what (in whole, the changed
-criteria only, or not at all), when the body an entry records differs from the one the record read,
-is the Coordinator's judgment, recorded with its grounds in the new entry's grounds.
+until its review runs again and a new entry records the edited body.
 
 ## What reads it
 
 - **The analysis module** — the review record is one of its inputs
   ([U2 Analysis](units/analysis.md) > *Criterion review record*), and the `[criterion-ready]` entry
   for the current body another.
-- **The Coordinator** — the dispositions, as the decisions it records and the issue edit it makes.
+- **criteria-apply** — the `[ac-decision]` entries the dispositions that change a criterion are
+  recorded as ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
 ## Issues filed before this procedure
 

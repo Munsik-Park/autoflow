@@ -107,12 +107,11 @@ run, so every consumer reaches the same verdict on the same file. When it
 cannot be read, nothing in it applies and no reviewer runs: the readout names
 it (`source: user <path>`), and every consumer prints the fixed marker line
 `user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
-from exit `2` and from every exit below; no wrapper starts its reviewer. Whether
-to proceed without those reviewers is put to the operator by the Coordinator
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4,
-[`units/review.md`](units/review.md) > *Reviewer review*): proceeding runs the
-round on the reviews of the target's side alone; stopping leaves the operator
-to fix the file and run the review again, which reads it anew.
+from exit `2` and from every exit below; no wrapper starts its reviewer. The
+review module goes on without those reviewers, on the reviews of the target's
+side, and records the unreadable file as a tool request
+([`units/review.md`](units/review.md) > *Reviewer review*); a fixed file is read
+anew by the next run.
 
 ### Operator file
 

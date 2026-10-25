@@ -31,8 +31,8 @@
 #   exit 6   → the user file cannot be read as configured: nothing in it
 #              applies, no reviewer is checked, and the fixed marker line
 #              `user-config: UNREADABLE <path> — <error>` is on stdout. The
-#              session that runs it asks the operator whether to proceed
-#              without those reviewers. Distinct from 0–4 in both modes.
+#              review module goes on without those reviewers and records the
+#              file as a tool request. Distinct from 0–4 in both modes.
 #
 # The default invocation (no `--probe`) is presence-only: a side-effect-free
 # command whose exit encodes a reviewer's auth state does not exist, so auth is
@@ -86,7 +86,7 @@ resolve_review_config check-review-backend
 echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 review_readout
 if [ "$REVIEW_USER_STATE" = unreadable ]; then
-  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it, or proceed without those reviewers — the operator's choice." >&2
+  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it; a review round goes on without those reviewers." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 

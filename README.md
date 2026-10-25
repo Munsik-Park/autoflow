@@ -86,8 +86,8 @@ Then, in your project:
   the default reviewers, `claude` and `codex`, review every pull request the
   review module is given; list the reviewers there to choose them, and each one's model, effort,
   rule file and lenses file ([`docs/reviewer-backend.md`](docs/reviewer-backend.md) >
-  *Config location*). A broken file is reported, and whether to go on without
-  those reviewers is put to you.
+  *Config location*). A broken file is reported, and the review goes on
+  without those reviewers.
 - **Declare what your project needs** in `.claude/autoflow.local.json` — the
   file is yours, and absent means none of the following
   ([`.claude/autoflow.local.json.example`](.claude/autoflow.local.json.example)):
@@ -202,8 +202,8 @@ backgrounded suite run ([`docs/core.md`](docs/core.md) > Records and the hook).
 AutoFlow does not classify a project's repository structure. The AI reads the
 project's own information and rule files where they exist — a `README.md`, a
 `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
-(see `docs/core.md` > Project Information), and asks the operator for a fact no
-file states. A project with sub-repos delivers each changed sub-repo on its own
+(see `docs/core.md` > Project Information), and records a fact no file states,
+and the repository does not show, as a tool request. A project with sub-repos delivers each changed sub-repo on its own
 PR, and the host PR's pointer names the commit it delivers
 (`docs/units/delivery.md` > *Multi-repo delivery*); what follows a merge is
 outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).

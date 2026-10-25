@@ -44,7 +44,7 @@
         }
       ],
       "evaluation": [
-        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence says so and states the question for the advisor (Q18) — the one way out, not a second list.",
+        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
         "the record names each criterion that has no in-depth target"
       ]
     },

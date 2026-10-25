@@ -38,9 +38,8 @@ are findings the evaluator recorded, each with its subject, the item it was foun
 and the finding ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format). They
 are disposed of as a reviewer's findings are: whether each holds is weighed first
 ([U7 Review](review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
-grounds. Which module runs next on a disposition is the Coordinator's
-([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D2); where a fix is
-made is the judgment of the AI acting on the finding (D6). The severity is information for that
+grounds. Where a fix is made is the judgment of the AI acting on the finding
+([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). The severity is information for that
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
@@ -60,16 +59,16 @@ judgment, and no rule branches on it.
   ([`evaluation-system.md`](../evaluation-system.md) > Evaluation Output Format) — or one whose fix
   could keep a criterion's letter only by adding a rule the criterion did not state
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*), is neither
-  fixed, separated nor deferred as it stands: it is decided as `[ac-decision]` entries
-  ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
-  cycle*).
+  fixed, separated nor deferred as it stands: the module acting on it puts the change to the advisor,
+  whose decision is recorded as `[ac-decision]` entries ([U3 Design](design.md) > *Report routing* >
+  *An acceptance-criterion change shown later*).
 - **A fact below the decision layer** ([U3 Design](design.md) > *Output artifacts* item 1) that an
   evaluation of the analysis or the design records is not a defect of the artifact it scores; it is
   taken up where the build derives it, and judged with that work at GATE:QUALITY.
 
-The AI acting on a recommendation states the question for the advisor, situation-first
+The AI acting on a recommendation puts it to the advisor, and follows the decision
 ([`role-contracts.md`](../role-contracts.md) > Advisor), when (a) the fix needs a contract or
-acceptance-criterion change it cannot settle on the grounds at hand; (b) the fix direction is
+acceptance-criterion change; (b) the fix direction is
 ambiguous, or a directly related recommendation looks undesirable to fix in this change (question 2)
 and would be left; (c) a re-score keeps the previous finding `remains` after its fix — the same
 complaint answered twice — and the re-score's grounds do not settle the next fix.

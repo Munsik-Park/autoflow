@@ -112,8 +112,8 @@
         },
         {
           "type": "section",
-          "heading": "Decision requests",
-          "note": "\"none\" when there is none"
+          "heading": "Advisor decisions",
+          "note": "each decision the run put to the advisor, by its ledger entry; \"none\" when it put none"
         }
       ]
     },
@@ -151,7 +151,7 @@
     {
       "id": "delta-not-rewrite",
       "check": "evaluation",
-      "rule": "On a re-run, each output document the run changes is the previous document unchanged, then one appended section \"## Delta — round <n>\", n being the number of delta sections in the previous document plus one; what the round is for, the module states from its inputs (Q13). \"## Decision requests\" is the exception: rewritten in place to its current state.",
+      "rule": "On a re-run, each output document the run changes is the previous document unchanged, then one appended section \"## Delta — round <n>\", n being the number of delta sections in the previous document plus one; what the round is for, the module states from its inputs (Q13).",
       "source": "docs/units/design.md > Re-entry"
     }
   ]

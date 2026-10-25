@@ -1,7 +1,7 @@
 ---
 name: autoflow-criterion-reconciler
 description: AutoFlow criterion-reconcile module of the criterion review — reconciliation of the screen's record with the trace and the in-depth analyses: settles in the code every case where they differ and writes the updated record. Spawn FRESH for every run of the module.
-tools: Read, Glob, Grep, Bash, Write, Edit
+tools: Read, Glob, Grep, Bash, Write, Edit, Agent
 effort: high
 ---
 
@@ -40,8 +40,11 @@ screen's record copied there and updated, the screen's own file left as it is:
 `## Cause reach and rule conflict` — the stage 2 findings as you settled them —
 and `## Reconciliation` — per stage 2 finding and per in-depth case, its
 verdict, how you took it (`applied` / `rejected` / `unresolved`) and the
-grounds, with the file it came from. Return the record's path and a
-one-line summary as your report.
+grounds, with the file it came from. An item you cannot decide with confidence
+you put to a fresh `autoflow-advisor` and decide as it decided, the row naming
+its ledger entry (`<autoflow-root>/docs/criterion-review.md` > *Authority*;
+`<autoflow-root>/docs/role-contracts.md` > Advisor). Return the record's path and a
+one-line summary, naming each decision you put to the advisor, as your report.
 
 You do not edit the issue, any criterion, or `## Inputs` beyond the model and
 effort you ran on. What else you read, in what order and with which tool, is your own.
@@ -51,7 +54,7 @@ Execution Mode).
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/criterion-review.md` > Review record; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/criterion-review.md` > In-depth analysis and reconciliation; `<autoflow-root>/docs/criterion-review.md` > Review record; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -69,7 +72,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -94,7 +97,8 @@ condition, and the grounds — and returns that path and a one-line summary.
 again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
 2 finding or an in-depth verdict differs from the record, it confirms in the code which one holds and
 settles it. A criterion that does not hold in a case it applies to is a finding for that case,
-recorded with the rule or condition that prevents it — never summarized as holding conditionally. It
+recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
+item it cannot decide with confidence it puts to the advisor (*Authority* below). It
 updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
 `## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
 `<out>/criterion-review.md`, and returns its path and a one-line summary.
@@ -126,12 +130,107 @@ line of its own, and every section below; a section with nothing to record says 
 | `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
 | `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
 | `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module could not decide with confidence says so in its row and states the question for the advisor — the behavior it concerns, why the code and policy do not settle it, and each option with what it changes in the criteria. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
+| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and its row names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
 
-The record is situation-first where the operator reads it — to follow what was decided and to
-override any of it ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*):
-what each finding means for the issue's behavior comes before its anchors.
+The record is situation-first where a person reads it — to follow what was decided and why
+([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*): what each finding means
+for the issue's behavior comes before its anchors.
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Advisor -->
+
+## Advisor (decisions a module puts to it)
+
+ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
+meets the decision spawns it and follows its decision. This section is the procedure's single home;
+[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
+module* route to it, and the module documents cite it.
+
+### Decisions the advisor makes
+
+- **The working AI decides what it can**, and records each decision with its grounds in its output
+  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
+  analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
+- **The module puts to the advisor**, and follows the advisor's decision:
+  - a change to an acceptance criterion's content that the work after the criterion review shows
+    (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
+  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
+    meet what the hypothesis evaluation asks;
+  - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
+    of a build meet differently;
+  - a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal the
+    re-score or the reviewer keeps while the two sides still disagree;
+  - an item the criterion review could not decide with confidence
+    ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
+  - every change to the target's security checklist (`[checklist-decision]`;
+    [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+- **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
+  denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
+  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  tool, credential, installation or material the environment does not provide — for a tool it has,
+  what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
+  request: the run does what it can without it and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development
+  Lifecycle > *Tools*).
+
+### Procedure
+
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
+   domain terms, the decision with each option and what it changes, the module's reading — the
+   option it leans to, its grounds, and the point where those grounds stop settling it — and the
+   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
+   from that reading rather than gathering the material anew.
+2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
+   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
+   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue. Where two or more decisions are open and
+   none depends on another's answer, their advisors may be spawned together, and a decision that
+   depends on another's answer is spawned after that answer is recorded; whether to spawn them
+   together or one after another is the module's judgment, within the concurrent-spawn limit
+   (`<autoflow-root>/docs/core.md` > Cost Control).
+3. **Decide and record.** The advisor weighs the material itself, writes its answer to
+   `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
+   entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
+   fields the decision's kind requires ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)). Its identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the append; the
+   call reserves the identifier, so advisors spawned together receive distinct ones
+   ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
+   the file on disk and checks (*Independence* below), so the prior content is never re-written. It
+   returns the identifier and the answer in one line.
+4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
+   follows the decision in its work, and names the entry by its identifier in its output. An advisor
+   that reports the decision blocked at the harness level turns it into a harness-level block.
+
+### Independence
+
+The advisor is never the author of what it judges: it is a fresh spawn per decision, not the agent
+or session whose work raised the point, and its record carries its own grounds. The record stays as
+written:
+
+- **Append-only — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
+  state-independent): a `Write` / `Edit` / `MultiEdit` to an `issue-*-ledger.md` is applied to the
+  file on disk and must keep the whole prior content as its prefix, so no entry is rewritten or
+  removed. A decision changes only by a new entry that names the one it replaces
+  (`<autoflow-root>/docs/decision-ledger.md` > *Replacement is explicit*).
+- **The record convention**: a consumer lets an entry replace another only by an explicit
+  `- Supersedes:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
+  `<autoflow-root>/scripts/contracts/criteria-apply.sh`, which locates an entry by its `[ac-decision]`
+  marker).
+
+The threat the hook answers is an agent overstepping in routine work — rewriting a ledger it meant to
+append to — not a determined evasion (the same model as `<autoflow-root>/docs/issue-proposal.md`).
+Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
+that only imitates an entry (a heading-less field line, a malformed heading).
+
+### Claude Code's advisor tool (`advisorModel`)
+
+Distinct from the advisor sub-agent above: Claude Code's advisor tool
+(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
+mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
+is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
+
+---
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->
 

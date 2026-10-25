@@ -633,5 +633,6 @@ an acceptance criterion the evaluator observes defective as a matter of fact
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*), the criterion's
 id; `item` — the rubric item it was found under; `severity` — a level of
 `<autoflow-root>/docs/review/review.md` > Severity; and `finding`. Whether and where a finding is
-fixed is the judgment of the AI acting on it, which asks the advisor when it cannot judge
+fixed is the judgment of the AI acting on it, which puts it to the advisor when it cannot judge with
+confidence and follows the decision
 ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).

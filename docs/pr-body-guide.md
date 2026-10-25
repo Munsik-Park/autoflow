@@ -57,7 +57,7 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
   verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
 - 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
   방법의 축소를 결정하고, review module의 reviewer가 그 reason의 타당성을 판단하며,
-  criterion의 **내용**이 바뀔 때만 Coordinator가 1차 판단하고, 근거로 정할 수 없으면 advisor가 판단한다
+  criterion의 **내용**이 바뀔 때는 그 변경을 보인 모듈이 advisor를 spawn해 정하고 그 결정을 따른다
   ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](units/design.md) >
   *Test necessity* 와 *Report routing*.
 - 형식은 항목 id + 검증 방법 + reason 한 줄. reason은 verification design의 셀을

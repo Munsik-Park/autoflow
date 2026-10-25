@@ -59,18 +59,16 @@ principle 2).
    criterion. A section with nothing beyond the criteria says `none`. Scope is a decision, settled
    here, not derived below.
 
-   **[MUST]** The document carries a `## Decision requests` section: each decision the design
-   needs that is not the module's to make, one entry each, written situation-first
-   ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*) —
+   **[MUST]** The document carries a `## Advisor decisions` section: each decision the design put
+   to the advisor (*Report routing* below), one entry each — the ledger entry's identifier, the
+   decision, and how the documents follow it:
    - an **acceptance-criterion content change** — excluding, revising or splitting an issue
-     acceptance criterion, or adding one: the criterion, the proposed change and the fact that
-     shows the need ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
-     decisions*);
-   - a **design point** the module is not confident to settle, or whose choice is not its own
-     ([`core.md`](../core.md) > Rule Scope, principle 3): the options and what each changes.
+     acceptance criterion, or adding one ([`decision-ledger.md`](../decision-ledger.md) >
+     *Acceptance-criterion decisions*);
+   - a **design point** the module cannot settle on the grounds at hand, or doubts
+     ([`core.md`](../core.md) > Rule Scope, principle 3).
 
-   A design with no such request says `none`. The module designs on its proposal and states the
-   proposal as pending.
+   A design that put no decision to the advisor says `none`.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -162,28 +160,24 @@ settling it on an observation by a person, on an environment it cannot drive, or
 
 ## Report routing
 
-What the design's output asks of others, and who settles it. The design states each request in
-`## Decision requests`; deciding it, and which module runs next, is the Coordinator's
-([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D2).
+The decisions the design puts to the advisor, and what it does with the advisor's decision
+([`role-contracts.md`](../role-contracts.md) > Advisor). Each is listed under `## Advisor decisions`.
 
 - **An acceptance-criterion content change.** Excluding, revising or splitting an issue
-  acceptance criterion, or adding one, is never the design's to apply. The decision is recorded as
-  `[ac-decision]` entries — one per decided criterion, carrying the criterion's text, in the grammar
-  at [`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions* — and
-  criteria-apply recomputes the applied criteria from them; the design takes the new applied
-  criteria as its input on its next run.
-- **A design point.** The answer is an `A` ledger entry; where it is the option the design took, the
-  documents stand, otherwise the design runs again on the answer (*Re-entry* below).
-- **An acceptance-criterion change raised later in the cycle.** The build module, when its work
-  shows a criterion defective — a fact it presumes that does not hold, or a scope too narrow or too
-  wide for the problem ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
-  decisions*) — raises it in its report with the criterion, the proposed change and the fact that
-  shows the need ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
-  Rules > *Scope judgment*); an evaluation recommendation reaches the same point
-  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). It is decided
-  and recorded as above; where the work then resumes — the design, when a verification-design row
-  must be added or rewritten; the build, when only the implementation changes — is the
-  Coordinator's.
+  acceptance criterion, or adding one, is never the design's to apply: the design puts the change to
+  the advisor, whose decision is recorded as `[ac-decision]` entries — one per decided criterion,
+  carrying the criterion's text, in the grammar at [`decision-ledger.md`](../decision-ledger.md) >
+  *Acceptance-criterion decisions* —, and the design's documents follow the decision. criteria-apply
+  computes the applied criteria from the entries for every module after the design.
+- **A design point** the design cannot settle on the grounds at hand, or doubts. The design puts it
+  to the advisor, and its documents follow the decision.
+- **An acceptance-criterion change shown later.** The build module, when its work shows a criterion
+  defective — a fact it presumes that does not hold, or a scope too narrow or too wide for the problem
+  ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*) — puts the change
+  to the advisor and follows the decision ([U4 Build and verify](build.md) > *What the build owes*);
+  a module that takes an evaluation recommendation recording a criterion defect does the same
+  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). The decision is
+  recorded as above.
 
 **What the advisor is asked, and what it is not.** A reduction in *verification method* — an item
 verified by an existing mechanism, an observation, a delivery check, or by nothing at all — is a
@@ -195,7 +189,7 @@ changes the criterion:
 2. **Reviewer (REVIEW).** Every reduced disposition and its reason is carried into the host
    PR body ([U6 Delivery](delivery.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
 3. **Criterion decision.** When the criterion's **content** must change — at the design or later
-   (*An acceptance-criterion change raised later in the cycle* above) — the decision is an
+   (*An acceptance-criterion change shown later* above) — the decision is an
    `[ac-decision]` entry. The options are exactly these: exclude the criterion, revise it in the
    proposed form, split it into a separate issue, or add a criterion the issue did not state.
 
@@ -229,10 +223,8 @@ documents and the material it answers.
   stated in the module's own words from its inputs — and leaves text the round did not change
   exactly as it stands. A delta item that corrects a decision under the verified-error exception
   ([`decision-ledger.md`](../decision-ledger.md) > Entries) also carries the reproducing command and
-  its summary line. One section is the exception: the feature design's `## Decision requests` is
-  rewritten in place to its current state — a request that has been answered is removed (its answer
-  is the ledger entry), a new one is added, and `none` means none is open. The delta section is
-  GATE:PLAN's narrowed input on a re-score ([`evaluation-system.md`](../evaluation-system.md) >
+  its summary line; a decision the round put to the advisor is a delta item that names its ledger
+  entry. The delta section is GATE:PLAN's narrowed input on a re-score ([`evaluation-system.md`](../evaluation-system.md) >
   GATE:PLAN > *Re-entry re-score*).
 - **Earlier runs are in the record directory.** The documents of every earlier run stay in their
   own run directories; how much of an earlier design the run carries over is its own, recorded in
