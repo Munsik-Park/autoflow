@@ -70,7 +70,7 @@ Facts the survey established:
 | **Move to the Coordinator** | the orchestrator role itself | ADR-0025 D5; [core.md](../../core.md) > Team Structure > AI Orchestrator |
 | **Keep in the module, as contract** | the output formats: analysis report sections, design AC table and `## Tools`, build report sections, evaluator report JSON, findings file | [units/analysis.md](../../units/analysis.md) > Analysis report; [units/design.md](../../units/design.md) > Output artifacts; [units/build.md](../../units/build.md) > Build report; [evaluation-system.md](../../evaluation-system.md) (report JSON); [units/review.md](../../units/review.md) |
 | **Keep in the module** | what each unit's work owes | each unit document's *What the … owes* |
-| **Keep** | state-independent policy denies: `gh pr merge`, push to the default branch or the base, `gh issue create`, ledger append-only and authority, explicit `model` on a spawn, backgrounded suite runs | `hooks/check-autoflow-gate.sh` Sections 0, 1, 1b, 1e |
+| **Keep** | state-independent policy denies: `gh pr merge`, push to the default branch (the base: no longer, Q22), `gh issue create`, ledger append-only and authority, explicit `model` on a spawn, backgrounded suite runs | `hooks/check-autoflow-gate.sh` Sections 0, 1, 1b, 1e |
 
 ## 4. Module boundaries
 
@@ -284,6 +284,10 @@ issue-body edit.
 | Q18 | What the criterion review returns | **Settled** (operator, 2026-10-25): every item the review finds, disposed of by the review itself, with its grounds — the work any issue analysis does: no criteria, so they are established; a criterion wrong, so it is revised; one missing, so it is added; a problem found beside them, so it is included in this issue or separated from it. The first run of criterion-screen on opensre#1 returned two revisions and three "open questions" ([criterion-review.md](../../criterion-review.md) > Review record, `## Open questions`, put to the advisor): which `<…>` are tags (a criterion the issue lacks), whether the gateway path is in scope (the body states it wrongly), and whether a raw `&` that drops text is (a problem found beside the criteria). Each is one of the dispositions above, so the review decides it. The criterion-screen and criterion-reconcile contracts require one `## Dispositions` table, an item and its disposition per row, in place of `## Proposed changes` and `## Open questions`; an item the module cannot decide with confidence says so and states the question for the advisor — the one way out (Q11), not a second list. |
 | Q19 | What check-in checks of an input, and the build's commits | **Settled** (operator, 2026-10-25): a module runs when its inputs are of the form its contract asks and does not run when they are not; making its outputs meet their format is the module's own rule, which check-out confirms. So check-in checks each input's form, and not where it came from: the rule that an input must come from a run whose result was accepted (§5.3 as written in #509) goes — an output short of its format is refused where it is used, by the same checks. The build's output is its commits, and an input from it is the commit range, checked for commits that exist; the opensre#1 run had named the build's `result.json` in its place (§11, *A `git` output has no path to hand on*). A build run that makes no commit is not refused for it: its report says why in a `## No commit` section (`absent_reason` on the `git_range` check). Checking that a range is the one the build produced is the Coordinator's, which reads the build's `result.json` to compose the next invocation. |
 | Q20 | Earlier runs, and the record directory | **Settled** (operator, 2026-10-25): a module is one work session given a place to run, and the attempt's runs are connected work on one branch. A re-run comes after a result that fell short, and a run that cannot see how the previous one worked cannot improve on it: in the opensre#1 run the second build rebuilt the first build's td parser port and tests, which lay in the first build's output directory, undeclared and outside its instruction's reach (§11, *A re-run cannot reach the previous run's working files*). Keeping a run from earlier results serves only to keep a worker from judging its own work, and judging is a separate run. So the attempt has one record directory, each run a subdirectory named by a simple rule (§5.3), and a functional module reads the directory (`reads_records: true`). A module that judges keeps to its declared inputs (`reads_records: false`), so an earlier verdict does not lead it: the four evaluation modules, criterion-in-depth — whose analysis "never saw the review's earlier verdicts" (`agents/autoflow-criterion-analyzer.md`, description) — and criteria-apply, a script. §1's "does not know what ran before it" is revised to match. The review contract's `records` input — the four design artifacts, which the review run copied into a directory for the `claude` reviewer's `--records` (§11) — goes: the reviewer is given the record directory itself. |
+| Q21 | Where PREFLIGHT's work goes | **Settled** (operator, 2026-10-26): no preparation module; the attempt is the Coordinator's worktree, branch and record directory. The coordinating session already builds a worktree per run from the base's latest commit and keeps a record directory per run, and the 27 module runs on opensre#1 ran on a branch and a record directory the Coordinator named (`test/io-contract-509-issue-1`, `~/.autoflow/io509-test/opensre-1/`) with no attempt made by `autoflow-records new`. So `autoflow-records new`, `claim`, `base` and `dir`, the `dev-<stamp>-issue-<N>` name, the record directory's `checkout` and `completed` files, one active attempt per checkout, `cleanup-issue.sh`, the git clean check and the start sync go; `root` and `drafts` stay. The cycle-layer store becomes each run's `<out>/local/` (Q20). The ledger keeps the name `issue-<N>-ledger.md`, which the hook's ledger check matches — on opensre#1 the ledger was `ledger.md`, so the check never ran. `target-check.sh` and `check-review-backend.sh` stay as checks the Coordinator runs when it builds the environment (§5.3), a condition of no module. |
+| Q22 | Which push denies stay | **Settled** (operator, 2026-10-26): the push restrictions go, and the push to the default branch stays denied as part of the merge prohibition. A push to the default branch is a merge that skips the pull request and its review, and no remote device stops it on the targets in use: `gh api repos/<owner>/<repo>/branches/main/protection` answers "Branch not protected" for `Munsik-Park/autoflow` and `Munsik-Park/opensre`, and protection is not available on `connev-llm/llmroute`'s plan. The base-branch push deny (#490 AC4) goes with the dev-branch test it rests on (`hooks/check-autoflow-gate.sh`, `DEV_SESSION`) and the `gh-merge-base` that only `autoflow-records new` set. |
+| Q23 | The run metrics | **Settled** (operator, 2026-10-26): `scripts/metrics/` finds an attempt by its state file only; it stays for the records made before this change and is documented so. Measuring module runs, whose `result.json` the Coordinator holds, is the Coordinator's. |
+| Q24 | `docs/security-checklist.md` | **Settled** (operator, 2026-10-26): its first section names the hook's state validation and score computation, which go (Q22, §3). The file is "Maintainer: Human (never auto-edited)"; the change is drafted and the operator accepts its text before it is applied. |
 
 Operator's words:
 
@@ -305,6 +309,9 @@ Operator's words:
 - Q19: "결과물 출력은 커밋으로 하고 입력도 커밋이 있는지 체크하면 될 것 같네요". On the module's conditions: "autoflow 는 입력 형식이 맞으면 실행한다 이고 입력이 맞지 않으면 실행되지 않는다는 조건 뿐이죠? 그리고 출력 형식에 맞게 출력해야 한다는 내부 실행 규칙이 있고요". Then: "통과한 실행에서 나왔는지 -> 볼 필요가 없어요 만약 출력 형식이 커밋을 요구한다면 잇어야 하고 없으면 없는 왜 없는지 처분 사유를 적으면 되요 검사기는 바꾸어야 하겠네요"
 - Q20: "공통 기록 폴더가 있고 자신의 사이클 build-c1 build-c2 뭐 어떤 식이든 구별할수 있도록 간단한 규칙만 주면 이전 사이클도 다 알수 있지 않느냐 하는거에요". Then: "이전 결과물을 보지 말라는 것은 작업자가 평가를 하게 될때 자기 평가를 막는 목적외에는 보이지 않아요 지금은 평가는 독립 실행을 하니 그 문제도 없구요". On §1's statement: "고쳐야죠".
 - Q10: "도구가 필요하면 쓴다. 없으면 요구해라. 반드시 기록해서 운영자한테 요구해라. 그리고 도구가 없더라도 할 수 있는 것을 방법을 찾아서 수행은 끝낸다." And: "매 사이트마다 검사하는 건 없앱니다." On GATE:PLAN's `Tools` item: "뺍니다."
+- Q21: "워크트리로 작업이 변경됩니다.  브랜치 커밋 베이스 작업이 가능하음로 많은 것들이 간소화됩니다" (with the coordination runbook to be read).
+- Q22: "브랜치의 푸시는 막을 사유가 줄었어요. 머지는 여전히 운영자 권한이고 푸시는 현재가지 운영상 보면 제한을 제거하도록 합니다 / 혹시 문제가 있나요?" Then, on the recommendation to keep the default branch denied: "수용".
+- Q23: "수용". Q24: "권고 수용".
 
 ## 7. Couplings to resolve
 
@@ -396,7 +403,33 @@ rather than reading a declared output.
   the model of a spawn it makes is read — `spawn-policy.sh model <phase-key>`
   ([core.md](../../core.md) > Spawn Model), which a module that carries only its procedure does not
   know (§11, *The model of a spawn the module makes*).
-- An ADR that supersedes the decisions below.
+- Applied in sub-issue 3 from the principles above (2026-10-26, on the survey of every document,
+  device and test that reads the state file or `remedy_class`; the survey's tables are one-shot,
+  keyed to `c2c9b5e`, outside the repository):
+  - the undeclared-spawn and teammate-`name` denies and the role-to-gate mapping go with the gates:
+    only the gates read them, and made state-independent they would refuse ordinary spawns in every
+    session the plugin is installed in; the ledger's authorship check reads `subagent_type` itself;
+  - a referenced material that cannot be opened, and a lint chain that cannot run, are tool requests
+    and the run ends (Q10), in place of the stop before leaving DIAGNOSE;
+  - the test-first rule is stated as its goal, without the `Kind` it reads today (Q8, Q16);
+  - the findings file's form checks in `review-gate.sh` move to the review contract's check-out (Q14,
+    Q19);
+  - the delivery contract's check on the deferred recommendations asks a disposition for each — an
+    issue that takes it, or the gap stated — in place of the finding's text verbatim (Q14; the
+    operator, 2026-10-25: a known gap worth fixing becomes an issue; §11, *Known gaps stated verbatim
+    grow the PR body*);
+  - [units/review.md](../../units/review.md) > *A repeated complaint* covers an evaluation's
+    recommendations as well as a reviewer's findings (§11, *A gate that names one case after
+    another*);
+  - the counted retries inside a module (delivery's "max 2"), the model tier revert after a
+    contradicted PASS and putting a question to the advisor are the Coordinator's (Q2, Q3, §4);
+  - the ledger's PREFLIGHT records leave it, and an entry's heading names no cycle or phase (Q4);
+  - `/autoflow:cycle`, `/autoflow:criterion-review` and [abbreviated-path.md](../../abbreviated-path.md)
+    go with the unit commands (§4);
+  - the rules [state-tracking.md](../../state-tracking.md) carries that stay — the policy denies, the
+    record location, the hook with no `jq` — move to the documents that keep them.
+- An ADR that supersedes the decisions below: [ADR-0038](../adr/0038-contract-modules-run-by-the-coordinator.md),
+  proposed 2026-10-26.
 
 ## 9. Decisions this supersedes
 
@@ -411,6 +444,11 @@ rather than reading a declared output.
 | [0037](../adr/0037-autoflow-keeps-no-after-work-procedure.md) | D2's scope (the Coordinator owns what follows a merge or a close, "and of nothing else") | the Coordinator's scope widens to the whole lifecycle |
 
 The list is the survey's reading; the ADR that supersedes them checks each against its text.
+Checked in ADR-0038 > *Relation to other decisions*, which adds what this list missed: ADR-0025 D8
+and the cap, loop and `remedy_class: operator` parts of D2–D4 and D7; ADR-0029 D2, D3, D5 and D8;
+ADR-0030 D2, D3, D5–D7 and D9; ADR-0032 D1, D2 and D5; ADR-0033 D1–D2; all of ADR-0036; ADR-0037
+K1's base clause, K2–K4, K6 and D3; ADR-0024 D4's class-routed re-entry; ADR-0034's start point
+and base.
 
 ## 10. Tests affected
 
