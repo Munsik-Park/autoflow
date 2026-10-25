@@ -7,7 +7,8 @@
 # =============================================================================
 # The acceptance criteria a cycle works to: the analysis report's criteria
 # (its "## Acceptance criteria" table, columns AC id | criterion | source)
-# with every [ac-decision] entry of the given ledger applied, in ledger order.
+# with every standing [ac-decision] entry of the given ledger applied, in ledger
+# order.
 # Every later module takes the result as its input instead of editing the
 # analysis report's table.
 #
@@ -25,8 +26,19 @@
 #   - Disposition: excluded | revised | split | added
 #   - Text: <text>          revised, added: the criterion as decided
 #   - Into: <id> — <text>   split: one line per criterion it makes
+#   - Authority: <value>    read for operator decision
+#   - Supersedes: <id>  |  Overrides: A<n>   (only on an entry that replaces one)
 # Text and Into are the lines Q5 adds; today's grammar has only AC and
 # Disposition, which say what changes but not into what.
+#
+# An entry stands unless a later [ac-decision] entry names it on a
+# `- Supersedes:` or `- Overrides:` line (docs/decision-ledger.md > Decision-point
+# entries, *Replacement is explicit*); a name two earlier entries share
+# replaces both (*ibid.*, *Identifier collision*). Only the standing entries
+# are applied. A name that is no earlier [ac-decision] entry, an advisor entry
+# (A<n>) naming an operator entry (Authority: operator decision), or an
+# Overrides that is not an operator entry's naming an A<n>, or a line naming no
+# entry refuses the run.
 #
 # excluded removes the criterion; revised replaces its text; split replaces
 # it, in place, by the criteria its Into lines name; added appends one. A
@@ -73,10 +85,14 @@ if [ -n "$LEDGER" ]; then
         if ($l | test("^## ")) then
           (if .cur then .out += [.cur] else . end)
           | .cur = (if ($l | test("\\[ac-decision\\]\\s*$")) then
-                      {entry: ($l | capture("^## (?<id>[AO][0-9]+)").id // $l), into: []}
+                      {entry: ($l | capture("^## (?<id>[AO][0-9]+)").id // $l), into: [], replaces: []}
                     else null end)
-        elif .cur and ($l | test("^- (AC|Disposition|Text):")) then
+        elif .cur and ($l | test("^- (AC|Disposition|Text|Authority):")) then
           ($l | capture("^- (?<k>[A-Za-z]+):\\s*(?<v>.*)$")) as $m | .cur[$m.k] = ($m.v | gsub("\\s+$"; ""))
+        elif .cur and ($l | test("^- (Supersedes|Overrides):")) then
+          ($l | capture("^- (?<k>[A-Za-z]+):(?<v>.*)$")) as $m
+          | [$m.v | match("\\b[A-Z][0-9]+\\b"; "g").string] as $ids
+          | .cur.replaces += (if $ids == [] then [{how: $m.k, id: null}] else [$ids[] | {how: $m.k, id: .}] end)
         elif .cur and ($l | test("^- Into:")) then
           (($l | capture("^- Into:\\s*(?<id>\\S+)\\s+—\\s+(?<text>.*)$")) // null) as $m
           | .cur.into += [if $m then {id: $m.id, text: ($m.text | gsub("\\s+$"; ""))} else {bad: $l} end]
@@ -84,10 +100,27 @@ if [ -n "$LEDGER" ]; then
     | (if .cur then .out + [.cur] else .out end)' "$LEDGER") || die "cannot read the ledger: $LEDGER"
 fi
 
+# the standing entries: an entry a later one names is replaced, never applied
+REPLACED=$(jq -c '
+  def operator: (.Authority // "" | gsub("`"; "") | sub("\\.$"; "")) == "operator decision";
+  to_entries as $E
+  | reduce $E[] as $x ({gone: [], defects: []};
+      $x.value as $d
+      | reduce $d.replaces[] as $r (.;
+          [$E[:$x.key][] | select(.value.entry == $r.id)] as $t
+          | if $r.id == null then .defects += ["\($d.entry): a \($r.how) line names no entry"]
+            elif ($t | length) == 0 then .defects += ["\($d.entry): \($r.how) \($r.id), which is no earlier [ac-decision] entry"]
+            elif $r.how == "Overrides" and ((($d | operator) and ($r.id | test("^A[0-9]+$"))) | not) then
+              .defects += ["\($d.entry): Overrides \($r.id), but an override is an operator entry (Authority: operator decision) naming an advisor entry (A<n>)"]
+            elif ($d.entry | test("^A[0-9]+$")) and any($t[]; .value | operator) then
+              .defects += ["\($d.entry): \($r.how) \($r.id), an operator entry, which an advisor entry never replaces"]
+            else .gone += [$t[].key] end))
+  | .gone as $g | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not) | .value], defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
+
 # apply, in order; any defect refuses the whole run
-RESULT=$(jq -n --argjson c "$CRITERIA" --argjson e "$ENTRIES" '
+RESULT=$(jq -n --argjson c "$CRITERIA" --argjson r "$REPLACED" '
   def has_id($id): any(.c[]; .id == $id);
-  reduce $e[] as $d ({c: $c, applied: [], defects: []};
+  reduce $r.standing[] as $d ({c: $c, applied: [], defects: $r.defects};
     ($d.entry) as $n
     | if ($d.AC // "") == "" then .defects += ["\($n): no AC line"]
       elif ($d.Disposition // "") == "excluded" then
