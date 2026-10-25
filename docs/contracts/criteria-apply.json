@@ -27,7 +27,7 @@
           "ac-decision"
         ]
       },
-      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes or Overrides line is not applied (ibid., Replacement is explicit). AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
+      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes or Overrides line is not applied (ibid., Replacement is explicit); standing entries on one AC id whose conclusions differ are a conflict that refuses the run unless the operator entries among them agree, which then win (ibid., Acceptance-criterion decisions). AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
       "fields": {
         "AC": {
           "required": true,

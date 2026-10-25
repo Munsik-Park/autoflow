@@ -40,6 +40,14 @@
 # Overrides that is not an operator entry's naming an A<n>, or a line naming no
 # entry refuses the run.
 #
+# Standing entries on one AC id whose conclusions (Disposition, and Text or
+# Into) differ are a conflict, never settled by recency (*ibid.*, *Replacement
+# is explicit*): when the operator entries among them agree, the first of them
+# alone is applied ("an `operator decision` entry wins", *ibid.*,
+# *Acceptance-criterion decisions*); otherwise the run is refused. The same
+# conclusion recorded twice is not a conflict, and the first of the entries
+# alone is applied. A decision on an id a split makes is on another AC id.
+#
 # excluded removes the criterion; revised replaces its text; split replaces
 # it, in place, by the criteria its Into lines name; added appends one. A
 # decision on an id that is not present at its turn, an id that would be
@@ -100,9 +108,10 @@ if [ -n "$LEDGER" ]; then
     | (if .cur then .out + [.cur] else .out end)' "$LEDGER") || die "cannot read the ledger: $LEDGER"
 fi
 
+OPERATOR='def operator: (.Authority // "" | gsub("`"; "") | sub("\\.$"; "")) == "operator decision";'
+
 # the standing entries: an entry a later one names is replaced, never applied
-REPLACED=$(jq -c '
-  def operator: (.Authority // "" | gsub("`"; "") | sub("\\.$"; "")) == "operator decision";
+REPLACED=$(jq -c "$OPERATOR"'
   to_entries as $E
   | reduce $E[] as $x ({gone: [], defects: []};
       $x.value as $d
@@ -116,6 +125,24 @@ REPLACED=$(jq -c '
               .defects += ["\($d.entry): \($r.how) \($r.id), an operator entry, which an advisor entry never replaces"]
             else .gone += [$t[].key] end))
   | .gone as $g | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not) | .value], defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
+
+# conflicts: standing entries on one AC id whose conclusions differ. The operator
+# entries win when they agree; a conflict keeps every entry, so the application
+# below still names what fails at its turn.
+REPLACED=$(jq -c "$OPERATOR"'
+  def concl: {d: .Disposition, t: (if .Disposition == "revised" or .Disposition == "added" then .Text else null end),
+               i: (if .Disposition == "split" then .into else null end)};
+  . as $r
+  | [$r.standing | to_entries[] | select((.value.AC // "") != "")] | group_by(.value.AC)
+  | reduce .[] as $g ({keep: [], defects: $r.defects};
+      [$g[] | select(.value | operator)] as $ops
+      | if ($g | map(.value | concl) | unique | length) == 1 then .keep += [$g[0].key]
+        elif ($ops | map(.value | concl) | unique | length) == 1 then .keep += [$ops[0].key]
+        else .keep += [$g[].key]
+          | .defects += ["\($g[0].value.AC): \($g | map(.value.entry) | join(", ")) disagree and none names another, a conflict never settled by recency"] end)
+  | .keep as $k
+  | {standing: [$r.standing | to_entries[] | select((.value.AC // "") == "" or (.key as $i | any($k[]; . == $i))) | .value], defects}' <<<"$REPLACED") \
+  || die "cannot resolve the conflicts"
 
 # apply, in order; any defect refuses the whole run
 RESULT=$(jq -n --argjson c "$CRITERIA" --argjson r "$REPLACED" '
