@@ -71,7 +71,7 @@
       "from": {
         "path": "coordinator"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated after earlier evaluations, each {subject, finding} (Q1: the triage result is a content input)"
+      "note": "a JSON array of the recommendations the Coordinator deferred or separated after earlier evaluations, each {subject, finding, disposition} (Q1: the triage result is a content input; the form is delivery.json's)"
     },
     "decisions": {
       "required": false,

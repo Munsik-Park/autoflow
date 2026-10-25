@@ -71,7 +71,7 @@
       "from": {
         "path": "coordinator"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated, each {subject, finding}"
+      "note": "a JSON array of the recommendations the Coordinator deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
     }
   },
   "outputs": {

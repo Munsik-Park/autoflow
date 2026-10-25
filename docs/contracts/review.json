@@ -40,6 +40,18 @@
     "findings": {
       "file": "findings.md",
       "format": "markdown",
+      "checks": [
+        {
+          "type": "line",
+          "pattern": "^pr: [^/\\s]+/[^#\\s]+#[0-9]+$",
+          "note": "the reviewed pull request, as <owner>/<name>#<N>; that it names params.pr is not expressible as a check"
+        },
+        {
+          "type": "line",
+          "pattern": "^max_severity: (Critical|High|Medium|Low Confidence|Low|None)$",
+          "note": "the highest level among the findings that hold, None when none remains; that there is exactly one such line, and that it equals the highest row that holds, is not expressible as a check"
+        }
+      ],
       "evaluation": [
         "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
         "every finding of every review is in the file"
