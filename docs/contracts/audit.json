@@ -41,8 +41,9 @@
     "security_checklist": {
       "required": false,
       "from": {
-        "path": "target"
-      }
+        "path": "coordinator"
+      },
+      "note": "the target's checklist at the version security-checklist.sh status names (score=), which the Coordinator writes to a file in the record directory (git show <score>); not given when none is declared"
     },
     "previous_evaluation": {
       "required": false,

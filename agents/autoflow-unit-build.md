@@ -472,7 +472,10 @@ AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores �
 evaluator, the five items below, the reference values — and the target owns what each item is
 judged by. Which version AUDIT reads is the one the record line of
 `bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names, and the `security_checklist` input is the checklist at that version:
+names. The Coordinator, which composes the invocation
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D2), writes the checklist
+at that version (`git show <score>`) to a file in the record directory and names it as the
+`security_checklist` input:
 
 - `none-declared` → no checklist: the five items are scored from the change alone, and the output
   says that none was declared;
@@ -481,7 +484,7 @@ names, and the `security_checklist` input is the checklist at that version:
   (`score=HEAD:<path>`, or `none` for a dropped declaration).
 
 **The evaluator reads the version it is given**, never the working-tree file, and states in its
-output which checklist version it scored against.
+`summary` which checklist version it scored against.
 
 #### Report
 

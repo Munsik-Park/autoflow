@@ -490,26 +490,6 @@ This named check makes the ADR-conformance concern explicit inside the two items
 - **Per-item cap distribution**: `Decision grounds` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
 - **N/A by default**: no governing ADR's Decision scope intersects **and** no trigger area is hit → the check does not apply, no cap, the item scores normally.
 
-#### AC-authority check (scored within Scope)
-
-Same mechanism as the ADR-conformance check above: **no added scored item, no reference-value change**; a
-violation caps `Scope` at 6, below the each-item reference value.
-
-- **The comparison** is a key join, both sides keyed: every criterion id of the applied criteria
-  (`applied_criteria`) against the `Item` column of the verification design's table. A
-  **difference** is one of exactly two states: the design carries no row for the criterion
-  (`dropped`); or its row neither verifies the criterion nor states why it does not
-  (`unreasoned`). A row whose proposition differs from the criterion's is **not** a difference
-  here — that is a semantic reading, scored under `Verification fit`. A row that states why it
-  verifies less is not a difference — it is a verification-method choice the design is authorized
-  to make, and its **reason quality** is scored by `Scope` under the existing verification-depth
-  clause ([U3 Design](<autoflow-root>/docs/units/design.md) > *Verification depth*), adding no scored item.
-- **Trigger → cap**: any difference caps `Scope` at 6. An acceptance-criterion change reaches the
-  design already applied — the applied criteria carry every `[ac-decision]` entry
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) —, so no entry
-  covers a difference.
-- **N/A by default**: no difference → no cap, the item scores normally.
-
 #### Re-entry re-score
 
 Given the previous evaluation, the gate re-scores as *Evaluator conduct* > *Re-score* above sets.

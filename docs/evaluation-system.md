@@ -211,7 +211,7 @@ Binds the GATE:QUALITY form only.
 
 The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section and every `## Scope judgments` section in the reports the evaluation is given.
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
 - A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
 - A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
 
@@ -352,26 +352,6 @@ This named check makes the ADR-conformance concern explicit inside the two items
 - **Per-item cap distribution**: `Decision grounds` caps on a structural-grounding divergence (the plan is not grounded in the ADR's decided structure); `Scope` caps on a redundant-mechanism / boundary divergence **or** the undocumented-ADR trigger; **both** cap when both defects are present. One divergence never leaves both items uncapped.
 - **N/A by default**: no governing ADR's Decision scope intersects **and** no trigger area is hit → the check does not apply, no cap, the item scores normally.
 
-#### AC-authority check (scored within Scope)
-
-Same mechanism as the ADR-conformance check above: **no added scored item, no reference-value change**; a
-violation caps `Scope` at 6, below the each-item reference value.
-
-- **The comparison** is a key join, both sides keyed: every criterion id of the applied criteria
-  (`applied_criteria`) against the `Item` column of the verification design's table. A
-  **difference** is one of exactly two states: the design carries no row for the criterion
-  (`dropped`); or its row neither verifies the criterion nor states why it does not
-  (`unreasoned`). A row whose proposition differs from the criterion's is **not** a difference
-  here — that is a semantic reading, scored under `Verification fit`. A row that states why it
-  verifies less is not a difference — it is a verification-method choice the design is authorized
-  to make, and its **reason quality** is scored by `Scope` under the existing verification-depth
-  clause ([U3 Design](units/design.md) > *Verification depth*), adding no scored item.
-- **Trigger → cap**: any difference caps `Scope` at 6. An acceptance-criterion change reaches the
-  design already applied — the applied criteria carry every `[ac-decision]` entry
-  ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) —, so no entry
-  covers a difference.
-- **N/A by default**: no difference → no cap, the item scores normally.
-
 #### Re-entry re-score
 
 Given the previous evaluation, the gate re-scores as *Evaluator conduct* > *Re-score* above sets.
@@ -412,7 +392,10 @@ AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores �
 evaluator, the five items below, the reference values — and the target owns what each item is
 judged by. Which version AUDIT reads is the one the record line of
 `bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names, and the `security_checklist` input is the checklist at that version:
+names. The Coordinator, which composes the invocation
+([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2), writes the checklist
+at that version (`git show <score>`) to a file in the record directory and names it as the
+`security_checklist` input:
 
 - `none-declared` → no checklist: the five items are scored from the change alone, and the output
   says that none was declared;
@@ -421,7 +404,7 @@ names, and the `security_checklist` input is the checklist at that version:
   (`score=HEAD:<path>`, or `none` for a dropped declaration).
 
 **The evaluator reads the version it is given**, never the working-tree file, and states in its
-output which checklist version it scored against.
+`summary` which checklist version it scored against.
 
 #### Report
 
@@ -466,11 +449,13 @@ range (`commits`) — and the work's outputs:
   `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
   `## Comment check`;
 - the AUDIT evaluation (`audit_evaluation`);
+- the recommendations the Coordinator deferred or separated after earlier evaluations, when there
+  are any (`deferred`);
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
 
-The cycle's scope records are the feature design's `## Scope` section and every
-`## Scope judgments` section in the reports above
+The cycle's scope records are the feature design's `## Scope` section, every
+`## Scope judgments` section in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
 The build report's out-of-scope-observations section is scoring input (*Evaluator conduct* >
@@ -559,9 +544,9 @@ reference value. Each violation caps the named item at 6, below the each-item re
   a row with no record, or a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *A missing run
     is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
-    **not** score `Test coverage` over it: the output names each such row under `Test coverage` as
-    `not-run: <rows>` and withholds that item's score (a lint omission under `Commit conventions`
-    is named and withheld the same way). Once each named row has been run and its record filled
+    **not** score `Test coverage` over it: the item keeps its key in `scores`, and its value names
+    the rows that were not run in place of a score — `{"not_run": ["<row>", …]}` (a lint omission
+    under `Commit conventions` is recorded the same way, with the commits and chains not run). Once each named row has been run and its record filled
     in, a re-score scores the withheld item only, in the *Re-entry re-score* form below with this
     output as the previous evaluation. A recorded run that **fails** is a defect, scored like any
     other.
@@ -573,7 +558,7 @@ reference value. Each violation caps the named item at 6, below the each-item re
 - **Completeness — AC-authority check**: the backstop for acceptance-criterion drift introduced
   **after** the design — a test the build rewrote after its first run, or the satisfiable-subset
   implementation [U4 Build and verify](units/build.md) permits on a design contradiction. The check
-  is a **name-the-site obligation**, not the GATE:PLAN key join: for each applied criterion
+  is a **name-the-site obligation**: for each applied criterion
   (`applied_criteria`), the evaluator names the test file and assertion, or the implementation
   site, that discharges it. A criterion for which no site can be named caps `Completeness` at 6; a
   criterion an `[ac-decision]` entry changed reaches the evaluation already applied, so it is owed
@@ -628,7 +613,9 @@ is the Coordinator's.
 
 `scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object
-(`{"score": 8, "reason": "..."}`), the score on the 10-point scale. At AUDIT, `scores` is given only
+(`{"score": 8, "reason": "..."}`), the score on the 10-point scale; an item whose subject was not
+run carries `{"not_run": [...]}` in its place (*Gate rubrics* > GATE:QUALITY > *Known blind-spot
+checks* > *Test coverage*). At AUDIT, `scores` is given only
 when `test_first.confirmed` is true (*Gate rubrics* > AUDIT > *Test-first* above).
 
 | Key | Type | Required | Meaning |

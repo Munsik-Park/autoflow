@@ -66,6 +66,13 @@
         "output": "evaluation"
       }
     },
+    "deferred": {
+      "required": false,
+      "from": {
+        "path": "coordinator"
+      },
+      "note": "a JSON array of the recommendations the Coordinator deferred or separated after earlier evaluations, each {subject, finding} (Q1: the triage result is a content input)"
+    },
     "decisions": {
       "required": false,
       "from": {
@@ -123,6 +130,15 @@
               "required_when": {
                 "input": "previous_evaluation"
               }
+            },
+            "refine_observations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "entry",
+                "disposition"
+              ],
+              "note": "the evaluator's disposition of every entry of the build report's \"## Out-of-scope observations — guard / boundary logic touched\" section; [] when it says none (Q14)"
             },
             "summary": {
               "type": "string",
