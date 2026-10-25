@@ -1,8 +1,8 @@
 # U3 Design — ARCHITECT and GATE:PLAN
 
 > Unit document for U3. [`core.md`](../core.md) > Unit Document Loading Contract routes to
-> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
-> Documents.
+> this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
+> Modules.
 
 U3 Design is two modules: the design module, whose contract is
 `<autoflow-root>/docs/contracts/design.json` and whose procedure is this file, and the plan evaluation

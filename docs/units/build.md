@@ -1,8 +1,8 @@
 # U4 Build and verify — BUILD and AUDIT
 
 > Unit document for U4. [`core.md`](../core.md) > Unit Document Loading Contract routes to
-> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
-> Documents.
+> this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
+> Modules.
 
 U4 Build and verify is two modules: the build module, whose contract is
 `<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit

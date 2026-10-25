@@ -1,8 +1,8 @@
 # U7 Review — REVIEW
 
 > Unit document for U7. [`core.md`](../core.md) > Unit Document Loading Contract routes to
-> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
-> Documents.
+> this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
+> Modules.
 
 U7 Review is one module, the review module, whose contract is
 `<autoflow-root>/docs/contracts/review.json` and whose procedure is this file

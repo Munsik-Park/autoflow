@@ -1,9 +1,9 @@
 # Role Common Rules
 
-> Shared rules that apply to every role spawn (the unit agents and their helpers) participating in
-> the AutoFlow lifecycle in this repository.
+> Shared rules that apply to every role spawn (the unit agents and their helpers) a module's run
+> makes.
 
-The orchestrator (the main session) coordinates work; role spawns are launched as
+The session that runs a module spawns its roles; role spawns are launched as
 Agents and execute the actual writing of code, tests, and documentation. The rules
 below describe the contract every role spawn honours.
 
@@ -15,8 +15,8 @@ below describe the contract every role spawn honours.
 - The role spawn may **read** any file in the repository.
 - The role spawn **may not modify** files outside the scope assigned by the dispatch
   instructions for the current issue.
-- Push and PR creation are the orchestrator's responsibility — the role spawn's git
-  work finishes at `git commit` on its branch; the orchestrator pushes at DELIVER
+- Push and PR creation are the delivery module's — the role spawn's git
+  work finishes at `git commit` on its branch
   ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
 
 ---
@@ -24,19 +24,19 @@ below describe the contract every role spawn honours.
 ## Git Workflow
 
 ```bash
-# At session start (after the orchestrator has prepared a branch in PREFLIGHT)
+# At session start (on the branch the invocation names, in the Coordinator's worktree)
 git status                  # confirm a clean working tree
 git log --oneline -5        # confirm the recent history
 
 # After completing the assigned work
 git add <files> && git commit
-# The orchestrator pushes (DELIVER) and opens the PR — report completion in the spawn's return value.
+# The delivery module pushes and opens the PR — report completion in the spawn's return value.
 ```
 
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch within an **attempt** — a review-response cycle continues on the attempt's existing dev branch. A new attempt of the same issue gets its own dev branch only when the cycle creates it, before its criterion review stage (`autoflow-records new` — beside an earlier attempt still here, on the operator's explicit request), even while an earlier attempt's PR is still open, and never from a role. Whether another attempt or another issue may start is **not** gated on a prior PR's merge state; it is governed by [`core.md`](core.md) > PR Wait Rule (the `active` flag, per checkout).
+- No new branch from a role — a run works on the branch its invocation names. The attempt's worktree, branch and record directory are the Coordinator's, as is whether another attempt or another issue starts ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 
@@ -65,7 +65,7 @@ git status                  # any uncommitted work?
 
 1. Read the `Next:` line in the most recent commit and continue from there.
 2. Read the assignment in the spawn prompt — it carries the task and the
-   `<attempt-dir>/*` paths. There is no mailbox to poll: the prompt is delivered
+   paths of its inputs and of its output directory. There is no mailbox to poll: the prompt is delivered
    once, at spawn.
 
 ---
@@ -73,7 +73,7 @@ git status                  # any uncommitted work?
 ## Bash Execution Mode
 
 - **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
-- The background + completion-notification pattern is **orchestrator-only**.
+- The background + completion-notification pattern is **the main session's only**.
 - **[MUST] A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
   - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split, an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
   - **No bare `wait`.** `wait "$pid"` names its process and is for a process that ends by itself; a process that must be stopped — a load generator, a server — is waited out by a bounded poll: `kill -0 "$pid"` against a counter, then `kill -KILL`, then a report of any PID that is still alive. The bound does not depend on `timeout`.
@@ -107,8 +107,8 @@ git status                  # any uncommitted work?
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the orchestrator included; the orchestrator-only background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-- **The orchestrator's side of the wait:** the orchestrator waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the orchestrator that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the orchestrator's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
+- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
+- **The main session's side of the wait:** the main session waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the main session that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the main session's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
 
@@ -116,8 +116,8 @@ git status                  # any uncommitted work?
 
 - **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
   the assignment its spawn prompt carries.
-- The orchestrator's spawn schedule issues no tree-writing spawn while another spawn's run is in
-  flight.
+- A session that spawns agents into one tree issues no tree-writing spawn while another spawn's
+  run in that tree is in flight.
 
 ---
 
@@ -128,7 +128,7 @@ Implement → the comment check (<autoflow-root>/docs/units/build.md > What the 
 ```
 
 **Required content of the completion report** (the spawn's return value — write any
-body to `<attempt-dir>/*` and return an anchor plus a one-line summary):
+body to the run's output directory and return an anchor plus a one-line summary):
 
 - Files changed.
 - Test results (pass/fail).
@@ -140,15 +140,15 @@ body to `<attempt-dir>/*` and return an anchor plus a one-line summary):
 
 ## Communication
 
-The orchestrator spawns each role with `Agent`
+The session that runs a module spawns each role with `Agent`
 (`subagent_type`, explicit `model`), and the spawn's return value is its report. There
 is no team, no mailbox, and no peer-to-peer messaging between roles.
 
 | Action | Method | Note |
 |--------|--------|------|
-| Receive instruction from orchestrator | the spawn prompt | delivered once, at spawn |
-| Report to orchestrator | the spawn's return value | completion, escalation — body to `<attempt-dir>/*`, return an anchor + one-line summary |
-| Cross-cutting impact notice | in the returned report | the orchestrator routes it to the affected scope |
+| Receive instruction from the spawning session | the spawn prompt | delivered once, at spawn |
+| Report to the spawning session | the spawn's return value | completion, escalation — body to the run's output directory, return an anchor + one-line summary |
+| Cross-cutting impact notice | in the returned report | the module states it in its output; where it is taken up is the Coordinator's |
 | Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
 ### Result delivery path by spawn mode
@@ -158,13 +158,13 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path �
 - **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
 - **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
 
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](core.md) > Cost Control > *Orchestrator context discipline*, row 2).
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](core.md) > Cost Control > *Context discipline*, row 2).
 
 | Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `<attempt-dir>/*` and report an anchor + one-line summary |
+| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to the run's output directory and report an anchor + one-line summary |
 
-A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
+A spawn carries no `name`: its role is its `subagent_type` ([`core.md`](core.md) > Communication).
 
 The single mode applies to every role; the per-role table is [`role-contracts.md`](role-contracts.md) > Spawn mode by role lifetime.
 

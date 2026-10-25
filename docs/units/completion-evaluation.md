@@ -1,8 +1,8 @@
 # U5 Completion evaluation — GATE:QUALITY
 
 > Unit document for U5. [`core.md`](../core.md) > Unit Document Loading Contract routes to
-> this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
-> Documents.
+> this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
+> Modules.
 
 U5 Completion evaluation is one module, the quality evaluation, whose contract is
 `<autoflow-root>/docs/contracts/quality.json` and whose procedure is

@@ -13,10 +13,10 @@ mechanisms conform to these rules.
 
 | Rule | Enforced by |
 |------|-------------|
-| R1 — Tool version | plugin packaging, the PREFLIGHT plugin record |
+| R1 — Tool version | plugin packaging; the version record is the Coordinator's |
 | R2 — Rule delivery | the command bodies, the agent definitions and the reviewers' rule files, generated and checked (regen-clean); the reviewer wrappers' prompts |
 | R3 — Target-identity separation (the project's own files) | the plugin package |
-| R4 — Packaging and runtime checks | CI, the PREFLIGHT target check |
+| R4 — Packaging and runtime checks | CI; the target check the Coordinator runs when it builds the environment |
 
 Terminology: the **plugin package** is the marketplace-distributed, versioned
 tool — this repository's tracked tree at a released version, whose root is the
@@ -34,9 +34,11 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 - **[MUST]** The AutoFlow version a target runs is the installed plugin's version
   (`<autoflow-root>/.claude-plugin/plugin.json` `.version`). The target commits no
   version record.
-- **[MUST]** Every cycle records, in its PREFLIGHT ledger entry, the plugin
-  version, the loaded root, and — when the root is a git work tree — its `HEAD`
-  and dirty state ([U1 Preparation](units/preparation.md) > *What is asked*).
+- Which AutoFlow an attempt ran on — the plugin version, the loaded root, and,
+  when the root is a git work tree, its `HEAD` and dirty state — is known from
+  the record the Coordinator keeps of the environment it builds; it is not a
+  ledger entry ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md)
+  D4, D8).
 - **[MUST]** The tool never records the target's version. The dependency stays
   one-way, target → tool.
 - An unpinned (`latest`) plugin version is not a supported configuration; the
@@ -80,12 +82,11 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
   `<autoflow-root>/…` reference in a document, an agent definition or a command
   body resolves inside it; and that the generated command bodies equal their
   generator's output.
-- **[MUST]** A failed **target check** is a fail-closed PREFLIGHT stop, in the
-  same class as the Git-clean hard stop: the target's own spawn policy against
-  the loaded agent definitions and the plugin's default, and the suite-plane
-  headers on an opted-in target
-  (`<autoflow-root>/scripts/preflight/target-check.sh`; [U1
-  Preparation](units/preparation.md) > *Stop conditions*).
+- The **target check** — the target's own spawn policy against the loaded agent
+  definitions and the plugin's default, and the suite-plane headers on an
+  opted-in target (`<autoflow-root>/scripts/preflight/target-check.sh`) — is a
+  check of the environment, run by the Coordinator when it builds it, not on
+  every run; it is a condition of no module (ADR-0038 D4).
 - The checks run from the plugin root and need no network access. Whether a
   newer version exists is Claude Code's plugin update, not an AutoFlow check.
 
@@ -93,7 +94,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 | Path in the target | Content |
 |---|---|
-| `.claude/autoflow.local.json` | the target's declarations — local checks, the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example`; absent means no local check, no checklist and no suite plane. The reviewers are not declared here (*Operator-level file* below) |
+| `.claude/autoflow.local.json` | the target's declarations — the security checklist, the suite-plane opt-in; written by the target, sample at `<autoflow-root>/.claude/autoflow.local.json.example`; absent means no checklist and no suite plane. The reviewers are not declared here (*Operator-level file* below) |
 | `.claude/autoflow/spawn-policy.json` | optional: the target's own spawn policy (*Spawn policy* below) |
 | the project's information and rule files | R3 |
 
@@ -102,7 +103,7 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 | Path | Content |
 |---|---|
 | `$HOME/.autoflow/config.json` | the operator's own values, one file per machine user: the reviewers AutoFlow runs in every project (`{ "review": { … } }`; [`reviewer-backend.md`](reviewer-backend.md) > *Config location*), and the record root (`"record_root": "<absolute path>"`, default `$HOME/.autoflow`) |
-| the record root (`$HOME/.autoflow` by default) | every file AutoFlow writes: each attempt's record directory `<repo-key>/<stamp>-issue-<N>/` — state, ledger, criterion review, reports, review records and the cycle-layer store — the issue drafts `<repo-key>/drafts/` and proposal records `<repo-key>/proposals/`, `_metrics/` and the hook's `.ledger-check-cache`; outside every checkout's tree, so a target needs no ignore rule for AutoFlow, and the hook and the scripts resolve it through `<autoflow-root>/scripts/lib/records.sh` (`autoflow-records`, on the Bash `PATH`), never from the plugin root or the target ([`state-tracking.md`](state-tracking.md) > *Record location*) |
+| the record root (`$HOME/.autoflow` by default) | every file AutoFlow writes: each attempt's record directory, which the Coordinator builds there — the ledger and each run's subdirectory, its outputs and its `local/` store — the issue drafts `<repo-key>/drafts/` and proposal records `<repo-key>/proposals/`, `_metrics/` and the hook's `.ledger-check-cache`; outside every checkout's tree, so a target needs no ignore rule for AutoFlow, and the hook and the scripts resolve it through `<autoflow-root>/scripts/lib/records.sh` (`autoflow-records`, on the Bash `PATH`), never from the plugin root or the target ([`core.md`](core.md) > Records and the hook) |
 
 It is neither target-owned nor shipped. The plugin's SessionStart hook
 (`<autoflow-root>/hooks/ensure-user-config.sh`, wired in
@@ -143,7 +144,7 @@ policy governs no row for (`policy_unmapped_agent_types`).
 
 | Variable | Provisioned by | Contract |
 |---|---|---|
-| `CLAUDE_PROJECT_DIR` | Claude Code (the project root) | the hook takes the session's checkout from it — whose attempts' state files gate the session, and whose working tree a record root may not be inside; Claude Code runs from the target's root |
+| `CLAUDE_PROJECT_DIR` | Claude Code (the project root) | the hook takes the session's checkout from it — whose remote default branch the push deny reads; Claude Code runs from the target's root |
 | `CLAUDE_PLUGIN_ROOT` | the plugin loader | substituted in `<autoflow-root>/hooks/hooks.json`, the agent definitions and the command bodies, and set in the hook's environment; absent from a Bash command's environment, where `autoflow-root` (`<autoflow-root>/bin/autoflow-root`, on the Bash `PATH`) prints the root; it never resolves a record path |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | not provisioned | AutoFlow neither requires nor reads it |
 | `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook, the review resolver and the record root, and the default record root `$HOME/.autoflow`; with `HOME` unset or empty there is no such file, and the record root is undetermined |

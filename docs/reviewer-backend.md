@@ -1,6 +1,6 @@
 # Reviewer Contract
 
-REVIEW reviews every pull request a cycle opens with the reviewers the operator's
+The review module reviews every pull request the delivery module opens with the reviewers the operator's
 configuration names and aggregates their reviews into one verdict
 ([ADR-0026](records/adr/0026-aggregated-review.md),
 [ADR-0033](records/adr/0033-review-unit-and-script-reviewers.md)). This document
@@ -17,7 +17,7 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the cycle's design artifacts in the attempt's record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
+| `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
 | `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
 | the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](units/review.md) > *Review aggregation*) |
 
@@ -56,7 +56,7 @@ one entry can name each target's own file.
 ```
 Contract: reviewer
   Output : one review record per reviewer, PR and round —
-           <attempt-dir>/issue-{N}-local/review/raw-<reviewer>-<owner>.<name>-<pr>-r<k>.md —
+           <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
@@ -107,12 +107,12 @@ run, so every consumer reaches the same verdict on the same file. When it
 cannot be read, nothing in it applies and no reviewer runs: the readout names
 it (`source: user <path>`), and every consumer prints the fixed marker line
 `user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
-from exit `2` and from every exit below; no wrapper starts its reviewer. The
-orchestrator asks the operator whether to proceed without those reviewers
+from exit `2` and from every exit below; no wrapper starts its reviewer. Whether
+to proceed without those reviewers is put to the operator by the Coordinator
 ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4,
 [`units/review.md`](units/review.md) > *Reviewer review*): proceeding runs the
 round on the reviews of the target's side alone; stopping leaves the operator
-to fix the file and run the step again, which reads it anew.
+to fix the file and run the review again, which reads it anew.
 
 ### Operator file
 
@@ -132,8 +132,7 @@ it once: the content is written to a temporary file and published with a hard
 link, which fails when the file exists, so a file another session created is
 never overwritten, only the creating session notifies, and no reader sees a
 partial file. The same file holds the operator's other AutoFlow values — the
-record root, `record_root` ([`state-tracking.md`](state-tracking.md) > *Record
-location*). Each key is read and validated by its own reader: an error in
+record root, `record_root` ([`core.md`](core.md) > Records and the hook). Each key is read and validated by its own reader: an error in
 `.review` does not touch the record root, and an error in `record_root` does not
 touch the reviewers; a file that is not valid JSON, or no `jq`, leaves both
 unreadable.
@@ -212,12 +211,12 @@ variables). `--probe` prints the same summary as
 `[check-review-backend] --probe: <reviewer> (model=… effort=…)` before its
 round-trip, and passes the identical flags.
 
-**Orchestrator vs. reviewer.** These pins govern only the reviewer subprocess;
-the orchestrating session's own model and effort follow the user's session
+**Session vs. reviewer.** These pins govern only the reviewer subprocess;
+the review module's session's own model and effort follow the user's session
 settings, and the aggregator's the `handoff-review-triage` row of
 `.claude/autoflow/spawn-policy.json`. None of them reads another.
 
-## Availability (PREFLIGHT, advisory)
+## Availability (advisory)
 
 `<autoflow-root>/scripts/preflight/check-review-backend.sh` resolves the
 reviewers through the shared resolver, prints them as one
@@ -233,15 +232,16 @@ probes each reviewer's CLI **presence only** (`command -v`):
 | `2` | usage error |
 | `6` | the operator file cannot be read as configured — the marker line `user-config: UNREADABLE <path> — <error>`; no reviewer is checked |
 
-PREFLIGHT records the result in the `preflight-review-config` record entry
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4). An absent
-CLI does **not** stop the cycle: REVIEW runs the other reviewers without it and
+The Coordinator runs it when it builds the environment, and keeps the result
+with its own records, not in the ledger
+([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4, D8). An absent
+CLI does **not** stop a run: the review runs the other reviewers without it and
 the aggregated comment names the omission
 ([`units/review.md`](units/review.md) > *Reviewer review*). An unreadable
-operator file (exit `6`) is put to the operator, who chooses between proceeding
-without those reviewers and fixing the file. Auth is **not** probed here: a
+operator file (exit `6`) is put to the operator by the Coordinator, who chooses
+between proceeding without those reviewers and fixing the file. Auth is **not** probed here: a
 present-but-unauthenticated reviewer passes and its auth failure surfaces at the
-REVIEW run, where it counts as a failed run.
+review run, where it counts as a failed run.
 
 ## On-demand auth probe (`--probe`)
 
@@ -251,9 +251,9 @@ configured reviewer — the same model-API connection a `claude -p` or a
 `codex exec` opens.
 
 **Triggers — on-demand only:** the operator runs it after writing or changing
-the reviewer configuration. It is **not** run per-cycle, is **not** wired into
-PREFLIGHT, and **no hook consumes it** — a probe failure is narrated, never used
-to gate a cycle.
+the reviewer configuration. It is **not** run per run, is **not** part of
+building the environment, and **no hook consumes it** — a probe failure is narrated, never used
+to gate a run.
 
 **Exit-code contract** (extends the presence `0/1/2`):
 
@@ -284,9 +284,9 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
 
 ## Trade-offs
 
-- **Two vendors, two inputs.** The `claude` review reads the cycle's design
+- **Two vendors, two inputs.** The `claude` review reads the attempt's design
   artifacts; the `codex` review reads only the pull request. The measurement
   behind issue #411 found their findings largely disjoint, so the aggregation
   keeps a finding only one of them raised.
 - **Account allowance.** The `claude` review runs on the same account allowance
-  as the orchestrator, once per pull request and round.
+  as the session that runs the review, once per pull request and round.

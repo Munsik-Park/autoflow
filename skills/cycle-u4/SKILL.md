@@ -240,8 +240,8 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 # U4 Build and verify — BUILD and AUDIT
 
 > Unit document for U4. [`core.md`](<autoflow-root>/docs/core.md) > Unit Document Loading Contract routes to
-> this file; the other units are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) > Unit
-> Documents.
+> this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
+> Modules.
 
 U4 Build and verify is two modules: the build module, whose contract is
 `<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
@@ -528,35 +528,30 @@ The fields go in the file's leading comment block at column 1, before its first 
 
 ## Functional-unit agents (U2 / U3 / U4)
 
-ADR-0025 D1 replaces the sixteen phases with six functional units as the unit of prescription; D2
-prescribes a unit by its goal, its artifact contract, its verification and its loop cap only. The
-three unit agents that run a unit's work are defined here; U1, U5, U6 and U7 have none (U1, U6 and U7 are the orchestrator's
-own work, with scripts that read and report, D8; U5 is the gate itself).
+Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D1); the
+evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
+lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
+and criteria-apply is a script.
 
-| Unit agent (`subagent_type`) | Unit | Gate class (hook) | Exit |
-|---|---|---|---|
-| `autoflow-unit-analysis` | U2 Analysis (DIAGNOSE, GATE:HYPOTHESIS) | analysis — no score gate | `gate_hypothesis` |
-| `autoflow-unit-design` | U3 Design (ARCHITECT, GATE:PLAN) | planning — GATE:HYPOTHESIS pass, or a `skipped` verdict | `gate_plan` |
-| `autoflow-unit-build` | U4 Build and verify (BUILD, AUDIT) | implementation — GATE:PLAN pass | `audit`, test-first judged by its evaluator |
+| Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |
+|---|---|---|
+| `autoflow-unit-analysis` | analysis (U2 Analysis) | hypothesis |
+| `autoflow-unit-design` | design (U3 Design) | plan |
+| `autoflow-unit-build` | build (U4 Build and verify) | audit, which judges test-first |
 
 - **Method is the unit's.** How the unit reaches its goal — what else it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
   with its grounds in the unit's artifact ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
-  The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the artifact contract and the
-  verification, and nothing else of their own; below that they carry the unit's guidance, generated
+  The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
+  evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
-- **A unit agent's spawns inherit its gate class.** The hook admits a spawn whose caller
-  (`agent_type`) is a unit agent without a role declaration and judges it by the unit's class; a
-  declared role that has a gate of its own keeps that gate too, so an existing role type is never
-  judged more loosely because a unit spawned it (`<autoflow-root>/docs/gate-matching-standard.md`
-  > P3). The caller is the immediate one: a helper's own spawn is judged by its own declaration.
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never writes
-  the state file or the ledger, never pushes, merges or files an issue, and a decision point it meets
-  goes to the advisor.
+  the ledger, never pushes, merges or files an issue, and a decision point it meets is stated in its
+  output as the question for the advisor.
 - **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
-  held at the values of the phase rows each unit replaces (DIAGNOSE; ARCHITECT; RED /
-  GREEN), so each migration step's measurement against the baseline isolates the method change.
-  The helpers a U4 unit spawns when it divides its work take theirs from the rows
+  held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
+  GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows
   `unit-build-area`, `unit-build-verify` and `unit-build-observe`: each is spawned as
   `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
   `effort` parameter, omitted when the row reads out the inherit sentinel
@@ -570,29 +565,29 @@ own work, with scripts that read and report, D8; U5 is the gate itself).
 
 ## Change Surface Rules
 
-Every changed line traces to the cycle's scope: the issue's acceptance criteria, the confirmed cause recorded in DIAGNOSE, the agreed plan, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the cycle is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
+Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its phase already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
    - this change created it or exposed it;
    - unless it is fixed, the behavior an acceptance criterion promises does not hold in actual use.
-2. **Is fixing it in this cycle desirable?** It is when it lies in the same module, is confirmed by the same verification, and fixing it separately would reopen the same code. It is not when it needs a design decision of its own, touches another ownership scope, or carries more risk than this issue.
+2. **Is fixing it in this change desirable?** It is when it lies in the same module, is confirmed by the same verification, and fixing it separately would reopen the same code. It is not when it needs a design decision of its own, touches another ownership scope, or carries more risk than this issue.
 
 | Judgment | Disposition |
 |---|---|
-| Directly related, fixing it here desirable | fixed in this cycle; the recorded judgment is the trace of its hunks |
+| Directly related, fixing it here desirable | fixed in this change; the recorded judgment is the trace of its hunks |
 | Directly related, fixing it here not desirable | separated, with its **separation reason** recorded |
 | Not directly related | separated — reported in one line with its `path:line`; a separate issue is the follow-up path |
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** At ARCHITECT it gets a verification-design row whose `Issue AC` is `—`; found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
-- **Criterion defects.** From ARCHITECT on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here and raised in the report with the criterion, the proposed change and the fact that shows it, and the orchestrator decides it, putting it to the advisor where those grounds do not settle it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
+- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here and raised in the report with the criterion, the proposed change and the fact that shows it, and the Coordinator decides it, putting it to the advisor where those grounds do not settle it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
 - A role that is not confident, or whose inclusion would change a design decision, raises the question instead of deciding it (principle 3).
-- **Where it is applied**: DIAGNOSE's scope judgments (the analysis report's `## Scope judgments`) and the ARCHITECT feature design's `## Scope` section set the cycle's scope; the BUILD unit judges what it meets during the work; and the gates' recommendations are triaged by the reviewer-finding procedure, where the same two questions decide which recommendation is not the issue's and ground the `Low` judgment (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
@@ -601,17 +596,17 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 ### Surrounding code
 - **[MUST]** Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
 - **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC or a recorded scope judgment requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
-- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing — which **Scope judgment** does not make directly related — are reported in the cycle report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this cycle.
+- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing — which **Scope judgment** does not make directly related — are reported in the run's report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this change.
 
 ### Over-engineering guard
-The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the cycle's scope needs:
-- **Scope**: don't add features, configurability, or "improvements" beyond the cycle's scope (**Scope judgment**). A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
+The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the change's scope needs:
+- **Scope**: don't add features, configurability, or "improvements" beyond the change's scope (**Scope judgment**). A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
 - **Documentation**: don't add docstrings, comments, or type annotations to code you didn't change. What a comment on changed code may carry is **Code comments** below.
 - **Defensive coding**: don't add error handling, fallbacks, or validation for scenarios that can't occur. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
 - **Abstractions**: don't create helpers or abstractions for a one-time operation, and don't design for hypothetical future requirements.
 
 ### Code comments
-The rule governs every comment in code a cycle writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the cycle leaves untouched stay as they are (**Surrounding code**).
+The rule governs every comment in code a change writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the change leaves untouched stay as they are (**Surrounding code**).
 
 - **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
 - **What a comment carries** — only what a reader cannot recover from the code, and only in one of these cases, each about the code the comment sits on:
@@ -626,14 +621,14 @@ The rule governs every comment in code a cycle writes or modifies — implementa
   - an issue, PR, review-round, or acceptance-criterion identifier;
   - the path or the contract of another file;
   - commented-out code.
-- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the cycle's `<attempt-dir>/*` design documents and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
+- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the attempt's design documents in its record directory and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
 - **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
 - **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
-The BUILD unit checks the cycle's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is the orchestrator's direct commit; a defect a comment carries on its own ground, such as an exposed credential, takes the severity and route its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
+The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is the Coordinator's, a fix no module owns; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
 
-### Orphans from this cycle
+### Orphans from this change
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
 - **[MUST]** Do not remove pre-existing unused symbols unless an AC or a recorded scope judgment requires it.
 
@@ -648,11 +643,11 @@ git grep -n -i -E 'lint[- ]chain|lint-outcome|lint outcome|ci-deferred|unexecute
 
 **Which chains exist, and how each runs, is the target's practice.** AutoFlow prescribes no lint command and no discovery order to a target. The committing role finds, at the location it commits in, how that target lints a change: its documents (`CLAUDE.md` > Development Commands, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a commit hook) and its pull-request CI. From them it judges which chains exist, the command that runs each in the working checkout, the files each covers, and which CI lint steps gate this pull request. A CI step that does not run for this pull request — its trigger, path filter, or job or step condition excludes it — gates nothing here and is not counted as a chain; the condition that excludes it is recorded as the ground. Where a CI step and a local command both stand for one chain, the local command run is one that selects and checks the files the step does. The judgment and its grounds go into the report (**Evidence anchor** below).
 
-**Execution trust boundary** — **[MUST]** the command run at commit time is one the baseline — the attempt's base (`autoflow-records base`) at its merge-base with `HEAD` — already carries. Before running it, the committing role confirms that the command's text at its source — the document entry, the script definition or the CI step body it was taken from — and any script file that text invokes by path are unchanged versus the baseline. A command this branch altered or added is not executed: the chain is reported `not-run` with the reason `modified-in-branch`, whichever source it came from. A command is run exactly as its source states it — a read-only check, not licence to run any other step, argument or command its source names.
+**Execution trust boundary** — **[MUST]** the command run at commit time is one the baseline — the base the branch is to merge into, at its merge-base with `HEAD` (`git merge-base HEAD origin/<base>`; the remote's default branch unless the Coordinator names another) — already carries. Before running it, the committing role confirms that the command's text at its source — the document entry, the script definition or the CI step body it was taken from — and any script file that text invokes by path are unchanged versus the baseline. A command this branch altered or added is not executed: the chain is reported `not-run` with the reason `modified-in-branch`, whichever source it came from. A command is run exactly as its source states it — a read-only check, not licence to run any other step, argument or command its source names.
 
-**Not executable in the checkout** — a chain the committing role cannot run in the working checkout (a CI step whose work is a third-party action reference with no local command that does the same, a tool the environment lacks) is reported `not-run` naming the step or command and the reason. A chain that cannot be run imposes a reporting obligation, not a blocking one: the commit proceeds. Not blocking the commit is not clearing the gate — GATE:QUALITY's `Commit conventions` clears the chain only by its reason class (**`not-run` reason classes** below). Making a chain locally executable belongs to the target repository's ops and is outside this rule's authority; a tool the work needs is secured as Verification and Tools > *The tools the work needs* says.
+**Not executable in the checkout** — a chain the committing role cannot run in the working checkout (a CI step whose work is a third-party action reference with no local command that does the same, a tool the environment lacks) is reported `not-run` naming the step or command and the reason. A chain that cannot be run imposes a reporting obligation, not a blocking one: the commit proceeds. Not blocking the commit is not clearing the gate — GATE:QUALITY's `Commit conventions` clears the chain only by its reason class (**`not-run` reason classes** below). Making a chain locally executable belongs to the target repository's ops and is outside this rule's authority; a tool the work needs is used, or requested, as Verification and Tools > *The tools the work needs* says.
 
-**Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this cycle's surface (**Surrounding code**).
+**Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this change's surface (**Surrounding code**).
 
 **Outcome vocabulary** — the report carries one word per chain the committing role identified, and the word set is total over the reachable states:
 
@@ -670,28 +665,28 @@ git grep -n -i -E 'lint[- ]chain|lint-outcome|lint outcome|ci-deferred|unexecute
 
 - **[MUST]** Fail-closed default: a chain whose reason class cannot be established is `unexecuted`. The permissive class is the one earned by evidence; the absence of evidence yields the blocking one.
 
-A `ci-deferred` deferral is discharged at HANDOFF's CI confirmation, which confirms the PR's check rollup is green — at least one check present and every element green (`<autoflow-root>/scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format item 5) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When no CI runs for the pull request (`confirm-ci-green.sh` exit `11` judged not run), the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*).
+A `ci-deferred` deferral is discharged at the delivery module's CI confirmation, which confirms the PR's check rollup is green — at least one check present and every element green (`<autoflow-root>/scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format item 5) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When no CI runs for the pull request (`confirm-ci-green.sh` exit `11` judged not run), the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*).
 
 - **[MUST]** A chain that did not execute is reported `not-run`, never `clean`.
 
 **Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration followed by the grounds of the identification (form and cardinality there).
 
 ### Refactor scope
-A refactor of the cycle's diff applies the same trace rule: refactor suggestions that touch code outside the cycle's change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the BUILD unit records its **Scope judgment**, and one judged directly related goes to the build report's out-of-scope-observations section for the evaluator to dispose of (`<autoflow-root>/docs/units/build.md` > Build report).
+A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**, and one judged directly related goes to the build report's out-of-scope-observations section for the evaluator to dispose of (`<autoflow-root>/docs/units/build.md` > Build report).
 
 ### GATE:QUALITY linkage
-GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope. The cycle's scope is the acceptance criteria, the confirmed cause recorded in DIAGNOSE (`<attempt-dir>/issue-{N}-analysis.md`), and the problems the cycle's recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section and every `## Scope judgments` section in the cycle's `<attempt-dir>/issue-{N}-*.md` reports, with the ledger's `[gate-autofix]` entries and gate verdict entries (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations the Coordinator deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom
 - stays inside the module or component that owns that cause
-- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this cycle** is the symbol-removal instance of this same test, not its limit
+- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this change** is the symbol-removal instance of this same test, not its limit
 - fixes each directly related problem its scope judgments include, and leaves out a directly related problem only with a recorded separation reason
 - leaves every surface outside the scope untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary — and keeps, inside it, the existing behavior that neither the acceptance criteria, the confirmed cause nor a problem its scope judgments include asks to change, a protection or the order of checks included; recording such a change as a known gap does not bring it into scope
 
 `Minimal implementation` asks whether each hunk is needed. The question is asked against the smallest change that satisfies the acceptance criteria, with the tests its verification design requires, and resolves the confirmed cause: a hunk beyond it stands only on its own recorded ground. It fails when a hunk traces to no acceptance criterion, confirmed cause or recorded scope judgment — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the scope needs (**Over-engineering guard**) — regardless of code quality, and when a hunk rests on a scope judgment that meets none of question 1's three conditions. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
 
-`Impact scope` asks the same question from the other side: whether the change reaches what its scope requires. A directly related problem that the cycle's own records show — a scope judgment, a build observation, an earlier gate's recommendation — and that the change leaves out with no separation reason recorded lowers it, as does a separation reason that answers neither half of question 2.
+`Impact scope` asks the same question from the other side: whether the change reaches what its scope requires. A directly related problem that the attempt's own records show — a scope judgment, a build observation, an earlier evaluation's recommendation — and that the change leaves out with no separation reason recorded lowers it, as does a separation reason that answers neither half of question 2.
 
 **Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the build report's `## Comment check` section (`<autoflow-root>/docs/units/build.md` > Build report) — its `comment-ratio` line and its hits — with the comments in the diff:
 - *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
@@ -1119,58 +1114,54 @@ Each limit below is an under-block, with layer three as the catch:
 ## Advisor (first judgment at a decision point)
 
 ADR-0025 D7 moves the first judgment at a decision point from the operator to a dedicated advisor.
-This section is the procedure's single home; [`core.md`](<autoflow-root>/docs/core.md) > Flow Control routes to
-it and the unit documents cite it.
+This section is the procedure's single home; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+*A decision that is not the module's own* routes to it and the module documents cite it.
 
 ### Decision points and harness-level blocks
 
 - **A decision point** is a decision the working AI cannot settle on the grounds at hand, or is not
   confident of ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). An acceptance-criterion
   change, a non-code root cause or a non-code lever, a planning / design / ADR prerequisite the
-  analysis records, a reviewer finding that repeats the previous attempt's complaint, and a
-  GATE:HYPOTHESIS PASS the orchestrator judges unreachable are where such a decision arises, not
-  decision points by their kind: the orchestrator judges each first, and where the grounds the
-  raising report, finding or evaluation carries settle it, it decides and records the decision with
-  those grounds in an `O` ledger entry under `orchestrator decision` — for an acceptance-criterion
-  change, its `[ac-decision]` entries ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
-  *Acceptance-criterion decisions*); for a repeated complaint, the attempt's `[review-autofix]`
-  entry. An un-agreed design point, a `remedy_class: operator`, and a recommendation or finding the
-  orchestrator cannot route with confidence (a pause criterion, a rebuttal the re-score or the
-  reviewer keeps while the two sides still disagree) are already decisions the working AI could not
-  settle. A security-checklist change (`[checklist-decision]`) is the one decision point by its
-  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator entry
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*). In U1's criterion
-  review stage, a point the review cannot settle is one as well, put by the session running the
-  stage — the orchestrator, or a `/autoflow:criterion-review` session taking its part — in the
-  procedure below with `cycle 0` and the phase `CRITERION-REVIEW`
-  ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*). Each decision point is answered by
-  the advisor first.
+  analysis records, a finding that repeats an earlier complaint, and a hypothesis evaluation whose
+  PASS looks unreachable are where such a decision arises, not decision points by their kind: the
+  Coordinator judges each first, and where the grounds the raising report, finding or evaluation
+  carries settle it, it decides and records the decision with those grounds in an `O` ledger entry
+  under `orchestrator decision` — for an acceptance-criterion change, its `[ac-decision]` entries
+  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). An un-agreed
+  design point, a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal
+  the re-score or the reviewer keeps while the two sides still disagree are already decisions the
+  working AI could not settle; the module states each in its output as the question for the
+  advisor. A security-checklist change (`[checklist-decision]`) is the one decision point by its
+  kind: `<autoflow-root>/scripts/gate/security-checklist.sh` counts only an advisor or an operator
+  entry ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*). In the
+  criterion review, an item the review could not decide with confidence is one as well, its
+  question stated in the item's `## Dispositions` row ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) >
+  *Authority*). Each decision point is answered by the advisor first.
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial), or a tool, credential, installation or material the environment does not provide — for a
-  tool it has, what using it lacks (access, a purpose and permitted scope, a permission setting). Only
-  such a block stops the cycle for the operator on the forward path — situation-first, `active:false`,
-  `phase:"awaiting-user"` ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > Human-decision
-  presentation). A decision at one of those points can end the cycle instead — a non-code lever or cause, a
-  prerequisite that comes first, a GATE:HYPOTHESIS PASS not reachable; the last asks the operator to
-  confirm closing the issue, the cycle not closing it itself ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) >
-  *Verification — GATE:HYPOTHESIS*). PREFLIGHT's readiness conditions, the gate thresholds and the caps are not decision
-  points and are unchanged ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1).
+  denial). It is reported to the operator situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
+  Principles > Human-decision presentation). A tool, credential, installation or material the
+  environment does not provide — for a tool it has, what using it lacks (access, a purpose and
+  permitted scope, a permission setting) — is a tool request: the run does what it can without it
+  and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). What follows a decision that
+  can end the work — a non-code lever or cause, a prerequisite that comes first, a hypothesis PASS
+  not reachable, the last closing the issue only on the operator's confirmation — is the
+  Coordinator's. The reference values and the caps are not decision points
+  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1).
 
 ### Procedure
 
-1. **Request.** The orchestrator writes `<attempt-dir>/issue-{N}-advisor-request-<k>.md` situation-first:
-   the situation in domain terms, the decision asked with each option and what it changes, the
-   orchestrator's own reading — the option it leans to, its grounds, and the point where those
-   grounds stop settling it — and the anchors (the artifact paths, the report or finding the
-   decision surfaced in). The advisor starts from that reading rather than gathering the material
-   anew.
+1. **Request.** The Coordinator writes `<attempt-dir>/issue-{N}-advisor-request-<k>.md`
+   situation-first: the situation in domain terms, the decision asked with each option and what it
+   changes, the reading of the module that raised it — the option it leans to, its grounds, and the
+   point where those grounds stop settling it — and the anchors (the output paths, the report or
+   finding the decision surfaced in). The advisor starts from that reading rather than gathering the
+   material anew.
 2. **Spawn.** One fresh `autoflow-advisor` per decision, anonymous, model from
    `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
-   `effort:` line). The prompt names the request file, the ledger, the issue, the cycle and the
-   phase. The spawn is never score-gated. Where two or more decisions are open and none depends on
-   another's answer, their advisors may be spawned together, and a decision that depends on another's
-   answer is spawned after that answer is recorded; whether to spawn them together or one after
-   another is the orchestrator's judgment (`<autoflow-root>/docs/core.md` > Rule Scope, principle 2), within the
+   `effort:` line). The prompt names the request file, the ledger and the issue. Where two or more
+   decisions are open and none depends on another's answer, their advisors may be spawned together,
+   and a decision that depends on another's answer is spawned after that answer is recorded; whether
+   to spawn them together or one after another is the Coordinator's judgment, within the
    concurrent-spawn limit (`<autoflow-root>/docs/core.md` > Cost Control).
 3. **Answer and record.** The advisor weighs the material itself, writes its answer to
    `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
@@ -1182,15 +1173,15 @@ it and the unit documents cite it.
    ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
    the file on disk and checks (*Independence* below), so the prior content is never re-written. It
    returns the identifier and the answer in one line.
-4. **Apply.** The orchestrator verifies the anchor — the ledger heading and the record file exist —
-   and routes the cycle as the operator's answer to that point would have been routed: the
-   Flow Control row the point sits on names the route. The cycle does not pause. An advisor that
+4. **Apply.** The Coordinator verifies the anchor — the ledger heading and the record file exist —
+   and applies the answer; which module runs next on it is its own
+   ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D2). An advisor that
    reports the decision blocked at the harness level turns it into a harness-level block.
 
 ### Independence
 
 The advisor is never the author of what it judges: it is a fresh spawn per decision, not the unit
-agent, role spawn or orchestrator whose work raised the point, and its record carries its own grounds.
+agent, role spawn or Coordinator whose work raised the point, and its record carries its own grounds.
 Its authority is worth only that separation, and the operator's override only its own — so each
 is written by its own writer alone and stays as written. Three locks:
 
@@ -1198,9 +1189,8 @@ is written by its own writer alone and stays as written. Three locks:
   state-independent): text a `Write` / `Edit` / `MultiEdit` adds to an `issue-*-ledger.md` that carries an `advisor decision`
   authority or an `A<n>` heading is denied unless the caller's `agent_type` is `autoflow-advisor`;
   text carrying an `operator decision` authority or an `O<n>` heading is denied unless the caller is
-  the main session (no `agent_type` — the orchestrator, or a `/autoflow:criterion-review` session
-  taking its part, recording its own decision, an operator override or instruction, or the review's
-  `[criterion-ready]` entry); the advisor
+  the main session (no `agent_type` — the Coordinator's session, recording its own decision, an
+  operator override or instruction, or the criterion review's `[criterion-ready]` entry); the advisor
   adds no `operator decision` and no `O` / `F` / `E` heading.
 - **Append-only — the same hook section**: a `Write` / `Edit` / `MultiEdit` is applied to the file
   on disk and must keep the whole prior content as its prefix, so no entry is rewritten or removed.
@@ -1208,8 +1198,9 @@ is written by its own writer alone and stays as written. Three locks:
   (`<autoflow-root>/docs/decision-ledger.md` > *Advisor decisions and operator overrides*).
 - **The record convention**: a consumer counts `advisor decision` only on an `A<n>` entry and
   `operator decision` only on an `O<n>` entry, and lets an entry replace another only by an explicit
-  `- Supersedes:` / `- Overrides:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`; the gate backstops
-  match the `[ac-decision]` marker and read the authority as recorded).
+  `- Supersedes:` / `- Overrides:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
+  `<autoflow-root>/scripts/contracts/criteria-apply.sh`, which locates an entry by its `[ac-decision]`
+  marker and reads the authority as recorded).
 
 The threat these locks answer is an agent overstepping in routine work — rewriting a ledger it
 meant to append to, or writing an authority that is not its own — not a determined evasion (the
@@ -1219,12 +1210,11 @@ line, a malformed heading, a variant spelling of an authority).
 
 ### Operator override
 
-An operator override of an advisor decision is recorded by the orchestrator as an `O` entry under
-the authority `operator decision`, with the marker of the entry it overrides and a line naming that
-`A` identifier. It supersedes the advisor's entry without a new verified fact — the override is the
-authority ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Advisor decisions and operator
-overrides*) — and the cycle re-enters where the overridden answer's route reaches, consuming no
-re-entry budget.
+An operator override of an advisor decision is recorded by the Coordinator's main session as an `O`
+entry under the authority `operator decision`, with the marker of the entry it overrides and a line
+naming that `A` identifier. It supersedes the advisor's entry without a new verified fact — the
+override is the authority ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Advisor decisions and
+operator overrides*). Which module runs again on it is the Coordinator's.
 
 ### Claude Code's advisor tool (`advisorModel`)
 
@@ -1240,8 +1230,8 @@ which is why the first judgment is the sub-agent's (ADR-0025 D7).
 
 ## Evaluation AI (subagent)
 
-This section is the orchestrator's side of the Evaluation AI: how it is spawned, prompted and its
-result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
+This section is the side of the session that runs an evaluation module: how the Evaluation AI is
+spawned, prompted and its result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
 output — is [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md), the one document its agent definition carries with the sections it names.
 
 - Independent evaluator that does not participate in planning or implementation.
@@ -1250,27 +1240,20 @@ output — is [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md
 - Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type, target file paths, and — for GATE:PLAN and GATE:QUALITY — the path of the issue's **acceptance-criterion list** (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`) together with the issue decision ledger (`<attempt-dir>/issue-{N}-ledger.md`). Those two are the declared source the AC-authority check diffs against. The list is an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format); whether it changes is the operator's.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection), and the prompt names the `<attempt-dir>/*` files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](<autoflow-root>/docs/core.md) > Cost Control.
-3. **[MUST]** The orchestrator-authored portion is 5 lines or fewer (excluding target file contents).
+1. **[MUST]** Include in the prompt: evaluation type and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](<autoflow-root>/docs/core.md) > Cost Control.
+3. **[MUST]** The portion the spawning session writes is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Finding coverage*).
 
 ### Recording the result
 
-The hook does **not** read the evaluator's `pass`, `avg` or `min` fields: it computes them from the raw
-`scores` the orchestrator records. The phase keys recorded in `<attempt-dir>/issue-{N}.json` are below.
-The four keys match the `gated_phase_keys` allow-list in `tests/fixtures/gate-schema.json`:
-
-- `gate_hypothesis` — GATE:HYPOTHESIS, one form for every issue (hook-gated for a bug / incident issue; its `verdict` `skipped (non-bug issue)` lets the hook admit the ARCHITECT spawn without reading the scores, and the orchestrator judges the PASS)
-- `gate_plan` — GATE:PLAN (hook-gated)
-- `audit` — AUDIT (hook-gated)
-- `gate_quality` — GATE:QUALITY (hook-gated)
-
-- **[MUST]** When an evaluation's `fail_hypothesis` is recorded in state, it is written at `phases.<phase_key>.fail_hypothesis` — a sibling of `evaluator` and `scores` inside the phase object. **[DENY]** Never at the state file's top level and never as an entry inside `scores`. Recording is permitted, not required.
-
-See [`state-tracking.md`](<autoflow-root>/docs/state-tracking.md) for the full schema.
-
+The Evaluation AI returns one JSON object, and the session that runs the evaluation module writes it,
+verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recommendations, and no
+verdict ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). The module's
+check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
+`outputs.evaluation`). Reading the scores against the reference values is the Coordinator's
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
 
 ---
 
@@ -1283,13 +1266,13 @@ Every role is an anonymous direct spawn, so there is exactly one delivery path �
 - **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
 - **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
 
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Orchestrator context discipline*, row 2).
+The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Context discipline*, row 2).
 
 | Spawn mode | Where the report arrives | Required delivery action |
 |---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to `<attempt-dir>/*` and report an anchor + one-line summary |
+| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to the run's output directory and report an anchor + one-line summary |
 
-A spawn carries no `name`: the gate hook keys the role→gate mapping on `subagent_type` alone and denies a `name`-carrying payload inside a cycle.
+A spawn carries no `name`: its role is its `subagent_type` ([`core.md`](<autoflow-root>/docs/core.md) > Communication).
 
 The single mode applies to every role; the per-role table is [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Spawn mode by role lifetime.
 
@@ -1299,20 +1282,20 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 ## Reporting Format
 
-When a role spawn reports to the orchestrator — the report is the spawn's return value, with any body written to `<attempt-dir>/*` and an anchor plus a one-line summary returned — it must follow this shape (see [`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Orchestrator context discipline*). This format governs **AI↔AI / AI↔orchestrator** reporting: the returned report, and what a unit agent's helpers report to it. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in [`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
+When a role spawn reports to the session that spawned it — the report is the spawn's return value, with any body written to the run's output directory and an anchor plus a one-line summary returned — it must follow this shape (see [`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Context discipline*). This format governs **AI↔AI** reporting: the returned report, and what a unit agent's helpers report to it. It does **not** govern a **human-facing decision pause** — that follows the situation-first contract in [`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > Human-decision presentation (situation → decision/options → anchors-as-evidence).
 
-1. **Reference paths, not bodies**: cite `<attempt-dir>/*` files, source files, and commit hashes by path/hash. Do NOT paste full file bodies or document sections into messages.
+1. **Reference paths, not bodies**: cite record files, source files, and commit hashes by path/hash. Do NOT paste full file bodies or document sections into messages.
 2. **One-line summaries**: each finding, fix, or status item gets one line. Tables of ≤ 10 rows are allowed for structured results (test counts, coverage percentages).
 3. **Test output**: report the test runner's summary line (e.g., "Tests: 147 passed, 147 total"), read from the run's log (item 5), + coverage percentage. Never paste per-case PASS/FAIL lines or the full coverage report.
 4. **Cited code excerpts**: when quoting code is unavoidable (e.g., to point out a bug), keep excerpts ≤ 10 lines AND verify the excerpt against the live file at quoting time.
 5. **Evidence anchor (mandatory)**: every "done" / "PASS" / "fixed" claim must end with one verifiable anchor — pick whichever fits:
    - code change → full 40-char commit SHA
-   - test pass  → the run's **log** — the file its output was written to (Testing Standards item 7), cited by path under `<attempt-dir>/issue-{N}-local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
+   - test pass  → the run's **log** — the file its output was written to (Testing Standards item 7), cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
    - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger)
-   - observation (a criterion verified with a tool) → the row's observation record, cited by path under `<attempt-dir>/issue-{N}-local/`, with its result line (`observation: match` / `observation: mismatch — …`) read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
+   - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result line (`observation: match` / `observation: mismatch — …`) read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → one line per chain the committing role identified, followed by the grounds of the identification — where it looked (the documents, scripts and CI files read) and each CI lint step it did not count as a chain with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. Each line's form follows its outcome word: `clean` / `fixed-and-staged` / `detected` → the command as invoked, its source (document section, script definition or workflow `path:line` and step name) and the result line it produced; `not-run` → the literal `not-run` plus its reason class in parentheses (`ci-deferred` / `unexecuted`, Change Surface Rules > *`not-run` reason classes*), the reason, and the unexecuted chain's identity (its command and source, or the workflow `path:line` and step name), and a `ci-deferred` line additionally names the covering pull-request job (workflow `path:line` plus job/step name) and the trigger evidence that it runs for this pull request — the workflow's `on: pull_request` entry, either no `paths:` filter or one whose patterns match a staged file, and a job and step condition that admits this pull request; a line missing that evidence is `unexecuted`, not `ci-deferred`; `not-covered` → the chain and the file set it covers; `not-applicable` → that word alone, with the grounds naming where the committing role looked. A report citing one chain where the committing role identified several is malformed, not compliant.
 
-   Anchors must be deterministically confirmable by the orchestrator against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
+   Anchors must be deterministically confirmable by their reader — the session that spawned the role, an evaluator, the Coordinator — against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
 
 
 ---
@@ -1321,19 +1304,19 @@ When a role spawn reports to the orchestrator — the report is the spawn's retu
 
 ## Verification and Tools
 
-This section applies to every actor of a cycle — the orchestrator and every role.
+This section applies to every actor of a module's run — the session that runs it and every role it spawns.
 
-**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2 the phases cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every `automated` row this cycle authored or changed and every `delivery-check` row — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format item 5). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is HANDOFF's CI — whatever the target's CI runs. There is no local whole-tree run: none scheduled, none held in reserve.
+**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format item 5). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs. There is no local whole-tree run: none scheduled, none held in reserve.
 
-**A run's evidence is the log it left; a report is confirmed by reading it, not by running it again**. The evidence of a test run is the log file its output was written to (Testing Standards item 7's `$LOG`), cited by path under `<attempt-dir>/issue-{N}-local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Confirming is not re-executing. Every point that confirms a run record — the orchestrator's acceptance of a role-spawn report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below), not failed; at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entries > the verified-error exception).
+**A run's evidence is the log it left; a report is confirmed by reading it, not by running it again**. The evidence of a test run is the log file its output was written to (Testing Standards item 7's `$LOG`), cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Confirming is not re-executing. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below), not failed; at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entries > the verified-error exception).
 
-**How a test is run is the target's practice**. AutoFlow prescribes no test command to a target. The role that runs a test — the BUILD unit, or a helper it spawns — finds, in the target checkout it works in, how that target runs its tests: its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree), runs the tests it judges the change requires that way, and records the command, the log and the summary line read from it. What the command executes internally is the target's practice; AutoFlow reads the outcome and adjudicates nothing beyond it. A **cycle-layer asset** — a default `automated` row's test, a `delivery-check`, a `manual` checklist — lives in the attempt's cycle-layer store `<attempt-dir>/issue-{N}-local/`, under the record root outside the target's tree; it is authored as an executable file there and **invoked directly by its path**, never through a driver AutoFlow ships. The recorded command **names the asset's absolute path in the store** and is run from the target checkout's root: the asset finds the tree it checks from its working directory (`git rev-parse --show-toplevel`), never from its own location, which is outside every tree. The verification design's table declares the set, and each row's recorded run — its **run record**: command, log path and summary line — is the witness that its asset executed, the log being what the witness is read from. A cycle that wants one command for several assets writes that driver *as* a cycle-layer asset in the same store. Such an asset is never committed, and stays with the attempt's other records. A cycle asset writes its reproducible output — a build result, a copy of a source tree or of another original: an output re-creatable from inputs its record already names, such as a commit and a command — only under the store's reserved path `<attempt-dir>/issue-{N}-local/disposable/`, which cleanup deletes — the one path it deletes ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup). Nothing a run record, an observation record or a cycle report cites ever goes there — not a log, a record file, the artifacts an observation left, or the asset itself, whose path the recorded command names — even when it is re-creatable. Whether an output is reproducible and uncited is the writer's judgment; where such an output goes is not. Only the store's top-level `disposable/` is reserved — a `disposable` deeper in the store is kept like any other path — and reproducible output left outside it is a deviation, kept with the rest of the store.
+**How a test is run is the target's practice**. AutoFlow prescribes no test command to a target. The role that runs a test — the build unit, or a helper it spawns — finds, in the target checkout it works in, how that target runs its tests: its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree), runs the tests it judges the change requires that way, and records the command, the log and the summary line read from it. What the command executes internally is the target's practice; AutoFlow reads the outcome and adjudicates nothing beyond it. A **run's own check** — a test the target's tree does not keep, a check run before delivery, a manual checklist — lives in the run's store `<out>/local/`, under the record root outside the target's tree; it is authored as an executable file there and **invoked directly by its path**, never through a driver AutoFlow ships. The recorded command **names the asset's absolute path in the store** and is run from the target checkout's root: the asset finds the tree it checks from its working directory (`git rev-parse --show-toplevel`), never from its own location, which is outside every tree. The verification design's table declares the set, and each row's recorded run — its **run record**: command, log path and summary line — is the witness that its asset executed, the log being what the witness is read from. A run that wants one command for several assets writes that driver *as* an asset in the same store. Such an asset is never committed, and stays with the attempt's other records, where a later run reads it. An asset writes its reproducible output — a build result, a copy of a source tree or of another original: an output re-creatable from inputs its record already names, such as a commit and a command — only under the store's reserved path `<out>/local/disposable/`, the one path that can be deleted with nothing the records cite lost; whether and when it is deleted is the Coordinator's ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup). Nothing a run record, an observation record or a report cites ever goes there — not a log, a record file, the artifacts an observation left, or the asset itself, whose path the recorded command names — even when it is re-creatable. Whether an output is reproducible and uncited is the writer's judgment; where such an output goes is not. Only the store's top-level `disposable/` is reserved — a `disposable` deeper in the store is kept like any other path — and reproducible output left outside it is a deviation, kept with the rest of the store.
 
-**The tools the work needs are found and used; what a tool lacks is requested from the operator**. Analysis, design, implementation and verification each find the tools they need — a browser to see a screen, a database to see data, a running server to see behavior, any other tool the problem calls for — in this environment (the session's tools, MCP servers included) and in the target (its documents, scripts and workspace structure). AutoFlow names no tool and no method to a target: which tool, what is started and how the result is looked at are the working AI's judgment in that target, recorded with its grounds. The orchestrator pursues securing them. A tool that is off, and whose starting procedure the target's documents or scripts carry (a dev server, a compose file, a seed), is started by that procedure, the procedure cited as the ground; one that must outlive a role spawn is started by the orchestrator ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Background execution is orchestrator-only*), and stopped once the cycle no longer needs it. A tool that cannot be used has something missing, and that is what is requested from the operator, situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Flow Control > *tool or referenced material → user*): the tool itself when this environment does not have it — an installation, enabling an MCP server or a browser extension — or, for a tool it has, what using it lacks — access, the purpose and permitted scope of the host or service it reaches, a credential, a permission setting. Providing any of these is outside the assigned scope ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); using a tool the environment already provides is not. A purpose or permitted scope is a project fact, asked with the request that the operator record it in the project's information ([`core.md`](<autoflow-root>/docs/core.md) > Project Information). The request names what is missing, not the output the tool would give: the output answers one cycle, and the next cycle that needs the same fact stops at the same point. A criterion falls back to a person's observation or a mock only when no tool can be secured: what is missing — the tool, or what using it lacks — was requested and the operator answers that it cannot be provided, or no tool exists that verifies the criterion (`<autoflow-root>/docs/units/design.md` > *Tools*). A material an acceptance criterion or the issue body points to — a design mockup, an asset, an external document — is opened, and the record of opening it is an input to analysis and to the verification design; an abbreviated example in the issue body does not stand in for it, and a material that cannot be opened reaches the operator the same way. A criterion verified with a tool is looked at with that tool once implemented: what was looked at, how, and the artifacts it left are its **observation record** under `<attempt-dir>/issue-{N}-local/` — for a screen, the rendered result compared against the referenced material — and, like a run's log, the record is what is read to confirm it, never a second observation. Where each phase does this: `<autoflow-root>/docs/units/analysis.md` (DIAGNOSE), `<autoflow-root>/docs/units/design.md` > *Tools* and `<autoflow-root>/docs/units/build.md` > What the build owes.
+**The tools the work needs are found and used; what is missing is requested, and the run still ends**. Analysis, design, implementation and verification each find the tools they need — a browser to see a screen, a database to see data, a running server to see behavior, any other tool the problem calls for — in this environment (the session's tools, MCP servers included) and in the target (its documents, scripts and workspace structure). AutoFlow names no tool and no method to a target: which tool, what is started and how the result is looked at are the working AI's judgment in that target, recorded with its grounds. A tool that is off, and whose starting procedure the target's documents or scripts carry (a dev server, a compose file, a seed), is started by that procedure, the procedure cited as the ground; one that must outlive a role spawn is started by the main session ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Background execution is the main session's only*), and stopped once the run no longer needs it. A tool that cannot be used has something missing: the tool itself when this environment does not have it — an installation, enabling an MCP server or a browser extension — or, for a tool it has, what using it lacks — access, the purpose and permitted scope of the host or service it reaches, a credential, a permission setting. Providing any of these is outside the assigned scope ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); using a tool the environment already provides is not. What is missing is recorded as a **tool request** — `{missing, instead}` in `<out>/tool-requests.json` and in the run's report: what is missing, named as what is missing and not as the output the tool would give, and what the run did instead, each verification it left unrun or ran on a mock or a person's observation for the lack included. The run does what it can without it — a mock, an observation, a verification left not run, by its own judgment — and ends; the delivery module states every request in the pull request, and the operator decides on it ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). A purpose or permitted scope is a project fact, and its request asks that the operator record it in the project's information ([`core.md`](<autoflow-root>/docs/core.md) > Project Information). A material an acceptance criterion or the issue body points to — a design mockup, an asset, an external document — is opened, and the record of opening it is an input to analysis and to the verification design; an abbreviated example in the issue body does not stand in for it, and a material that cannot be opened is a tool request the same way. A criterion verified with a tool is looked at with that tool once implemented: what was looked at, how, and the artifacts it left are its **observation record** under the run's `<out>/local/` — for a screen, the rendered result compared against the referenced material — and, like a run's log, the record is what is read to confirm it, never a second observation. Where each module does this: `<autoflow-root>/docs/units/analysis.md`, `<autoflow-root>/docs/units/design.md` > *Tools* and `<autoflow-root>/docs/units/build.md` > What the build owes.
 
-**A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a spawn prompt that hands the record to the next role, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL and routes nowhere; a run that fails routes as the phase's own rules say.
+**A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says, and what follows it is the Coordinator's.
 
-**What a cycle leaves in the target's tree is not classified by AutoFlow**. A cycle adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the cycle does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 
