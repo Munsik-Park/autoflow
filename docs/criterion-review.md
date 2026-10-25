@@ -276,12 +276,10 @@ confirmations*):
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](core.md) > Decision Ledger).
 
-**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N --records <attempt-dir>`
-reads the last `[criterion-ready]` entry in the attempt's own ledger — never another attempt's —
-and reports `READY` only when the entry is an `O` entry under `operator decision`, its record
-exists, and its `- Issue body sha256:` equals the sha256 of the issue body read from GitHub now. Any
-edit to the body after the entry leaves the attempt not ready until its review runs again and a new
-entry records the edited body. Whether the review runs again, and over what (in whole, the changed
+**The confirmation is bound to the attempt and to the body.** The entry that stands is the last
+`[criterion-ready]` entry in the attempt's own ledger — never another attempt's —, and it confirms
+the body its `- Issue body sha256:` names. A body edited after the entry is not the one it confirms
+until its review runs again and a new entry records the edited body. Whether the review runs again, and over what (in whole, the changed
 criteria only, or not at all), when the body an entry records differs from the one the record read,
 is the Coordinator's judgment, recorded with its grounds in the new entry's grounds.
 

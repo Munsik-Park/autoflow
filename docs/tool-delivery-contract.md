@@ -13,7 +13,7 @@ mechanisms conform to these rules.
 
 | Rule | Enforced by |
 |------|-------------|
-| R1 — Tool version | plugin packaging; the version record is the Coordinator's |
+| R1 — Tool version | plugin packaging; every run's `result.json` records the AutoFlow that ran it |
 | R2 — Rule delivery | the command bodies, the agent definitions and the reviewers' rule files, generated and checked (regen-clean); the reviewer wrappers' prompts |
 | R3 — Target-identity separation (the project's own files) | the plugin package |
 | R4 — Packaging and runtime checks | CI; the target check the Coordinator runs when it builds the environment |
@@ -34,11 +34,12 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 - **[MUST]** The AutoFlow version a target runs is the installed plugin's version
   (`<autoflow-root>/.claude-plugin/plugin.json` `.version`). The target commits no
   version record.
-- Which AutoFlow an attempt ran on — the plugin version, the loaded root, and,
-  when the root is a git work tree, its `HEAD` and dirty state — is known from
-  the record the Coordinator keeps of the environment it builds; it is not a
-  ledger entry ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md)
-  D4, D8).
+- Which AutoFlow a module ran on — the plugin version, the loaded root, and,
+  when the root is a git work tree, its `HEAD` and dirty state — is recorded in
+  the run's `<out>/result.json` (`autoflow`), which
+  `<autoflow-root>/scripts/contracts/contract.sh` writes at check-in's refusal
+  and at check-out (ADR-0027 D4); it is not a ledger entry
+  ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D8).
 - **[MUST]** The tool never records the target's version. The dependency stays
   one-way, target → tool.
 - An unpinned (`latest`) plugin version is not a supported configuration; the

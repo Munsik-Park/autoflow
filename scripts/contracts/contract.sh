@@ -40,7 +40,11 @@
 #             (<out>/tool-requests.json: a JSON array of {missing, instead},
 #             [] when the run lacked nothing — 5.3, Q10). It writes
 #             <out>/result.json: the module, accepted or refused, each
-#             output's path, each defect found, and the tool requests.
+#             output's path, each defect found, the tool requests, and the
+#             AutoFlow that ran it — `autoflow`: its version, its root and,
+#             for a root that is a git work tree, its HEAD and whether the
+#             tree is dirty (ADR-0027 D4). A refusal's result carries the
+#             same.
 #
 # lint      — the contracts agree with each other and with the documents
 #             they name (no invocation; §8, the contract–document check):
@@ -102,13 +106,28 @@ input_paths() { jq -r --arg n "$1" '.inputs[$n] // empty | if type == "array" th
 has_input() { [ -n "$(input_paths "$1")" ]; }
 param() { jq -r --arg n "$1" '.params[$n] // empty' "$INV"; }
 
+# The AutoFlow that ran the module (ADR-0027 D4): the plugin's version, the
+# root it was loaded from and, when that root is a git work tree of its own, its
+# HEAD and whether the tree is dirty.
+autoflow_run() {
+  local v head='' dirty=''
+  v=$(jq -r '.version // empty' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null)
+  if [ "$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" = "$(cd -P -- "$ROOT" && pwd)" ]; then
+    head=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
+    if [ -n "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then dirty=true; else dirty=false; fi
+  fi
+  jq -nc --arg v "$v" --arg r "$ROOT" --arg h "$head" --arg d "$dirty" \
+    '{version: $v, root: $r} + (if $h == "" then {} else {head: $h, dirty: ($d == "true")} end)'
+}
+
 write_result() { # <status>
   mkdir -p "$OUT"
   local tr='[]' outs=${OUTPUTS:-'{}'}
   [ -f "$OUT/tool-requests.json" ] && jq -e 'type == "array"' "$OUT/tool-requests.json" >/dev/null 2>&1 \
     && tr=$(jq -c . "$OUT/tool-requests.json")
   jq -n --arg m "$MODULE" --arg s "$1" --argjson d "$DEFECTS" --argjson o "$outs" --argjson t "$tr" \
-    '{contract: 1, module: $m, status: $s, outputs: $o, defects: $d, tool_requests: $t}' >"$OUT/result.json"
+    --argjson a "$(autoflow_run)" \
+    '{contract: 1, module: $m, status: $s, outputs: $o, defects: $d, tool_requests: $t, autoflow: $a}' >"$OUT/result.json"
 }
 
 finish() { # <stage>

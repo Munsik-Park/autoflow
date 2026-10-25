@@ -33,7 +33,8 @@
 #                                     A<n>; only the main session adds `operator
 #                                     decision` / O<n>; the advisor adds no
 #                                     O,F,E (Section 1e, ADR-0025 D7)
-#   - (no jq) → the same denies, read from the raw input (Section 0)
+#   - (no jq) → the denies above but the ledger's, read from the raw input
+#                                     (Section 0); a ledger write passes unchecked
 #
 # Advisory (never denies): an Agent spawn whose model is outside the spawn
 # policy's admitted set for its subagent_type (Section 1d).

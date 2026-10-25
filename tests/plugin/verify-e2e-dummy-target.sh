@@ -27,8 +27,8 @@
 #          default, and the target's issue-draft directory under it
 #     E2b  autoflow-records makes no attempt: `new`, `dir`, `base` and `claim`
 #          are usage errors that create no branch and no directory
-#     E2c  criterion-ready.sh reads the [criterion-ready] entry of the record
-#          directory it is given, its record in a run's subdirectory
+#     E2c  criterion-ready.sh, run from a subdirectory of the target, prints
+#          the sha256 of the issue body
 #
 #   E3  the gate hook, run as the harness runs it
 #     E3a  a benign command is allowed (exit 0)
@@ -184,15 +184,14 @@ SD="$RECORD_ROOT/$KEY/attempt-7"
 mkdir -p "$SD/criterion-reconcile-1"
 printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
 LEDGER="$SD/issue-7-ledger.md"
-body_sha="$(in_target "$T" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 2>&1)"
+in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
+body_sha="$(cat "$WORK/e2c.out")"
 printf '# ledger\n\n## O1 — criteria settled [criterion-ready]\n- Decision: settled\n- Record: criterion-reconcile-1/criterion-review.md\n- Issue body sha256: %s\n- Grounds: e2e\n- Authority: operator decision\n' \
   "$body_sha" > "$LEDGER"
-in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" status --issue 7 --records "$SD" >"$WORK/e2c.out" 2>&1; rc=$?
-if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ] \
-   && grep -qxF "criterion-ready: issue #7 READY — attempt $SD, entry O1, record criterion-reconcile-1/criterion-review.md, body sha256=$body_sha" "$WORK/e2c.out"; then
-  pass "E2c: criterion-ready.sh, run from a subdirectory, reads the entry of the record directory it is given ($SD)"
+if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ]; then
+  pass "E2c: criterion-ready.sh, run from a subdirectory, prints the sha256 of the issue body"
 else
-  failc "E2c" "rc=$rc sha=$body_sha out=$(tr '\n' '|' < "$WORK/e2c.out")"
+  failc "E2c" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2c.out")"
 fi
 
 # ── E3 ──────────────────────────────────────────────────────────────────────

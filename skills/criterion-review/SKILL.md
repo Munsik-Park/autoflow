@@ -359,12 +359,10 @@ confirmations*):
 The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger> O`, called
 immediately before the append ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger).
 
-**The confirmation is bound to the attempt and to the body.** `<autoflow-root>/scripts/preflight/criterion-ready.sh status --issue N --records <attempt-dir>`
-reads the last `[criterion-ready]` entry in the attempt's own ledger — never another attempt's —
-and reports `READY` only when the entry is an `O` entry under `operator decision`, its record
-exists, and its `- Issue body sha256:` equals the sha256 of the issue body read from GitHub now. Any
-edit to the body after the entry leaves the attempt not ready until its review runs again and a new
-entry records the edited body. Whether the review runs again, and over what (in whole, the changed
+**The confirmation is bound to the attempt and to the body.** The entry that stands is the last
+`[criterion-ready]` entry in the attempt's own ledger — never another attempt's —, and it confirms
+the body its `- Issue body sha256:` names. A body edited after the entry is not the one it confirms
+until its review runs again and a new entry records the edited body. Whether the review runs again, and over what (in whole, the changed
 criteria only, or not at all), when the body an entry records differs from the one the record read,
 is the Coordinator's judgment, recorded with its grounds in the new entry's grounds.
 
@@ -539,11 +537,9 @@ criterion-reconcile run's `criterion-reconcile-<n>/criterion-review.md` —, nev
 one with a `.` or `..` component), an
 `- Issue body sha256:` line (the value `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints
 for the body the entry records), and the ordinary Grounds and Authority lines with the authority value
-`operator decision`. No `A<n>` entry carries the marker. `<autoflow-root>/scripts/preflight/criterion-ready.sh
-status --issue N --records <attempt-dir>` reads the **last** entry carrying the marker in the attempt's own ledger — never another
-attempt's — and counts it only when it is an `O` entry
-under `operator decision`, its record exists and its sha256 equals the issue body's now; an edit to
-the body is confirmed by a new entry, never by editing this one. A criterion change after the
+`operator decision`. No `A<n>` entry carries the marker. The entry that stands is the **last** one
+carrying the marker in the attempt's own ledger — never another attempt's —, and it confirms the body
+its sha256 names; an edit to the body is confirmed by a new entry, never by editing this one. A criterion change after the
 review is an `[ac-decision]`.
 
 <!-- From <autoflow-root>/docs/issue-proposal.md -->

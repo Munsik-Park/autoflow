@@ -101,12 +101,13 @@ Then, in your project:
   that row's `model` there.
 
 **Updating** is the plugin update alone: `/plugin marketplace update` →
-`/plugin update autoflow@autoflow`. Which AutoFlow ran an attempt — the plugin
-version, the loaded root and, for a checkout, its `HEAD` — is recorded by the
-Coordinator when it builds the environment, where it also runs the **target
-check**: your own spawn policy against the loaded agent definitions, and, on an
-opted-in target, the suite headers (`<autoflow-root>/scripts/preflight/target-check.sh`;
-[`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > R4).
+`/plugin update autoflow@autoflow`. Which AutoFlow ran a module — the plugin
+version, the loaded root and, for a checkout, its `HEAD` — is recorded in the
+run's `result.json` ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > R1).
+The **target check** — your own spawn policy against the loaded agent
+definitions, and, on an opted-in target, the suite headers
+(`<autoflow-root>/scripts/preflight/target-check.sh`) — is a script for setting
+up the environment ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > R4).
 
 **Developing AutoFlow**: `claude --plugin-dir <clone>` runs a clone's working
 tree in place of the installed plugin for that session.
