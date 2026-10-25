@@ -78,8 +78,7 @@
 #                          never settled within the bound, suspected (NOT a
 #                          conflict); bounded. NOT green.
 #
-# What follows any exit — another delivery run, and how many — is the
-# Coordinator's (ADR-0038 D2); this script counts nothing across runs.
+# Each run reads once; this script counts nothing across runs.
 #   64  usage / bad arg / bad env int.
 #
 # `set -uo pipefail` (not -e): the poll intentionally tolerates a transient

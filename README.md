@@ -4,12 +4,11 @@ A reusable framework for structured, evaluation-gated AI-assisted software devel
 
 AutoFlow is a set of modules — the criterion review, analysis, design, build, delivery and review,
 and the evaluations that score their work — each with a contract, built on multi-agent role
-separation, independent analysis, and quantified evaluation. A Coordinator outside AutoFlow runs
-the modules and judges their results; AutoFlow writes no file into the project's tree (see
-[Quick Start](#quick-start)). Three properties set its scope:
+separation, independent analysis, and quantified evaluation. AutoFlow writes no file into the
+project's tree (see [Quick Start](#quick-start)). Three properties set its scope:
 
 1. **Terminal scope** — AutoFlow's last output is the reviewed PR; an external review process performs the merge. **AutoFlow never merges.**
-2. **Modules with contracts** — a module checks its inputs' form, runs once, and checks its outputs against its contract (`docs/contracts/<module>.json`); which module runs next, on which inputs and how many times is the Coordinator's (ADR-0038).
+2. **Modules with contracts** — a module checks its inputs' form, runs once, and checks its outputs against its contract (`docs/contracts/<module>.json`); modules compose through their inputs and outputs (ADR-0038).
 3. **Work and evaluation apart** — the analysis, the design and the build each run as one unit agent prescribed by its goal and its output, and each is scored by an evaluation module of its own, a fresh Evaluation AI.
 
 A project without sub-repos is the plain case (the delivery module pushes one branch and opens
@@ -33,14 +32,13 @@ delivery          the push, the change shown working above its own tests, draft 
 review            the configured reviewers, each run by its own script, and the target's own review bots → one aggregated comment and its findings file
 ```
 
-The order in which they run, a re-run, and handing the pull request to external review are the
-Coordinator's; external review merges out of band (AutoFlow does not merge).
+External review merges the pull request out of band.
 
 ### Key Features
 
-- **Multi-Agent Roles** — functional-unit agents (analysis, design, build), the criterion-review agents, Evaluation AI and advisor with separated responsibilities; the Coordinator runs the modules from outside.
+- **Multi-Agent Roles** — functional-unit agents (analysis, design, build), the criterion-review agents, Evaluation AI and advisor with separated responsibilities.
 - **Analysis unit** — one analysis spawn states the current structure as fact, the gap to the request and whether code is the lever, heeding stated bias cautions; a fresh evaluator scores it.
-- **Evaluations** — 10-point scoring with reference pass values (average ≥ 7.5, each item ≥ 7, security ≤ 3 → rework) the Coordinator applies.
+- **Evaluations** — 10-point scoring, output with the reference pass values (average ≥ 7.5, each item ≥ 7, security ≤ 3 → rework).
 - **Hook Enforcement** — a shell hook denies, in every session, `gh pr merge`, a push to the default branch, `gh issue create`, a ledger rewrite, a spawn without `model` and a backgrounded suite run.
 - **Sub-Repo Support** — a changed sub-repo is delivered on its own PR and the host follows it by its pointer; the project's structure is read from its own information, not classified.
 
@@ -67,15 +65,14 @@ repository's `.claude/settings.json`.
 
 Then, in your project:
 
-- **Run a module** on an invocation file the Coordinator writes — the module's parameters, its
+- **Run a module** on an invocation file — the module's parameters, its
   inputs, the attempt's record directory and the run's output directory
   ([`docs/core.md`](docs/core.md) > Development Lifecycle). Until the module commands replace them,
   the commands `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u7` and
-  `/autoflow:criterion-review` carry the modules' procedures (ADR-0038 D9). The attempt — its
-  worktree, its branch and its record directory — is the Coordinator's.
+  `/autoflow:criterion-review` carry the modules' procedures (ADR-0038 D9).
 - **Nothing to ignore**: every record — an attempt's ledger, each run's outputs and `local/`
-  store, issue drafts — is under the record root (`autoflow-records root` prints it); the
-  Coordinator builds each attempt's record directory there. Set
+  store, issue drafts — is under the record root (`autoflow-records root` prints it), each
+  attempt's record directory there. Set
   `"record_root": "<absolute path>"` in `~/.autoflow/config.json` to move it; the file stays where
   it is.
 - **Your reviewers are set once, for every project**, in
@@ -173,7 +170,6 @@ core, and each agent definition the core parts and documents its role follows (A
 
 | Agent | Role | Can Write To |
 |-------|------|--------------|
-| **Coordinator** (outside AutoFlow) | Runs the modules and judges their results | Host repo (rules, config, infra, bulk docs); the attempt's worktree, branch and record directory |
 | **Build unit (U4)** | Implements and verifies the design per target scope, test-first | Files within the assigned scope |
 | **Evaluation AI** | Scores quality | Nothing (read-only) |
 
@@ -182,7 +178,7 @@ core, and each agent definition the core parts and documents its role follows (A
 At GATE:HYPOTHESIS, GATE:PLAN, AUDIT, and GATE:QUALITY, a freshly spawned
 Evaluation AI scores the work and states its grounds. The reference pass values
 — average ≥ 7.5, each item ≥ 7, a security score ≤ 3 → rework — are kept with
-the rubrics, and the Coordinator applies them. Categories and weights are
+the rubrics and output with the scores. Categories and weights are
 customisable per project.
 
 ### 4. Hook Enforcement
@@ -211,7 +207,7 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 ### Evaluation Tuning
 
 - Adjust category **weights** to match your priorities.
-- The **reference pass values** are kept with the rubrics (`docs/evaluation-system.md` > PASS Criteria) and in each evaluation contract's `reference`; the Coordinator applies them.
+- The **reference pass values** are kept with the rubrics (`docs/evaluation-system.md` > PASS Criteria) and in each evaluation contract's `reference`, which an evaluation outputs with its scores.
 - Add **custom categories** as needed.
 
 ---

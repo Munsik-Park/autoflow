@@ -111,7 +111,7 @@
           "keys": [
             "verdict"
           ],
-          "note": "Q2: applying the pass values is the Coordinator's"
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
         },
         {
           "type": "partition",
@@ -148,7 +148,7 @@
       "security_rework_at_or_below": 3
     },
     "source": "docs/evaluation-system.md > PASS Criteria",
-    "note": "Q2: AutoFlow provides these with the evaluation; applying them is the Coordinator's."
+    "note": "Q2: AutoFlow provides these with the evaluation, which outputs its scores and their grounds against them."
   },
   "result": {
     "summary": "one line"

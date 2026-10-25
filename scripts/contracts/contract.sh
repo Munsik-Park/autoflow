@@ -5,8 +5,8 @@
 # contract.sh — the module contract validator (issue #509, epic #507;
 # docs/records/design-reviews/io-contract-modules.md > 5.3, Q6)
 # =============================================================================
-# A module runs between two calls of this script, both on the invocation file
-# the Coordinator wrote:
+# A module runs between two calls of this script, both on its invocation
+# file:
 #
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-in  <invocation.json>
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>

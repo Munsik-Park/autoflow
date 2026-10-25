@@ -167,9 +167,7 @@ that did not take — is not this case.
 The run ends when its round's comment is posted. Its report names the pull request's URL and head
 commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
 findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
-pull request whose pointer names a sub-repo pull request's commit, that dependency. What follows a
-verdict — another round of work, or handing the pull request to external review — is the
-Coordinator's.
+pull request whose pointer names a sub-repo pull request's commit, that dependency.
 
 **[MUST]** AutoFlow merges nothing and promotes no draft. The hook denies `gh pr merge` and a push
 to the default branch.

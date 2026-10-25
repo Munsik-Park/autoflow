@@ -23,7 +23,7 @@
 ## Instruction Conventions		all
 ## Rule Scope		all
 ## Development Lifecycle		split
-## Development Lifecycle	**AutoFlow is a set of modules, run by the Coordinator.**	all
+## Development Lifecycle	**AutoFlow is a set of modules.**	all
 ## Development Lifecycle	**A module runs once, on its invocation.**	all
 ## Development Lifecycle	**A module's procedure states the goal of its work.**	all
 ## Development Lifecycle	**Decisions within a module.**	all
@@ -81,7 +81,6 @@
 ## Project Information	A project whose information names sub-repos	U6 U7
 ## Team Structure		split
 ## Team Structure	각 역할의 상세 계약은	all
-## Team Structure > ### Coordinator		all
 ## Team Structure > ### Evaluation AI		U2 U3 U4 U5
 ## Team Structure > ### Build unit (U4)		U4
 ## Team Structure > ### Advisor		all

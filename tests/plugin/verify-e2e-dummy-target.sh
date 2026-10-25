@@ -178,8 +178,8 @@ else
   failc "E2b" "$e2b branch=$(git -C "$T" symbolic-ref --short HEAD) dirs=$(ls -A "$RECORD_ROOT/$KEY" | tr '\n' ' ')"
 fi
 
-# The attempt's record directory is the Coordinator's: any name under the
-# record root, its ledger issue-<N>-ledger.md, each run in a subdirectory.
+# The attempt's record directory: any name under the record root, its ledger
+# issue-<N>-ledger.md, each run in a subdirectory.
 SD="$RECORD_ROOT/$KEY/attempt-7"
 mkdir -p "$SD/criterion-reconcile-1"
 printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"

@@ -11,8 +11,8 @@
 #   <record-root>/<repo-key>/proposals/           proposal records
 #   <record-root>/_metrics/                       cycle metrics
 #
-# and an attempt's record directory, which the Coordinator builds there and
-# names in each invocation (ADR-0038 D4): the ledger `issue-<N>-ledger.md` and
+# and an attempt's record directory there, which each invocation names
+# (ADR-0038 D4): the ledger `issue-<N>-ledger.md` and
 # each run's subdirectory `<module>-<n>` (docs/core.md > Records and the hook).
 #
 # The record root is `record_root` in the operator's user file

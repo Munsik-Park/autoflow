@@ -5,9 +5,9 @@
 > `<autoflow-root>/docs/contracts/<module>.json`: the standard the evaluator evaluates by, its
 > conduct, every gate's rubric — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — with the
 > reference values set on its scale, and the output it returns. The evaluator's agent definition carries it and the sections it names for every gate
-> (*The evaluator's standard* > *What it reads*). What is done with an evaluation's result — the
-> reference values applied, a re-run, where a finding is fixed — is the Coordinator's
-> ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2).
+> (*The evaluator's standard* > *What it reads*). An evaluation outputs its scores, their grounds
+> and its recommendations, with the reference values
+> ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
 
 ---
 
@@ -141,8 +141,8 @@ A change passes two independent quality procedures, and neither stands in for th
 ## PASS Criteria
 
 AutoFlow provides these reference values with the rubrics, on the scale above; each evaluation
-contract carries them (`<autoflow-root>/docs/contracts/<module>.json` > `reference`). Applying them
-to an evaluation's scores, and judging what follows, is the Coordinator's
+contract carries them (`<autoflow-root>/docs/contracts/<module>.json` > `reference`), and an
+evaluation outputs them with its scores
 ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6):
 
 - average ≥ 7.5;
@@ -275,8 +275,7 @@ work it evaluates ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coord
 GATE:HYPOTHESIS evaluates the analysis, GATE:PLAN the design, AUDIT the build, and GATE:QUALITY the
 completed change. Each gate's section below is its contract's `procedure`. Every gate is scored by
 an Evaluation AI, never by the agent that did the work, so its rubric lives here, in the
-evaluator's own document, and not in the work's. What is done with a gate's result is the
-Coordinator's (*ibid.* D2).
+evaluator's own document, and not in the work's.
 
 ### GATE:HYPOTHESIS
 
@@ -392,10 +391,8 @@ AutoFlow ships no checklist and names no item: AutoFlow owns how AUDIT scores �
 evaluator, the five items below, the reference values — and the target owns what each item is
 judged by. Which version AUDIT reads is the one the record line of
 `bash <autoflow-root>/scripts/gate/security-checklist.sh status --base origin/<base> --ledger <attempt-dir>/issue-{N}-ledger.md`
-names, `<base>` the branch the pull request merges into. The Coordinator, which composes the invocation
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2), writes the checklist
-at that version (`git show <score>`) to a file in the record directory and names it as the
-`security_checklist` input:
+names, `<base>` the branch the pull request merges into. The audit takes the checklist at that
+version (`git show <score>`), written to a file, as its `security_checklist` input:
 
 - `none-declared` → no checklist: the five items are scored from the change alone, and the output
   says that none was declared;
@@ -449,8 +446,8 @@ range (`commits`) — and the work's outputs:
   `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
   `## Comment check`;
 - the AUDIT evaluation (`audit_evaluation`);
-- the recommendations the Coordinator deferred or separated after earlier evaluations, when there
-  are any (`deferred`);
+- the recommendations deferred or separated after earlier evaluations, when there are any
+  (`deferred`);
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
 
@@ -608,8 +605,8 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 }
 ```
 
-The output carries no verdict: applying the reference values (*PASS Criteria* above) to its scores
-is the Coordinator's.
+The output carries the scores and their grounds; the reference values they are read against are
+*PASS Criteria* above.
 
 `scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object

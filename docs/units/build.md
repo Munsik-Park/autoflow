@@ -34,7 +34,7 @@ Rule Scope, principle 2).
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
-  `[ac-decision]` entries, the recommendations the Coordinator deferred or separated (`deferred`),
+  `[ac-decision]` entries, the recommendations deferred or separated (`deferred`),
   which the build leaves to their disposition, and on a re-run the previous report and the findings
   it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
   directory, where earlier runs left their work and their `local/` stores, and the output directory.
@@ -212,7 +212,7 @@ The audit module judges test-first and scores the change: one fresh Evaluation A
 names), on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
 Its agent definition carries that document. When it does not confirm test-first it scores nothing
 and records what is missing; its output is otherwise the scores and their grounds with its
-recommendations. What follows is the Coordinator's.
+recommendations.
 
 ### Security checklist
 
@@ -266,7 +266,7 @@ retroactively. The grammar's single definition site is `<autoflow-root>/scripts/
 - **The grammar is those two fields and nothing else.** The lint admits no other field.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The target check the Coordinator runs when it builds the environment (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7; ADR-0038 D4) names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The target check, a script for setting up the environment (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7; ADR-0038 D4), names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
 1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
 2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.

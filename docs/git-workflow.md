@@ -81,28 +81,7 @@ Closes #<issue-number>
 
 ## Post-Merge Cleanup
 
-**Merging, and what follows it, are outside AutoFlow.** Whether and when a pull request is merged,
-in what sequence beside the pull requests it depends on, by what method, and what is confirmed
-before it — the sub-repo pointer included — are the external review's. What follows a merge or a
-close — how a host pointer is brought up after a sub-repo pull request merges, what becomes of the
-attempt's branches on either side and of its worktree and record directory, and what is cleaned up,
-when and how — is the Coordinator's. AutoFlow defines no step, order or timing for either.
-
-The **Coordinator** is the role outside AutoFlow that runs AutoFlow's modules and judges their
-results — which module runs next and on which inputs, a re-run, the caps, the attempt's worktree,
-branch and record directory — and owns what follows a merge or a close
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2, D4). Merging stays the
-external review's, and one party may hold both roles. It is a role's name only: AutoFlow names no
-person, session or repository that holds it, and makes no link that reads its procedure.
-
-What AutoFlow keeps there:
-
-- It merges nothing and promotes no draft, and the hook denies `gh pr merge` and a push to the
-  default branch; every pull request it opens is a draft ([`units/delivery.md`](units/delivery.md)
-  > *Push and pull request*; [`units/review.md`](units/review.md) > *End*).
-- On the remote, a module pushes its branch and opens or updates its pull requests (delivery) and
-  posts its round's comment (review); no module deletes a remote branch, or closes or labels a pull
-  request.
+Merging, and what follows a merge or a close, are outside AutoFlow.
 
 ---
 

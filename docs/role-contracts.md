@@ -1,6 +1,6 @@
 # Role Contracts
 
-> This document defines the role contracts for the role spawns AutoFlow's modules make: **Evaluation AI**, the **advisor**, the **functional-unit agents**, and the **build unit in a target scope**. What the Coordinator does, outside AutoFlow, is [`core.md`](core.md) > Team Structure. Per-phase spawn model policy: see [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
+> This document defines the role contracts for the role spawns AutoFlow's modules make: **Evaluation AI**, the **advisor**, the **functional-unit agents**, and the **build unit in a target scope**. Per-phase spawn model policy: see [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 ---
 
@@ -24,7 +24,7 @@ The other modules have no role spawn of their own: criterion-screen is the work 
 
 ### Model tier revert
 
-A phase whose lower-tier result is materially contradicted on the same attempt runs on the higher tier, `.claude/autoflow/spawn-policy.json` updated in the same commit. The result is an evaluation's PASS — its scores read against the reference values — or a lower-tier **role spawn**'s claim that its outputs are done; the contradicting signal is a later finding on the same surface that the result's rubric or claim covers: an audit's test-first finding or a `Security` score at 3 or below, a quality evaluation's finding, or a review `Medium`+ finding. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert. Seeing the contradiction and making the revert are the Coordinator's ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D2).
+A phase whose lower-tier result is materially contradicted on the same attempt runs on the higher tier, `.claude/autoflow/spawn-policy.json` updated in the same commit. The result is an evaluation's PASS — its scores read against the reference values — or a lower-tier **role spawn**'s claim that its outputs are done; the contradicting signal is a later finding on the same surface that the result's rubric or claim covers: an audit's test-first finding or a `Security` score at 3 or below, a quality evaluation's finding, or a review `Medium`+ finding. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
 
 A change to the per-phase assignment follows the same grounds.
 
@@ -54,8 +54,8 @@ The Evaluation AI returns one JSON object, and the session that runs the evaluat
 verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recommendations, and no
 verdict ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
-`outputs.evaluation`). Reading the scores against the reference values is the Coordinator's
-([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
+`outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
+against ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
 
 ---
 
@@ -225,5 +225,4 @@ and criteria-apply is a script.
 
 The 10-point scale, the reference pass values (PASS Criteria), the evaluation types and the output format have one home —
 [`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report in any other shape
-than its *Evaluation Output Format* fails the evaluation module's check-out; a re-run is the
-Coordinator's.
+than its *Evaluation Output Format* fails the evaluation module's check-out.

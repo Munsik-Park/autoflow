@@ -201,8 +201,7 @@ to GATE:PLAN `Verification fit` and to GATE:QUALITY's assertion-claim alignment.
 The plan module scores the two documents: one fresh Evaluation AI (`autoflow-evaluator`, the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-plan` names), on the rubric of
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN. Its agent definition
-carries that document, and its output is the scores and their grounds with its recommendations;
-what follows them is the Coordinator's.
+carries that document, and its output is the scores and their grounds with its recommendations.
 
 ## Re-entry
 

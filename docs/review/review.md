@@ -27,7 +27,7 @@ The review rules every AutoFlow reviewer applies. Each reviewer's own rule file,
 
 ## Severity
 
-Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`, `Low Confidence`. `Low Confidence` is a suspected issue that could not be confirmed; the other levels are confirmed. State the severity of every finding. What follows the highest severity among the findings that hold — another round of work, or handing the pull request to external review — is the Coordinator's (`<autoflow-root>/docs/units/review.md` > *End*).
+Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`, `Low Confidence`. `Low Confidence` is a suspected issue that could not be confirmed; the other levels are confirmed. State the severity of every finding.
 
 ## Review Method
 

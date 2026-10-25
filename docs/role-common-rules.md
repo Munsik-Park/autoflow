@@ -24,7 +24,7 @@ below describe the contract every role spawn honours.
 ## Git Workflow
 
 ```bash
-# At session start (on the branch the invocation names, in the Coordinator's worktree)
+# At session start (on the branch the invocation names)
 git status                  # confirm a clean working tree
 git log --oneline -5        # confirm the recent history
 
@@ -36,7 +36,7 @@ git add <files> && git commit
 **Absolute rules**:
 
 - No direct commits to the default branch (`main`).
-- No new branch from a role — a run works on the branch its invocation names. The attempt's worktree, branch and record directory are the Coordinator's, as is whether another attempt or another issue starts ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
+- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4).
 - Always run `git status` before committing.
 - No `feat`/`fix` commit while tests are failing — use `wip` instead.
 
@@ -148,7 +148,7 @@ is no team, no mailbox, and no peer-to-peer messaging between roles.
 |--------|--------|------|
 | Receive instruction from the spawning session | the spawn prompt | delivered once, at spawn |
 | Report to the spawning session | the spawn's return value | completion, escalation — body to the run's output directory, return an anchor + one-line summary |
-| Cross-cutting impact notice | in the returned report | the module states it in its output; where it is taken up is the Coordinator's |
+| Cross-cutting impact notice | in the returned report | the module states it in its output |
 | Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
 ### Result delivery path by spawn mode

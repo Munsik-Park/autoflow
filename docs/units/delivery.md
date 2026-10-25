@@ -70,7 +70,7 @@ What a pull request usually carries — offered as what to weigh, not as a check
 - the known gaps ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*): each directly
   related problem the work separated, with its separation reason
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment*), and each recommendation the Coordinator deferred or separated (`deferred`;
+  judgment*), and each recommendation deferred or separated (`deferred`;
   [U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) by its
   disposition — the issue that takes it, or the gap stated in a line —, not the finding's text whole;
 - when the branch already has an open pull request, the push updates it, and its body is brought up
@@ -89,7 +89,7 @@ INTEGRATE looks at the change as the system runs it, beyond what the build verif
   run is `not-run`, never `passed`.
 - **A failing check**: the pull request is opened once the integration checks pass. A check that
   fails is recorded with its output, and the run ends there, its result refused for want of the
-  pull request; a fix of what failed is the build's, and which module runs next is the Coordinator's.
+  pull request; a fix of what failed is the build's.
 
 Cautions:
 
@@ -151,8 +151,6 @@ header carries the full contract; the exit codes read as follows.
 | `14` | the mergeable state could not be confirmed within the bound — a `gh` transport, auth or parse failure | not a conflict: check `gh auth` and connectivity; the run ends with the failure stated in its result |
 | `64` | usage | fix the invocation |
 
-Whether the delivery runs again after an unsettled or failed read is the Coordinator's.
-
 Cautions:
 
 - The module does not write its own poll loop, and does not read an empty status as green. A
@@ -191,8 +189,7 @@ not classify the project; what the sub-repos are, where each one's pull request 
 upstream) and where issues are filed are read from the project's own information
 ([`core.md`](../core.md) > Project Information).
 
-What follows a sub-repo pull request's merge — whether the host's pointer moves to it, when and
-how — is the Coordinator's, outside AutoFlow ([`git-workflow.md`](../git-workflow.md) >
+What follows a sub-repo pull request's merge is outside AutoFlow ([`git-workflow.md`](../git-workflow.md) >
 Post-Merge Cleanup).
 
 What is asked:
@@ -215,7 +212,7 @@ Cautions:
 - Another change may have moved the base's pointer since this branch forked. When the delivered
   sub-repo commit does not contain that pointer — the base is ahead of it, or the two have
   diverged — setting it would move the host's pointer backwards or across histories: the
-  module does not push, and states it in its result for the operator, situation-first.
+  module does not push, and records it in its result, situation-first.
 - Every pointer move is a host commit the host review reads again; a pointer moved while the
   sub-repo pull request is still changing under review costs a host re-review per move.
 - A sub-repo nested inside a sub-repo is that sub-repo's own delivery.

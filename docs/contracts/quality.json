@@ -71,7 +71,7 @@
       "from": {
         "path": "coordinator"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated after earlier evaluations, each {subject, finding, disposition} (Q1: the triage result is a content input; the form is delivery.json's)"
+      "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition} (Q1: the triage result is a content input; the form is delivery.json's)"
     },
     "decisions": {
       "required": false,
@@ -160,7 +160,7 @@
           "keys": [
             "verdict"
           ],
-          "note": "Q2: applying the pass values is the Coordinator's"
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
         },
         {
           "type": "partition",

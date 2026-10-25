@@ -150,7 +150,7 @@ below is present; a section with nothing to record says `none`.
 | `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
 | `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | criteria-apply |
 | `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | the design module |
-| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the Coordinator |
+| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS |
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
 | `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Affected documents` | the documents the change is expected to update | the design and build modules |
@@ -165,9 +165,7 @@ fresh-spawned per run on the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS — one
 form for every issue. Its agent definition carries that document, and its output is the scores and
-their grounds with its recommendations; what follows — a re-run on its findings, the answer a
-`no change needed` or a `non-code lever` conclusion calls for, a judgment that no re-run will reach
-the reference values — is the Coordinator's.
+their grounds with its recommendations.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 

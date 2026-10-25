@@ -5,9 +5,8 @@
 # bin/ is on the Bash PATH of the main session and of every subagent (ADR-0027
 # > Context, M1), so every document, agent definition and script names the
 # record root through this command or the library it wraps
-# (scripts/lib/records.sh). An attempt's record directory is the Coordinator's:
-# it builds the directory under the record root, with the worktree and the
-# branch, and names it in each invocation (ADR-0038 D4).
+# (scripts/lib/records.sh). An attempt's record directory is under the record
+# root, and each invocation names it (ADR-0038 D4).
 #
 #   autoflow-records root
 #       the record root, created when absent (ADR-0029 D1)

@@ -231,14 +231,14 @@ probes each reviewer's CLI **presence only** (`command -v`):
 | `2` | usage error |
 | `6` | the operator file cannot be read as configured — the marker line `user-config: UNREADABLE <path> — <error>`; no reviewer is checked |
 
-The Coordinator runs it when it builds the environment, and keeps the result
-with its own records, not in the ledger
+It is a script for setting up the environment, and the review module reads its
+`reviewers:` line; its result is no ledger entry
 ([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4, D8). An absent
 CLI does **not** stop a run: the review runs the other reviewers without it and
 the aggregated comment names the omission
-([`units/review.md`](units/review.md) > *Reviewer review*). An unreadable
-operator file (exit `6`) is put to the operator by the Coordinator, who chooses
-between proceeding without those reviewers and fixing the file. Auth is **not** probed here: a
+([`units/review.md`](units/review.md) > *Reviewer review*). With an unreadable
+operator file (exit `6`) the review goes on without those reviewers and records
+the file as a tool request (*ibid.*). Auth is **not** probed here: a
 present-but-unauthenticated reviewer passes and its auth failure surfaces at the
 review run, where it counts as a failed run.
 

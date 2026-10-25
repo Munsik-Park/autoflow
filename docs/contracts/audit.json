@@ -43,7 +43,7 @@
       "from": {
         "path": "coordinator"
       },
-      "note": "the target's checklist at the version security-checklist.sh status names (score=), which the Coordinator writes to a file in the record directory (git show <score>); not given when none is declared"
+      "note": "the target's checklist at the version security-checklist.sh status names (score=), written to a file in the record directory (git show <score>); not given when none is declared"
     },
     "previous_evaluation": {
       "required": false,
@@ -122,7 +122,7 @@
           "keys": [
             "verdict"
           ],
-          "note": "Q2: applying the pass values is the Coordinator's"
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
         },
         {
           "type": "partition",

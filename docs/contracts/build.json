@@ -81,7 +81,7 @@
       "from": {
         "path": "coordinator"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated after earlier evaluations, each {subject, finding, disposition}; the build leaves them to their disposition (the form is delivery.json's)"
+      "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition}; the build leaves them to their disposition (the form is delivery.json's)"
     }
   },
   "outputs": {

@@ -24,8 +24,7 @@ a target's code is treated.
   run, never the author of what it scores, read-only
   ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); check-out confirms the output's
   form. Beyond it, CI and the review verify the delivered change.
-- **Result owed**: the evaluation file and a one-line summary. Applying the reference values to its
-  scores, and what follows, is the Coordinator's.
+- **Result owed**: the evaluation file and a one-line summary.
 
 **Evaluator**: a fresh-spawned Evaluation AI scores the change on the rubric of
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY. Its agent
@@ -43,7 +42,7 @@ grounds. Where a fix is made is the judgment of the AI acting on the finding
 judgment, and no rule branches on it.
 
 - **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
-  the build — or, for a fix no module owns, by the Coordinator or a one-off session it runs. The
+  the build — or, for a fix no module owns, in a commit of its own. The
   recommending evaluation's re-score judges it: the finding's `rescore.prior_findings` entry is
   `cleared` or `remains`.
 - **Does not hold.** It is rebutted with the grounds that show it, and the recommending
@@ -100,12 +99,9 @@ carry, never routes the cycle.
   therefore never the cause of a low score on any item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity its impact sets, as any finding does.
-- **Fix — a commit no module owns.** Whether a comment surfaced by this evaluation's
-  `recommendations`, the build report's `## Comment check` or a reviewer's finding is fixed is
-  the Coordinator's judgment, and the fix is made by the Coordinator or a one-off session it runs
-  ([`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D6). A fix is one
-  commit that deletes comment lines or corrects their sentences and changes nothing else, and it
-  ends there: no re-run, no re-score, and no review round. The commit still runs the lint chain over its staged files
+- **Fix — a commit no module owns.** A comment surfaced by this evaluation's `recommendations`,
+  the build report's `## Comment check` or a reviewer's finding is fixed by one commit that deletes
+  comment lines or corrects their sentences and changes nothing else, and it ends there: no re-run, no re-score, and no review round. The commit still runs the lint chain over its staged files
   ([`core.md`](../core.md) > Commit Rules); one made after the delivery module's push is pushed, and
   CI is confirmed on the new head. A comment whose correct wording is uncertain is deleted, not
   rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
@@ -116,6 +112,6 @@ carry, never routes the cycle.
   changes.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged, and its
   fix is made like any other change.
-- *Secondary (multi-repo):* a comment in a sub-repo is outside the main session's scope
+- *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
   ([`core.md`](../core.md) > Cross-Project Boundary Rules); the build module of that scope makes
   the same single commit on the same terms.

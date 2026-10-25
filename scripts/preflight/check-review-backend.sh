@@ -4,9 +4,8 @@
 # =============================================================================
 # Reviewer availability report (issue #979, D5; #411; #463; #485)
 # =============================================================================
-# Run by the Coordinator when it builds the environment of an attempt — a
-# check of the environment, not of every run, and a condition of no module
-# (ADR-0038 D4, Q21) — and by the review module, which reads its `reviewers:`
+# A script for setting up the environment of an attempt (ADR-0038 D4, Q21),
+# and run by the review module, which reads its `reviewers:`
 # line for the reviewers it runs (docs/units/review.md > Reviewer review).
 #
 # Resolves the reviewers through the shared resolver

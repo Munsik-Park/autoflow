@@ -69,14 +69,14 @@
       "from": {
         "results": "tool_requests"
       },
-      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations the Coordinator deferred or separated. Each is a run's tool-requests.json."
+      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations deferred or separated. Each is a run's tool-requests.json."
     },
     "deferred": {
       "required": false,
       "from": {
         "path": "coordinator"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
+      "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
     }
   },
   "outputs": {

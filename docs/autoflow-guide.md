@@ -1,7 +1,7 @@
 # AutoFlow Guide — Modules and Their Contracts
 
 > AutoFlow is a set of modules for AI-assisted software engineering with Claude Code, each with a
-> contract, run by the Coordinator ([`ADR-0038`](records/adr/0038-contract-modules-run-by-the-coordinator.md)).
+> contract ([`ADR-0038`](records/adr/0038-contract-modules-run-by-the-coordinator.md)).
 > This guide is the **index of the modules**: each module's goal, what its work owes, its output
 > and its cautions live in its procedure document (*Modules* below), and its inputs and outputs in
 > its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
@@ -12,12 +12,10 @@
 
 ## Overview
 
-A module is an input, the work it does, and an output. It runs once, on the invocation the
-Coordinator writes: it checks its inputs' form, does its work, writes its outputs, and checks them
-against its contract ([`core.md`](core.md) > Development Lifecycle). Which module runs next, on which
-inputs, how many times, and what follows an evaluation's scores are the Coordinator's; AutoFlow
-defines no step, order or timing for them. Its terminal output is an open, reviewed pull request;
-merging is performed by an external review process, and AutoFlow does not merge.
+A module is an input, the work it does, and an output. It runs once, on its invocation: it checks
+its inputs' form, does its work, writes its outputs, and checks them against its contract
+([`core.md`](core.md) > Development Lifecycle). The terminal output of the modules is an open,
+reviewed pull request; an external review process merges it.
 
 Key principles:
 
@@ -27,8 +25,8 @@ Key principles:
 - **Multi-agent separation** — the work and its evaluation are separate modules, and each
   evaluation is a fresh Evaluation AI.
 - **Quantified quality** — 10-point evaluation, with the reference pass values kept with the
-  rubrics ([`evaluation-system.md`](evaluation-system.md) > PASS Criteria) and applied by the
-  Coordinator.
+  rubrics ([`evaluation-system.md`](evaluation-system.md) > PASS Criteria) and output with the
+  scores.
 - **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 The phase names stay as identifiers — the spawn-policy keys and the documents' headings carry
@@ -37,7 +35,7 @@ into one BUILD (ADR-0025):
 
 | upstream | phase | module |
 |----------|-------|--------|
-| STEP 0 | PREFLIGHT | — (the Coordinator's worktree, branch and record directory, ADR-0038 D4) |
+| STEP 0 | PREFLIGHT | — (the branch and the record directory a module's invocation names, ADR-0038 D4) |
 | STEP 1 | DIAGNOSE | analysis |
 | STEP 1.5 | GATE:HYPOTHESIS | hypothesis |
 | STEP 2 | ARCHITECT | design |
@@ -52,9 +50,9 @@ into one BUILD (ADR-0025):
 
 ## Modules
 
-Each module's contract names the outputs of other modules it takes; that is the only order between
-them AutoFlow states. The table reads the contracts: an input with no producer named is a file
-outside the modules — the target's documents, a ledger entry, or a file the Coordinator writes.
+Each module's contract names the outputs of other modules it takes. The table reads the contracts:
+an input with no producer named is a file outside the modules — the target's documents, a ledger
+entry, or a file the invocation names.
 
 | Module | Kind | Procedure | Takes (required) | Gives |
 |--------|------|-----------|------------------|-------|
