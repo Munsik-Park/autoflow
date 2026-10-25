@@ -35,11 +35,10 @@
 #
 #   E3  the gate hook, run as the harness runs it
 #     E3a  a benign command is allowed (exit 0)
-#     E3b  the hook reads the state of the target's attempt: `git push` is
-#          admitted with no state file and denied once the attempt holds an
-#          active one with no gate scores
-#     E3c  the ledger advisory finds its helper in the plugin root, and its
-#          cache lands at the record root
+#     E3b  with no state anywhere, a push of the work branch is admitted and
+#          a push to the default branch denied (ADR-0038 D5)
+#     E3c  with no state anywhere, a write that rewrites the attempt's ledger
+#          is denied and one that appends to it admitted
 #     E3e  after every run above, the target's `git status --porcelain` is
 #          empty: AutoFlow left no file in a tree that ignores none
 #     E3d  the target's spawn policy wins over the plugin default — in the
@@ -232,26 +231,24 @@ else
   failc "E3a" "rc=$rc stderr=$(tr '\n' '|' < "$WORK/e3a.err")"
 fi
 
-PUSH='git push -u origin dev/2026-10-17-000000-issue-7'
-mv "$SD/issue-7.json" "$WORK/issue-7.json.held"
-bash_payload "$PUSH" | run_hook "$T" >/dev/null 2>"$WORK/e3b0.err"; rc0=$?
-mv "$WORK/issue-7.json.held" "$SD/issue-7.json"
-bash_payload "$PUSH" | run_hook "$T" >/dev/null 2>"$WORK/e3b1.err"; rc1=$?
-if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -q 'BLOCKED' "$WORK/e3b1.err"; then
-  pass "E3b: the hook reads the target's attempt — the push is admitted with no state file and denied with the active one"
+bash_payload 'git push -u origin work-issue-7' | run_hook "$T" >/dev/null 2>"$WORK/e3b0.err"; rc0=$?
+bash_payload 'git push origin main' | run_hook "$T" >/dev/null 2>"$WORK/e3b1.err"; rc1=$?
+if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -qF "$ROOT/docs/core.md > Push and PR creation" "$WORK/e3b1.err"; then
+  pass "E3b: with no state anywhere, the work branch's push is admitted and the push to the default branch denied"
 else
-  failc "E3b" "rc-without-state=$rc0 rc-with-state=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3b1.err")"
+  failc "E3b" "rc-work-branch=$rc0 rc-default=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3b1.err")"
 fi
 
-printf '\n## no identifier here\n' >> "$LEDGER"
-out=$(bash_payload ls | run_hook "$T" 2>"$WORK/e3c.err"); rc=$?
-if [ "$rc" -eq 0 ] && grep -q 'decision-ledger identifier defect' "$WORK/e3c.err" \
-   && grep -qF "$ROOT/scripts/ledger/ledger-entry-id.sh next" "$WORK/e3c.err" \
-   && printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | test("identifier defect")' >/dev/null 2>&1 \
-   && [ -f "$RECORD_ROOT/.ledger-check-cache" ] && [ ! -e "$T/.autoflow" ] && [ ! -e "$ROOT/.autoflow/.ledger-check-cache" ]; then
-  pass "E3c: the ledger advisory runs the plugin's helper ($ROOT/scripts/ledger/) and caches at the record root"
+ledger_now="$(cat "$LEDGER")"
+jq -n --arg f "$LEDGER" '{tool_name:"Write",tool_input:{file_path:$f,content:"# rewritten\n"}}' \
+  | run_hook "$T" >/dev/null 2>"$WORK/e3c0.err"; rc0=$?
+jq -n --arg f "$LEDGER" --arg c "$ledger_now"$'\n\n## O1 — e2e\n- Authority: operator decision\n' \
+  '{tool_name:"Write",tool_input:{file_path:$f,content:$c}}' | run_hook "$T" >/dev/null 2>"$WORK/e3c1.err"; rc1=$?
+if [ "$rc0" -eq 2 ] && grep -qF "$ROOT/docs/decision-ledger.md" "$WORK/e3c0.err" && [ "$rc1" -eq 0 ] \
+   && [ ! -e "$T/.autoflow" ] && [ ! -e "$RECORD_ROOT/.ledger-check-cache" ]; then
+  pass "E3c: with no state anywhere, the ledger's rewrite is denied and an append by the main session admitted"
 else
-  failc "E3c" "rc=$rc stderr=$(tr '\n' '|' < "$WORK/e3c.err")"
+  failc "E3c" "rc-rewrite=$rc0 rc-append=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3c0.err" "$WORK/e3c1.err")"
 fi
 
 porcelain="$(git -C "$T" status --porcelain)"

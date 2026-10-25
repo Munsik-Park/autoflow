@@ -2,82 +2,41 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # AutoFlow Gate Check
-# The hook computes pass/fail directly from the raw `scores` object so that the
-# trust chain stops at the script level — the AI's own `pass`/`avg`/`min` fields
-# are ignored.
+# The policy denies (ADR-0038 D5; docs/core.md > Records and the hook). Each
+# holds in every session and in every repository the plugin is installed in,
+# and none reads a state: there is no state file, and no deny depends on which
+# module runs or what an evaluation scored.
 #
-# Command matching and check ordering follow docs/gate-matching-standard.md:
-#   - P1: gates match with the shared CMD_BOUNDARY prefix + word boundary,
+# Command matching follows docs/gate-matching-standard.md:
+#   - P1: denies match with the shared CMD_BOUNDARY prefix + word boundary,
 #         never a bare `^` (which `cd x && git push` would bypass).
-#   - P2: unconditional denies (gh pr merge / default-branch push) run in
-#         Section 1, BEFORE the
-#         activity check, so an inactive/absent state file cannot nullify them.
+#   - P2: every deny is unconditional.
+#   - P3: who acts is read from structural fields only — the caller's
+#         `agent_type` and an Agent call's own `model`, never prompt keywords.
 #
-# PASS criteria (defined in docs/core.md):
-#   - average ≥ 7.5
-#   - each item ≥ 7
-#   - security ≤ 3 → automatic block
-#
-# Gate points:
-#   - Bash(gh pr merge)             → DENIED unconditionally (AutoFlow never merges)
-#   - Bash(backgrounded run-suites.sh) → DENIED unconditionally (foreground only)
-#   - Bash(git push <default br>)   → DENIED unconditionally (push dev branch + PR only);
-#                                     likewise the dev branch's base (issue #490)
-#   - Bash(gh issue create)         → DENIED unconditionally; also the REST form
-#                                     (POST to the issues collection). Filing goes
-#                                     through scripts/issue/create-issue.sh, which
+# Denies:
+#   - Bash(gh pr merge)             → DENIED (AutoFlow never merges)
+#   - Bash(backgrounded run-suites.sh) → DENIED (foreground only)
+#   - Bash(git push <default br>)   → DENIED: the remote default branch
+#                                     (`origin/HEAD`, else `main`) — a push there
+#                                     is a merge that skips the pull request and
+#                                     its review
+#   - Bash(gh issue create)         → DENIED; also the REST form (POST to the
+#                                     issues collection). Filing goes through
+#                                     scripts/issue/create-issue.sh, which
 #                                     re-runs the duplicate search from a draft
 #                                     (docs/issue-proposal.md)
 #   - Agent (any spawn)             → explicit `model` parameter required
-#                                     (state-independent — docs/core.md > Spawn Model)
-#   - Agent (role-declared spawn)   → gate by DECLARED role, never by prompt
-#                                     keywords (docs/gate-matching-standard.md P3):
-#                                     planning → GATE:HYPOTHESIS pass (bug issue;
-#                                     verdict containing "skip" → bypass, non-bug),
-#                                     implementation → GATE:PLAN pass,
-#                                     analysis / evaluation / research / advisor
-#                                     → pass. Unit agents (ADR-0025): unit-analysis
-#                                     → analysis, unit-design → planning,
-#                                     unit-build → implementation
-#   - Agent (spawn BY a unit agent) → no declaration needed; judged by the
-#                                     caller's class (a declared role's own gate
-#                                     also applies, a `name` notwithstanding)
+#                                     (docs/core.md > Spawn Model)
 #   - Write/Edit/MultiEdit on a ledger → append-only (prior text kept); only
 #                                     autoflow-advisor adds `advisor decision` /
 #                                     A<n>; only the main session adds `operator
 #                                     decision` / O<n>; the advisor adds no
-#                                     O,F,E (state-independent, Section 1e, D7)
-#   - Agent (undeclared spawn)      → DENIED while a cycle is active (declare the
-#                                     role via subagent_type autoflow-<role> —
-#                                     see resolve_spawn_role)
-#   - Bash(git push)                → AUDIT + GATE:QUALITY pass required, and neither
-#                                     gate's latest record carries a remedy_class (an
-#                                     open re-entry — a recommendation attempt
-#                                     not yet re-scored clean; issue #275)
-#   - Bash(gh pr create)            → the same two conditions
-#   - (no jq) → the state-independent denies above, read from the raw input;
-#     and, a dev branch checked out → push / PR creation / a spawn other than
-#                                     research or evaluation DENIED: neither the
-#                                     input nor this checkout's state can be read
-#                                     (Section 0, issue #466)
-#   - (record root undetermined or unusable, a dev branch checked out) → the
-#                                     same calls DENIED with the user file's path
-#                                     and error (Section 2, issue #466)
-#   - (a state file left in the checkout's own .autoflow/ before issue #466) →
-#                                     the score-gated calls DENIED until it is
-#                                     moved to the record root (Section 2)
-#   - Bash(git commit)              → while the latest GATE:QUALITY record carries
-#                                     remedy_class "doc": the doc re-entry's sweep
-#                                     record issue-N-remedy-sweep.md (beside the
-#                                     state file) must
-#                                     exist with non-empty `## Command` and
-#                                     `## Output` sections (issue #140, Gate 5)
+#                                     O,F,E (Section 1e, ADR-0025 D7)
+#   - (no jq) → the same denies, read from the raw input (Section 0)
 #
-# Which state gates a call: the state files of THIS checkout's attempts — the
-# attempt record directories under the record root whose `checkout` file names
-# the session's checkout (CLAUDE_PROJECT_DIR; scripts/lib/records.sh). Another
-# checkout's attempt — of the same issue, another issue or another repository —
-# never gates this session, and one attempt is active at a time per checkout.
+# Advisory (never denies): an Agent spawn whose model is outside the spawn
+# policy's admitted set for its subagent_type (Section 1d).
 
 set -e
 
@@ -125,93 +84,38 @@ af_helper() {
 # Scope: -c/-C interposition that arises in NORMAL operation. Adversarial
 # wrappers (subshell/backtick/command-substitution) stay out of P1's threat
 # model and are NOT covered here (docs/gate-matching-standard.md > P1). Defined
-# at global scope (before the Bash guard and the is_score_gated_surface
-# definition) so all three consumers — the P2 default-branch deny, Gate 3, and
-# is_score_gated_surface (called on the Agent path too) — reference a set value.
+# at global scope, before the Bash guard, so both consumers — the
+# default-branch deny of Section 1 and its jq-free reading in Section 0 —
+# reference one value.
 GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
-GIT_COMMIT='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+commit\b'
 
-# ── The session's checkout and branch (issue #466) ──
-# A session with no AutoFlow dev branch checked out can have no attempt in
-# progress, so what the record root and the input are read for is nothing a
-# gate decides there. Any `dev-…-issue-<N>` name counts, and `dev/…-issue-<N>`
-# — an attempt made before issue #490 — the pre-#433 form too.
-# A detached HEAD is read through an interrupted rebase or `git am`, whose
-# head-name file still names the branch being rebuilt — a push of `HEAD:<dev
-# branch>` from the middle of one is a dev-branch session's push.
-SESSION_BRANCH=$(git -C "$PROJECT_DIR" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
-if [ -z "$SESSION_BRANCH" ]; then
-  for _hn in rebase-merge/head-name rebase-apply/head-name; do
-    _hf=$(git -C "$PROJECT_DIR" rev-parse --git-path "$_hn" 2>/dev/null || true)
-    case "$_hf" in /*) ;; ?*) _hf="$PROJECT_DIR/$_hf" ;; esac
-    if [ -n "$_hf" ] && [ -f "$_hf" ]; then
-      IFS= read -r SESSION_BRANCH < "$_hf" || true
-      SESSION_BRANCH=${SESSION_BRANCH#refs/heads/}
-      break
-    fi
-  done
-fi
-DEV_SESSION=0
-if printf '%s\n' "$SESSION_BRANCH" | grep -Eq '^dev[-/].+-issue-[0-9]+$'; then DEV_SESSION=1; fi
-
-# ── The branches AutoFlow does not push to (P2; issue #490) ──
-# The remote default branch, and in a dev-branch session its base — the branch
-# its pull request merges into, kept as the dev branch's `gh-merge-base` by
-# `autoflow-records new`. PUSH_DENY_RE matches one of them as a whole branch
-# name: the name ends where a character no branch name has there follows, so a
-# base `dev` does not match `dev-…` (a `\b` there would).
-DENY_BRANCHES=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
-DENY_BRANCHES="${DENY_BRANCHES:-main}"
-if [ "$DEV_SESSION" = 1 ]; then
-  _base=$(git -C "$PROJECT_DIR" config "branch.$SESSION_BRANCH.gh-merge-base" 2>/dev/null || true)
-  if [ -n "$_base" ] && [ "$_base" != "$DENY_BRANCHES" ]; then DENY_BRANCHES="$DENY_BRANCHES $_base"; fi
-fi
-PUSH_DENY_RE="($(printf '%s\n' $DENY_BRANCHES | sed 's/[.+(){}|$]/\\&/g' | paste -sd'|' -))([^[:alnum:]_./-]|\$)"
+# ── The branch AutoFlow does not push to (P2; ADR-0038 D5) ──
+# The remote default branch, as `origin/HEAD` names it, else `main`.
+# PUSH_DENY_RE matches it as a whole branch name: the name ends where a
+# character no branch name has there follows, so a default `dev` does not
+# match `dev-…` (a `\b` there would).
+DENY_BRANCH=$(git -C "$PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')
+DENY_BRANCH="${DENY_BRANCH:-main}"
+PUSH_DENY_RE="($(printf '%s' "$DENY_BRANCH" | sed 's/[.+(){}|$]/\\&/g'))([^[:alnum:]_./-]|\$)"
 
 # ── Section 0: no jq (issue #466) ──
-# The input, the user file and every state file are JSON, read with jq. With
-# no jq none of them can be read, and the first jq read below would end the
-# hook under `set -e` with exit 127, which PreToolUse does not treat as a block.
-# So this section runs first: in a dev-branch session the calls a gate decides
-# are refused on a jq-free reading of the raw input — the tool name and the
-# `subagent_type` value as JSON keys, `git push` / `gh pr create` anywhere in
-# the text (over-inclusive: an escaped mention matches too, the fail-closed
-# direction). Reads, writes (the repair of the user file among them) and
-# research / evaluation spawns pass. Outside a dev-branch session nothing here
-# applies, and the hook reads nothing it could gate on.
+# The input is JSON, read with jq. With no jq it cannot be read, and the first
+# jq read below would end the hook under `set -e` with exit 127, which
+# PreToolUse does not treat as a block. So this section runs first: the denies
+# of Sections 1 and 1b are read from the raw input, over-inclusively — an
+# escaped mention matches too, the fail-closed direction. Everything else
+# passes.
 if ! command -v jq >/dev/null 2>&1; then
-  # The state-independent denies of Sections 1 and 1b hold with no jq too, read
-  # the same over-inclusive way: a merge, an issue filing, a push naming the
-  # default branch, a backgrounded suite run,
-  # a spawn with no `model`.
   _raw_why=""
   if printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge\b'; then _raw_why="'gh pr merge' — AutoFlow does not merge"
   elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
        || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
-  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then _raw_why="a push to ${DENY_BRANCHES// / or }"
+  elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then _raw_why="a push to ${DENY_BRANCH}"
   elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
   elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
   fi
   if [ -n "$_raw_why" ]; then
-    echo "BLOCKED: jq is not installed, and this call reads as ${_raw_why} — a deny that holds in every state ($(af_path docs/state-tracking.md) > Hook gates)." >&2
-    exit 2
-  fi
-  [ "$DEV_SESSION" = 1 ] || exit 0
-  _raw_tool=$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' | head -1 | sed -E 's/.*"([A-Za-z_]+)"$/\1/')
-  _raw_deny=0
-  case "$_raw_tool" in
-    Bash)
-      if printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}|gh[[:space:]]+pr[[:space:]]+create\b"; then _raw_deny=1; fi ;;
-    Agent)
-      _raw_type=$(printf '%s' "$INPUT" | grep -oE '"subagent_type"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*"([^"]*)"$/\1/')
-      case "$_raw_type" in
-        Explore|Plan|claude-code-guide|autoflow-evaluator|*:autoflow-evaluator) ;;
-        *) _raw_deny=1 ;;
-      esac ;;
-  esac
-  if [ "$_raw_deny" = 1 ]; then
-    echo "BLOCKED: jq is not installed, so the AutoFlow user file \$HOME/.autoflow/config.json and this checkout's attempt state cannot be read — and the dev branch $SESSION_BRANCH is checked out." >&2
-    echo "Push, pull-request creation and spawns other than research and evaluation are refused until jq is installed; the next call reads them anew ($(af_path docs/state-tracking.md) > Hook gates)." >&2
+    echo "BLOCKED: jq is not installed, and this call reads as ${_raw_why} — a deny that holds in every session ($(af_path docs/core.md) > Records and the hook)." >&2
     exit 2
   fi
   exit 0
@@ -241,8 +145,7 @@ SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 # The hook input's `agent_type` names the sub-agent that made the call; the
 # harness sets it on a sub-agent's calls and omits it on the main loop's (Claude
 # Code CHANGELOG 2.1.69: "Added `agent_id` (for subagents) and `agent_type` …
-# to hook events"). Section 1e (ledger authorship) and the unit-caller class
-# below read it.
+# to hook events"). Section 1e (ledger authorship) reads it.
 CALLER_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null || true)
 
 
@@ -484,11 +387,9 @@ $_shb_buf"; fi
   printf '%s' "$_shb_all"
 }
 
-# ── Section 1: Unconditional blocks (state-independent — P2) ──
+# ── Section 1: Unconditional blocks (P2) ──
 # AutoFlow never merges and never pushes to the default branch through the
-# agent's tools. Enforced regardless of any AutoFlow state so that a
-# terminal phase setting active:false (or a removed state file) cannot
-# disable the prohibition. Merging is performed by external review.
+# agent's tools, in every session. Merging is performed by external review.
 
 if [ "$TOOL_NAME" = "Bash" ]; then
   # Shell-separator segment split shared by the co-occurrence denies below
@@ -612,8 +513,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # drafts`) and RE-RUNS the duplicate search itself. That wrapper carries no
   # `gh issue create` token in its own invocation string, so this deny does not
   # block it; the operator's permission prompt on the wrapper is layer three.
-  # State-independent (P2), like every Section-1 deny: no cycle need be active
-  # for the review obligation to hold.
+  # Unconditional (P2), like every Section-1 deny.
   #
   # Two surfaces, both segment-scoped so an adjacent sub-command cannot be
   # mistaken for this one:
@@ -659,23 +559,20 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   while IFS= read -r _bp_seg; do
     if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
        && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then
-      echo "BLOCKED: AutoFlow does not push to ${DENY_BRANCHES// / or } — push the dev branch and open a PR ($(af_path docs/core.md) > Push and PR creation)." >&2
+      echo "BLOCKED: AutoFlow does not push to ${DENY_BRANCH}, the remote default branch — push the work branch and open a pull request ($(af_path docs/core.md) > Push and PR creation)." >&2
       exit 2
     fi
   done <<< "$_SEGMENTS"
 fi
 
-# ── Section 1b: Agent spawn must declare an explicit model (state-independent) ──
+# ── Section 1b: Agent spawn must declare an explicit model (P2) ──
 # docs/core.md > Spawn Model [MUST]: every Agent spawn (any subagent_type)
 # declares the `model` parameter explicitly. An omitted model silently
 # inherits the HOST SESSION model, bypassing the per-phase model policy — and
 # bills at whatever tier the host runs (2x the policy model when the host is on
-# a premium tier). Enforced BEFORE the state check so ad-hoc spawns outside an
-# Auto-Flow cycle are covered too. Research (Explore/Plan) and evaluation spawns
-# are NOT exempt: the declaration rule applies to every spawn (the spawn policy
-# .claude/autoflow/spawn-policy.json models some of these types; a type it does
-# not model still declares — see Section 1d) — their
-# bypasses below apply only to the score gates, not to this declaration rule.
+# a premium tier). No spawn is exempt, research (Explore/Plan) and evaluation
+# included: the spawn policy .claude/autoflow/spawn-policy.json models some of
+# these types, and a type it does not model still declares (Section 1d).
 # Presence-only check: the Agent tool's own enum validates the value.
 if [ "$TOOL_NAME" = "Agent" ]; then
   AGENT_MODEL=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
@@ -686,7 +583,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   fi
 fi
 
-# ── Section 1e: decision-ledger integrity (state-independent — ADR-0025 D7) ──
+# ── Section 1e: decision-ledger integrity (P2; ADR-0025 D7) ──
 # The ledger carries two authorities at a decision point — the advisor's first
 # judgment and the operator's override — and each is worth only its writer and
 # its record staying as written. On a Write / Edit / MultiEdit of an
@@ -777,262 +674,6 @@ case "$TOOL_NAME" in
     ;;
 esac
 
-# ── Spawn role resolution (declaration, not inference) ──
-# A spawn's gate class comes from a STRUCTURAL declaration, never from prompt
-# keywords. Keyword inference failed in both directions in live cycles: benign
-# spawns whose prompts mentioned "수정"/"design"/"create" were over-blocked and
-# then re-spawned with sanitized wording (training the orchestrator to phrase
-# around the regex), while a keyword-free implementation prompt slipped past
-# GATE:PLAN entirely. Declaration channel (docs/gate-matching-standard.md P3):
-#   - direct spawn: subagent_type = autoflow-<role> (defined in <root>/agents/)
-#   - research:     built-in read-only types Explore / Plan / claude-code-guide
-# `subagent_type` is the SOLE channel. The teammate-name-prefix channel was
-# removed jointly with the spawn-mode migration (ADR-0021, discharging ADR-0017
-# C7/C8; the removal itself is ADR-0017 Q3): with every role spawned anonymously
-# and directly, retaining the prefix branch would leave an unreachable path that
-# still name-prefix-overrode `subagent_type`.
-# Prints: research|analysis|planning|implementation|evaluation|advisor,
-# or "" (undeclared). A unit agent type prints the class unit_role_of gives it. The role→gate mapping below is owned by this hook — a spawn
-# declares WHO it is; it never declares which gate applies to it.
-resolve_spawn_role() {
-  local _subtype _name _role=""
-  _subtype=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)
-  _name=$(echo "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null)
-  # A payload carrying `name` stays undeclared → denied while a cycle is
-  # active, even when subagent_type also names a valid role. What `name`
-  # selects is decided by the RUNTIME, not by this hook: a named spawn launches
-  # as a persistent, resumable teammate (addressable by name; a later
-  # SendMessage re-wakes it from its transcript), so admitting the payload on
-  # its subagent_type would not turn it into a direct spawn — it would create
-  # the persistent teammate the policy forbids. The policy this branch encodes
-  # is "no persistent teammate inside a cycle", and its grounds are cost and
-  # consistency, not delivery correctness (issue #168):
-  #   - cost: every wake of a persistent teammate re-writes context it had
-  #     already read — 16–43% of agent cost across two measured cycles
-  #     (ADR-0017 > Notes > C8, issue #136); the #168 probe re-wrote 53% of
-  #     the prefix on a warm wake 57 s after the previous turn and 100% on a
-  #     cold wake past the cache TTL; a fresh
-  #     direct spawn per phase pays for its prefix once and carries continuity
-  #     through the attempt's records instead;
-  #   - no offsetting benefit: the C7 pilot found the direct spawn's VERIFY
-  #     detection EQUAL_OR_BETTER than the named baseline (ADR-0021);
-  #   - consistency: one delivery path (the return value) and one declaration
-  #     channel (subagent_type) for every role (ADR-0017 Q3).
-  # The #40 final-text loss that first motivated the migration is NOT a ground:
-  # re-measured on Claude Code 2.1.260 (issue #168) a named spawn's final text
-  # does reach the lead, in its idle notification's `result` field — see
-  # docs/role-common-rules.md > Result delivery path by spawn mode. This
-  # branch keys on the presence of `name` alone (no prefix, no subagent_type):
-  # what it blocks is the named, persistent form. Resuming an anonymous spawn
-  # by raw agentId through SendMessage is outside this hook's surface.
-  if [ -n "$_name" ]; then
-    printf ''
-    return 0
-  fi
-  role_of_type "$_subtype"
-}
-
-# role_of_type <subagent_type>: the declared class of a type, name aside.
-role_of_type() {
-  local _subtype=$1 _role=""
-  case "$_subtype" in
-    Explore|Plan|claude-code-guide)              _role="research" ;;
-    autoflow-analyzer|*:autoflow-analyzer)       _role="analysis" ;;
-    autoflow-criterion-tracer|*:autoflow-criterion-tracer)         _role="analysis" ;;
-    autoflow-criterion-analyzer|*:autoflow-criterion-analyzer)     _role="analysis" ;;
-    autoflow-criterion-reconciler|*:autoflow-criterion-reconciler) _role="analysis" ;;
-    autoflow-evaluator|*:autoflow-evaluator)     _role="evaluation" ;;
-    autoflow-advisor|*:autoflow-advisor)         _role="advisor" ;;
-    *)
-      _role=$(unit_role_of "$_subtype")
-      ;;
-  esac
-  printf '%s' "$_role"
-}
-
-# Functional-unit agents (ADR-0025 D1/D5) and the gate class each carries —
-# U2 Analysis → analysis, U3 Design → planning, U4 Build → implementation.
-# Prints the class for a unit agent type, or "" for any other type.
-unit_role_of() {
-  case "$1" in
-    autoflow-unit-analysis|*:autoflow-unit-analysis) printf 'analysis' ;;
-    autoflow-unit-design|*:autoflow-unit-design)     printf 'planning' ;;
-    autoflow-unit-build|*:autoflow-unit-build)       printf 'implementation' ;;
-  esac
-}
-
-# A spawn made BY a unit agent (the hook input's caller `agent_type`) needs no
-# role declaration: the unit chooses its own method, helpers included, and the
-# spawn inherits the unit's gate class (ADR-0025 D5). The caller is the
-# immediate one only — a helper's own spawn is classified by its own
-# declaration, since the hook sees no ancestry.
-CALLER_UNIT_ROLE=$(unit_role_of "$CALLER_TYPE")
-
-# Shared by the corrupt-state and multi-active fail-closed branches below: both
-# need the identical "does this call hit the score-gated surface?" test (git
-# push / gh pr create, or a non-research/non-evaluation Agent spawn) — a single
-# definition keeps the two branches from silently drifting apart on a future
-# edit to that surface (issue #843 REFINE).
-is_score_gated_surface() {
-  if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}(${GIT_PUSH}|gh[[:space:]]+pr[[:space:]]+create)\b"; then
-    return 0
-  elif [ "$TOOL_NAME" = "Agent" ]; then
-    # Research is read-only and evaluation must stay spawnable (it produces the
-    # scores a repaired state needs); every other role — and an undeclared
-    # spawn — fails closed. A unit agent's spawn carries the unit's class,
-    # which is never research or evaluation.
-    [ -z "$CALLER_UNIT_ROLE" ] || return 0
-    local _role
-    _role=$(resolve_spawn_role)
-    [ "$_role" != "research" ] && [ "$_role" != "evaluation" ]
-  else
-    return 1
-  fi
-}
-
-# ── This checkout's attempts under the record root (issue #466) ──
-# The record root comes from the operator's user file through the library the
-# scripts use (scripts/lib/records.sh) — the AutoFlow tree's own copy, never the
-# target's. RECORD_ROOT stays empty when it is undetermined or unusable; Section
-# 2 decides what that means for the call. OWN_DIRS lists, one per line, the
-# record directories whose `checkout` file names this session's checkout and
-# that carry no `completed` mark.
-RECORD_ROOT=""
-RECORD_ROOT_MARKER=""
-OWN_DIRS=""
-_records_lib="$(af_helper scripts/lib/records.sh)"
-PROJECT_TOP=""
-if [ -n "$_records_lib" ] && . "$_records_lib" 2>/dev/null; then
-  PROJECT_TOP=$(af_checkout_top "$PROJECT_DIR" 2>/dev/null || true)
-  if [ -n "$PROJECT_TOP" ] && af_record_root "$PROJECT_TOP"; then
-    RECORD_ROOT="$AF_RECORD_ROOT"
-  elif [ -n "$PROJECT_TOP" ]; then
-    RECORD_ROOT_MARKER=$(af_record_root_marker)
-  else
-    RECORD_ROOT_MARKER="record-root: UNDETERMINED — $PROJECT_DIR is not a git checkout"
-  fi
-else
-  RECORD_ROOT_MARKER="record-root: UNDETERMINED — $(af_path scripts/lib/records.sh) cannot be loaded"
-fi
-# A directory under the root that cannot be listed hides whatever attempt it
-# holds; in a dev-branch session that is a state that cannot be found.
-RECORD_ROOT_UNREADABLE=""
-if [ -n "$RECORD_ROOT" ]; then
-  for _kd in "$RECORD_ROOT"/*/ "$RECORD_ROOT"/*/*-issue-*/; do
-    [ -d "$_kd" ] || continue
-    if [ ! -r "$_kd" ] || [ ! -x "$_kd" ]; then RECORD_ROOT_UNREADABLE="${RECORD_ROOT_UNREADABLE:+$RECORD_ROOT_UNREADABLE }${_kd%/}"; fi
-  done
-  for _ck in "$RECORD_ROOT"/*/*-issue-*/checkout; do
-    [ -f "$_ck" ] || continue
-    _od="${_ck%/checkout}"
-    [ -e "$_od/completed" ] && continue
-    _owner=""
-    IFS= read -r _owner < "$_ck" || true
-    [ "$_owner" = "$PROJECT_TOP" ] || continue
-    OWN_DIRS="${OWN_DIRS}${_od}
-"
-  done
-fi
-
-# ── Section 1c: standing decision-ledger identifier advisory (NON-GATING) ──
-# docs/core.md > Decision Ledger requires each settled-decision entry to carry a
-# uniquely allocated identifier. This step surfaces a violation early; it does
-# NOT enforce one. It never exits and never denies: a ledger defect is a
-# methodology defect, not a reason to block a tool call, and the ledger is not
-# a gate input. The only observable effect is a warning: on stderr, and — on a
-# call the hook admits — to the model as `additionalContext` (below).
-#
-# Placement is load-bearing (docs/core.md > Decision Ledger). The step sits AFTER Section 1b's unconditional denies and BEFORE
-# Section 2's activity check, so it still runs on every path the script exits 0
-# early — no state file, `active != true`, and a research/analysis/evaluation
-# spawn. Placed after any one of those, it would silently never run for that
-# traffic.
-#
-# Fail-open by construction: the whole step runs under `|| true`, which also
-# suspends `set -e` for its body, so a missing helper, a missing hashing tool,
-# an unreadable ledger or an unwritable cache degrades to "no advice" rather
-# than to a broken hook.
-ledger_advisory_check() {
-  local _helper _cache _ledger _hash _prev _out
-  # The helper is resolved by af_helper (top of this file): the AutoFlow tree's
-  # own copy, never the target's.
-  _helper="$(af_helper scripts/ledger/ledger-entry-id.sh)"
-  [ -n "$_helper" ] || return 0
-  command -v shasum >/dev/null 2>&1 || return 0
-
-  # Content-hash cache: re-check a ledger only when its bytes changed since the
-  # last observation, so an unchanged defective ledger does not repeat the same
-  # warning on every tool call of a session. Keyed by path, kept at the record
-  # root — never in the target's tree (issue #466) — and named outside the
-  # attempt directories so state-file discovery never picks it up. The ledgers
-  # checked are this checkout's attempts' (OWN_DIRS).
-  [ -n "$RECORD_ROOT" ] || return 0
-  _cache="$RECORD_ROOT/.ledger-check-cache"
-  local _od
-  while IFS= read -r _od; do
-    [ -n "$_od" ] || continue
-    for _ledger in "$_od"/issue-*-ledger.md; do
-      [ -f "$_ledger" ] || continue
-      _hash=$(shasum -a 256 "$_ledger" 2>/dev/null | cut -d' ' -f1)
-      [ -n "$_hash" ] || continue
-      _prev=""
-      if [ -f "$_cache" ]; then
-        # A row is `<64-hex sha256><2 spaces><path>`. The path may contain
-        # spaces, so both fields are read by fixed offset rather than by
-        # whitespace field splitting (which would never match such a path and
-        # would re-warn on every call for an unchanged ledger).
-        _prev=$(awk -v p="$_ledger" \
-          'substr($0, 67) == p { h = substr($0, 1, 64) } END { print h }' \
-          "$_cache" 2>/dev/null)
-      fi
-      [ "$_prev" = "$_hash" ] && continue
-
-      _out=$(bash "$_helper" check "$_ledger" 2>&1 >/dev/null)
-      if [ -n "$_out" ]; then
-        echo "WARNING: decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):" >&2
-        # Bounded: the helper already sanitises and truncates each heading it
-        # echoes; this caps how many defect lines one warning can emit.
-        printf '%s\n' "$_out" | head -20 >&2
-        echo "  Allocate identifiers with $(af_path scripts/ledger/ledger-entry-id.sh) next ($(af_path docs/core.md) > Decision Ledger)." >&2
-        LEDGER_ADVISORY="${LEDGER_ADVISORY}decision-ledger identifier defect in $_ledger (advisory — this call is NOT blocked):
-  $(printf '%s\n' "$_out" | head -20)
-  A defect cannot be removed from an append-only ledger; what you do about it is your judgment, recorded as a new entry. A citation of a shared identifier is read as $(af_path docs/decision-ledger.md) > Entry identifier > Identifier collision says.
-  "
-      fi
-
-      # Drop this ledger's prior row by the same fixed-offset path comparison
-      # (a substring match would mis-handle paths containing spaces), then
-      # append the fresh one.
-      { [ -f "$_cache" ] && awk -v p="$_ledger" 'substr($0, 67) != p' "$_cache"
-        printf '%s  %s\n' "$_hash" "$_ledger"
-      } > "$_cache.tmp" 2>/dev/null && mv -f "$_cache.tmp" "$_cache" 2>/dev/null
-    done
-  done <<EOF_OWN_DIRS
-$OWN_DIRS
-EOF_OWN_DIRS
-  return 0
-}
-# Model-visible delivery (issue #422). Stderr of a PreToolUse hook that exits 0
-# is not the model's channel; `hookSpecificOutput.additionalContext` is
-# (anthropics/claude-code CHANGELOG `## 2.1.9`: "Added support for `PreToolUse`
-# hooks to return `additionalContext` to the model"; the minimum runtime is
-# 2.1.277). The writer no longer runs `check` itself, so this warning is the
-# only signal of a defect. It reaches whichever actor makes the next hooked call
-# after the ledger changes — once per ledger content, across the record root
-# (the cache above) — not necessarily the writer (PR #424 review). An EXIT trap emits it only when the hook exits 0 — a deny
-# (exit 2) already carries stderr to the model — and nothing else in this hook
-# writes stdout, so the JSON object is the whole of it.
-# shellcheck disable=SC2329  # invoked by the EXIT trap below
-_ledger_advisory_emit() {
-  [ "$1" -eq 0 ] || return 0
-  command -v jq >/dev/null 2>&1 || return 0
-  jq -cn --arg ctx "$LEDGER_ADVISORY" \
-    '{hookSpecificOutput: {hookEventName: "PreToolUse", additionalContext: $ctx}}' 2>/dev/null || true
-}
-LEDGER_ADVISORY=""
-ledger_advisory_check || true
-[ -z "$LEDGER_ADVISORY" ] || trap '_ledger_advisory_emit $?' EXIT
-
 # ── Section 1d: spawn-policy model advisory (NON-GATING, issue #150) ──────────
 # docs/core.md > Spawn Model routes every per-phase model value through
 # .claude/autoflow/spawn-policy.json. The hook sees `subagent_type` and `model`
@@ -1057,9 +698,9 @@ ledger_advisory_check || true
 # is untouched. This step never exits and never denies. Fail-open by
 # construction — the whole step runs under `|| true`, so a missing helper, a
 # missing `jq` or an unreadable config degrades to "no advice" rather than to a
-# broken hook (which would block the evaluation spawns that must stay
-# spawnable). The helper is resolved by the same af_helper lookup
-# `ledger_advisory_check` uses; the config is then resolved by the readout
+# broken hook. The helper is resolved by af_helper (top of this file): the
+# AutoFlow tree's own copy, never the target's; the config is then resolved by
+# the readout
 # itself (the target's policy first, the AutoFlow default after it), never by
 # this hook.
 spawn_policy_advisory_check() {
@@ -1088,411 +729,6 @@ spawn_policy_advisory_check() {
   return 0
 }
 spawn_policy_advisory_check || true
-
-# ── Section 2: Activity check — this checkout's attempt state ──
-# No state file of this checkout's attempts means no attempt of this checkout
-# has passed PREFLIGHT — let the call through (before PREFLIGHT, or an
-# attempt's criterion review stage, whose state file comes after it).
-# The Section 1 denies above already ran unconditionally.
-#
-# Two conditions come first (issue #466), each failing closed only on the
-# score-gated surface, so reads, the writes that repair the cause and research /
-# evaluation spawns stay open:
-#   - a state file in the checkout's own .autoflow/ — a cycle recorded before the
-#     record root moved out of the tree, in progress or waiting — is never
-#     passed over: it is moved to the record root first
-#     (scripts/migrate/migrate-in-tree-records.sh);
-#   - in a dev-branch session, a record root that is undetermined or unusable
-#     leaves this checkout's state unfindable, so the call is refused with the
-#     user file's path and error. A session with no dev branch checked out can
-#     have no attempt in progress and is not refused.
-_legacy=""
-for _lsf in "${PROJECT_TOP:-$PROJECT_DIR}"/.autoflow/*-issue-*/issue-*.json; do
-  [ -f "$_lsf" ] || continue
-  _lb=${_lsf##*/}; _ln=${_lb#issue-}; _ln=${_ln%.json}
-  case "$_ln" in ''|*[!0-9]*) continue ;; esac
-  _ldir=${_lsf%/*}; _ldir=${_ldir##*/}
-  case "$_ldir" in *-issue-"$_ln") ;; *) continue ;; esac
-  _legacy="${_legacy:+$_legacy }$_lsf"
-done
-if [ -n "$_legacy" ] && is_score_gated_surface; then
-  echo "BLOCKED: AutoFlow state recorded inside the checkout's tree, before the record root (issue #466): $_legacy" >&2
-  echo "Move it to the record root with $(af_path scripts/migrate/migrate-in-tree-records.sh) before score-gated work — the cycle continues from there ($(af_path docs/state-tracking.md) > Record location)." >&2
-  exit 2
-fi
-if [ -n "$RECORD_ROOT_UNREADABLE" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then
-  echo "BLOCKED: a directory under the AutoFlow record root cannot be read, so this checkout's attempt state may be in it: $RECORD_ROOT_UNREADABLE — and the dev branch $SESSION_BRANCH is checked out." >&2
-  echo "Restore its read and search permission; the next call reads it anew ($(af_path docs/state-tracking.md) > Record location)." >&2
-  exit 2
-fi
-if [ -z "$RECORD_ROOT" ] && [ "$DEV_SESSION" = 1 ] && is_score_gated_surface; then
-  echo "BLOCKED: the AutoFlow record root is not usable, so this checkout's attempt state cannot be found — and the dev branch $SESSION_BRANCH is checked out." >&2
-  echo "$RECORD_ROOT_MARKER" >&2
-  echo "Fix the file (or the directory) it names; the next call reads it anew ($(af_path docs/state-tracking.md) > Record location)." >&2
-  exit 2
-fi
-#
-# Discovery is JSON-semantic (jq), not a textual grep: a state file is "active"
-# iff `.active == true` as JSON, regardless of serialization whitespace. A prior
-# `grep -rl '"active": true'` matched only the exact one-space form, so a valid
-# but compact (`{"active":true}`) or reformatted (`"active" : true`) state file
-# was silently not found — leaving STATE_FILE empty and bypassing every score
-# gate (issue #241). jq decides by value; the loop keeps the first active file
-# (one attempt runs at a time in a checkout).
-#
-# Parse-validity and `.active` are decided in a SINGLE jq read per file, not two:
-# a `jq -e '.active == true'` returns non-zero for both a parse error AND
-# `.active == false`, and reading the file twice (validate, then re-read for
-# active) leaves a TOCTOU window where a mid-write between the two reads validates
-# on the first and parse-errors on the second — slipping past both branches into a
-# silent fail-open (PR #242 review). One `jq -er 'if .active == true ...'` snapshot
-# distinguishes the three outcomes atomically: jq exits non-zero on a parse error
-# (→ corrupt, recorded in MALFORMED_STATE and made to FAIL CLOSED for the
-# score-gated commands below, never silently skipped); otherwise it prints
-# "active" / "inactive". The assignment sits in the `if` condition so a jq failure
-# does not trip `set -e`.
-STATE_FILE=""
-STATE_JSON=""
-MALFORMED_STATE=""
-ACTIVE_COUNT=0
-ACTIVE_FILES=""
-while IFS= read -r _od; do
-  [ -n "$_od" ] || continue
-  # AUTOFLOW-ATTEMPT-DIR (issues #423, #466): an attempt's files live in its own
-  # directory <record-root>/<repo-key>/<stamp>-issue-<N>/, so its state file is
-  # <that directory>/issue-<N>.json. Only this checkout's attempts are read
-  # (OWN_DIRS), so the PR Wait Rule holds per checkout.
-  for _sf in "$_od"/issue-*.json; do
-    [ -e "$_sf" ] || continue   # glob had no match → literal path → skip
-    # AUTOFLOW-STATE-FILENAME (issue #64): state files are named issue-<digits>.json
-    # (docs/state-tracking.md > AutoFlow State Tracking). Any other JSON in an issue directory
-    # — e.g. a VALIDATE launch record (issue-{N}-runtime-launch.json) — is not a
-    # state-file candidate: skip it BEFORE the cat+jq validator so a non-state JSON
-    # can never take the MALFORMED path and fail-closed block push-class commands
-    # (#64). The file's number must also be its directory's.
-    _base=${_sf##*/}
-    case "$_base" in issue-*.json) ;; *) continue ;; esac
-    _num=${_base#issue-}; _num=${_num%.json}
-    case "$_num" in ''|*[!0-9]*) continue ;; esac
-    _dir=${_sf%/*}; _dir=${_dir##*/}
-    case "$_dir" in *-issue-"$_num") ;; *) continue ;; esac
-    # Read the file ONCE into memory and decide parse-validity + active on that
-    # single snapshot. Every downstream consumer (ACTIVE, VERDICT, check_scores)
-    # reads STATE_JSON, never the file again — so a partial write occurring after
-    # discovery cannot turn a later re-read into a jq parse error that exits 5,
-    # which PreToolUse treats as a NON-blocking error (only exit 2 blocks). The
-    # cat+jq pair sits in the `if` condition so neither failure trips `set -e`.
-    # `jq -s` slurps the file: a valid state is EXACTLY ONE top-level JSON object.
-    # jq is a stream parser, so two concatenated objects would otherwise parse to
-    # "active\nactive" and slip past both the active and the malformed branches
-    # (PR #242 review). Zero/multiple top-level values, a non-object top-level, or
-    # a parse error all take the malformed path → fail closed.
-    # AUTOFLOW-SCHEMA-VALIDATION (issue #245): the filter is CLOSED-WORLD — it accepts ONLY
-    # the declared shape (top-level keys in the allowlist or fix_regression_cycle_N; each
-    # field's type; verdict in {"",pending,evaluated,skipped (non-bug issue),skipped (feat issue)}; scores
-    # number|{score:number} in [0,10]; phases only at root + fix_regression* cycles) and
-    # routes EVERY other shape to error() -> the MALFORMED path -> exit 2. "Reject all not
-    # explicitly allowed" (vs the prior open-world "reject known-bad shapes") structurally
-    # closes the corrupt-but-valid-JSON fail-open class (issue #245 cycle 2; verdict-value #5,
-    # unknown-key/field-type #6). Single source of the vocabulary: tests/fixtures/gate-schema.json
-    # (verdict_enum, top_level_keys, cycle_key_grammar, score_range), changed together with
-    # this validator (issue #293 retired the standing drift check). check_scores below is UNTOUCHED — a
-    # validator-passing doc has phases only at grammar-legal cycles, so its walk is uncontaminated.
-    if _content=$(cat "$_sf" 2>/dev/null) \
-       && _verdict=$(printf '%s' "$_content" | jq -s -er 'def in_range: type == "number" and . >= 0 and . <= 10; def is_score: in_range or (type == "object" and (.score | in_range)); def scores_ok: (type == "object") and ((to_entries | map(.value | is_score)) | all); def verdict_ok: (type == "string") and (. == "" or . == "pending" or . == "evaluated" or . == "skipped (non-bug issue)" or . == "skipped (feat issue)"); def remedy_ok: (type == "string") and (. == "doc" or . == "test" or . == "impl" or . == "design" or . == "operator"); def phase_ok($p): (.phases[$p] == null) or ((.phases[$p] | type == "object") and ((.phases[$p].verdict == null) or (.phases[$p].verdict | verdict_ok)) and ((.phases[$p].scores == null) or (.phases[$p].scores | scores_ok))); def remedy_field_ok($p): (.phases[$p] == null) or ((.phases[$p] | type != "object") or ((.phases[$p] | has("remedy_class")) | not) or (.phases[$p].remedy_class | remedy_ok)); def topkeys_ok: (keys_unsorted - ["active","issue","title","date","branch","cycle","mode","phase","phases","fix_regression"]) | map(select(test("^fix_regression_cycle_[0-9]+$") | not)) | length == 0; def topvalues_ok: ((has("issue")|not) or (.issue|type=="string")) and ((has("title")|not) or (.title|type=="string")) and ((has("date")|not) or (.date|type=="string")) and ((has("branch")|not) or (.branch|type=="string")) and ((has("cycle")|not) or (.cycle|type=="number")) and ((has("mode")|not) or (.mode|type=="string")) and ((has("phase")|not) or (.phase|type=="string")) and ((has("phases")|not) or (.phases|type=="object")); if (length != 1) or (.[0] | type != "object") then error("state file must be exactly one JSON object") else .[0] | if (has("active") | not) or (.active | type != "boolean") then error("active must be a boolean") elif .active != true then "inactive" elif (topkeys_ok | not) then error("unknown top-level key") elif (topvalues_ok | not) then error("top-level field has wrong type") else ( [.. | objects | select(has("phases"))] as $cycles | ([., (to_entries[] | select(.key == "fix_regression" or (.key | test("^fix_regression_cycle_[0-9]+$"))) | .value)] | map(select(type == "object" and has("phases")))) as $allowed | if (($cycles | length) != ($allowed | length)) then error("phases in a disallowed location") elif ($cycles | map(.phases | type == "object") | all | not) then error("phases must be an object") elif ($cycles | map(. as $c | ["gate_hypothesis","gate_plan","audit","gate_quality"] | map(. as $p | $c | phase_ok($p)) | all) | all | not) then error("gated phase has invalid shape") elif ($cycles | map(. as $c | ["gate_hypothesis","gate_plan","audit","gate_quality"] | map(. as $p | $c | remedy_field_ok($p)) | all) | all | not) then error("remedy_class outside its enum") else "active" end ) end end' 2>/dev/null); then
-      if [ "$_verdict" = "active" ]; then
-        # Count EVERY active file (no break) so a second simultaneously-active
-        # state file cannot be silently ignored: the first-active-wins glob
-        # order would otherwise decide every score gate by whichever file sorts
-        # first, regardless of which issue the command targets (issue #843).
-        # The first active file is still remembered as STATE_FILE so the
-        # single-active path is byte-identical to before; the ≥2 fail-closed
-        # branch below consults ACTIVE_COUNT.
-        ACTIVE_COUNT=$((ACTIVE_COUNT + 1))
-        ACTIVE_FILES="${ACTIVE_FILES:+$ACTIVE_FILES }$_sf"
-        if [ -z "$STATE_FILE" ]; then
-          STATE_FILE="$_sf"
-          STATE_JSON="$_content"
-        fi
-      fi
-    else
-      MALFORMED_STATE="$_sf"    # parse error / unreadable → corrupt; cannot trust its active flag
-    fi
-  done
-done <<EOF_OWN_DIRS
-$OWN_DIRS
-EOF_OWN_DIRS
-
-# Fail closed on corrupt state: no readable active file, but a malformed state
-# file exists whose active flag we cannot determine. The state file gates BOTH
-# git push / gh pr create AND score-gated Agent spawns,
-# so refuse all of those on corrupt state — while leaving read-only commands and
-# the writes needed to repair the file unblocked (no recovery deadlock). Research
-# (Explore / Plan / claude-code-guide) and evaluation agents never gate, so they
-# stay allowed even on corrupt state. The unconditional Section 1 denies already ran.
-if [ -z "$STATE_FILE" ] && [ -n "$MALFORMED_STATE" ]; then
-  if is_score_gated_surface; then
-    echo "BLOCKED: malformed AutoFlow state file: $MALFORMED_STATE" >&2
-    echo "An attempt's state file <record-root>/<repo-key>/<stamp>-issue-<N>/issue-<N>.json is malformed (invalid JSON or schema) — refusing score-gated work on corrupt state. Fix or remove it." >&2
-    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
-    exit 2
-  fi
-fi
-
-# Fail closed on multiple active state files of this checkout: one attempt runs
-# at a time in a checkout (docs/core.md > PR Wait Rule). When two or more state files are simultaneously
-# active, the first-active-wins discovery above would decide every score gate by
-# whichever file sorts first in the glob — regardless of which issue the pushed
-# branch / spawn actually targets (issue #843). Shares `is_score_gated_surface`
-# with the corrupt-state branch above: only the score-gated surface (git push /
-# gh pr create / gated Agent spawns, undeclared spawns included) fails closed;
-# read-only commands, repair writes, and research/evaluation spawns stay
-# unblocked so the operator can deactivate the stale file without a deadlock.
-# Runs while STATE_FILE is set to the first active file, ahead of every score
-# gate.
-if [ "$ACTIVE_COUNT" -ge 2 ]; then
-  if is_score_gated_surface; then
-    echo "BLOCKED: multiple active AutoFlow state files in this checkout — one attempt runs at a time in a checkout ($(af_path docs/core.md) > PR Wait Rule)." >&2
-    echo "Active: $ACTIVE_FILES" >&2
-    echo "Deactivate all but the in-flight cycle's state file before score-gated work." >&2
-    exit 2
-  fi
-fi
-
-if [ -z "$STATE_FILE" ]; then
-  exit 0
-fi
-
-ACTIVE=$(printf '%s' "$STATE_JSON" | jq -r '.active // false' 2>/dev/null)
-if [ "$ACTIVE" != "true" ]; then
-  exit 0
-fi
-
-# ── Compute PASS verdict from raw scores ──
-# Output: JSON { "pass": bool, "avg": float, "min": int, "security": int|null, "reason": string }
-#
-# State files can nest cycles (`fix_regression`, `fix_regression_cycle_2`, …)
-# alongside the top-level `phases.*`. A previous cycle's gate scores are
-# preserved at the top level, so a naive top-level lookup silently passes the
-# stale verdict instead of the current cycle's. Select the scores of the LAST
-# cycle location that HAS a `phases[$phase]` key at all — JSON authoring order
-# corresponds to cycle order (base → fix_regression → fix_regression_cycle_N),
-# so `last` is the most recent cycle that recorded this phase. An empty
-# `scores` at that most-recent recording location is treated as "evaluation not
-# run" (fail closed via the length==0 branch below) — NEVER a fallback to an
-# earlier cycle's PASS. The removed `map(select(non-empty))` empty-skipping is
-# exactly what let the stale-PASS fallback through, so it is not re-added: a
-# future author must not filter empty score objects out before `last`.
-# Companion invariant (deadlock-safety, not code-enforced): a nested
-# `fix_regression*` object must record ONLY the phases actually re-run in that
-# regression — never a full empty-template reset of all five phase keys. This
-# keeps the GATE:QUALITY→BUILD regression (which re-runs AUDIT/GATE:QUALITY but
-# not GATE:PLAN) deadlock-free: the regression carries no `phases.gate_plan`
-# key, so `select(.phases | has("gate_plan"))` skips it and the walk resolves
-# the base cycle's gate_plan PASS. Current top-level-reset authoring never
-# produces the all-`{}` shape.
-check_scores() {
-  local phase_key=$1
-  printf '%s' "$STATE_JSON" | jq --arg phase "$phase_key" '
-    [.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase].scores]
-    | (last // {}) |
-    if length == 0 then
-      { pass: false, avg: 0, min: 0, security: null, reason: "evaluation not run" }
-    else
-      (to_entries | map(.value | if type == "object" then .score else . end | tonumber)) as $vals |
-      ($vals | add / length * 10 | round / 10) as $avg |
-      ($vals | min) as $min |
-      (.["security"] // .["보안"] // null | if type == "object" then .score else . end) as $sec |
-      if $sec != null and $sec <= 3 then
-        { pass: false, avg: $avg, min: $min, security: $sec,
-          reason: ("security score " + ($sec | tostring) + " — automatic rework") }
-      elif $min < 7 then
-        { pass: false, avg: $avg, min: $min, security: $sec,
-          reason: ("lowest score " + ($min | tostring) + " — each item must be ≥ 7") }
-      elif $avg < 7.5 then
-        { pass: false, avg: $avg, min: $min, security: $sec,
-          reason: ("average " + ($avg | tostring) + " — must be ≥ 7.5") }
-      else
-        { pass: true, avg: $avg, min: $min, security: $sec, reason: "PASS" }
-      end
-    end
-  '
-}
-
-# Block if the gate's check_scores result is not pass.
-block_with_scores() {
-  local gate_name=$1
-  local phase_key=$2
-  local result pass
-  # A security gate must never let an error in score evaluation become a
-  # non-blocking exit. If check_scores fails — e.g. a raw score is non-numeric so
-  # jq's `tonumber` errors and exits 5, which PreToolUse does NOT treat as
-  # blocking (only exit 2 blocks) — fail closed with an explicit exit 2 (PR #242
-  # review). The assignment sits in the `if` condition so the failure does not
-  # trip `set -e` before it is handled. All four score gates route through here,
-  # so this single guard closes the whole "jq error → exit 5 → fail-open" class.
-  if ! result=$(check_scores "$phase_key" 2>/dev/null); then
-    echo "BLOCKED: ${gate_name}" >&2
-    echo "Reason: state scores are not evaluable (corrupt or non-numeric) — failing closed." >&2
-    echo 'Accepted score shapes: a number 0-10, or {"score": <number 0-10>, "reason": "..."} — a prose string is rejected.' >&2
-    echo "State file: $STATE_FILE" >&2
-    exit 2
-  fi
-  pass=$(echo "$result" | jq -r '.pass')
-
-  if [ "$pass" != "true" ]; then
-    local reason avg min_val
-    reason=$(echo "$result" | jq -r '.reason')
-    avg=$(echo "$result" | jq -r '.avg')
-    min_val=$(echo "$result" | jq -r '.min')
-    echo "BLOCKED: ${gate_name}" >&2
-    echo "Reason: ${reason}" >&2
-    echo "Current scores — average: ${avg}, lowest: ${min_val}" >&2
-    echo "PASS criteria — average ≥ 7.5, each ≥ 7, security > 3" >&2
-    echo "State file: $STATE_FILE" >&2
-    exit 2
-  fi
-}
-
-# ── Gate: Agent spawn (declared role → gate; the hook owns the mapping) ──
-# apply_role_gate <role> <label>: returns when the role's gate admits the spawn,
-# exits 2 when it does not. <label> names what the class was read from.
-apply_role_gate() {
-  local ROLE=$1 _label=$2
-  case "$ROLE" in
-    research|analysis|evaluation|advisor)
-      # research: read-only, never gates. evaluation: must stay spawnable —
-      # blocking it would deadlock the very gate it produces scores for.
-      # analysis: DIAGNOSE precedes every gate, so it has no prerequisite.
-      # advisor: answers a decision point in any phase (ADR-0025 D7).
-      return 0
-      ;;
-    planning)
-      # Gate 1: planning spawn → GATE:HYPOTHESIS pass required (bug issues only).
-      # gate_hypothesis.verdict carries the bug signal: a value without "skip" is a bug issue.
-      # Fail closed if the verdict cannot be read — a JSON-valid but schema-corrupt
-      # state (e.g. `.phases` is not an object) makes this jq error and would
-      # otherwise exit 5, a NON-blocking PreToolUse code (PR #242 review). The
-      # assignment sits in the `if` condition so set -e does not fire first.
-      if ! VERDICT=$(printf '%s' "$STATE_JSON" | jq -r '.phases.gate_hypothesis.verdict // empty' 2>/dev/null); then
-        echo "BLOCKED: AutoFlow state schema is corrupt (.phases is not an object) — failing closed for the Agent spawn." >&2
-        echo "State file: $STATE_FILE" >&2
-        exit 2
-      fi
-      if [ -n "$VERDICT" ] && ! echo "$VERDICT" | grep -qi "skip"; then
-        block_with_scores "planning agent spawn${_label} requires GATE:HYPOTHESIS pass" "gate_hypothesis"
-      fi
-      ;;
-    implementation)
-      # Gate 2: implementation spawn → GATE:PLAN pass required.
-      block_with_scores "${ROLE} agent spawn${_label} requires GATE:PLAN pass" "gate_plan"
-      ;;
-    *)
-      # Undeclared spawn while a cycle is active: deny LOUDLY. Inference from
-      # prompt text is deliberately not attempted — a silent misclassification
-      # (either direction) is worse than this explicit, self-describing stop.
-      echo "BLOCKED: Agent spawn without a declared AutoFlow role while a cycle is active." >&2
-      echo "Declare the role structurally — set subagent_type to autoflow-{analyzer|evaluator|unit-analysis|unit-design|unit-build|advisor}. Research types (Explore/Plan/claude-code-guide) pass as-is. If this payload carries team_name/name, drop them: the team-spawn channel is retired and a name-carrying payload is denied even with a valid subagent_type." >&2
-      echo "State file: $STATE_FILE" >&2
-      exit 2
-      ;;
-  esac
-}
-
-if [ "$TOOL_NAME" = "Agent" ]; then
-  ROLE=$(resolve_spawn_role)
-  if [ -n "$CALLER_UNIT_ROLE" ]; then
-    # A unit agent's spawn: admitted without a declaration and judged by the
-    # caller's class (ADR-0025 D5). A declared role that has a gate of its own
-    # keeps it as well, so an existing role type is never judged more loosely
-    # because a unit spawned it.
-    apply_role_gate "$CALLER_UNIT_ROLE" " (inherited from caller $CALLER_TYPE)"
-    # The declared type is read with any `name` set aside: a name admits the
-    # spawn under a unit caller, but never hides the gate its type carries.
-    ROLE=$(role_of_type "$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)")
-    case "$ROLE" in
-      ''|research) ;;
-      *) apply_role_gate "$ROLE" "" ;;
-    esac
-  else
-    apply_role_gate "$ROLE" ""
-  fi
-  exit 0
-fi
-
-# An open re-entry is not pushed past: while a gate's latest record carries
-# `remedy_class`, a re-entry is open — a recommendation attempt not yet
-# re-scored clean.
-# The value is read at the same most-recent-cycle location as check_scores reads
-# scores; a FAIL's class is already behind its failing scores, so this branch
-# only ever adds the PASS-with-open-attempt case. The validator above closes
-# the value to the doc|test|impl|design|operator enum (a malformed value is a
-# MALFORMED state, fail-closed before any gate) and admits only the field's
-# ABSENCE as "no open re-entry" — an explicit null is malformed, not absent —
-# and the reader applies the same distinction (has(), not == null) and fails
-# closed on its own if it meets anything but a non-empty enum string.
-block_if_open_reentry() {
-  local action=$1 phase_key=$2 _open
-  if ! _open=$(printf '%s' "$STATE_JSON" | jq -r --arg phase "$phase_key" '[.. | objects | select(has("phases")) | select(.phases | has($phase)) | .phases[$phase]] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
-    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.${phase_key}.remedy_class; failing closed for ${action}." >&2
-    echo "State file: $STATE_FILE" >&2
-    exit 2
-  fi
-  if [ -n "$_open" ]; then
-    echo "BLOCKED: ${action} while phases.${phase_key} carries remedy_class=${_open} — an open re-entry (a recommendation attempt not yet re-scored clean)." >&2
-    echo "Finish the routed fix, run the gate's re-score, and remove the value once no attempt is left open ($(af_path docs/units/completion-evaluation.md) > Recommendation triage)." >&2
-    echo "State file: $STATE_FILE" >&2
-    exit 2
-  fi
-}
-
-# ── Gate 3: git push → AUDIT + GATE:QUALITY pass required, no open re-entry ──
-if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_PUSH}"; then
-  block_with_scores "git push requires AUDIT pass" "audit"
-  block_with_scores "git push requires GATE:QUALITY pass" "gate_quality"
-  block_if_open_reentry "git push" "audit"
-  block_if_open_reentry "git push" "gate_quality"
-fi
-
-# ── Gate 4: gh pr create → AUDIT + GATE:QUALITY pass required, no open re-entry ──
-if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+create\b"; then
-  block_with_scores "gh pr create requires AUDIT pass" "audit"
-  block_with_scores "gh pr create requires GATE:QUALITY pass" "gate_quality"
-  block_if_open_reentry "gh pr create" "audit"
-  block_if_open_reentry "gh pr create" "gate_quality"
-fi
-
-# ── Gate 5: git commit under a `doc` GATE:QUALITY remedy → sweep record required ──
-# A GATE:QUALITY FAIL whose remedy_class is `doc` re-enters at an orchestrator
-# doc commit instead of BUILD. The remedy obligation for that class is
-# class-level, not site-level: the fix anchors on a repo-wide sweep (command +
-# output), not on the evaluator's listed sites. The gate checks the sweep
-# RECORD FILE — its presence and its two sections — never the wording of any
-# instruction or prompt.
-# `remedy_class` is read from the same most-recent-cycle location as
-# check_scores reads scores; an absent or non-`doc` value leaves commits
-# ungated. Fail closed only on the jq read erroring, as the score gates do.
-if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}${GIT_COMMIT}"; then
-  if ! _remedy=$(printf '%s' "$STATE_JSON" | jq -r '[.. | objects | select(has("phases")) | select(.phases | has("gate_quality")) | .phases.gate_quality] | last | if . == null then "" elif (type == "object" and ((has("remedy_class")) | not)) then "" elif (type == "object" and (.remedy_class | type == "string" and length > 0)) then .remedy_class else error("malformed remedy_class") end' 2>/dev/null); then
-    echo "BLOCKED: AutoFlow state schema is corrupt — cannot read phases.gate_quality.remedy_class; failing closed for git commit." >&2
-    echo "State file: $STATE_FILE" >&2
-    exit 2
-  fi
-  if [ "$_remedy" = "doc" ]; then
-    _sweep="${STATE_FILE%.json}-remedy-sweep.md"
-    _sweep_ok=0
-    if [ -r "$_sweep" ] \
-       && awk 'BEGIN{c=0;o=0} /^## Command[[:space:]]*$/{s="c";next} /^## Output[[:space:]]*$/{s="o";next} /^## /{s=""} s=="c" && NF{c=1} s=="o" && NF{o=1} END{exit !(c&&o)}' "$_sweep"; then
-      _sweep_ok=1
-    fi
-    if [ "$_sweep_ok" -ne 1 ]; then
-      echo "BLOCKED: git commit under a GATE:QUALITY remedy_class=doc re-entry requires the sweep record." >&2
-      echo "Write ${_sweep} with a non-empty '## Command' section (the repo-wide sweep command) and a non-empty '## Output' section (its output) before committing the doc remedy ($(af_path docs/units/completion-evaluation.md) > FAIL routing)." >&2
-      echo "State file: $STATE_FILE" >&2
-      exit 2
-    fi
-  fi
-fi
 
 # Pass.
 exit 0

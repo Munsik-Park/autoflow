@@ -12,7 +12,6 @@
 #   <record-root>/<repo-key>/drafts/              issue drafts
 #   <record-root>/<repo-key>/proposals/           proposal records
 #   <record-root>/_metrics/                       cycle metrics
-#   <record-root>/.ledger-check-cache             the gate hook's ledger cache
 #
 # An attempt is one run of an issue: its key is the name of its dev branch
 # without `dev-` — `dev-<stamp>-issue-<N>` → `<stamp>-issue-<N>`, <stamp> being
