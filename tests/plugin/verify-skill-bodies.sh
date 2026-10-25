@@ -287,14 +287,14 @@ k1() {
 k1 "$REPO_ROOT/skills" > "$WORK/k1.out"
 k1n=$(tail -1 "$WORK/k1.out"); k1bad=$(sed '$d' "$WORK/k1.out" | tr '\n' ' ')
 cp -R "$REPO_ROOT/skills" "$WORK/k1skills"
-sed '/^\*\*Regressions\*\*/d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1skills/cycle-u4/SKILL.md"
+sed '/^U4 Build and verify /d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1skills/cycle-u4/SKILL.md"
 k1spec=$(k1 "$WORK/k1skills" | sed '$d' | tr '\n' ' ')
 if [ "$k1n" -lt 40 ]; then
   failc "K1" "only $k1n classification entries read (vacuous)"
 elif [ -n "$k1bad" ]; then
   failc "K1" "a unit body disagrees with the classification: $k1bad"
-elif [ "$k1spec" != "U4:$(grep -m1 '^\*\*Regressions\*\*' "$REPO_ROOT/skills/cycle-u4/SKILL.md" | cut -c1-50) " ]; then
-  failc "K1" "a U4 body without its Regressions line was read as '$k1spec'"
+elif [ "$k1spec" != "U4:$(grep -m1 '^U4 Build and verify ' "$REPO_ROOT/skills/cycle-u4/SKILL.md" | cut -c1-50) " ]; then
+  failc "K1" "a U4 body without its module line was read as '$k1spec'"
 else
   pass "K1: $k1n classification entries read apart from the generator; each one's lines are in exactly its units' bodies; a body missing a line is caught"
 fi

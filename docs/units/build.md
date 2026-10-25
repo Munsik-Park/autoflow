@@ -4,104 +4,91 @@
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
-BUILD and AUDIT are one functional unit, U4 Build and verify
-([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
-four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
-this file states them, with the cautions the build is asked to heed and the result it owes. How the
-unit reaches the goal — what else it reads, whether it spawns helpers, how it divides test and
-implementation work, how it runs its checks and when it stops iterating — is the unit agent's,
-recorded with its grounds in its artifact ([`core.md`](../core.md) > Rule Scope,
-principle 2).
+U4 Build and verify is two modules: the build module, whose contract is
+`<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
+evaluation module that judges test-first and audits the change
+(`<autoflow-root>/docs/contracts/audit.json`, [`evaluation-system.md`](../evaluation-system.md) >
+*Gate rubrics* > AUDIT; [`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md)
+D1). This file states the build's goal, what it owes, the cautions it is asked to heed and the
+report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
+how it divides test and implementation work, how it runs its checks and when it stops iterating
+within its run — is its own, recorded with its grounds in its report ([`core.md`](../core.md) >
+Rule Scope, principle 2).
 
-- **Goal**: the design that passed GATE:PLAN, implemented within the cycle's scope, with every
-  acceptance criterion verified as the verification design says.
-- **Artifact contract**: the commits on the cycle's branch and the build report (*Build report*
-  below).
-- **Verification**: AUDIT — a fresh Evaluation AI that judges test-first from the build report and
-  git, then scores the change on the rubric of [`evaluation-system.md`](../evaluation-system.md) >
-  *Gate rubrics* > AUDIT; the unit never scores its own artifact. U4 ends when `audit` PASSes
-  (*Verification — AUDIT* below).
-- **Loop cap**: a test-first finding or an AUDIT FAIL re-runs the unit with its findings and the
-  previous artifacts (*Re-entry* below), max 2× together — the AUDIT FAIL cap
-  (`<autoflow-root>/docs/core.md` > Flow Control > Regressions).
+- **Goal**: the design implemented within its scope on the branch the invocation names
+  (`params.branch`), and every item of the verification design verified as it says — or, where it
+  cannot be, the reason recorded.
+- **Output**: the commits the run makes on the branch, the build report (*Build report* below), a
+  green-blocker record when the design cannot be built as it stands, and the run's tool requests
+  ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
+  report and git, then scores the change on the rubric of
+  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
+  scores its own change (*Evaluation — AUDIT* below).
 - **Result owed**: the build report's path, the commit SHAs and a one-line summary
-  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The orchestrator
-  does not receive the report's body.
-
-## Transitions
-
-The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
-
-| Transition | Condition |
-|------|------|
-| BUILD → AUDIT | the unit returned (`<autoflow-root>/docs/units/build.md` > *Report routing*) |
-| AUDIT (test-first) → BUILD | the AUDIT evaluator does not confirm that a `driving` / `regression` test's Red run precedes its implementation commit with its failure shown in its log → it scores nothing, and a unit re-run takes its `## Test-first` section; consumes the AUDIT FAIL counter (Regressions below) (`<autoflow-root>/docs/evaluation-system.md` > AUDIT > *Test-first*; `<autoflow-root>/docs/units/build.md` > *Verification — AUDIT*) |
-| BUILD → ARCHITECT | design contradiction — implementation and tests each faithful to the design while the acceptance criteria are mutually unsatisfiable, reproduced by measurement and recorded in `<attempt-dir>/issue-{N}-green-blocker.md` → ARCHITECT unit re-run → GATE:PLAN re-evaluation → BUILD re-entry (cap: Regressions below) |
-| BUILD → user | a harness-level block — a lint chain covering a staged file stays `not-run (unexecuted)` because it is neither executable in this checkout nor covered by a nameable pull-request CI job → report situation-first + pause (`active:false`, `phase:"awaiting-user"`) |
-| AUDIT entry (security-checklist change) → advisor | `<autoflow-root>/scripts/gate/security-checklist.sh status` exits `3` (the cycle changed the target's declared security checklist and no `[checklist-decision]` entry covers the committed version) → AUDIT is **not** spawned until the advisor's `[checklist-decision]` entry is recorded and the status re-run; `rejected` → the change is reverted first; consumes no re-entry budget (`<autoflow-root>/docs/units/build.md` > *Security checklist*) |
-| AUDIT → GATE:QUALITY | security audit PASS + its recommendations triaged (no attempt open) |
+  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
 ## Unit spawn
 
 - **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
-  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) once GATE:PLAN has PASSed. The
-  prompt states the goal and names the inputs by path — the two design documents
-  (`<attempt-dir>/issue-{N}-feature-design.md`, `<attempt-dir>/issue-{N}-verification-design.md`), the
-  acceptance-criterion list (`<attempt-dir>/issue-{N}-analysis.md` > `## Acceptance criteria`), the
-  decision ledger, the cycle-layer store `<attempt-dir>/issue-{N}-local/`, and each recommendation a
-  gate's triage deferred to the build with its subject and finding
-  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — and the build report's path. On a
-  re-entry it also names what the re-entry is for and the material that carries it (*Re-entry*
-  below).
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
+  module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
+  acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
+  `[ac-decision]` entries, and on a re-run the previous report and the findings it answers (an
+  audit's, a quality evaluation's or a review's) — the branch, the attempt's record directory, where
+  earlier runs left their work and their `local/` stores, and the output directory.
 - **Documents.** The unit's agent definition carries this file with the rest of its guidance
-  ([`core.md`](../core.md) > Context Injection); the prompt names the affected docs DIAGNOSE
-  identified by path, and the unit reads anything further by its own judgment. The return is routed
-  (*Report routing* below).
+  ([`core.md`](../core.md) > Context Injection); the analysis report's `## Affected documents` and
+  the target's documents are read by the module's own judgment.
 
 ## What the build owes
 
-These are the rules other documents cite; everything else about the work is the unit's.
+These are the rules other documents cite; everything else about the work is the module's.
 
-- **Scope.** The unit implements every issue acceptance criterion within the cycle's scope — the
-  feature design with its `## Scope` section, and the verification design. An AC whose disposition
-  is not `automated` ([U3 Design](design.md) > *Test necessity*) is still implemented; only its
-  evidence differs. A problem met during the work that the scope does not name is judged under
-  [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment* and recorded under `## Scope judgments`. Tests verify correctness; they do not define the
-  solution — no hard-coding to test inputs, no special-casing an assertion. Once the scope is
-  implemented and verified, a further change the unit judges useful beyond the scope and the problems
-  its scope judgments include is recorded under `## Scope judgments`, not made.
-- **Test-first (TDD).** Every `driving` and `regression` row's test is written before the
-  implementation it verifies and seen failing; a `characterization` test may pass from the start. The
-  order of the work — a failing run in the working tree first, or a test commit first — is the
-  unit's. The result owed is the Red run's evidence (*Build report* > `## Test-first`). Cautions:
-  - A test that passes from the start is not Red evidence. Look again at whether it checks the
-    required behavior, and record that judgment in the report.
-  - The Red run's failure is readable in its log, the exit status included.
-  - `## Run record` holds one row per verification row — its latest run. The Red run goes in
-    `## Test-first` only.
+- **Scope.** The module implements every applied acceptance criterion within the scope — the
+  feature design with its `## Scope` section, and the verification design. An item the verification
+  design verifies other than by an executable test ([U3 Design](design.md) > *Test necessity*) is
+  still implemented; only its evidence differs. A problem met during the work that the scope does
+  not name is judged under [`submodule-common-rules.md`](../submodule-common-rules.md) > Change
+  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
+  correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
+  an assertion. Once the scope is implemented and verified, a further change the module judges
+  useful beyond the scope and the problems its scope judgments include is recorded under
+  `## Scope judgments`, not made.
+- **Test-first (TDD).** A test that verifies a required behavior is seen failing before the
+  implementation it verifies: a behavior not yet implemented, or a defect reproduced before its fix.
+  A test that records existing behavior the change must preserve may pass from the start. Which of
+  its tests verify a required behavior, and the order of the work — a failing run in the working
+  tree first, or a test commit first — are the module's; the result owed is each such test's failing
+  run with its evidence (*Build report* > `## Test-first`). Cautions:
+  - A test that passes from the start is not evidence of a failing run. Look again at whether it
+    checks the required behavior, and record that judgment in the report.
+  - The failing run's failure is readable in its log, the exit status included.
+  - `## Run record` holds each item's latest run. The failing run goes in `## Test-first` only.
 
-  ADR-0025 D3's test-first rule is judged by the AUDIT evaluator from this report and git: the Red
-  run precedes the implementation commit, and its failure is shown by its log
+  The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
+  failing run precedes the implementation commit, and its failure is shown by its log
   ([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Test-first*).
-- **Where a test lives.** A `cycle` row's test, a `delivery-check`, a `manual` scenario document and
-  an observation record live under `<attempt-dir>/issue-{N}-local/` and are run by their path
-  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools). A test file
-  goes into the target's tree only as the exception: in this repository a `standing` row
-  (`automated / standing: <token>`); on a target, a file the unit judges the target should keep,
-  listed under `## Test files kept` with its reason and the CI job expected to run it — HANDOFF
+- **Where a test lives.** A test the run writes for its own verification, a one-shot delivery
+  check, an observation scenario and its record live under the run's `<out>/local/` and are run by
+  their path ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools);
+  a later run reads them there, in the record directory. A test file goes into the target's tree
+  only as the exception: a file the module judges the target should keep — in this repository a
+  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
+  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
   carries that list into the PR body with the CI job that actually ran each file
-  ([U6 Delivery](delivery.md) > *CI* > *Added test files*). Such a file
-  is wired into the target's CI discovery in the same commit.
+  ([U6 Delivery](delivery.md) > *CI* > *Added test files*). Such a file is wired into the target's
+  CI discovery in the same commit.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
-  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. A row
-  verified with a tool (`manual`, executor `AI: <tool>`) is looked at with that tool and its
-  observation record written under the store, ending in one result line — `observation: match` or
+  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
+  verified by observation with a tool is looked at with that tool and its observation record written
+  under `<out>/local/`, ending in one result line — `observation: match` or
   `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
-  environment nor the target's procedures provide, or what using a tool the environment has lacks, is
-  reported — naming what is missing, not the output the tool would give — and never acquired.
-- **Comment check.** Before the unit's last commit it reads the comment lines the cycle's diff adds
-  (`git diff <base>...HEAD`) against [`submodule-common-rules.md`](../submodule-common-rules.md) >
+  environment nor the target's procedures provide, or what using a tool the environment has lacks,
+  is recorded as a tool request — naming what is missing, not the output the tool would give, and
+  what the run did instead — and never acquired.
+- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
+  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](../submodule-common-rules.md) >
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
@@ -110,20 +97,24 @@ These are the rules other documents cite; everything else about the work is the 
   kept with the reason the match is not the class) and records the result under `## Comment check`.
   The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
-  implementation and the tests each faithful to the design — the unit implements the satisfiable
-  subset and records the contradiction in `<attempt-dir>/issue-{N}-green-blocker.md`: the conflicting AC
-  IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit.
+  implementation and the tests each faithful to the design — the module implements the satisfiable
+  subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
+  measurement that reproduces the conflict, and `path:line` anchors at the run's commit. The design
+  module takes it as an input on its re-run.
 - **Acceptance-criterion change.** Work that shows a criterion defective ([`decision-ledger.md`](../decision-ledger.md)
   > *Acceptance-criterion decisions*) is raised in the report with the criterion, the proposed change
   and the fact that shows the need — never worked around by keeping the criterion's letter
   ([U3 Design](design.md) > *Report routing* > *An acceptance-criterion change raised later in the
   cycle*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
-  included. The unit does not push.
+  included. A lint chain covering a staged file that cannot run in this checkout, and that no
+  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
+  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
+  `## No commit`.
 
 ## Dividing the work
 
-A recommendation, not a rule: whether the unit divides its work, and how, stays its own, and the
+A recommendation, not a rule: whether the module divides its work, and how, stays its own, and the
 division it chose and its grounds go in the build report. This section records what a division is
 worth and where it loses.
 
@@ -169,8 +160,8 @@ worth and where it loses.
   differently is a decision point.
 - **A deterministic run is a command, not a context.** Running tests, lint and builds, and
   committing, take no judgment; what they cost is their output carried in the context that reads
-  it. A run goes through a command that bounds its time, keeps the full output in a log under the
-  cycle-layer store, and prints the exit status, the summary line, the names of failing tests, the
+  it. A run goes through a command that bounds its time, keeps the full output in a log under
+  `<out>/local/`, and prints the exit status, the summary line, the names of failing tests, the
   first error block and the log's path. That short result fills `## Run record` and `## Test-first`;
   the log stays the evidence. A run with no bound holds the context that started it, and every
   helper report waiting on that context. A model spawned for each run costs more than it saves:
@@ -190,77 +181,58 @@ worth and where it loses.
 
 ## Build report
 
-`<attempt-dir>/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry that passes through AUDIT and GATE:QUALITY (*Re-entry* below). Every section
-below is present; a section with nothing to record says `none`.
-The five record sections are tables, one row per item, in any column order; the column a reader
-needs is named below.
+`<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
+it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
+`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
+`none`.
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, shown in its log), `Impl commit` (the commit that makes it pass) | AUDIT (*Test-first*) |
-| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
-| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
+| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
+| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
-| `## Lint` | one row per chain per commit this cycle makes on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | GATE:QUALITY `Commit conventions` |
+| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
 | `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the unit rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
+| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; HANDOFF (PR body; *Added test files*) |
+| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
+| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
+| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
-Anything else the unit records — how it divided the work, the checks it chose to run and what they
-found — is its own, written where it judges useful.
+Anything else the module records — how it divided the work, the checks it chose to run and what
+they found — is its own, written where it judges useful.
 
-## Report routing
+## Evaluation — AUDIT
 
-- **The unit's return** → AUDIT (*Verification — AUDIT* below), whose evaluator judges test-first
-  before it scores.
-- **A `green-blocker` record** → an ARCHITECT unit re-run naming it ([U3 Design](design.md) >
-  *Re-entry*), then GATE:PLAN's re-entry re-score and a U4 re-run; consumes the ARCHITECT re-entry
-  counter.
-- **An acceptance-criterion change** → the orchestrator's decision, the advisor's where the
-  report's grounds do not settle it; where the cycle re-enters on its `[ac-decision]` entries is the orchestrator's judgment
-  ([U3 Design](design.md) > *Report routing*). No counter.
-- **A tool, or what using one lacks, reported missing** → the tool request pause ([`core.md`](../core.md) > Flow Control).
-- **A lint chain reported `not-run (unexecuted)`** because it is not executable in this checkout and
-  no pull-request CI job covering it can be named → a harness-level block: the cycle pauses for the
-  operator (`active:false`, `phase:"awaiting-user"`), presented situation-first
-  ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
-
-## Verification — AUDIT
-
-One fresh Evaluation AI (`autoflow-evaluator`, the model
-`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit` names) judges test-first and scores the
-change on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
-Its agent definition carries that document. Its spawn prompt carries the security-checklist record
-line (*Security checklist* below).
-
-- **Test-first not confirmed** → the evaluator scores nothing and returns its `## Test-first`
-  section. The orchestrator does not re-spawn the evaluator: a BUILD unit re-run takes the section
-  (*Re-entry* below), consuming the AUDIT FAIL counter.
-- **PASS** (avg ≥ 7.5, each ≥ 7, security ≤ 3 → immediate block) → recommendation triage
-  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) → GATE:QUALITY.
-- **FAIL** → a BUILD unit re-run with the report's failed items (*Re-entry* below), then a
-  re-evaluation (max 2×, the counter shared with test-first findings). Third FAIL → human.
+The audit module judges test-first and scores the change: one fresh Evaluation AI
+(`autoflow-evaluator`, the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit`
+names), on the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT.
+Its agent definition carries that document. When it does not confirm test-first it scores nothing
+and records what is missing; its output is otherwise the scores and their grounds with its
+recommendations. What follows is the Coordinator's.
 
 ### Security checklist
 
 The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
 in the target-owned scaffold `.claude/autoflow.local.json`
-(`{"audit":{"security_checklist":"<repository-relative path>"}}`). At AUDIT entry the orchestrator
-runs `bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md` and
-acts on its one record line:
+(`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
+the one the record line of
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
+names; the Coordinator, which composes the audit's invocation, runs it, writes the checklist at that
+version to a file and names it as the audit's `security_checklist` input
+([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Security checklist*):
 
-| Exit | Verdict | What follows |
+| Exit | Verdict | The version the audit reads |
 |------|---------|-------------|
-| 0 | `none-declared` | AUDIT is spawned; no checklist — the five items are scored from the change alone |
-| 0 | `unchanged` | AUDIT is spawned; it reads the checklist as of the cycle's base commit (`score=<base>:<path>`) |
-| 0 | `changed-decided` | AUDIT is spawned; it reads the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
-| 3 | `changed-undecided` | **[MUST]** AUDIT is not spawned: the orchestrator hands the change to the advisor with a request written situation-first ([`role-contracts.md`](../role-contracts.md) > Advisor) and re-runs the status on its answer |
-| 2 | — | nothing — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; repair it and re-run |
+| 0 | `none-declared` | none — the five items are scored from the change alone |
+| 0 | `unchanged` | the checklist as of the base commit (`score=<base>:<path>`) |
+| 0 | `changed-decided` | the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
+| 3 | `changed-undecided` | none yet: the change is a decision for the advisor, put to it situation-first ([`role-contracts.md`](../role-contracts.md) > Advisor), and the status is run again on its answer |
+| 2 | — | none — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; it is repaired and the status run again |
 
-**A change the cycle makes to its checklist.** A change to the file, or to the declaration that
-points at it, has no effect on that cycle's AUDIT until it is accepted — by the advisor first, and
+**A change the work makes to the checklist.** A change to the file, or to the declaration that
+points at it, has no effect on the audit of that change until it is accepted — by the advisor first, and
 by the operator's override, recorded as an entry that names the advisor's (`- Overrides: A<n>`).
 Standing entries that disagree with neither naming the other are a conflict: the record is
 undecided with `conflict=<ids>`, and a new entry resolves it. The answer is a `[checklist-decision]`
@@ -268,35 +240,15 @@ ledger entry ([`decision-ledger.md`](../decision-ledger.md) > *Security-checklis
 `accepted`, carrying the committed version's blob and non-empty Decision and Grounds lines under
 the authority `advisor decision` on an `A<n>` entry (an override: `operator decision` on an `O<n>`
 entry) → the status re-run reports `changed-decided`;
-`rejected` → the change is reverted and the status re-run. The decision consumes no re-entry budget.
+`rejected` → the change is reverted and the status re-run.
 
 ## Re-entry
 
-No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-build` by *Unit
-spawn* above, whose prompt names what the re-entry is for, the material that carries it, and the
-build report so far. On a re-entry that passes through AUDIT and GATE:QUALITY, the report is
-brought up to date, not rewritten: a row a re-entry supersedes is replaced, a new commit adds its lint
-rows, and the sections GATE:QUALITY reads carry the current state.
-
-| Re-entry | Material named | Counter |
-|---|---|---|
-| AUDIT test-first finding | the AUDIT report's `## Test-first` section | AUDIT FAIL (max 2×, shared) |
-| AUDIT FAIL | the AUDIT report and its failed items | AUDIT FAIL (max 2×, shared) |
-| GATE:QUALITY FAIL routed `test` / `impl` | the evaluation report and its failed items | GATE:QUALITY FAIL (max 3×) |
-| a `test` / `impl` recommendation attempt at AUDIT or GATE:QUALITY | the recommendation's subject and finding | the attempt window (max 7×) |
-| REVIEW review-triage thin route (`test` / `impl`) | the finding row in the PR's findings file | the auto-resolution window (max 7×) |
-| advisor answer or operator override that reaches the build | the `A` / `O` entries | none |
-
-An INTEGRATE failure names the failing check and its output; a HANDOFF CI failure routed `test` /
-`impl` names `<attempt-dir>/issue-{N}-ci-failure.md`. The unit fixes what failed, and the cycle runs
-forward again to the INTEGRATE check or the CI that failed.
-
-A re-entry passes through AUDIT and GATE:QUALITY on their narrowed re-scores
-([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Review-response re-score*; > GATE:QUALITY > *Re-entry re-score*). A REVIEW thin route fixes the finding on its own surface and returns to the reviewer
-re-review; it does not bring the build report up to date.
-
-The unit reads and writes no `<attempt-dir>/issue-{N}.json` state file, so every counter above is the
-orchestrator's own accounting.
+A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
+the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
+directory — their reports and their `local/` stores — and brings the build report up to date, not
+rewritten: a row the re-run supersedes is replaced, a new commit adds its lint rows, and the sections
+GATE:QUALITY reads carry the current state.
 
 ## Header contract
 
@@ -314,7 +266,7 @@ retroactively. The grammar's single definition site is `<autoflow-root>/scripts/
 - **The grammar is those two fields and nothing else.** The lint admits no other field.
 - `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
 
-**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The PREFLIGHT target check (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7) names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The target check the Coordinator runs when it builds the environment (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7; ADR-0038 D4) names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
 
 1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
 2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
@@ -330,4 +282,4 @@ The fields go in the file's leading comment block at column 1, before its first 
 **Admission**: before creating a suite file at all, answer these two questions.
 
 - Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a `cycle` artifact under `<attempt-dir>/issue-{N}-local/` (a `delivery-check`, or a default `automated` row), not a suite file (in this repository the `standing` categories are ADR-0024 D1's closed list, and on a target the default is to add no file at all).
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a run's own check under `<out>/local/`, not a suite file (on a target the default is to add no file at all).

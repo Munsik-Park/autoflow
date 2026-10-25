@@ -68,71 +68,67 @@ Execution Mode).
 
 This section is the single home of the four principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind. Each binds the path that carries it — the full cycle every one of them, the abbreviated path the ones its definition names (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*).
-2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the report or ledger entry the phase already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and, in the full cycle, by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
+2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
-The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a cycle leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/criterion-review.md > In-depth analysis and reconciliation -->
 
 ## In-depth analysis and reconciliation
 
 **In-depth analysis.** For each criterion with an in-depth target, a fresh context examines each
-target case: an `autoflow-criterion-analyzer` spawn the review session makes, which carries none of
-the session's conversation. The session hands it one target file,
-`<attempt-dir>/issue-{N}-criterion-review-target-<criterion>.md`, holding only the
-issue body, the criterion's text, the target cases, each case's code locations (`path:line`) and
-the commit they were read at — no verdict, grounds or conclusion. The verdict rests on the code
-that decides whether and how the required behavior occurs and the condition applied there, never
-on the point where it shows alone. Where the behavior occurs only under a condition, the analysis
-checks whether a situation that does not meet the condition actually arises — from which input,
-state or usage flow; where one does, the behavior does not hold in that situation. It writes
-`<attempt-dir>/issue-{N}-criterion-review-in-depth-<criterion>.md` — per case the
-verdict, the deciding code and condition, and the grounds — and returns that path and a one-line
-summary.
+target case: the criterion-in-depth module, an `autoflow-criterion-analyzer` agent, which carries
+none of the screen's conversation. It is given one target file, the screen's
+`targets/<criterion>.md`, holding only the issue body, the criterion's text, the target cases, each
+case's code locations (`path:line`) and the commit they were read at — no verdict, grounds or
+conclusion. The verdict rests on the code that decides whether and how the required behavior occurs
+and the condition applied there, never on the point where it shows alone. Where the behavior occurs
+only under a condition, the analysis checks whether a situation that does not meet the condition
+actually arises — from which input, state or usage flow; where one does, the behavior does not hold
+in that situation. It writes `<out>/in-depth.md` — per case the verdict, the deciding code and
+condition, and the grounds — and returns that path and a one-line summary.
 
-**Reconciliation.** After stage 2 and every in-depth analysis, one `autoflow-criterion-reconciler`
-spawn — again a fresh context — receives the review record, the stage 2 file and the in-depth
-files. Where a stage 2 finding or an in-depth verdict differs from the record, it confirms in the
-code which one holds and settles it. A criterion that does not hold in a case it applies to is a
-finding for that case, recorded with the rule or condition that prevents it — never summarized as
-holding conditionally. It updates `## Findings`, `## Screening`, `## Proposed changes` and
-`## Open questions` to match, writes `## Cause reach and rule conflict` and `## Reconciliation`,
-and returns the record's path and a one-line summary.
+**Reconciliation.** The criterion-reconcile module, an `autoflow-criterion-reconciler` agent —
+again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
+2 finding or an in-depth verdict differs from the record, it confirms in the code which one holds and
+settles it. A criterion that does not hold in a case it applies to is a finding for that case,
+recorded with the rule or condition that prevents it — never summarized as holding conditionally. It
+updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
+`## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
+`<out>/criterion-review.md`, and returns its path and a one-line summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
 verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
-receives the issue body and the stage 1 record and none of the session's conversation, and the
-in-depth context receives the target file and nothing of the session's verdicts or grounds. Each context's agent definition carries its part of this document ([`core.md`](<autoflow-root>/docs/core.md) >
+receives the issue and the stage 1 record and none of the screen's conversation, and the
+in-depth context receives the target file and nothing of the review's verdicts or grounds. Each
+context's agent definition carries its part of this document ([`core.md`](<autoflow-root>/docs/core.md) >
 Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
-principle 2 — [`core.md`](<autoflow-root>/docs/core.md)). Each spawn
-declares its role by its `subagent_type` and the model its policy row names
-([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at most five are in flight at once
-([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Concurrent spawns*), and its prompt states the
-delivery as "return … as your report".
+principle 2 — [`core.md`](<autoflow-root>/docs/core.md)). Each agent is spawned as its `subagent_type` on the model its
+policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at most five are in flight at once
+([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Concurrent spawns*), and its prompt states the delivery as
+"return … as your report".
 
 <!-- From <autoflow-root>/docs/criterion-review.md > Review record -->
 
 ## Review record
 
-`<attempt-dir>/issue-{N}-criterion-review.md`, written by the reviewer in the
-attempt's record directory (`autoflow-records dir` on its dev branch). Every section is present; a
-section with nothing to record says `none`.
+`<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
+in its own run directory. It carries the line `Issue body sha256: <sha256>` — the issue body
+reviewed, as `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it — on a
+line of its own, and every section below; a section with nothing to record says `none`.
 
 | Section | Holds |
 |---|---|
-| `## Inputs` | the issue body sha256 reviewed; the scope the reviewer set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort the session and each stage 2, in-depth analysis and reconciliation spawn ran on |
+| `## Inputs` | the scope the review set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort each module ran on |
 | `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
 | `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
 | `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
 | `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Proposed changes` | per finding that calls for one, from either stage or the reconciliation: the criterion, the disposition (`excluded` / `revised` / `split` / `added`), the proposed text, the grounds and where the finding came from (`stage 1`, `stage 2` or `in-depth`) — or `none` |
-| `## Open questions` | each point the review could not settle itself (what a term is meant to cover, which of two readings the issue intends) and put to the advisor (*Authority* below): the question, stated as the behavior it concerns, why the code and policy do not settle it, each option with what it changes in the criteria, and the advisor's answer with its ledger entry — or `none`. How the change will be made is never a question here (*Purpose and scope* > *What the review leaves to the cycle*) |
+| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module could not decide with confidence says so in its row and states the question for the advisor — the behavior it concerns, why the code and policy do not settle it, and each option with what it changes in the criteria. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
-| `## Operator decisions` | each decision the operator gave when they chose to — an override of an advisor answer (with its `O` override entry) or of a disposition, or an instruction (a re-run and its scope, a text) — with what it changed; or `none`. It is not an item-by-item operator verdict on the dispositions and advisor answers, and the `[criterion-ready]` entry does not wait on it (*Authority* below) |
-| `## Session decisions` | the session's own judgments after the review, apart from the operator's decisions: each detail an operator decision leaves open, with its grounds; whether the review was run again and over what scope when the body the entry records differs from the one `## Inputs` names, with its grounds (*Confirmation* below); and the issue edit that applied the decisions, with the edited body's sha256 — or `none` |
 
 The record is situation-first where the operator reads it — to follow what was decided and to
 override any of it ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*):

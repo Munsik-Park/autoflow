@@ -57,7 +57,7 @@ Hard rules:
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 
-**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/review.md` > Review triage > Review aggregation; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/units/review.md` > Review triage > A repeated complaint; `<autoflow-root>/docs/units/delivery.md` > CI > CI-failure re-entry; `<autoflow-root>/docs/review/review.md` > Severity; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**Carried below** — the guidance this role follows, from its homes by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/core.md` > Instruction Conventions; `<autoflow-root>/docs/core.md` > Rule Scope; `<autoflow-root>/docs/units/review.md` > Review triage > Review aggregation; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/units/review.md` > Review triage > A repeated complaint; `<autoflow-root>/docs/units/delivery.md` > CI > CI failure; `<autoflow-root>/docs/review/review.md` > Severity; `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/core.md > Instruction Conventions -->
 
@@ -73,22 +73,24 @@ Hard rules:
 
 This section is the single home of the four principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind. Each binds the path that carries it — the full cycle every one of them, the abbreviated path the ones its definition names (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*).
-2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the report or ledger entry the phase already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and, in the full cycle, by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
+2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
-The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a cycle leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Review aggregation -->
 
 ### Review aggregation
 
-**1. The reviews are aggregated by a spawned analysis role.** The orchestrator does not read the
+**1. The reviews are aggregated by a spawned analysis role.** The session does not read the
 review records or the comment body itself (Cost Control). An anonymous direct subagent —
-`subagent_type: autoflow-analyzer`, on the model the policy names for `handoff-review-triage` — is
+`subagent_type: autoflow-analyzer`, on the model
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — is
 the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
-reviewer unavailable for the round with the reason, the decision ledger, and, for a PR whose repository has
+reviewer unavailable for the round with the reason, the decision ledger, the earlier rounds'
+findings files and comments in the record directory, and, for a PR whose repository has
 submodules, their paths (its `.gitmodules`) — the locations outside that review's target. It also
 reads the reviews of the target's side from the pull request itself and names each one's author as
 its source.
@@ -100,22 +102,21 @@ it leaves behind is fixed:
 - **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
   a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
   grounds it does not hold; a reviewer unavailable for the round named with the reason. Its body is kept as
-  `<attempt-dir>/issue-{N}-local/review/comment-<owner>.<name>-<pr>-r<k>.md`.
+  `<out>/comment.md`.
 - **The findings file** (below).
 
 It returns `{max_severity, findings}`.
 
-- **[MUST] One findings file per reviewed PR.** Each PR's aggregation writes `<attempt-dir>/issue-{N}-local/review/findings-<owner>.<name>-<pr>.md` for the reviewed PR `<owner>/<name>#<pr>` — the whole identity; an owner name holds no `.`, so the first `.` separates it. A single-PR cycle follows the same rule. Only that PR's aggregation writes the file, and a later round of the same PR **overwrites** it. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <remedy_class> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `remedy_class` on every Medium+ row that holds, `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no cell the script reads. A `rejected` row is a record: it counts toward no verdict. `<autoflow-root>/scripts/handoff/review-gate.sh` reads the file and exits `2` on one that does not keep this contract; the aggregator is then spawned again.
+- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-run-by-the-coordinator.md) D6).
 - **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
-- **[MUST] `remedy_class` per Medium+ finding.** The aggregator tags **every** `Medium`+ finding that holds with a `remedy_class` from the same vocabulary the late-gate evaluator uses (`doc` / `test` / `impl` / `design` / `operator`, defined at [U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *FAIL routing*) and writes it in that finding's row. The classifying question is **not** how large the fix is: it is **does clearing this finding discard or change a decision the design settled?** Yes → `design`. No → the class of change that clears it. Not classifiable with confidence → `operator`, never a guess.
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
 
 ### Whether a finding holds
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A role the route hands a finding to that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that a role the route hands it to finds does not hold is a rebuttal: the orchestrator posts it with its grounds on the PR and runs *Reviewer review* on that PR again — a new round, also when the round only rebuts and changes no code — and that round's reviews and aggregation judge it. A gate recommendation's rebuttal is judged by the recommending gate's re-score. A finding that does not hold is not routed and its `rejected` row needs no `remedy_class` — nothing reads one there — and one that holds in part is routed by the class its real problem needs. Each rebuttal is recorded with its grounds in the ledger entry of its round: the attempt's `[review-autofix]` entry, or, for a round that only rebuts and so routes nothing, an `O` entry whose heading ends in `[rebuttal]`, which no cap counts. At a gate that entry is also what an interrupted session resumes from ([U1 Preparation](<autoflow-root>/docs/units/preparation.md) > *Resume*). When a rebutted finding is kept and the two sides still disagree, the orchestrator asks the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). When to ask is its judgment and no count decides it.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the question goes to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -127,42 +128,36 @@ git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|
 
 ### A repeated complaint
 
-A review-response can loop: each fix answers the case the reviewer named while the property the
-reviewer asserts stays unmet, and the next review names another case. No spawn checks for this on
-every attempt. Whoever reads the finding — the aggregator here, or the DIAGNOSE unit — and sees that it repeats the complaint of the previous
-attempt (the same property asserted, a different witness case; the previous attempt's
-`[review-autofix]` entry and the previous cycle's artifacts are what it compares against) says so
-where it writes the finding: in the finding's cell of the findings file, or under the analysis
-report's `## Decision points`. The orchestrator then decides the re-entry — its depth, or none;
-for example restating the acceptance criterion as one rule over the whole input, or a further
-case-specific change — and records it with its grounds in the attempt's `[review-autofix]` entry;
-where those grounds do not settle it, or it is not confident, it puts it to the advisor
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) with a request written situation-first,
-and the advisor's `A` entry decides it. A
-redefined criterion is recorded as `[ac-decision]` entries and the cycle restarts from DIAGNOSE on
-it. A complaint already decided is not decided again without a new verified fact
-([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). The same finding with the same witness — a fix
-that did not take — is not this case; it is routed like any finding.
+A change can loop: each fix answers the case a reviewer — or an evaluation's recommendation — named
+while the property it asserts stays unmet, and the next review or re-score names another case. No
+spawn checks for this on every round. Whoever reads the finding — the aggregator here, the analysis
+module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
+complaint (the same property asserted, a different witness case; the earlier rounds' findings files
+and comments, and the earlier evaluations in the record directory, are what it compares against)
+says so where it writes the finding: in the finding's cell of the findings file, under the analysis
+report's `## Decision points`, or in its own report. What follows — restating the acceptance
+criterion as one rule over the whole input, a further case-specific change, or leaving the property
+a known gap — is the Coordinator's, the advisor's where the grounds do not settle it
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor); a redefined criterion is recorded as
+`[ac-decision]` entries. A complaint already decided is not decided again without a new verified
+fact ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). The same finding with the same witness — a fix
+that did not take — is not this case.
 
-<!-- From <autoflow-root>/docs/units/delivery.md > CI > CI-failure re-entry -->
+<!-- From <autoflow-root>/docs/units/delivery.md > CI > CI failure -->
 
-### CI-failure re-entry
+### CI failure
 
-A CI failure (exit `12`) re-enters by `remedy_class` through `<autoflow-root>/scripts/gate/remedy-route.sh route`
-([Transitions](<autoflow-root>/docs/units/delivery.md)). The orchestrator
-does not read the failure log itself (Cost Control): an anonymous direct subagent —
-`subagent_type: autoflow-analyzer`, model per policy key `handoff-review-triage` — reads the failing
-check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
-`<attempt-dir>/issue-{N}-ci-failure.md` with the failing check, the first failing assertion or error,
-**one `remedy_class`** (`doc` / `test` / `impl` / `design` / `operator`) and the grounds for it —
-the class of change that clears the failure, `design` when clearing it would discard or change a
-decision the design settled — and returns the class plus a one-line summary.
-`<autoflow-root>/scripts/gate/remedy-route.sh route <class>` picks the entry point (`DOC_COMMIT` / `BUILD` /
-`ARCHITECT` / `PAUSE`); the re-entered phase runs forward to HANDOFF again and *CI* re-confirms.
-Not classifiable with confidence, or the failure output unobtainable → `operator`, never a guess
-([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). A failure routed with no recorded class is a
-report defect: reject and re-spawn the subagent, as for a missing `fail_hypothesis`. The orchestrator
-records the route as an `O` ledger entry naming the check and the class.
+A CI failure (exit `12`) is read, not routed. The session does not read the failure log itself
+(Cost Control): an anonymous direct subagent — `subagent_type: autoflow-analyzer`, the model
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — reads
+the failing check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
+`<out>/ci-failure.md` with the failing check, the first failing assertion or error, where the fix
+that clears it is made — the implementation, a test asset, a document, or the design when clearing
+it would discard or change a decision the design settled — and the grounds for that judgment, and
+returns the path and a one-line summary. Where it cannot judge with confidence, or the failure output
+is unobtainable, it says so and states the question for the advisor, never a guess
+([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). The run ends with the record; which module runs
+next is the Coordinator's.
 
 <!-- From <autoflow-root>/docs/review/review.md > Severity -->
 

@@ -88,12 +88,12 @@ Hard rules:
 
 This section is the single home of the four principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The push gate, the merge prohibition, the gate score thresholds, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the auto-resolution attempt caps are rules of this kind. Each binds the path that carries it — the full cycle every one of them, the abbreviated path the ones its definition names (`<autoflow-root>/docs/abbreviated-path.md` > *The checks that bind it*).
-2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the report or ledger entry the phase already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by CI, by the external reviewer, and, in the full cycle, by the gates. When the AI is not confident, or the choice is not its own to make, it asks the advisor, whose answer is recorded and applied; the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind. Applying the reference values, and every cap on re-runs, is the Coordinator's (`ADR-0038` D2, D6).
+2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. When the AI is not confident, or the choice is not its own to make, it states the question for the advisor with its grounds; the advisor's answer is recorded and applied, and the operator is asked only when a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
 4. **A rule and the device that enforces it change in the same change.**
 
-The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a cycle leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 <!-- From <autoflow-root>/docs/evaluation-system.md -->
 
@@ -749,12 +749,12 @@ The analysis is asked for four things, each conclusion with its grounds:
 - the decision points — the judgments the working AI is not the one to make.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
-ones, what it checks and with which tool — is the unit's judgment, recorded with its grounds under
+ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
 `## Method` and `## Cause`.
 
 The request is the trigger target — the issue, a review comment or thread, or the finding a
-re-entry is for — and the as-is is the state it is measured against, which the unit judges from
-what it was spawned for and records under `## Method`. The question is whether the as-is already
+re-run is for — and the as-is is the state it is measured against, which the module judges from
+its inputs and records under `## Method`. The question is whether the as-is already
 satisfies the request.
 
 **Cautions.** Each names a bias the analysis is to avoid:
@@ -769,118 +769,121 @@ satisfies the request.
 - Open every material the issue body or an acceptance criterion references — a design mockup, an
   asset, an external document — yourself; one that cannot be opened is recorded with the reason.
 
-How the unit guards against these biases — whether it separates the structure reading from the
+How the module guards against these biases — whether it separates the structure reading from the
 issue reading, in what order it reads, what it gives or withholds from a helper — is its own,
 recorded with its grounds under `## Method`.
 
-The rules below are the ones other documents cite; everything else about the work is the unit's.
+The rules below are the ones other documents cite; everything else about the work is the module's.
 
-- **Acceptance criteria.** The report's `## Acceptance criteria` table is the issue's single
-  machine-addressable acceptance-criterion list; an absent or unparseable table is itself a finding
-  downstream ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing*;
-  [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
-  a review-response cycle carries the previous cycle's table forward unchanged — a review comment
-  never edits the list; only an `[ac-decision]` ledger entry does
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
-- **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
-  code and policy in the attempt's criterion review stage, and the review's settled decisions were
-  recorded in a `[criterion-ready]` entry before PREFLIGHT wrote the state file
-  ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record that review left is an input,
-  not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
-  commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it
-  cites — is checked at the cycle's base, and a difference from the record is recorded with its
-  grounds. The record changes nothing about how the criteria are taken: the `## Acceptance criteria`
-  table restates the issue's criteria as the body that entry records states them, the analysis does not run
-  the review again (issue #291: DIAGNOSE takes the criteria as written), and a defect it observes as
-  a fact is still raised as a decision point on the in-cycle path
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Decision-point entries > *A criterion can be
-  wrong*). The record's findings are the reconciled ones: `## Screening` lists each case a
-  criterion applies to with the code that decides it, and `## Cause reach and rule conflict` where
-  a confirmed cause reaches beyond the reported points or a required behavior meets a rule in force,
-  each read like the findings as an earlier reading; `## Reconciliation` records, per stage 2
-  finding and per in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
-  are findings the analysis may close with its own checks (*Checking a finding* below). How the
-  record was used is recorded under `## Method`.
+- **Acceptance criteria.** The report's `## Acceptance criteria` table restates the issue's
+  criteria faithfully, as the issue body states them; it is the table
+  `<autoflow-root>/scripts/contracts/criteria-apply.sh` reads, and its output — the applied criteria
+  — is what every later module takes. A re-run carries the table forward unchanged: a change to a
+  criterion stands only as an `[ac-decision]` entry, which criteria-apply applies, and the table is
+  not edited to match it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
+  decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
+- **Criterion review record.** The issue's criteria were reviewed against the code and policy by
+  the criterion review's modules, and the decisions they led to are recorded in the ledger's
+  `[criterion-ready]` and `[ac-decision]` entries ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md));
+  the record that review left is an input, not a verdict. The analysis reads its findings as an
+  earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
+  analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
+  from, and a difference from the record is recorded with its grounds. The record changes nothing
+  about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
+  as the body the `[criterion-ready]` entry records states them, the analysis does not run the
+  review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
+  a fact is still raised as a decision point ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+  Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
+  item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
+  with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
+  reaches beyond the reported points or a required behavior meets a rule in force, each read like
+  the findings as an earlier reading; `## Reconciliation` records, per stage 2 finding and per
+  in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked`
+  items, and each case left `unresolved`, are findings the analysis may close with its own checks
+  (*Checking a finding* below). How the record was used is recorded under `## Method`.
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
   where it is, how it was opened, and what it shows for the criterion that names it; the material,
-  not an abbreviated example in the body, is what the criterion means. **[MUST]** A material
-  recorded `not opened: <reason>` is raised to the operator before the cycle leaves DIAGNOSE
-  (`<autoflow-root>/docs/core.md` > Flow Control > *tool or referenced material → user*;
-  [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *The tools
-  the work needs*).
+  not an abbreviated example in the body, is what the criterion means. A material that cannot be
+  opened is recorded `not opened: <reason>` and as a tool request — what is missing, and what the
+  analysis concluded without it — and the run goes on to its end ([`core.md`](<autoflow-root>/docs/core.md) >
+  Development Lifecycle > *Tools*; [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+  Verification and Tools > *The tools the work needs*).
 - **Checking a finding.** A finding the analysis checks is checked with what the environment and the
   target's documents and scripts provide — API calls, queries, service status, logs — and those tools
   are looked for before a finding is left unchecked; a tool that is off is started by the target's
-  own procedure, and one that needs the operator is requested (*The tools the work needs*). The
-  report records each tool a conclusion rests on and whether it was usable; a finding left unchecked
+  own procedure, and one that needs the operator is recorded as a tool request (*The tools the work
+  needs*). The report records each tool a conclusion rests on and whether it was usable; a finding left unchecked
   names the tool it needed.
 - **Scope judgments.** Beyond the acceptance criteria, the analysis names the problems the confirmed
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
   and its grounds ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface
-  Rules > *Scope judgment*). ARCHITECT reads them and settles the cycle's scope in the feature
+  Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design's `## Scope` section; the analysis does not decide it alone.
 - **Decision points.** A judgment the working AI is not the one to make is recorded under
-  `## Decision points` with its grounds, and the orchestrator routes it (*Report routing*): a
-  planning, design or ADR prerequisite clearly required before the issue can be implemented
-  (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
-  whose lever is not code; on a reviewer finding, one that repeats the previous
-  attempt's complaint with a different witness case ([U7 Review](<autoflow-root>/docs/units/review.md) > *A repeated
-  complaint*). A suggested split of the issue stays a suggestion: it is filed only on
-  the operator's request, through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
+  `## Decision points` with its grounds, and what follows it is the Coordinator's: a planning,
+  design or ADR prerequisite clearly required before the issue can be implemented (when in doubt,
+  none); a request the as-is already satisfies; a gap or a cause whose lever is not code; on a
+  reviewer finding, one that repeats an earlier round's complaint with a different witness case
+  ([U7 Review](<autoflow-root>/docs/units/review.md) > *A repeated complaint*). A decision point the module is not confident
+  of states the question for the advisor ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3). A
+  suggested split of the issue stays a suggestion: it is filed only on the operator's request,
+  through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
   ([`issue-proposal.md`](<autoflow-root>/docs/issue-proposal.md)).
 
 <!-- From <autoflow-root>/docs/units/analysis.md > Analysis report -->
 
 ## Analysis report
 
-`<attempt-dir>/issue-{N}-analysis.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry. Every section below is present; a section with nothing to record says `none`.
+`<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
+up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. Every section
+below is present; a section with nothing to record says `none`.
 
 | Section | Holds | Read by |
 |---|---|---|
 | `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
 | `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | GATE:HYPOTHESIS |
 | `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
-| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | ARCHITECT, GATE:PLAN, BUILD, GATE:QUALITY |
-| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | ARCHITECT (*Tools*) |
-| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the orchestrator (*Verification — GATE:HYPOTHESIS*) |
+| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | criteria-apply |
+| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | the design module |
+| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the Coordinator |
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
-| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (spawn prompt) |
-| `## Decision points` | each decision point with its grounds, or `none` | the orchestrator (*Report routing*) |
+| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
+| `## Affected documents` | the documents the change is expected to update | the design and build modules |
+| `## Decision points` | each decision point with its grounds, or `none` | the Coordinator |
 
-Anything else the unit records is its own, written where it judges useful.
+Anything else the module records is its own, written where it judges useful.
 
 <!-- From <autoflow-root>/docs/units/design.md > Output artifacts -->
 
 ## Output artifacts
 
-1. **Feature Design Document** — `<attempt-dir>/issue-{N}-feature-design.md`, the
-   **architecture decision layer** and nothing below it: the decisions, the constraints
-   they hold under, and the alternatives considered and rejected with the ground for each rejection.
-   It cites the verification design's `Failure mode` column (below) for the failure mode each
-   verification exists to catch, rather than stating it.
+1. **Feature Design Document** — `<out>/feature-design.md`, the **architecture decision layer** and
+   nothing below it: the decisions, the constraints they hold under, and the alternatives considered
+   and rejected with the ground for each rejection. It cites the verification design for what each
+   verification exists to catch, rather than restating it.
 
-   **[MUST]** The document carries a `## Scope` section: the cycle's scope beyond the acceptance
+   **[MUST]** The document carries a `## Scope` section: the scope beyond the acceptance
    criteria. Each problem judged under
    [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-   judgment* — DIAGNOSE's `## Scope judgments` and any the design found — is listed as
+   judgment* — the analysis's `## Scope judgments` and any the design found — is listed as
    included or separated, with the conditions it meets and, for a directly related problem left
-   out, its separation reason. A section with nothing beyond the criteria says `none`. Scope is a
-   decision, settled here, not derived below.
+   out, its separation reason. Each item the design includes carries an id, the first cell of its
+   row in a table whose first column is `Item`, so the verification design disposes of it as of a
+   criterion. A section with nothing beyond the criteria says `none`. Scope is a decision, settled
+   here, not derived below.
 
    **[MUST]** The document carries a `## Decision requests` section: each decision the design
-   needs that is not the unit's to make, one entry each, written situation-first
+   needs that is not the module's to make, one entry each, written situation-first
    ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*) —
    - an **acceptance-criterion content change** — excluding, revising or splitting an issue
      acceptance criterion, or adding one: the criterion, the proposed change and the fact that
      shows the need ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
      decisions*);
-   - a **design point** the unit is not confident to settle, or whose choice is not its own
+   - a **design point** the module is not confident to settle, or whose choice is not its own
      ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3): the options and what each changes.
 
-   A design with no such request says `none`. The unit designs on its proposal and states the
-   proposal as pending; it never applies an acceptance-criterion change itself.
+   A design with no such request says `none`. The module designs on its proposal and states the
+   proposal as pending.
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -892,107 +895,45 @@ Anything else the unit records is its own, written where it judges useful.
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** — `<attempt-dir>/issue-{N}-verification-design.md`. The
-   `Issue AC` join key is **not** reduced by the layer split above: the per-criterion disposition is
-   a design output. What the split removes from it is depth, not rows: `Method` names the **kind**
-   of oracle a row gets, and the condition clause that implements it is BUILD's. The table's columns
-   are what the downstream readers need — GATE:PLAN's AC-authority check joins on `Issue AC`, the
-   AUDIT evaluator reads `Kind` for its test-first judgment, GATE:QUALITY reads `Type`, and HANDOFF carries each reduced disposition and its
-   `Reason` into the PR body; how each row is reached is the unit's.
+2. **Verification Design Document** — `<out>/verification-design.md`. It holds one table whose
+   first column is `Item`: one row for each applied acceptance criterion, by its id, and one for each
+   item the feature design's `## Scope` includes, by its id — every item the work owes, each with its
+   disposition: how it is verified and what that verification catches, or why it is not verified.
+   The other columns, and the words each row uses, are the module's. A row is never deleted: a
+   criterion verified by anything other than an executable test keeps its row and says how it is
+   verified instead, and why. The per-criterion disposition is a design output; what the layer split
+   above removes from it is depth, not rows — a row names the kind of oracle it gets, and the
+   condition clause that implements it is BUILD's. Its readers: GATE:PLAN's `Verification fit` reads
+   each row against its item, the build verifies each row and reports each item's outcome, and the
+   pull request carries each row not verified by an executable test with its reason
+   ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
 
-| Issue AC | Acceptance criterion | Type | Kind | Method | Failure mode | Reason |
-|----------|----------------------|------|------|--------|--------------|--------|
-| AC1 | (criterion 1) | automated | driving | pytest / API test / etc. | the defect only this test fails on | — |
-| AC2 | (criterion 2) | existing-coverage | — | the schema check that already rejects this shape | a value of the shape this criterion forbids | the check runs on every build |
-| AC3 | (criterion 3) | manual | — | AI: `<tool in ## Tools>` — scenario doc; the result compared against the referenced material | the behavior the scenario observes breaking | no executable assertion states it; the AI observes it with the tool `## Tools` records |
-| AC4 | (criterion 4) | none | — | — | — | absence costs nothing: the value is read from a sample file the user edits |
-| — | (criterion 5) | environment-dependent | — | introduce mock or propose design change | the failure the mock itself can catch (`—` on a design-change request) | — |
-
-- **`Type` is the per-criterion verification disposition**, one of
-  `automated` / `existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
-  `none`. An `automated` or `manual` row is `cycle` — executed once, uncommitted under
-  `<attempt-dir>/issue-{N}-local/`, its run recorded. **In this repository only**, the same cell also
-  carries the row's **layer**: a row is `standing` (committed; CI-registered) when the
-  cell names one of D1's closed tokens in the form `automated / standing: <token>`
-  (`manual / standing: <token>`); the token list is ADR-0024 D1's and is not copied here, and a
-  token outside it is a layer violation ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY > *Test quality — layer violation*). On a
-  target the cell carries no layer token ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *What a cycle
-  leaves in the target's tree*). `Kind`
-  applies to `automated` rows only (`driving` / `regression` / `characterization`). Both
-  vocabularies, and when each disposition is the right answer, are defined once at *Test necessity*
-  below.
-- **`Issue AC` is the join key.** Each row's value is either an `AC id` from the
-  `## Acceptance criteria` table in `<attempt-dir>/issue-{N}-analysis.md`, or `—` for a criterion this
-  verification design added on its own. **[MUST]** Every AC id in that table gets a row, and a
-  criterion the design verifies by anything other than an automated test keeps its row, states that
-  disposition, and states its `Reason` in one line — the row is never deleted. A design-added
-  criterion (`—`) is never a finding and owes no reason; each problem the feature design's
-  `## Scope` section includes gets one.
-- **`Failure mode` holds each verification's unique failure mode**, and this bullet is the only
-  place that obligation is defined. The cell names the defect that makes the row's verification
-  fail and that no other verification catches. On an `existing-coverage` row it names what the
-  named mechanism fails on, and `Reason` says why no new layer is owed without restating that
-  failure. On an `environment-dependent` row resolved to a mock, it names the failure the mock
-  itself can catch, not the environment behavior the mock stands in for.
-  - **Row grain** — one row per verification: a criterion verified more than one way carries one
-    row per verification under the same `Issue AC`, and every other criterion keeps its one row. A
-    verification that spans rows carries the same label in `Method` on each of them.
-  - **Compared against** — every other distinct verification in the design, and every existing
-    mechanism that fails on the same defect: an existing test, a lint rule, a schema, a compiler or
-    type check, a build or packaging check. Naming such a mechanism is the `existing-coverage`
-    disposition (*Test necessity* below).
-  - **[MUST] Owed** on `automated`, `existing-coverage`, `delivery-check` and `manual` rows, and on
-    `environment-dependent` rows resolved to a mock or a manual delegation. `none` and
-    design-change-request rows carry `—`.
-  - **A cell that cannot be filled** — the verification names no defect that another verification
-    or mechanism does not already catch — removes that verification from the design.
-
-- For untestable items: first find the tool that verifies the item directly (*Tools* below); only when none can be secured, state the reason and the alternative (design change / a `manual` row executed by a person / mock). When an item is not automatable, consider first whether a feature-design change makes it testable.
-- Design-change request: parts of the feature design that should be revised so they become testable.
+- For an item that is hard to verify: first find the tool that verifies it directly (*Tools*
+  below); only when none can be secured, state the reason and the alternative — a design change, an
+  observation by a person, a mock. When an item cannot be automated, consider first whether a
+  feature-design change makes it verifiable.
+- Design-change request: parts of the feature design that should be revised so they become
+  verifiable.
 
 ### Test necessity
 
 A test exists only when it is needed. The burden of proof lies on the test, never on its absence:
 not writing a test needs no justification, and a proposed test that cannot answer both judgments
-below is not written. This clause decides **existence** only — whether a criterion is verified at
-all. Whether a verification **stays in the repository** is decided by ADR-0024 D1's closed
-`standing` list and by nothing else: a stated reason, however good, does not move a row out of the
-`cycle` layer. This clause is
-the policy body; every other document references it rather than restating it.
+below is not written. This clause decides **existence** only — whether an item is verified at all
+and by what; where a test file lives is [U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What the build owes* >
+*Where a test lives*. This clause is the policy body; every other document references it rather than
+restating it.
 
-- **[MUST]** Each proposed verification answers two judgments, in the row that carries it:
+- **[MUST]** Each proposed verification answers two judgments:
   1. **Required behavior** — is this a behavior or contract a consumer actually requires, as
      opposed to an imagined failure mode?
   2. **Cost of absence** — if no verification exists and this breaks after merge, who loses what,
      concretely?
-- **[MUST]** When the two judgments cannot both be answered, the disposition is `none`.
+- **[MUST]** When the two judgments cannot both be answered, no verification is proposed, and the
+  item's row says why its absence costs nothing.
 - Necessity is a **judgment**, not a classification: no subject is exempt by category and none is
   obligated by category. The two guidance notes below are that judgment applied to two areas —
   they are not separate rules.
-
-**Verification disposition** (the `Type` of each acceptance-criteria row):
-
-| Disposition | Meaning |
-|---|---|
-| `automated` | an executable test — `cycle` by default (run once from `<attempt-dir>/issue-{N}-local/`, its run recorded), `standing` only with a D1 token in the cell |
-| `existing-coverage` | already detected by an existing test, lint rule, schema, compiler/type check, build or packaging check — the row names which |
-| `delivery-check` | a one-shot check that the change was wired / generated / delivered — a `cycle` artifact under `<attempt-dir>/issue-{N}-local/`, never committed; the test-first rule does not apply to it |
-| `manual` | a scenario verified by observation, not by an executable assertion; `Method` names its executor — `AI: <tool>`, the tool the `## Tools` section records, or `person` only when no tool can be secured, the `Reason` saying why (*Tools* below); the row names the checklist — a `cycle` artifact unless the cell carries a D1 token |
-| `environment-dependent` | verifiable only against an environment this cycle cannot drive with the tools the `## Tools` section records |
-| `none` | no persistent verification has positive value — the row states why absence costs nothing |
-
-- **[MUST]** Every disposition other than `automated` on an **issue** AC row carries a one-line
-  `Reason`. A row for a design-added criterion (`Issue AC` = `—`) is never a finding and needs no
-  reason.
-
-**Test kind** (the `Kind` of each `automated` row, and the test-first expectation for it —
-[U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What the build owes*):
-
-| Kind | Meaning | Before the implementation |
-|---|---|---|
-| `driving` | a required behavior not yet implemented | must FAIL before the implementation |
-| `regression` | reproduces a known defect | must FAIL before the fix |
-| `characterization` | records existing behavior the change must preserve | may PASS from the start |
 
 **Configuration and data.** A value is not a required behavior; the behavior that consumes it is.
 Whether
@@ -1006,18 +947,13 @@ a test shape.
 ### Verification depth
 
 - **[MUST]** The verification design opens with a **risk line** — one line naming
-  who is harmed and how if this change is wrong.
-  Depth is justified against that risk, and this clause sets a justification form, never a quantity
-  cap: no layer count, file count, or line budget.
-- **Per-verification failure mode** — carried by the acceptance-criteria table's `Failure mode`
-  column. The column's bullet under *Output artifacts* above defines what the cell names, what it
-  is compared against and what a cell that cannot be filled means.
-- **[MUST]** State the determination once in the verification design, and restate no
-  verification's failure mode anywhere outside the `Failure mode` column; narrative that states no
-  per-layer failure mode (a layer removed, depth added) may stay. The obligation is
-  unconditional — every verification design has at least one layer — so an absent statement is a
-  missing obligation, not a "not applicable". A risk found later raises depth at a re-entry, with
-  its reason stated in the delta (*Re-entry* below).
+  who is harmed and how if this change is wrong. Depth is justified against that risk — never by a
+  quantity cap: no layer count, file count, or line budget.
+- Each verification catches a failure no other verification in the design, and no existing
+  mechanism — an existing test, a lint rule, a schema, a compiler or type check, a build or
+  packaging check — already catches. A verification that would catch nothing such a mechanism does
+  not is left out, and the mechanism is named in its place. A risk found later raises depth on a
+  re-run, its reason stated in the delta (*Re-entry* below).
 
 ### Tools
 
@@ -1025,32 +961,15 @@ The rule is [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-
 this clause is where the verification design applies it. The design opens the materials
 the analysis report's `## Referenced materials` section lists ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) >
 *What the analysis owes*) — the material, not the issue body's abbreviated example, is the
-design's input — and finds, for each criterion, the tool that verifies it directly **before**
-settling it as a `manual` row executed by a person, as `environment-dependent`, or on a mock.
+design's input — and finds, for each item, the tool that verifies it directly **before**
+settling it on an observation by a person, on an environment it cannot drive, or on a mock.
 
-- **[MUST]** The verification design carries a `## Tools` section: one line per tool — the tool,
-  the rows it verifies (or the design question it serves), its availability, and the ground the
-  availability rests on. Availability is one of `available` (usable in this environment now),
-  `target procedure: <document section or script>` (off, and the target carries the procedure that
-  starts it), or `operator: <what is needed>` — what is missing for the tool to be used: the tool
-  itself when this environment does not have it (an installation, enabling an MCP server or a
-  browser extension), what using a tool the environment has lacks (access, the purpose and
-  permitted scope of the host or service it reaches, a credential, a permission setting), or access
-  to a material. The item names what is missing, never the output the tool would give; a tool the
-  environment has, whose use lacks nothing, is `available`. A design that needs no
-  tool says `none`, with its ground in one line. AutoFlow names no tool here: which tool, and how
-  it is used, is the design's judgment in the target.
-- **Availability is settled here, not at BUILD.** After the unit returns, the orchestrator reads
-  this section — a targeted excerpt, not a full read ([`core.md`](<autoflow-root>/docs/core.md)
-  > Cost Control > *Orchestrator context discipline*) — before GATE:PLAN. An `operator` item is the
-  tool request pause ([`core.md`](<autoflow-root>/docs/core.md) > Flow Control > *tool or referenced material →
-  user*), presented situation-first, and GATE:PLAN is not spawned until the operator answers. A
-  `target procedure` item is started when the phase that uses it begins — by the orchestrator when
-  the tool must outlive a role spawn. A tool found missing later, at BUILD, takes the same pause.
-- A criterion for which no tool can be secured — what is missing (the tool, or what using it
-  lacks) was requested and the operator answers that it cannot be provided, or no tool exists that
-  verifies the criterion — keeps the fallbacks of the untestable-items bullet above — a `manual` row executed by a person, or a mock — and its `Reason` states why no
-  tool could be secured; GATE:PLAN's `Verification fit` reads that reason.
+- A tool the design's verification needs and this environment does not provide — or what using a
+  tool the environment has lacks — is recorded as a tool request: what is missing, and the
+  verification the design chose instead, with its reason in the item's row. The design goes on to
+  its end; whether to provide the tool is the operator's, from the pull request
+  ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). AutoFlow names no tool here: which
+  tool, and how it is used, is the design's judgment in the target.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
   observation record, written at BUILD ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report > `## Manual checklist`).
 
@@ -1058,48 +977,52 @@ settling it as a `manual` row executed by a person, as `environment-dependent`, 
 
 ## What the build owes
 
-These are the rules other documents cite; everything else about the work is the unit's.
+These are the rules other documents cite; everything else about the work is the module's.
 
-- **Scope.** The unit implements every issue acceptance criterion within the cycle's scope — the
-  feature design with its `## Scope` section, and the verification design. An AC whose disposition
-  is not `automated` ([U3 Design](<autoflow-root>/docs/units/design.md) > *Test necessity*) is still implemented; only its
-  evidence differs. A problem met during the work that the scope does not name is judged under
-  [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment* and recorded under `## Scope judgments`. Tests verify correctness; they do not define the
-  solution — no hard-coding to test inputs, no special-casing an assertion. Once the scope is
-  implemented and verified, a further change the unit judges useful beyond the scope and the problems
-  its scope judgments include is recorded under `## Scope judgments`, not made.
-- **Test-first (TDD).** Every `driving` and `regression` row's test is written before the
-  implementation it verifies and seen failing; a `characterization` test may pass from the start. The
-  order of the work — a failing run in the working tree first, or a test commit first — is the
-  unit's. The result owed is the Red run's evidence (*Build report* > `## Test-first`). Cautions:
-  - A test that passes from the start is not Red evidence. Look again at whether it checks the
-    required behavior, and record that judgment in the report.
-  - The Red run's failure is readable in its log, the exit status included.
-  - `## Run record` holds one row per verification row — its latest run. The Red run goes in
-    `## Test-first` only.
+- **Scope.** The module implements every applied acceptance criterion within the scope — the
+  feature design with its `## Scope` section, and the verification design. An item the verification
+  design verifies other than by an executable test ([U3 Design](<autoflow-root>/docs/units/design.md) > *Test necessity*) is
+  still implemented; only its evidence differs. A problem met during the work that the scope does
+  not name is judged under [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change
+  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
+  correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
+  an assertion. Once the scope is implemented and verified, a further change the module judges
+  useful beyond the scope and the problems its scope judgments include is recorded under
+  `## Scope judgments`, not made.
+- **Test-first (TDD).** A test that verifies a required behavior is seen failing before the
+  implementation it verifies: a behavior not yet implemented, or a defect reproduced before its fix.
+  A test that records existing behavior the change must preserve may pass from the start. Which of
+  its tests verify a required behavior, and the order of the work — a failing run in the working
+  tree first, or a test commit first — are the module's; the result owed is each such test's failing
+  run with its evidence (*Build report* > `## Test-first`). Cautions:
+  - A test that passes from the start is not evidence of a failing run. Look again at whether it
+    checks the required behavior, and record that judgment in the report.
+  - The failing run's failure is readable in its log, the exit status included.
+  - `## Run record` holds each item's latest run. The failing run goes in `## Test-first` only.
 
-  ADR-0025 D3's test-first rule is judged by the AUDIT evaluator from this report and git: the Red
-  run precedes the implementation commit, and its failure is shown by its log
+  The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
+  failing run precedes the implementation commit, and its failure is shown by its log
   ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Test-first*).
-- **Where a test lives.** A `cycle` row's test, a `delivery-check`, a `manual` scenario document and
-  an observation record live under `<attempt-dir>/issue-{N}-local/` and are run by their path
-  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools). A test file
-  goes into the target's tree only as the exception: in this repository a `standing` row
-  (`automated / standing: <token>`); on a target, a file the unit judges the target should keep,
-  listed under `## Test files kept` with its reason and the CI job expected to run it — HANDOFF
+- **Where a test lives.** A test the run writes for its own verification, a one-shot delivery
+  check, an observation scenario and its record live under the run's `<out>/local/` and are run by
+  their path ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools);
+  a later run reads them there, in the record directory. A test file goes into the target's tree
+  only as the exception: a file the module judges the target should keep — in this repository a
+  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
+  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
   carries that list into the PR body with the CI job that actually ran each file
-  ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*). Such a file
-  is wired into the target's CI discovery in the same commit.
+  ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*). Such a file is wired into the target's
+  CI discovery in the same commit.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
-  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. A row
-  verified with a tool (`manual`, executor `AI: <tool>`) is looked at with that tool and its
-  observation record written under the store, ending in one result line — `observation: match` or
+  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
+  verified by observation with a tool is looked at with that tool and its observation record written
+  under `<out>/local/`, ending in one result line — `observation: match` or
   `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
-  environment nor the target's procedures provide, or what using a tool the environment has lacks, is
-  reported — naming what is missing, not the output the tool would give — and never acquired.
-- **Comment check.** Before the unit's last commit it reads the comment lines the cycle's diff adds
-  (`git diff <base>...HEAD`) against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+  environment nor the target's procedures provide, or what using a tool the environment has lacks,
+  is recorded as a tool request — naming what is missing, not the output the tool would give, and
+  what the run did instead — and never acquired.
+- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
+  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
@@ -1108,41 +1031,46 @@ These are the rules other documents cite; everything else about the work is the 
   kept with the reason the match is not the class) and records the result under `## Comment check`.
   The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
-  implementation and the tests each faithful to the design — the unit implements the satisfiable
-  subset and records the contradiction in `<attempt-dir>/issue-{N}-green-blocker.md`: the conflicting AC
-  IDs, the measurement that reproduces the conflict, and `path:line` anchors at the cycle's commit.
+  implementation and the tests each faithful to the design — the module implements the satisfiable
+  subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
+  measurement that reproduces the conflict, and `path:line` anchors at the run's commit. The design
+  module takes it as an input on its re-run.
 - **Acceptance-criterion change.** Work that shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)
   > *Acceptance-criterion decisions*) is raised in the report with the criterion, the proposed change
   and the fact that shows the need — never worked around by keeping the criterion's letter
   ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* > *An acceptance-criterion change raised later in the
   cycle*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
-  included. The unit does not push.
+  included. A lint chain covering a staged file that cannot run in this checkout, and that no
+  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
+  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
+  `## No commit`.
 
 <!-- From <autoflow-root>/docs/units/build.md > Build report -->
 
 ## Build report
 
-`<attempt-dir>/issue-{N}-build-report.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry that passes through AUDIT and GATE:QUALITY (*Re-entry* below). Every section
-below is present; a section with nothing to record says `none`.
-The five record sections are tables, one row per item, in any column order; the column a reader
-needs is named below.
+`<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
+it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
+`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
+`none`.
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Test-first` | one row per `driving` / `regression` test: `Issue AC`, `Test` (its path), `Red at` (the commit the failing run was made at), `Red log`, `Red line` (the summary line read from that log), `Red exit` (the run's non-zero exit status, shown in its log), `Impl commit` (the commit that makes it pass) | AUDIT (*Test-first*) |
-| `## Run record` | one row per `automated` or `delivery-check` verification row, its latest run: `Issue AC`, `Command`, `Log`, `Summary line`, `Result` (`pass` / `fail`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
-| `## Manual checklist` | one row per `manual` row: `Issue AC`, `Executor` (`AI: <tool>` or `person`), `Record` (the observation record's path, or `delegated to user`) | GATE:QUALITY `Test coverage`; HANDOFF (PR body) |
+| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
+| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
-| `## Lint` | one row per chain per commit this cycle makes on the branch: `Commit` (≥ 7 hex), `Chain`, `Outcome` (the lint outcome word, a `not-run` with its reason class in parentheses); a commit another actor makes on the branch adds its own rows | GATE:QUALITY `Commit conventions` |
+| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
 | `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the unit rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
+| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; HANDOFF (PR body; *Added test files*) |
+| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
+| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
+| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
-Anything else the unit records — how it divided the work, the checks it chose to run and what they
-found — is its own, written where it judges useful.
+Anything else the module records — how it divided the work, the checks it chose to run and what
+they found — is its own, written where it judges useful.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 

@@ -4,67 +4,45 @@
 > this file; the other units are listed in [`autoflow-guide.md`](../autoflow-guide.md) > Unit
 > Documents.
 
-DIAGNOSE and GATE:HYPOTHESIS are one functional unit, U2 Analysis
-([`ADR-0025`](../records/adr/0025-outcome-gated-functional-units.md) D1). The unit is prescribed by
-four things only — its goal, its artifact contract, its verification and its loop cap (D2) — and
-this file states them, with the cautions the analysis is asked to heed and the result it owes. How
-the unit reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
-gives each, how it keeps the cautions — is the unit agent's, recorded with its grounds in its
-artifact ([`core.md`](../core.md) > Rule Scope, principle 2).
+U2 Analysis is two modules: the analysis module, whose contract is
+`<autoflow-root>/docs/contracts/analysis.json` and whose procedure is this file, and the hypothesis
+evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypothesis.json`,
+[`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS;
+[`ADR-0038`](../records/adr/0038-contract-modules-run-by-the-coordinator.md) D1). This file states
+the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
+module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
+gives each, how it keeps the cautions — is its own, recorded with its grounds in its report
+([`core.md`](../core.md) > Rule Scope, principle 2).
 
-- **Goal**: the request that triggered the cycle is understood well enough for GATE:HYPOTHESIS to
-  score it — the affected structure as it stands, the gap between it and the requested behavior,
-  whether a change is owed and whether code is the lever, and the decision points, each conclusion
-  with its grounds.
-- **Artifact contract**: the analysis report (*Analysis report* below).
-- **Verification**: GATE:HYPOTHESIS — a fresh Evaluation AI scores the report on one form for
-  every issue, the rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
-  GATE:HYPOTHESIS: whether the report's conclusion is supported by its grounds and whether the
-  analysis met its goal. The unit never scores its own artifact. U2 ends at a `gate_hypothesis`
-  PASS (*Verification — GATE:HYPOTHESIS* below).
-- **Loop cap**: none counted (issue #421). After a FAIL, what follows is the orchestrator's
-  judgment, and the cycle leaves GATE:HYPOTHESIS only on a PASS; a PASS judged unreachable goes, on
-  that recorded judgment, to the operator (*Verification — GATE:HYPOTHESIS* below).
+- **Goal**: the request understood well enough to be evaluated — the affected structure as it
+  stands, the gap between it and the requested behavior, whether a change is owed and whether code
+  is the lever, and the decision points, each conclusion with its grounds.
+- **Output**: the analysis report (*Analysis report* below), and the run's tool requests
+  ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
+  every issue: whether the report's conclusion is supported by its grounds and whether the analysis
+  met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.
 - **Result owed**: the report's path and a one-line summary that names any decision point it
-  recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format). The
-  orchestrator does not receive the report's body.
-
-## Transitions
-
-The Flow Control rows that leave this unit; the rows that leave no single unit, and the regression and escalation caps, are [`core.md`](../core.md) > Flow Control.
-
-| Transition | Condition |
-|------|------|
-| DIAGNOSE (prerequisite) → orchestrator / advisor | `mode=new-issue` only. The analysis report's `## Decision points` records that a planning/design/ADR prerequisite is clearly required first → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident: proceed → GATE:HYPOTHESIS (after a U2 re-run where the analysis stopped at the prerequisite); the prerequisite comes first → the cycle ends with the analysis report (`active:false`, `phase:"awaiting-user"`) — a new issue is filed only on the operator's request; when in doubt, no prerequisite is recorded (`<autoflow-root>/docs/units/analysis.md` > *Report routing*) |
-| DIAGNOSE → GATE:HYPOTHESIS | the U2 unit returned, its analysis report carries every required section, and it records no prerequisite (`<autoflow-root>/docs/units/analysis.md` > Unit spawn) |
-| GATE:HYPOTHESIS (PASS, `no change needed`) → close / reply / rebuttal | the report concludes the as-is already satisfies the request or nothing is left to do → how the cycle answers it (an already-resolved issue closed, an open PR replied on, a reviewer finding rebutted) is the orchestrator's judgment over the situation, recorded in the ledger (`<autoflow-root>/docs/units/analysis.md` > *Verification — GATE:HYPOTHESIS*) |
-| review-response (a repeated complaint) → orchestrator / advisor | whoever reads a reviewer finding — the REVIEW aggregator, or the DIAGNOSE unit — sees it repeat the previous attempt's complaint with a new witness case and records that → the orchestrator decides the re-entry (its depth, or none), the advisor where the grounds do not settle it or it is not confident. No spawn checks for it on every attempt (`<autoflow-root>/docs/units/review.md` > *A repeated complaint*) |
-| GATE:HYPOTHESIS → ARCHITECT | PASS + the report concludes `code change` + its recommendations triaged (no attempt open); the hook gates the spawn on the recorded PASS for a bug / incident issue, and `verdict` `skipped (non-bug issue)` admits it for any other |
-| GATE:HYPOTHESIS (PASS, `non-code lever`) → orchestrator / advisor | a real gap whose lever is data / configuration / operations → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident: a code change is still owed → ARCHITECT; the lever is non-code → the cycle ends with its report (`active:false`, `phase:"awaiting-user"`) |
-| GATE:HYPOTHESIS (FAIL) → DIAGNOSE | the re-entry is the orchestrator's judgment over the evaluator's findings, recorded in the ledger — a U2 unit re-run; no count cap, and the cycle leaves GATE:HYPOTHESIS only on a PASS |
-| GATE:HYPOTHESIS (a PASS judged unreachable) → advisor / user | the orchestrator judges no re-run will reach a PASS and records that judgment, asking the advisor where it is not confident of it: reachable → a re-run on the answer; not reachable → the operator is asked to confirm closing the issue, the recorded judgment as the direction (`active:false`, `phase:"awaiting-user"`) — the cycle does not close it |
+  recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
 ## Unit spawn
 
 - **The spawn.** One `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
-  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) at DIAGNOSE entry. The
-  prompt states the goal, the cycle's `mode` and
-  the report's path, and names the inputs by path: the issue (new-issue) or the review comment /
-  thread PREFLIGHT identified (review-response), and the decision ledger
-  (`<attempt-dir>/issue-{N}-ledger.md`). In a new-issue cycle it also names the criterion review record
-  the ledger's last `[criterion-ready]` entry points at (*Criterion review record* below). In a review-response cycle it also names every artifact the
-  previous cycle left (`<attempt-dir>/issue-{N}-c{C}-*.md`) and, where REVIEW's triage wrote one, the
-  PR's findings file; how much of the previous analysis the unit reuses is its own, recorded under
-  `## Method`. On a re-entry it names what the re-entry is for and the material that carries it
-  (*Re-entry* below).
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) runs the
+  module. Its prompt states the goal, names the inputs the invocation gives by path — the issue
+  (`params.issue`), the criterion review record, the decision ledger's `[criterion-ready]` and
+  `[ac-decision]` entries, the target's documents, and on a re-run the previous report and its
+  evaluation — the attempt's record directory, where earlier runs left their work, and the output
+  directory the report goes to.
+- **What the run is for is read from its inputs.** Given the criterion review record, the run
+  analyzes the issue the record reviewed (*Criterion review record* below). Given the previous
+  report and its evaluation, it brings that report up to date on the evaluation's findings, and
+  what else it reuses from the earlier runs in the record directory is its own, recorded under
+  `## Method`.
 - **Documents.** The unit's agent definition carries the documents the analysis needs (this file, and the
   rubric it is scored on, [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
   GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](../core.md) > Context Injection);
-  the prompt copies none of them, and the unit reads anything further by its own judgment.
-- **Before the gate (orchestrator-side).** The orchestrator confirms the report exists, is
-  non-empty and carries every section *Analysis report* lists. A missing one is an infrastructure
-  cause: the unit is spawned again with the same inputs, consuming no counter. The return is then
-  routed (*Report routing* below).
+  the prompt copies none of them, and the module reads anything further by its own judgment.
 
 ## What the analysis owes
 
@@ -78,12 +56,12 @@ The analysis is asked for four things, each conclusion with its grounds:
 - the decision points — the judgments the working AI is not the one to make.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
-ones, what it checks and with which tool — is the unit's judgment, recorded with its grounds under
+ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
 `## Method` and `## Cause`.
 
 The request is the trigger target — the issue, a review comment or thread, or the finding a
-re-entry is for — and the as-is is the state it is measured against, which the unit judges from
-what it was spawned for and records under `## Method`. The question is whether the as-is already
+re-run is for — and the as-is is the state it is measured against, which the module judges from
+its inputs and records under `## Method`. The question is whether the as-is already
 satisfies the request.
 
 **Cautions.** Each names a bias the analysis is to avoid:
@@ -98,170 +76,103 @@ satisfies the request.
 - Open every material the issue body or an acceptance criterion references — a design mockup, an
   asset, an external document — yourself; one that cannot be opened is recorded with the reason.
 
-How the unit guards against these biases — whether it separates the structure reading from the
+How the module guards against these biases — whether it separates the structure reading from the
 issue reading, in what order it reads, what it gives or withholds from a helper — is its own,
 recorded with its grounds under `## Method`.
 
-The rules below are the ones other documents cite; everything else about the work is the unit's.
+The rules below are the ones other documents cite; everything else about the work is the module's.
 
-- **Acceptance criteria.** The report's `## Acceptance criteria` table is the issue's single
-  machine-addressable acceptance-criterion list; an absent or unparseable table is itself a finding
-  downstream ([U3 Design](design.md) > *Report routing*;
-  [`evaluation-system.md`](../evaluation-system.md) > GATE:PLAN > *AC-authority check*). **[MUST]** It is authored once per issue, in the `mode = new-issue` cycle;
-  a review-response cycle carries the previous cycle's table forward unchanged — a review comment
-  never edits the list; only an `[ac-decision]` ledger entry does
-  ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
-- **Criterion review record** (`mode = new-issue`). The issue's criteria were reviewed against the
-  code and policy in the attempt's criterion review stage, and the review's settled decisions were
-  recorded in a `[criterion-ready]` entry before PREFLIGHT wrote the state file
-  ([`criterion-review.md`](../criterion-review.md)); the record that review left is an input,
-  not a verdict. The analysis reads its findings as an earlier reading of the code and policy at the
-  commits its `## Inputs` names: a finding the analysis builds on — a confirmed cause, a policy it
-  cites — is checked at the cycle's base, and a difference from the record is recorded with its
-  grounds. The record changes nothing about how the criteria are taken: the `## Acceptance criteria`
-  table restates the issue's criteria as the body that entry records states them, the analysis does not run
-  the review again (issue #291: DIAGNOSE takes the criteria as written), and a defect it observes as
-  a fact is still raised as a decision point on the in-cycle path
-  ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be
-  wrong*). The record's findings are the reconciled ones: `## Screening` lists each case a
-  criterion applies to with the code that decides it, and `## Cause reach and rule conflict` where
-  a confirmed cause reaches beyond the reported points or a required behavior meets a rule in force,
-  each read like the findings as an earlier reading; `## Reconciliation` records, per stage 2
-  finding and per in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked` items, and each case left `unresolved`,
-  are findings the analysis may close with its own checks (*Checking a finding* below). How the
-  record was used is recorded under `## Method`.
+- **Acceptance criteria.** The report's `## Acceptance criteria` table restates the issue's
+  criteria faithfully, as the issue body states them; it is the table
+  `<autoflow-root>/scripts/contracts/criteria-apply.sh` reads, and its output — the applied criteria
+  — is what every later module takes. A re-run carries the table forward unchanged: a change to a
+  criterion stands only as an `[ac-decision]` entry, which criteria-apply applies, and the table is
+  not edited to match it ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
+  decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
+- **Criterion review record.** The issue's criteria were reviewed against the code and policy by
+  the criterion review's modules, and the decisions they led to are recorded in the ledger's
+  `[criterion-ready]` and `[ac-decision]` entries ([`criterion-review.md`](../criterion-review.md));
+  the record that review left is an input, not a verdict. The analysis reads its findings as an
+  earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
+  analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
+  from, and a difference from the record is recorded with its grounds. The record changes nothing
+  about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
+  as the body the `[criterion-ready]` entry records states them, the analysis does not run the
+  review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
+  a fact is still raised as a decision point ([`decision-ledger.md`](../decision-ledger.md) >
+  Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
+  item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
+  with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
+  reaches beyond the reported points or a required behavior meets a rule in force, each read like
+  the findings as an earlier reading; `## Reconciliation` records, per stage 2 finding and per
+  in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked`
+  items, and each case left `unresolved`, are findings the analysis may close with its own checks
+  (*Checking a finding* below). How the record was used is recorded under `## Method`.
 - **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
   where it is, how it was opened, and what it shows for the criterion that names it; the material,
-  not an abbreviated example in the body, is what the criterion means. **[MUST]** A material
-  recorded `not opened: <reason>` is raised to the operator before the cycle leaves DIAGNOSE
-  (`<autoflow-root>/docs/core.md` > Flow Control > *tool or referenced material → user*;
-  [`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools > *The tools
-  the work needs*).
+  not an abbreviated example in the body, is what the criterion means. A material that cannot be
+  opened is recorded `not opened: <reason>` and as a tool request — what is missing, and what the
+  analysis concluded without it — and the run goes on to its end ([`core.md`](../core.md) >
+  Development Lifecycle > *Tools*; [`submodule-common-rules.md`](../submodule-common-rules.md) >
+  Verification and Tools > *The tools the work needs*).
 - **Checking a finding.** A finding the analysis checks is checked with what the environment and the
   target's documents and scripts provide — API calls, queries, service status, logs — and those tools
   are looked for before a finding is left unchecked; a tool that is off is started by the target's
-  own procedure, and one that needs the operator is requested (*The tools the work needs*). The
-  report records each tool a conclusion rests on and whether it was usable; a finding left unchecked
+  own procedure, and one that needs the operator is recorded as a tool request (*The tools the work
+  needs*). The report records each tool a conclusion rests on and whether it was usable; a finding left unchecked
   names the tool it needed.
 - **Scope judgments.** Beyond the acceptance criteria, the analysis names the problems the confirmed
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
   and its grounds ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
-  Rules > *Scope judgment*). ARCHITECT reads them and settles the cycle's scope in the feature
+  Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design's `## Scope` section; the analysis does not decide it alone.
 - **Decision points.** A judgment the working AI is not the one to make is recorded under
-  `## Decision points` with its grounds, and the orchestrator routes it (*Report routing*): a
-  planning, design or ADR prerequisite clearly required before the issue can be implemented
-  (`mode = new-issue`; when in doubt, none); a request the as-is already satisfies; a gap or a cause
-  whose lever is not code; on a reviewer finding, one that repeats the previous
-  attempt's complaint with a different witness case ([U7 Review](review.md) > *A repeated
-  complaint*). A suggested split of the issue stays a suggestion: it is filed only on
-  the operator's request, through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
+  `## Decision points` with its grounds, and what follows it is the Coordinator's: a planning,
+  design or ADR prerequisite clearly required before the issue can be implemented (when in doubt,
+  none); a request the as-is already satisfies; a gap or a cause whose lever is not code; on a
+  reviewer finding, one that repeats an earlier round's complaint with a different witness case
+  ([U7 Review](review.md) > *A repeated complaint*). A decision point the module is not confident
+  of states the question for the advisor ([`core.md`](../core.md) > Rule Scope, principle 3). A
+  suggested split of the issue stays a suggestion: it is filed only on the operator's request,
+  through a draft and `<autoflow-root>/scripts/issue/create-issue.sh`
   ([`issue-proposal.md`](../issue-proposal.md)).
 
 ## Analysis report
 
-`<attempt-dir>/issue-{N}-analysis.md`. The unit writes it whole on its first run and brings it up to
-date on a re-entry. Every section below is present; a section with nothing to record says `none`.
+`<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
+up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. Every section
+below is present; a section with nothing to record says `none`.
 
 | Section | Holds | Read by |
 |---|---|---|
 | `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
 | `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | GATE:HYPOTHESIS |
 | `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
-| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | ARCHITECT, GATE:PLAN, BUILD, GATE:QUALITY |
-| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | ARCHITECT (*Tools*) |
-| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the orchestrator (*Verification — GATE:HYPOTHESIS*) |
+| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | criteria-apply |
+| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | the design module |
+| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS; the Coordinator |
 | `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
-| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | ARCHITECT; GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Affected documents` | the documents the change is expected to update | ARCHITECT; BUILD (spawn prompt) |
-| `## Decision points` | each decision point with its grounds, or `none` | the orchestrator (*Report routing*) |
+| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
+| `## Affected documents` | the documents the change is expected to update | the design and build modules |
+| `## Decision points` | each decision point with its grounds, or `none` | the Coordinator |
 
-Anything else the unit records is its own, written where it judges useful.
+Anything else the module records is its own, written where it judges useful.
 
-## Report routing
+## Evaluation — GATE:HYPOTHESIS
 
-- **A prerequisite** (`mode = new-issue`) → the orchestrator decides it on the report's grounds,
-  recorded in an `O` ledger entry; where those grounds do not settle it, or it is not confident, the
-  advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), the report as the request's
-  anchor, written situation-first ([`core.md`](../core.md) > Execution Principles >
-  *Human-decision presentation*).
-  **Proceed** → GATE:HYPOTHESIS, after a unit re-run naming the decision's entry where the analysis
-  stopped at the prerequisite; **the prerequisite comes first** → the cycle ends with `active:
-  false`, `phase: "awaiting-user"`, the report and the decision's record as its report. No counter.
-- **A repeated complaint** (a reviewer finding) → the orchestrator decides the re-entry — its
-  depth, or none — the advisor where the grounds do not settle it ([U7 Review](review.md) > *A
-  repeated complaint*). A redefined criterion comes
-  back as `[ac-decision]` entries and a unit re-run on them. No counter.
-- **Otherwise** → GATE:HYPOTHESIS: one fresh Evaluation AI scores the report. The dispositions — a
-  request needing no change, a non-code lever, a FAIL, a PASS judged unreachable — are
-  *Verification — GATE:HYPOTHESIS*'s (below); a decision point the report records is confirmed by the
-  gate's PASS before any close or end.
-- **A material not opened, or a tool the analysis needs that neither this environment nor the
-  target's procedures provide, or what using a tool the environment has lacks** — a harness-level block → the operator, situation-first
-  (`awaiting-user`; `<autoflow-root>/docs/core.md` > Flow Control > *tool or referenced material → user*).
-
-## Verification — GATE:HYPOTHESIS
-
-One independent Evaluation AI (`autoflow-evaluator`), fresh-spawned per entry on the model
-`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, scores the report on the
+The hypothesis module scores the report: one independent Evaluation AI (`autoflow-evaluator`),
+fresh-spawned per run on the model
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-hypothesis` names, on the
 rubric of [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:HYPOTHESIS — one
-form for every issue. Its agent definition carries that document. The orchestrator records the
-scores under `phases.gate_hypothesis`, with the `verdict` `pending` → `evaluated` for a bug /
-incident issue and `skipped (non-bug issue)` otherwise ([`core.md`](../core.md) > AutoFlow
-State Tracking > `verdict` rule). The hook gates the ARCHITECT spawn on the recorded PASS for a bug
-/ incident issue only; for any other issue the orchestrator judges the PASS line itself: each ≥ 7,
-avg ≥ 7.5.
-
-**PASS** → recommendation triage ([U5 Completion evaluation](completion-evaluation.md) >
-*Recommendation triage*) → the route the report's `## Necessity` conclusion names:
-
-- **`no change needed`** → no change is made. How the cycle answers the conclusion — closing an
-  issue that was already resolved, replying on an open PR, rebutting a reviewer finding a re-entry
-  examined ([U7 Review](review.md) > *Whether a finding holds*) — is the orchestrator's judgment
-  over the situation, recorded with its grounds in the ledger ([`core.md`](../core.md) > Rule
-  Scope, principles 2–3). Before it closes an issue, the orchestrator confirms the recorded
-  `phases.gate_hypothesis` scores meet the PASS line and the report's conclusion is `no change
-  needed`; the close comment records those scores and a summary of the existing mechanism.
-- **`non-code lever`** → the orchestrator decides it on the report's grounds, the advisor where they do not settle it or it is not confident
-  ([`role-contracts.md`](../role-contracts.md) > Advisor). **A code change is still owed** → ARCHITECT; **the lever is non-code** → report the
-  finding situation-first ([`core.md`](../core.md) > Execution Principles > Human-decision
-  presentation) — where a PR is open, as the PR reply — and end the cycle with
-  `active: false`, `phase: "awaiting-user"`.
-- **`code change`** → ARCHITECT.
-
-**FAIL** → what follows is the orchestrator's judgment over the evaluator's findings, recorded with
-its grounds in the ledger — a U2 unit re-run naming the findings and the previous report (*Re-entry*
-below) is the usual route. No count caps it: the cycle leaves GATE:HYPOTHESIS only on a PASS.
-
-**A PASS judged unreachable** → when the orchestrator judges that no re-run will bring the report
-to a PASS — the re-runs do not converge, or the request cannot be brought to a supported conclusion
-— it records that judgment with its grounds in the ledger, and asks the advisor where it is not
-confident of it. **Reachable** → a re-run on the answer. **Not reachable** → the issue is not
-closed by the cycle: the operator is asked to confirm closing it, situation-first, with the recorded
-judgment as the direction (`active: false`, `phase: "awaiting-user"`). This differs from `no
-change needed`, whose close the orchestrator makes without the operator's confirmation.
-
-## Re-entry
-
-No unit agent's lifetime spans a spawn: every re-entry spawns a fresh `autoflow-unit-analysis` by
-*Unit spawn* above, whose prompt names what the re-entry is for, the material that carries it, and
-the report so far. The report is brought up to date, not rewritten; its `## Acceptance criteria`
-table changes only by an `[ac-decision]` entry, which the orchestrator applies.
-
-| Re-entry | Material named | Counter |
-|---|---|---|
-| GATE:HYPOTHESIS FAIL | the evaluation report and its failed items | none — the orchestrator's judgment (*Verification — GATE:HYPOTHESIS* above) |
-| a recommendation attempt at GATE:HYPOTHESIS routed to the analysis | the recommendation's subject and finding | the attempt window (max 7×) |
-| an advisor answer or operator override that reaches the analysis | the `A` / `O` entries | none |
-
-A re-entry passes through GATE:HYPOTHESIS again on its re-score
-([`evaluation-system.md`](../evaluation-system.md) > GATE:HYPOTHESIS > *Re-entry re-score*). The unit reads and writes no
-`<attempt-dir>/issue-{N}.json` state file, so the counter above is the orchestrator's own accounting.
+form for every issue. Its agent definition carries that document, and its output is the scores and
+their grounds with its recommendations; what follows — a re-run on its findings, the answer a
+`no change needed` or a `non-code lever` conclusion calls for, a judgment that no re-run will reach
+the reference values — is the Coordinator's.
 
 ## Spot-check & escalation discipline (incomplete-output guard)
 
-A DIAGNOSE spot-check is an orchestrator read that confirms a finding of the
-analysis report before it feeds a routing decision, a blocker, or a user escalation. A Claude
+A spot-check is a read that confirms a finding of a module's output — the analysis report or any
+other — before it feeds a decision, a blocker, or a question to the operator. A Claude
 Code behavior produces a **false "absent / stub" reading**:
 
 - **Read-dedup stub.** A re-read of an unchanged file returns a 1-line stub ("file
@@ -277,7 +188,7 @@ Code behavior produces a **false "absent / stub" reading**:
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
   data — re-run the single command sequentially first.
-- **[MUST]** Spot-checks run **after the unit has returned**, as single
+- **[MUST]** Spot-checks run **after the spawn has returned**, as single
   sequential commands. Another
   directory is addressed with `git -C <path>` + absolute paths rather than a
   `cd`-prefixed compound, which can raise a permission prompt.

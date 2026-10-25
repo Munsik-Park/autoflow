@@ -109,7 +109,7 @@ it (`source: user <path>`), and every consumer prints the fixed marker line
 `user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
 from exit `2` and from every exit below; no wrapper starts its reviewer. The
 orchestrator asks the operator whether to proceed without those reviewers
-([`units/preparation.md`](units/preparation.md) > *Stop conditions*,
+([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4,
 [`units/review.md`](units/review.md) > *Reviewer review*): proceeding runs the
 round on the reviews of the target's side alone; stopping leaves the operator
 to fix the file and run the step again, which reads it anew.
@@ -234,7 +234,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 | `6` | the operator file cannot be read as configured — the marker line `user-config: UNREADABLE <path> — <error>`; no reviewer is checked |
 
 PREFLIGHT records the result in the `preflight-review-config` record entry
-([`units/preparation.md`](units/preparation.md) > *Stop conditions*). An absent
+([ADR-0038](records/adr/0038-contract-modules-run-by-the-coordinator.md) D4). An absent
 CLI does **not** stop the cycle: REVIEW runs the other reviewers without it and
 the aggregated comment names the omission
 ([`units/review.md`](units/review.md) > *Reviewer review*). An unreadable
