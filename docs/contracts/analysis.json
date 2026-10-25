@@ -49,6 +49,20 @@
         "module": "hypothesis",
         "output": "evaluation"
       }
+    },
+    "findings": {
+      "required": false,
+      "from": [
+        {
+          "module": "quality",
+          "output": "evaluation"
+        },
+        {
+          "module": "review",
+          "output": "findings"
+        }
+      ],
+      "note": "the findings a re-run answers when one moves a conclusion of the analysis: the quality evaluation's recommendations, or the review's findings (docs/units/review.md > A repeated complaint)"
     }
   },
   "outputs": {

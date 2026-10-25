@@ -18,8 +18,8 @@ reports. One reading is made by a spawned role — what a failed CI check shows 
   open as a draft with CI green on its head — or, where no CI runs for it, that fact and its ground
   recorded on it (*CI*) — whose body lets the operator decide on it.
 - **Output**: the pushed branches and the pull requests (*Push and pull request*), the integration
-  record `<out>/integration.md` (*Integration*), the CI-failure record when a check failed
-  (*CI failure*), and the run's tool requests.
+  record `<out>/integration.md` (*Integration*), the CI-failure record `<out>/ci-failure.md` when a
+  check failed (*CI failure*), and the run's tool requests.
 - **What a script reads and reports**: CI confirmation (*CI*), by exit code.
 - **Checks**: check-out confirms each pull request open and a draft, its body stating every
   applied criterion, every tool request of the work and every deferred recommendation's disposition,
@@ -45,7 +45,7 @@ name — the title, how the body is composed, when the push happens — is the m
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
-  Coordinator names for the branch.
+  invocation names (`params.base`), or the remote's default branch when it names none.
 
 What a pull request usually carries — offered as what to weigh, not as a checklist:
 

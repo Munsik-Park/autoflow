@@ -32,8 +32,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   module. Its prompt states the goal, names the inputs the invocation gives by path — the issue
   (`params.issue`), the criterion review record, the decision ledger's `[criterion-ready]` and
   `[ac-decision]` entries, the target's documents, and on a re-run the previous report and its
-  evaluation — the attempt's record directory, where earlier runs left their work, and the output
-  directory the report goes to.
+  evaluation, or the findings it answers (a quality evaluation's or a review's) — the attempt's
+  record directory, where earlier runs left their work, and the output directory the report goes to.
 - **What the run is for is read from its inputs.** Given the criterion review record, the run
   analyzes the issue the record reviewed (*Criterion review record* below). Given the previous
   report and its evaluation, it brings that report up to date on the evaluation's findings, and

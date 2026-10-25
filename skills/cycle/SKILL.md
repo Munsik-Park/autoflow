@@ -594,8 +594,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   module. Its prompt states the goal, names the inputs the invocation gives by path — the issue
   (`params.issue`), the criterion review record, the decision ledger's `[criterion-ready]` and
   `[ac-decision]` entries, the target's documents, and on a re-run the previous report and its
-  evaluation — the attempt's record directory, where earlier runs left their work, and the output
-  directory the report goes to.
+  evaluation, or the findings it answers (a quality evaluation's or a review's) — the attempt's
+  record directory, where earlier runs left their work, and the output directory the report goes to.
 - **What the run is for is read from its inputs.** Given the criterion review record, the run
   analyzes the issue the record reviewed (*Criterion review record* below). Given the previous
   report and its evaluation, it brings that report up to date on the evaluation's findings, and
@@ -1077,9 +1077,10 @@ Rule Scope, principle 2).
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
-  `[ac-decision]` entries, and on a re-run the previous report and the findings it answers (an
-  audit's, a quality evaluation's or a review's) — the branch, the attempt's record directory, where
-  earlier runs left their work and their `local/` stores, and the output directory.
+  `[ac-decision]` entries, the recommendations the Coordinator deferred or separated (`deferred`),
+  which the build leaves to their disposition, and on a re-run the previous report and the findings
+  it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
+  directory, where earlier runs left their work and their `local/` stores, and the output directory.
 - **Documents.** The unit's agent definition carries this file with the rest of its guidance
   ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection); the analysis report's `## Affected documents` and
   the target's documents are read by the module's own judgment.
@@ -1637,8 +1638,8 @@ reports. One reading is made by a spawned role — what a failed CI check shows 
   open as a draft with CI green on its head — or, where no CI runs for it, that fact and its ground
   recorded on it (*CI*) — whose body lets the operator decide on it.
 - **Output**: the pushed branches and the pull requests (*Push and pull request*), the integration
-  record `<out>/integration.md` (*Integration*), the CI-failure record when a check failed
-  (*CI failure*), and the run's tool requests.
+  record `<out>/integration.md` (*Integration*), the CI-failure record `<out>/ci-failure.md` when a
+  check failed (*CI failure*), and the run's tool requests.
 - **What a script reads and reports**: CI confirmation (*CI*), by exit code.
 - **Checks**: check-out confirms each pull request open and a draft, its body stating every
   applied criterion, every tool request of the work and every deferred recommendation's disposition,
@@ -1664,7 +1665,7 @@ name — the title, how the body is composed, when the push happens — is the m
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
-  Coordinator names for the branch.
+  invocation names (`params.base`), or the remote's default branch when it names none.
 
 What a pull request usually carries — offered as what to weigh, not as a checklist:
 

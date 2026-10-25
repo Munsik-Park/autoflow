@@ -34,9 +34,10 @@ Rule Scope, principle 2).
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
-  `[ac-decision]` entries, and on a re-run the previous report and the findings it answers (an
-  audit's, a quality evaluation's or a review's) — the branch, the attempt's record directory, where
-  earlier runs left their work and their `local/` stores, and the output directory.
+  `[ac-decision]` entries, the recommendations the Coordinator deferred or separated (`deferred`),
+  which the build leaves to their disposition, and on a re-run the previous report and the findings
+  it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
+  directory, where earlier runs left their work and their `local/` stores, and the output directory.
 - **Documents.** The unit's agent definition carries this file with the rest of its guidance
   ([`core.md`](../core.md) > Context Injection); the analysis report's `## Affected documents` and
   the target's documents are read by the module's own judgment.
