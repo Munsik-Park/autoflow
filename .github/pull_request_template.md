@@ -55,7 +55,7 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 
 - Issue: <!-- #N or N/A -->
 - Phase: `awaiting-external-review`
-- Evaluation summary: _paste the GATE:QUALITY summary line (from `<attempt-dir>/issue-N.json`, outside the tree)_
+- Evaluation summary: _paste the quality evaluation's summary (its `<out>/evaluation.json`, outside the tree)_
 
 ## Testing
 

@@ -14,6 +14,11 @@
     "branch": {
       "type": "string",
       "required": true
+    },
+    "base": {
+      "type": "string",
+      "required": false,
+      "note": "the branch the pull request is to merge into, the baseline of the lint chain's execution trust boundary (docs/submodule-common-rules.md > Verification and Tools); not given, the remote's default branch"
     }
   },
   "inputs": {

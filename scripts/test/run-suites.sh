@@ -157,7 +157,7 @@ fi
 
 # A failed selection executes nothing: which fallback applies is the calling
 # step's rule, not this runner's (BUILD runs no whole-tree run; BUILD's
-# derivation and the `doc` remedy degrade to the enumerated set). What the
+# derivation degrades to the enumerated set). What the
 # runner owes the caller is both routes by name, so a BLOCK is never a dead end.
 if [ "$SELECT_RC" -ne 0 ]; then
   echo "run-suites: selection failed (exit $SELECT_RC) — no suite executed" >&2

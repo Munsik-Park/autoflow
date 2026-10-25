@@ -5,7 +5,12 @@
 
 A record tool, machine-local: it reads what Claude Code already left on disk and
 keeps the aggregate, because the transcripts expire and the archive does not
-hold them. It changes no rule, gate, hook or bundle, is no gate input, and is
+hold them.
+
+It reads the records left before ADR-0038 (D10, Q23): it finds an attempt by
+its state file `issue-<N>.json`, which no attempt has had since — a module run
+is measured from the result.json the Coordinator holds, and that measurement
+is the Coordinator's. It stays for those earlier records. It changes no rule, gate, hook or bundle, is no gate input, and is
 not shipped to a target (same disposition as scripts/architect/deliberation-metrics.py).
 
 Two steps, run together by default:

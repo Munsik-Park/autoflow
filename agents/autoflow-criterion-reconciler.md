@@ -1,7 +1,7 @@
 ---
 name: autoflow-criterion-reconciler
 description: AutoFlow criterion-reconcile module of the criterion review — reconciliation of the screen's record with the trace and the in-depth analyses: settles in the code every case where they differ and writes the updated record. Spawn FRESH for every run of the module.
-tools: Read, Glob, Grep, Bash, Edit
+tools: Read, Glob, Grep, Bash, Write, Edit
 effort: high
 ---
 

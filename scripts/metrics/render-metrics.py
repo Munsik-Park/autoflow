@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """AutoFlow cycle metrics — static HTML view (issue #268).
 
+Like cycle-metrics.py, it covers the records left before ADR-0038 (D10, Q23):
+no attempt made since has the state file that tool finds an attempt by.
+
 Reads <record-root>/_metrics/issues.json (written by cycle-metrics.py) and writes ONE
 self-contained HTML file: inline CSS, inline JS, inline data, no external
 resource of any kind, so it opens without a network. Only aggregate values go
