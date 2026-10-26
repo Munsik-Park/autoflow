@@ -1,0 +1,64 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "review",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews posted on it: each finding once, with its severity and whether it holds.\n",
+  "procedure": "docs/units/review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "pr": {
+      "type": "string",
+      "required": true,
+      "pattern": "^[^/]+/[^#]+#[0-9]+$"
+    },
+    "round": {
+      "type": "integer",
+      "required": true
+    }
+  },
+  "inputs": {
+    "previous_findings": {
+      "required": false,
+      "from": {
+        "module": "review",
+        "output": "findings"
+      }
+    }
+  },
+  "outputs": {
+    "reviews": {
+      "file": "reviews/*.md",
+      "format": "markdown",
+      "many": true,
+      "note": "one per configured reviewer; a reviewer unavailable for the round is named with the reason in the findings"
+    },
+    "findings": {
+      "file": "findings.md",
+      "format": "markdown",
+      "evaluation": [
+        "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
+        "every finding of every review is in the file"
+      ]
+    },
+    "comment": {
+      "file": "comment.md",
+      "format": "pull-request-comment",
+      "checks": [
+        {
+          "type": "pr_comment_posted",
+          "pr_param": "pr",
+          "body_file": "comment.md",
+          "note": "the round's aggregated comment, kept as the file and posted on the pull request"
+        }
+      ]
+    }
+  },
+  "result": {
+    "summary": "one line, with the highest severity among the findings that hold"
+  }
+}

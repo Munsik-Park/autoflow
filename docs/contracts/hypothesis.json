@@ -1,0 +1,137 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "hypothesis",
+  "kind": "evaluation",
+  "reads_records": false,
+  "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached.\n",
+  "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS",
+  "evaluator": {
+    "agent": "autoflow-evaluator",
+    "spawn": "fresh, every run"
+  },
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "analysis": {
+      "required": true,
+      "from": {
+        "module": "analysis",
+        "output": "report"
+      }
+    },
+    "decisions": {
+      "required": false,
+      "from": {
+        "ledger": [
+          "ac-decision"
+        ]
+      }
+    },
+    "previous_evaluation": {
+      "required": false,
+      "from": {
+        "module": "hypothesis",
+        "output": "evaluation"
+      }
+    }
+  },
+  "outputs": {
+    "evaluation": {
+      "file": "evaluation.json",
+      "format": "json",
+      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "checks": [
+        {
+          "type": "keys",
+          "spec": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "const": "hypothesis_evaluation"
+            },
+            "issue": {
+              "type": "string",
+              "required": true,
+              "pattern": "^#[0-9]+$"
+            },
+            "scores": {
+              "type": "object",
+              "keys_exactly": [
+                "Conclusion grounds",
+                "Goal coverage"
+              ],
+              "note": "each value a number 0-10, or { score, reason }",
+              "required": true
+            },
+            "rescore": {
+              "type": "object",
+              "required_when": {
+                "input": "previous_evaluation"
+              }
+            },
+            "summary": {
+              "type": "string",
+              "required": true
+            },
+            "recommendations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "subject",
+                "item",
+                "finding"
+              ]
+            }
+          }
+        },
+        {
+          "type": "forbidden_keys",
+          "keys": [
+            "verdict"
+          ],
+          "note": "Q2: applying the pass values is the Coordinator's"
+        },
+        {
+          "type": "partition",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "of_keys": ".scores",
+          "into": [
+            ".rescore.rescored",
+            ".rescore.inherited"
+          ],
+          "note": "every rubric item is scored afresh or inherited"
+        },
+        {
+          "type": "covers",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "source": {
+            "input": "previous_evaluation",
+            "ids": ".recommendations[].finding"
+          },
+          "by": ".rescore.prior_findings[].finding",
+          "disposed_by": ".rescore.prior_findings[].disposition",
+          "note": "every finding of the previous evaluation has its disposition"
+        }
+      ]
+    }
+  },
+  "reference": {
+    "pass": {
+      "average_at_least": 7.5,
+      "each_item_at_least": 7
+    },
+    "source": "docs/evaluation-system.md > PASS Criteria"
+  },
+  "result": {
+    "summary": "one line"
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "build",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "The design implemented within the cycle's scope on the cycle's branch, and every item of the verification design verified as it says — or, where it cannot be, the reason recorded.\n",
+  "procedure": "docs/units/build.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "branch": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "inputs": {
+    "applied_criteria": {
+      "required": true,
+      "from": {
+        "module": "criteria-apply",
+        "output": "applied_criteria"
+      }
+    },
+    "feature_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
+    "verification_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "verification_design"
+      }
+    },
+    "decisions": {
+      "required": false,
+      "from": {
+        "ledger": [
+          "ac-decision"
+        ]
+      }
+    },
+    "previous_report": {
+      "required": false,
+      "from": {
+        "module": "build",
+        "output": "report"
+      },
+      "note": "previous_report and findings are given on a re-run."
+    },
+    "findings": {
+      "required": false,
+      "from": [
+        {
+          "module": "audit",
+          "output": "evaluation"
+        },
+        {
+          "module": "quality",
+          "output": "evaluation"
+        },
+        {
+          "module": "review",
+          "output": "findings"
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "commits": {
+      "format": "git",
+      "checks": [
+        {
+          "type": "git_range",
+          "branch_param": "branch",
+          "absent_reason": {
+            "output": "report",
+            "section": "No commit"
+          },
+          "note": "the commits the run made on the branch, from its head at check-in; a run that makes none says why in the report's ## No commit section (Q19)"
+        }
+      ]
+    },
+    "report": {
+      "file": "build-report.md",
+      "format": "markdown",
+      "checks": [
+        {
+          "type": "table",
+          "first": "Item",
+          "rows_disposed": true,
+          "covers": [
+            {
+              "input": "verification_design",
+              "table": {
+                "first": "Item",
+                "outside_delta": true
+              }
+            }
+          ],
+          "note": "every item of the verification design with its outcome — how it was verified and what the run showed, or why it was not"
+        }
+      ]
+    },
+    "green_blocker": {
+      "file": "green-blocker.md",
+      "format": "markdown",
+      "required": false,
+      "note": "Written when the design cannot be built as it stands: the decision that blocks and why. The design module takes it as an input on its re-run."
+    }
+  },
+  "result": {
+    "summary": "one line, with the commit SHAs"
+  }
+}
