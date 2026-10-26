@@ -248,7 +248,7 @@ finds.
 
 - **[MUST] Resolve the anchor before executing.** Where the anchor being re-derived is a **suite
   verdict** (a test run's pass or fail), the anchor is the recorded local run — the command, the
-  log it wrote and the summary line read from it (Reporting Format item 5) — and the evaluator confirms it by reading that line
+  log it wrote and the summary line read from it (Reporting Format > *Evidence anchor*) — and the evaluator confirms it by reading that line
   at the cited log path, never by re-running the command; a log absent at its path makes the row
   `not-run` (GATE:QUALITY > *Known blind-spot checks* > *Test coverage* > *Execution omission is
   not a defect* below), and a log that does not carry the line is evidence authored without a
