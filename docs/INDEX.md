@@ -25,6 +25,7 @@ These documents are the operating source of truth.
 | --- | --- |
 | [Core](core.md) | AutoFlow operating manual — the authority rules, how a module runs, the records and the hook — and the source of the module command bodies, `/autoflow:<module>`, each with the parts of the core its module uses (ADR-0027 D2, ADR-0038 D9). |
 | [AutoFlow Guide](autoflow-guide.md) | Index of the modules: each one's kind, procedure document, and what it takes and gives. |
+| [Module Usage](module-usage.md) | How each module is run and how one module's output becomes another's input: the invocation, the result, and each module's params, inputs and outputs, generated from the contracts. |
 | Module contracts (`<autoflow-root>/docs/contracts/<module>.json`) | Each module's parameters, inputs and outputs, checked by `<autoflow-root>/scripts/contracts/contract.sh` (ADR-0038 D1). |
 | [U2 Analysis](units/analysis.md) | The analysis module: goal, cautions and analysis report; the other modules are listed in the AutoFlow Guide. |
 | [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`). |

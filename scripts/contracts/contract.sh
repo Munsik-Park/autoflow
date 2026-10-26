@@ -62,7 +62,10 @@
 #             of its row (by the Contract column) in the procedure document's
 #             "Evaluation | Gate | Contract | Items" table, and the first
 #             column of the "Item" table in its procedure section, when that
-#             section has one. It prints each disagreement.
+#             section has one; and, run on every contract, that the generated
+#             part of docs/module-usage.md is the contracts'
+#             (scripts/contracts/gen-module-usage.sh). It prints each
+#             disagreement.
 #
 # Exit: 0 accepted (check-in: the module may run; lint: every contract
 #       agrees) · 1 refused (result.json names each defect; lint: the
@@ -701,6 +704,10 @@ lint() {
       while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
     fi
   done
+  # the module usage document's generated part is the contracts'
+  if [ $# -eq 0 ] && ! bash "$ROOT/scripts/contracts/gen-module-usage.sh" --check 2>/dev/null; then
+    f=module-usage.md; say "differs from the contracts — run: bash scripts/contracts/gen-module-usage.sh"
+  fi
   return $bad
 }
 

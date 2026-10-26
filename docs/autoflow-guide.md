@@ -7,6 +7,8 @@
 > its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
 > authority rules, how a module runs, the Execution Principles, the records and the hook — lives in
 > [`core.md`](core.md).
+> How each module is run and how one module's output becomes another's input:
+> [`module-usage.md`](module-usage.md).
 
 ---
 
