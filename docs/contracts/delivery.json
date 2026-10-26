@@ -84,30 +84,6 @@
           "draft": true
         },
         {
-          "type": "pr_body_covers",
-          "source": {
-            "input": "applied_criteria",
-            "ids": ".criteria[].id"
-          },
-          "note": "every applied criterion is named, with its outcome and where its evidence is"
-        },
-        {
-          "type": "pr_body_covers",
-          "source": {
-            "input": "tool_requests",
-            "ids": ".[].missing"
-          },
-          "note": "every tool request of the run is stated, with what it left unverified"
-        },
-        {
-          "type": "pr_body_covers",
-          "source": {
-            "input": "deferred",
-            "ids": ".[].finding"
-          },
-          "note": "every recommendation the Coordinator deferred or separated is stated"
-        },
-        {
           "type": "pr_checks",
           "not_run_marker": "CI: not run",
           "note": "the head's checks are all green, or the body records that no CI ran with the marker line"

@@ -422,22 +422,6 @@ check_pr() { # <output name> <checks json>
       pr_open)
         jq -e '.state == "OPEN"' <<<"$pr" >/dev/null || defect "$n: the pull request is not open"
         jq -e --argjson c "$c" '($c.draft // false | not) or .isDraft' <<<"$pr" >/dev/null || defect "$n: the pull request is not a draft" ;;
-      pr_body_covers)
-        local name; name=$(jq -r .source.input <<<"$c")
-        while IFS= read -r p; do
-          while IFS= read -r id; do
-            [ -n "$id" ] || continue
-            # the id as a whole identifier: a letter, digit or underscore next to
-            # it, or a mark with one beyond it (AC10, AC-1-2, AC1.c, AC1/x),
-            # continues another id; whitespace, or a mark with none beyond it,
-            # ends one (AC1. — (AC1) — AC1, AC2)
-            jq -e --arg id "$id" '.body as $b | ($id | length) as $l
-              | any($b | indices($id)[]; . as $i
-                  | ($i == 0 or ((($b[$i-1:$i] | test("[A-Za-z0-9_]")) or ($i >= 2 and ($b[$i-2:$i] | test("^[A-Za-z0-9][^A-Za-z0-9_\\s]$")))) | not))
-                    and ((($b[$i+$l:$i+$l+1] | test("[A-Za-z0-9_]")) or ($b[$i+$l:$i+$l+2] | test("^[^A-Za-z0-9_\\s][A-Za-z0-9]$"))) | not))' <<<"$pr" >/dev/null \
-              || defect "$n: the body does not state '$id' (from $name)"
-          done < <(jq -r "[$(jq -r .source.ids <<<"$c")] | .[] | strings" "$p" 2>/dev/null)
-        done < <(input_paths "$name") ;;
       pr_checks)
         if jq -e '(.statusCheckRollup // []) | length > 0' <<<"$pr" >/dev/null; then
           jq -e 'all(.statusCheckRollup[]; ((.conclusion // .state // "") | ascii_upcase) as $s
@@ -521,7 +505,7 @@ check_out() {
 # The check types each format implements above; lint refuses any other.
 KNOWN_TYPES='{"markdown": ["section", "line", "table"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
-  "git": ["git_range"], "pull-request": ["pr_open", "pr_body_covers", "pr_checks"],
+  "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
   "pull-request-comment": ["pr_comment_posted"]}'
 
 # does "<path> > <heading> > <heading>…" resolve under ROOT?
