@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "build",
   "kind": "functional",
@@ -14,6 +14,11 @@
     "branch": {
       "type": "string",
       "required": true
+    },
+    "base": {
+      "type": "string",
+      "required": false,
+      "note": "the branch the pull request is to merge into, the baseline of the lint chain's execution trust boundary (docs/submodule-common-rules.md > Verification and Tools); not given, the remote's default branch"
     }
   },
   "inputs": {
@@ -70,6 +75,13 @@
           "output": "findings"
         }
       ]
+    },
+    "deferred": {
+      "required": false,
+      "from": {
+        "path": "invocation"
+      },
+      "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition}; the build leaves them to their disposition (the form is delivery.json's)"
     }
   },
   "outputs": {
@@ -90,23 +102,7 @@
     "report": {
       "file": "build-report.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "table",
-          "first": "Item",
-          "rows_disposed": true,
-          "covers": [
-            {
-              "input": "verification_design",
-              "table": {
-                "first": "Item",
-                "outside_delta": true
-              }
-            }
-          ],
-          "note": "every item of the verification design with its outcome — how it was verified and what the run showed, or why it was not"
-        }
-      ]
+      "checks": []
     },
     "green_blocker": {
       "file": "green-blocker.md",
@@ -114,8 +110,5 @@
       "required": false,
       "note": "Written when the design cannot be built as it stands: the decision that blocks and why. The design module takes it as an input on its re-run."
     }
-  },
-  "result": {
-    "summary": "one line, with the commit SHAs"
   }
 }

@@ -13,8 +13,9 @@
 # Legs (category: packaging):
 #
 #   H   gate-hook helper lookup and message paths
-#     H1  CLAUDE_PLUGIN_ROOT set: the plugin root's ledger helper runs, never
-#         the target's copy, and the advisory reaches the model
+#     H1  CLAUDE_PLUGIN_ROOT set: the plugin root's spawn-policy readout runs
+#         for the hook's advisory, never the target's copy, and the warning
+#         names it by absolute path
 #     H2  no CLAUDE_PLUGIN_ROOT, the hook at <root>/hooks/: the helper is found
 #         beside it
 #     H3  a plugin root that carries no helper runs none: the target's copy of
@@ -91,24 +92,10 @@ make_plugin_root() {
   cp "$REPO_ROOT/.claude/autoflow/spawn-policy.json" "$d/.claude/autoflow/spawn-policy.json"
 }
 
-# The record root of every leg: HOME's default, $WORK/empty-home/.autoflow
-# (scripts/lib/records.sh, issue #466).
-RECORD_ROOT="$WORK/empty-home/.autoflow"
-# shellcheck source=../../scripts/lib/records.sh
-. "$REPO_ROOT/scripts/lib/records.sh"
-
-# make_target <dir> — a git repository with one attempt whose ledger is
-# defective, so the hook's ledger advisory has something to report whenever its
-# helper runs. The attempt's record directory is under the record root and
-# names <dir> as its checkout.
+# make_target <dir> — a git repository with no AutoFlow file.
 make_target() {
-  local d="$1" a
-  mkdir -p "$d"
-  git_init "$d"
-  a="$RECORD_ROOT/$(autoflow_repo_key "$d")/2026-01-01-000000-issue-1"
-  mkdir -p "$a"
-  printf '%s\n' "$d" > "$a/checkout"
-  printf '# ledger\n\n## no identifier here\n' > "$a/issue-1-ledger.md"
+  mkdir -p "$1"
+  git_init "$1"
 }
 
 # target_policy <dir> — the target's own policy: the default with every
@@ -128,39 +115,41 @@ make_plugin_root "$PLUGIN"
 # ── H: gate-hook helper lookup and message paths ─────────────────────────────
 echo "== H: gate-hook helper lookup and message paths =="
 
+# A spawn on a model no policy row admits draws the hook's spawn-policy
+# advisory whenever its helper runs.
+ADVISED="$(agent_payload autoflow-evaluator no-such-model)"
 T="$WORK/target-h"
 make_target "$T"
-mkdir -p "$T/scripts/ledger"
+mkdir -p "$T/scripts/spawn-policy"
 DECOY_MARK="$WORK/decoy-ran"
-printf '#!/usr/bin/env bash\ntouch %q\nexit 0\n' "$DECOY_MARK" > "$T/scripts/ledger/ledger-entry-id.sh"
+printf '#!/usr/bin/env bash\ntouch %q\nexit 0\n' "$DECOY_MARK" > "$T/scripts/spawn-policy/spawn-policy.sh"
 
-out=$(bash_payload ls | run_clean CLAUDE_PLUGIN_ROOT="$PLUGIN" CLAUDE_PROJECT_DIR="$T" \
-  bash "$PLUGIN/hooks/check-autoflow-gate.sh" 2>"$WORK/h1.err"); rc=$?
-if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && grep -q 'decision-ledger identifier defect' "$WORK/h1.err" \
-   && printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | test("identifier defect")' >/dev/null 2>&1 \
-   && grep -qF "$PLUGIN/scripts/ledger/ledger-entry-id.sh next" "$WORK/h1.err"; then
-  pass "H1: the plugin root's ledger helper runs (the target's copy does not), and the warning names it by absolute path"
+printf '%s' "$ADVISED" | run_clean CLAUDE_PLUGIN_ROOT="$PLUGIN" CLAUDE_PROJECT_DIR="$T" \
+  bash "$PLUGIN/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h1.err"; rc=$?
+if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && grep -q "outside the spawn policy's admitted set" "$WORK/h1.err" \
+   && grep -qF "$PLUGIN/scripts/spawn-policy/spawn-policy.sh model <phase-key>" "$WORK/h1.err"; then
+  pass "H1: the plugin root's spawn-policy readout runs (the target's copy does not), and the warning names it by absolute path"
 else
   failc "H1" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h1.err")"
 fi
 
-rm -f "$DECOY_MARK" "$RECORD_ROOT/.ledger-check-cache"
-bash_payload ls | run_clean CLAUDE_PROJECT_DIR="$T" bash "$PLUGIN/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h2.err"; rc=$?
-if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && grep -q 'decision-ledger identifier defect' "$WORK/h2.err"; then
+rm -f "$DECOY_MARK"
+printf '%s' "$ADVISED" | run_clean CLAUDE_PROJECT_DIR="$T" bash "$PLUGIN/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h2.err"; rc=$?
+if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && grep -q "outside the spawn policy's admitted set" "$WORK/h2.err"; then
   pass "H2: without CLAUDE_PLUGIN_ROOT the hook at <root>/hooks/ finds the helper beside it"
 else
   failc "H2" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h2.err")"
 fi
 
-# A plugin root that carries hooks/ only: the target's decoy helper (make_target
+# A plugin root that carries hooks/ only: the target's decoy helper (written
 # above, under $T) is the only copy of the helper anywhere the hook could look.
 BARE="$WORK/bare-root"
 mkdir -p "$BARE/hooks"
 cp "$HOOK_SRC" "$BARE/hooks/check-autoflow-gate.sh"
-rm -f "$DECOY_MARK" "$RECORD_ROOT/.ledger-check-cache"
-bash_payload ls | run_clean CLAUDE_PLUGIN_ROOT="$BARE" CLAUDE_PROJECT_DIR="$T" \
+rm -f "$DECOY_MARK"
+printf '%s' "$ADVISED" | run_clean CLAUDE_PLUGIN_ROOT="$BARE" CLAUDE_PROJECT_DIR="$T" \
   bash "$BARE/hooks/check-autoflow-gate.sh" >/dev/null 2>"$WORK/h3.err"; rc=$?
-if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && ! grep -q 'decision-ledger identifier defect' "$WORK/h3.err"; then
+if [ "$rc" -eq 0 ] && [ ! -e "$DECOY_MARK" ] && ! grep -q "outside the spawn policy's admitted set" "$WORK/h3.err"; then
   pass "H3: a plugin root without the helper runs none — the target's copy is never executed"
 else
   failc "H3" "hook" "rc=$rc decoy-ran=$([ -e "$DECOY_MARK" ] && echo yes || echo no) stderr=$(head -c 300 "$WORK/h3.err")"

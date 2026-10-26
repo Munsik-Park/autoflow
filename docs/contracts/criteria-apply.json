@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "criteria-apply",
   "kind": "deterministic",
@@ -27,7 +27,7 @@
           "ac-decision"
         ]
       },
-      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes line (or an Overrides line, which an earlier ledger may carry) is not applied (ibid., Replacement is explicit); standing entries on one AC id whose conclusions differ, none naming another, are a conflict that refuses the run. Who wrote an entry is not read: every entry has the same effect, and an identifier is any capital letter and number. AC and Disposition are today's lines; Text and Into are the lines Q5 adds, so that a script can apply the decision — sub-issue 3 adds them to the grammar.",
+      "note": "The [ac-decision] entries of docs/decision-ledger.md > Decision-point entries, the standing ones applied in ledger order: an entry a later one names on a Supersedes line (or an Overrides line, which an earlier ledger may carry) is not applied (ibid., Replacement is explicit); standing entries on one AC id whose conclusions differ, none naming another, are a conflict that refuses the run. Who wrote an entry is not read: every entry has the same effect, and an identifier is any capital letter and number. It reads each entry's AC, Disposition, Text and Into lines (docs/decision-ledger.md > Acceptance-criterion decisions).",
       "fields": {
         "AC": {
           "required": true,
@@ -85,8 +85,5 @@
       ],
       "note": "criteria: the criteria as applied, in order; applied: the identifiers of the entries applied, in order"
     }
-  },
-  "result": {
-    "summary": "one line"
   }
 }

@@ -5,8 +5,8 @@
 # contract.sh — the module contract validator (issue #509, epic #507;
 # docs/records/design-reviews/io-contract-modules.md > 5.3, Q6)
 # =============================================================================
-# A module runs between two calls of this script, both on the invocation file
-# the Coordinator wrote:
+# A module runs between two calls of this script, both on its invocation
+# file:
 #
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-in  <invocation.json>
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>
@@ -40,7 +40,11 @@
 #             (<out>/tool-requests.json: a JSON array of {missing, instead},
 #             [] when the run lacked nothing — 5.3, Q10). It writes
 #             <out>/result.json: the module, accepted or refused, each
-#             output's path, each defect found, and the tool requests.
+#             output's path, each defect found, the tool requests, and the
+#             AutoFlow that ran it — `autoflow`: its version, its root and,
+#             for a root that is a git work tree, its HEAD and whether the
+#             tree is dirty (ADR-0027 D4). A refusal's result carries the
+#             same.
 #
 # lint      — the contracts agree with each other and with the documents
 #             they name (no invocation; §8, the contract–document check):
@@ -53,7 +57,14 @@
 #             another module produces names a contract and an output it has;
 #             every output's format and check types are ones this script
 #             implements; every param, input and output a check names is
-#             declared; reads_records is true or false. It prints each
+#             declared; reads_records is true or false; an evaluation
+#             contract's score keys are its rubric's items — the Items cell
+#             of its row (by the Contract column) in the procedure document's
+#             "Evaluation | Gate | Contract | Items" table, and the first
+#             column of the "Item" table in its procedure section, when that
+#             section has one; and, run on every contract, that the per-module
+#             part of docs/autoflow-guide.md is the contracts'
+#             (scripts/contracts/gen-module-usage.sh). It prints each
 #             disagreement.
 #
 # Exit: 0 accepted (check-in: the module may run; lint: every contract
@@ -98,13 +109,28 @@ input_paths() { jq -r --arg n "$1" '.inputs[$n] // empty | if type == "array" th
 has_input() { [ -n "$(input_paths "$1")" ]; }
 param() { jq -r --arg n "$1" '.params[$n] // empty' "$INV"; }
 
+# The AutoFlow that ran the module (ADR-0027 D4): the plugin's version, the
+# root it was loaded from and, when that root is a git work tree of its own, its
+# HEAD and whether the tree is dirty.
+autoflow_run() {
+  local v head='' dirty=''
+  v=$(jq -r '.version // empty' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null)
+  if [ "$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" = "$(cd -P -- "$ROOT" && pwd)" ]; then
+    head=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
+    if [ -n "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then dirty=true; else dirty=false; fi
+  fi
+  jq -nc --arg v "$v" --arg r "$ROOT" --arg h "$head" --arg d "$dirty" \
+    '{version: $v, root: $r} + (if $h == "" then {} else {head: $h, dirty: ($d == "true")} end)'
+}
+
 write_result() { # <status>
   mkdir -p "$OUT"
   local tr='[]' outs=${OUTPUTS:-'{}'}
   [ -f "$OUT/tool-requests.json" ] && jq -e 'type == "array"' "$OUT/tool-requests.json" >/dev/null 2>&1 \
     && tr=$(jq -c . "$OUT/tool-requests.json")
   jq -n --arg m "$MODULE" --arg s "$1" --argjson d "$DEFECTS" --argjson o "$outs" --argjson t "$tr" \
-    '{contract: 1, module: $m, status: $s, outputs: $o, defects: $d, tool_requests: $t}' >"$OUT/result.json"
+    --argjson a "$(autoflow_run)" \
+    '{contract: 1, module: $m, status: $s, outputs: $o, defects: $d, tool_requests: $t, autoflow: $a}' >"$OUT/result.json"
 }
 
 finish() { # <stage>
@@ -271,9 +297,6 @@ check_markdown() { # <output name> <file> <checks json> <files map>
           || { defect "$n: no section '## $h'"; continue; }
         jq -e --arg h "$h" 'any(.sections[] | select(.heading == $h) | .body[]; test("\\S"))' <<<"$model" >/dev/null \
           || defect "$n: section '## $h' is empty (write \"none\" when there is nothing)" ;;
-      line)
-        jq -e --arg p "$(jq -r .pattern <<<"$c")" 'any(.lines[]; test($p))' <<<"$model" >/dev/null \
-          || defect "$n: no line matches $(jq -r .pattern <<<"$c")" ;;
       table)
         local tbl desc
         tbl=$(jq -c --argjson c "$c" "$MD_JQ"' pick($c)' <<<"$model")
@@ -364,6 +387,21 @@ check_json() { # <output name> <file> <checks json>
         local by dby src name p
         by=$(jq -r .by <<<"$c"); dby=$(jq -r '.disposed_by // empty' <<<"$c")
         name=$(jq -r .source.input <<<"$c")
+        if jq -e '.count_only // false' <<<"$c" >/dev/null; then
+          # as many entries as the source has items, each disposed of; which entry
+          # answers which item is the module's to state
+          local want got
+          want=0
+          while IFS= read -r p; do
+            want=$((want + $(jq -r "[$(jq -r .source.ids <<<"$c")] | length" "$p" 2>/dev/null || echo 0)))
+          done < <(input_paths "$name")
+          got=$(jq -r "[$by] | length" "$f" 2>/dev/null || echo 0)
+          [ "$got" -ge "$want" ] || defect "$n: $by has $got entries for the $want items of $name"
+          if [ -n "$dby" ]; then
+            jq -e "[try ($dby)] | all((. // \"\") | tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
+          fi
+          continue
+        fi
         while IFS= read -r p; do
           while IFS= read -r id; do
             [ -n "$id" ] || continue
@@ -503,7 +541,7 @@ check_out() {
 
 # --- lint ---------------------------------------------------------------------
 # The check types each format implements above; lint refuses any other.
-KNOWN_TYPES='{"markdown": ["section", "line", "table"],
+KNOWN_TYPES='{"markdown": ["section", "table"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
   "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
   "pull-request-comment": ["pr_comment_posted"]}'
@@ -524,6 +562,50 @@ ref_resolves() { # <reference>
     [ -n "$n" ] || { echo "no heading '$h' in $path after line $line"; return 1; }
     line=$n
   done
+}
+
+# the first column of the "Item" table in the section a reference names, or
+# nothing when the section has none
+section_items() { # <reference>
+  local ref path rest h line=0 level n
+  ref=$(sed -E 's/ \([^)]*\)$//' <<<"$1"); path=${ref%% > *}; rest=${ref#* > }
+  while [ -n "$rest" ]; do
+    h=${rest%% > *}
+    [ "$h" = "$rest" ] && rest="" || rest=${rest#* > }
+    h=$(sed -E 's/ \([^)]*\)$//' <<<"$h")
+    n=$(awk -v h="$h" -v from="$line" 'NR > from && /^#+ / { t = $0; sub(/^#+ +/, "", t); sub(/ +$/, "", t); if (t == h) { print NR; exit } }' "$ROOT/$path")
+    [ -n "$n" ] || return 0
+    line=$n
+  done
+  level=$(sed -n "${line}p" "$ROOT/$path" | sed -E 's/^(#+).*/\1/' | tr -d '\n' | wc -c)
+  awk -v from="$line" -v lv="$level" 'NR > from && /^#+ / { l = $0; sub(/ .*/, "", l); if (length(l) <= lv) exit } NR > from' "$ROOT/$path" \
+    | jq -Rsc "$MD_JQ model | pick({first: \"Item\"}) | if . == null then empty else [.rows[][0]] end"
+}
+
+# an evaluation contract's score keys against its rubric's items (§8)
+rubric_disagreements() { # <contract json>
+  local c=$1 keys path items
+  keys=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.keys_exactly // empty] | first // empty' <<<"$c")
+  [ -n "$keys" ] || { echo "no scores keys_exactly to check against the rubric"; return; }
+  path=$(jq -r '.procedure // "" | sub(" > .*$"; "")' <<<"$c")
+  [ -f "$ROOT/$path" ] || return 0
+  items=$(md_model "$ROOT/$path" | jq -c --arg m "$(jq -r .module <<<"$c")" "$MD_JQ"'
+    pick({header: ["Evaluation", "Gate", "Contract", "Items"]})
+    | if . == null then null else ([.rows[] | select(.[2] == $m) | .[3] | split(", ")] | first) end')
+  if [ -z "$items" ]; then
+    echo "cannot read the rubric's items from $path"
+  elif [ "$items" = null ]; then
+    echo "no row for $(jq -r .module <<<"$c") in the Evaluation | Gate | Contract | Items table of $path"
+  else
+    jq -r --argjson k "$keys" --argjson i "$items" --arg w "$path > Evaluation Types" '
+      (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
+      (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+  fi
+  items=$(section_items "$(jq -r '.procedure // ""' <<<"$c")")
+  [ -n "$items" ] && jq -r --argjson k "$keys" --argjson i "$items" --arg w "$(jq -r .procedure <<<"$c")" '
+    (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
+    (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+  return 0
 }
 
 lint() {
@@ -555,7 +637,7 @@ lint() {
           elif ($all[$f.module].outputs | has($f.output) | not) then "input \($k): module \($f.module) has no output \($f.output)"
           else empty end
         elif has("ledger") then empty
-        elif has("path") then (if .path | IN("target", "coordinator") then empty else "input \($k): path is not target or coordinator" end)
+        elif has("path") then (if .path | IN("target", "invocation") then empty else "input \($k): path is not target or invocation" end)
         elif has("results") then (if .results == "tool_requests" then empty else "input \($k): results is not tool_requests" end)
         else "input \($k): from names no module, ledger, path or results" end' <<<"$c") || say "inputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
@@ -573,7 +655,16 @@ lint() {
             (if $ch.absent_reason and ($c.outputs[$ch.absent_reason.output].format // "") != "markdown" then "output \($o): absent_reason names an output that is not markdown" else empty end)
         end' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    # an evaluation's score keys are its rubric's items
+    if jq -e '.kind == "evaluation"' <<<"$c" >/dev/null; then
+      found=$(rubric_disagreements "$c")
+      while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    fi
   done
+  # the guide's per-module part is the contracts'
+  if [ $# -eq 0 ] && ! bash "$ROOT/scripts/contracts/gen-module-usage.sh" --check 2>/dev/null; then
+    f=autoflow-guide.md; say "differs from the contracts — run: bash scripts/contracts/gen-module-usage.sh"
+  fi
   return $bad
 }
 

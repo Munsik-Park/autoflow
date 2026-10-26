@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "criterion-reconcile",
   "kind": "functional",
@@ -40,32 +40,11 @@
       "file": "criterion-review.md",
       "format": "markdown",
       "note": "the screen's record brought up to date — a new file, the input left as it is (§5.3)",
-      "checks": [
-        {
-          "type": "line",
-          "pattern": "^Issue body sha256: [0-9a-f]{64}$",
-          "note": "the sha256 of the issue body reviewed, on a line of its own"
-        },
-        {
-          "type": "section",
-          "heading": "Dispositions"
-        },
-        {
-          "type": "table",
-          "under": "Dispositions",
-          "first": "Item",
-          "rows_disposed": true,
-          "unique_first": true,
-          "note": "one row per item the review found — each criterion, and each problem found beyond them — with the disposition the module decided and its grounds"
-        }
-      ],
+      "checks": [],
       "evaluation": [
-        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence says so and states the question for the advisor (Q18) — the one way out, not a second list.",
+        "every criterion of the issue, and every problem the review finds beyond them, is disposed of, with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
         "every finding of the trace and every in-depth case is reflected in the dispositions, with its grounds"
       ]
     }
-  },
-  "result": {
-    "summary": "one line"
   }
 }

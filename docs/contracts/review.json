@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "review",
   "kind": "functional",
@@ -40,6 +40,7 @@
     "findings": {
       "file": "findings.md",
       "format": "markdown",
+      "checks": [],
       "evaluation": [
         "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
         "every finding of every review is in the file"
@@ -57,8 +58,5 @@
         }
       ]
     }
-  },
-  "result": {
-    "summary": "one line, with the highest severity among the findings that hold"
   }
 }

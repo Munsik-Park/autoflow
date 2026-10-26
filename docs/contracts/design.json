@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "design",
   "kind": "functional",
@@ -38,8 +38,7 @@
       "required": false,
       "from": {
         "ledger": [
-          "ac-decision",
-          "design-point"
+          "ac-decision"
         ]
       }
     },
@@ -97,61 +96,19 @@
     "feature_design": {
       "file": "feature-design.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "section",
-          "heading": "Scope"
-        },
-        {
-          "type": "table",
-          "under": "Scope",
-          "first": "Item",
-          "required": false,
-          "unique_first": true,
-          "note": "the items the design includes beyond the criteria, each with its id; absent when it includes none"
-        },
-        {
-          "type": "section",
-          "heading": "Decision requests",
-          "note": "\"none\" when there is none"
-        }
-      ]
+      "checks": []
     },
     "verification_design": {
       "file": "verification-design.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "table",
-          "first": "Item",
-          "outside_delta": true,
-          "rows_disposed": true,
-          "covers": [
-            {
-              "input": "applied_criteria",
-              "ids": ".criteria[].id"
-            },
-            {
-              "output": "feature_design",
-              "table": {
-                "under": "Scope",
-                "first": "Item"
-              }
-            }
-          ],
-          "note": "Every item the work owes has a disposition: each applied acceptance criterion and each item the feature design's \"## Scope\" includes (Q8, Q14). How an item is verified, or why it is not, is the module's judgment in its own words. The table the first run wrote is the one outside every \"## Delta — round <n>\" section: a re-run appends a delta and leaves that table as it stands (docs/units/design.md > Re-entry)."
-        }
-      ]
+      "checks": []
     }
-  },
-  "result": {
-    "summary": "one line"
   },
   "rules": [
     {
       "id": "delta-not-rewrite",
       "check": "evaluation",
-      "rule": "On a re-run, each output document the run changes is the previous document unchanged, then one appended section \"## Delta — round <n>\", n being the number of delta sections in the previous document plus one; what the round is for, the module states from its inputs (Q13). \"## Decision requests\" is the exception: rewritten in place to its current state.",
+      "rule": "On a re-run, each output document the run changes is the previous document unchanged, then one appended section \"## Delta — round <n>\", n being the number of delta sections in the previous document plus one; what the round is for, the module states from its inputs (Q13).",
       "source": "docs/units/design.md > Re-entry"
     }
   ]

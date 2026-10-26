@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/handoff/confirm-ci-green.sh
 #
-# HANDOFF CI confirmation — deterministic "confirm CI is green" helper.
+# CI confirmation of the delivery module — deterministic "confirm CI is green"
+# helper.
 #
 # Promotes the CI-confirmation invariant from prose
 # (docs/units/delivery.md > CI) into a single enforceable invocation so the
-# orchestrator never hand-writes a polling loop again (issue #25). It reads
+# session that runs the delivery module never hand-writes a polling loop
+# (issue #25). It reads
 # `mergeable`/`mergeStateStatus` FIRST and early-exits on CONFLICTING/DIRTY
 # WITHOUT ever entering a poll (the PR #321 infinite-wait class); only when the
 # PR is MERGEABLE/CLEAN does it run a finite, deadline-bounded poll that
@@ -17,8 +19,8 @@
 #
 # Observe-only: it performs no merge, no CI re-trigger, and no conflict
 # resolution. Conflict *resolution* lives in the docs (a sub-repo pointer →
-# docs/units/delivery.md > Multi-repo delivery; other conflict → rebase on
-# the PR's base). This script owns only the *confirmation*.
+# docs/units/delivery.md > Multi-repo delivery; other conflict → stated in
+# the report). This script owns only the *confirmation*.
 #
 # Usage:
 #   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
@@ -44,8 +46,7 @@
 # Exit-code contract (feature §4):
 #   0   CI green         — >=1 check present and every element green.
 #   10  not mergeable    — a CONFIRMED CONFLICTING/DIRTY value at precheck OR on
-#                          a mid-poll flip; stderr carries the reserved
-#                          [HANDOFF-INTERNAL-RETRY] token. No poll on precheck.
+#                          a mid-poll flip. No poll on precheck.
 #                          Only on a JSON-confirmed read; a failed/timed-out/
 #                          empty/non-JSON read — at the precheck OR mid-poll —
 #                          falls through to the bounded poll (or, mid-poll, to a
@@ -75,8 +76,9 @@
 #   14  inconclusive     — could not confirm mergeable within the bound; gh
 #                          transport/auth/parse failure, or a mergeability that
 #                          never settled within the bound, suspected (NOT a
-#                          conflict); bounded; stderr carries the reserved
-#                          [HANDOFF-INTERNAL-RETRY] token. NOT green.
+#                          conflict); bounded. NOT green.
+#
+# Each run reads once; this script counts nothing across runs.
 #   64  usage / bad arg / bad env int.
 #
 # `set -uo pipefail` (not -e): the poll intentionally tolerates a transient
@@ -422,7 +424,7 @@ else
       # mergeable, so empty unambiguously marks a bad read.
   elif is_not_mergeable "$pre_mergeable" "$pre_state"; then
     mergeable_confirmed=1
-    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase on the PR's base); HANDOFF internal retry" >&2
+    echo "not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> state it in the report)" >&2
     exit 10
   elif is_mergeable_undetermined "$pre_mergeable" "$pre_state"; then
     : # still-computing UNKNOWN on either field (or an unrecognised value): an uncertain read,
@@ -475,7 +477,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   undetermined=0
   if is_mergeable_undetermined "$m" "$s"; then undetermined=1; else mergeable_confirmed=1; fi
   if is_not_mergeable "$m" "$s"; then
-    echo "[HANDOFF-INTERNAL-RETRY] not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> rebase on the PR's base); HANDOFF internal retry" >&2
+    echo "not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> state it in the report)" >&2
     exit 10
   fi
 
@@ -485,14 +487,14 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
   if [ "$fail" -gt 0 ]; then
-    echo "a check concluded failure/error/cancelled/timed_out — red CI (route by remedy_class)" >&2
+    echo "a check concluded failure/error/cancelled/timed_out — red CI" >&2
     exit 12
   fi
   # An undetermined read withholds the GREEN verdict only: exit 0 is contracted
   # as "CI green on a PR whose mergeable state was confirmed". The fail>0 branch
   # above and the saw_checks accounting below still run — a concluded failure is
   # true of the read however mergeability resolves, and masking it would sleep a
-  # red build to a deadline code that never routes a re-entry.
+  # red build to a deadline code that hides the failure.
   # An unresolved superseded-run lookup withholds the GREEN verdict the same way.
   if [ "$undetermined" -eq 0 ] && [ "$RUN_WF_COMPLETE" -eq 1 ] \
      && [ "$total" -gt 0 ] && [ "$green" -eq "$total" ]; then
@@ -511,7 +513,7 @@ done
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
 if [ "$mergeable_confirmed" -eq 0 ]; then
-  echo "[HANDOFF-INTERNAL-RETRY] could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a merge state that never settled (an UNKNOWN mergeable or mergeStateStatus) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
+  echo "could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a merge state that never settled (an UNKNOWN mergeable or mergeStateStatus) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then

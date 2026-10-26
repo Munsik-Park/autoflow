@@ -18,7 +18,7 @@
 # and changes no label — the aggregation of every review of the PR posts the
 # one comment.
 #
-# The orchestrator launches this wrapper once per pull request and round when
+# The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's
 # `~/.autoflow/config.json` — names claude or names no reviewer. Model, effort,
 # rule file and lenses file come from the shared resolver
@@ -27,16 +27,18 @@
 # wrapper prints the fixed marker line `user-config: UNREADABLE <path> —
 # <error>`, starts no claude and exits 6.
 #
-# `--records <dir>` names the attempt's record directory, where claude reads
-# the cycle's design artifacts; it and the AutoFlow tree are added to claude's
-# working directories (`--add-dir`).
+# `--records <dir>` names the attempt's record directory — the one the
+# invocation names (`records`, ADR-0038 D4) —, where claude reads the earlier
+# runs' work; it and the AutoFlow tree are added to claude's working
+# directories (`--add-dir`).
 #
 # Per-PR review: `--repo owner/name` reviews a sub-repo PR (the prompt tells
 # claude to pass `--repo` to every gh command); without it the PR is the
 # current repository's.
 #
-# The record file is an absolute path outside the checkout's tree — the
-# attempt's record directory (`autoflow-records dir`).
+# The record file is an absolute path outside the checkout's tree — in the
+# run's output directory under the attempt's record directory, which the
+# caller names (`--out`).
 #
 # Usage: scripts/review/claude-review-pr.sh --pr <number> --out <record file>
 #                                           [--repo <owner/name>] [--expected-head <branch>]
@@ -98,7 +100,7 @@ trap 'rm -f "$SCRATCH"' EXIT
 resolve_reviewer_settings claude-review claude
 review_readout
 if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
-  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it, or proceed without this reviewer — the operator's choice." >&2
+  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it; the review round goes on without this reviewer." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 build_review_backend_args

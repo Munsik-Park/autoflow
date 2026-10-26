@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "quality",
   "kind": "evaluation",
@@ -66,6 +66,13 @@
         "output": "evaluation"
       }
     },
+    "deferred": {
+      "required": false,
+      "from": {
+        "path": "invocation"
+      },
+      "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition} (Q1: the triage result is a content input; the form is delivery.json's)"
+    },
     "decisions": {
       "required": false,
       "from": {
@@ -86,7 +93,7 @@
     "evaluation": {
       "file": "evaluation.json",
       "format": "json",
-      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "note": "the evaluator, writing into the output directory its prompt names (Q7, revised 2026-10-26)",
       "checks": [
         {
           "type": "keys",
@@ -124,6 +131,15 @@
                 "input": "previous_evaluation"
               }
             },
+            "refine_observations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "entry",
+                "disposition"
+              ],
+              "note": "the evaluator's disposition of every entry of the build report's \"## Out-of-scope observations — guard / boundary logic touched\" section; [] when it says none (Q14)"
+            },
             "summary": {
               "type": "string",
               "required": true
@@ -144,7 +160,7 @@
           "keys": [
             "verdict"
           ],
-          "note": "Q2: applying the pass values is the Coordinator's"
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
         },
         {
           "type": "partition",
@@ -169,7 +185,8 @@
           },
           "by": ".rescore.prior_findings[].finding",
           "disposed_by": ".rescore.prior_findings[].disposition",
-          "note": "every finding of the previous evaluation has its disposition"
+          "note": "every finding of the previous evaluation has its disposition; which entry answers which finding the evaluation states in its own words",
+          "count_only": true
         }
       ]
     }
@@ -181,8 +198,5 @@
       "security_rework_at_or_below": 3
     },
     "source": "docs/evaluation-system.md > PASS Criteria"
-  },
-  "result": {
-    "summary": "one line"
   }
 }

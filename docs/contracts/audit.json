@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "audit",
   "kind": "evaluation",
@@ -41,8 +41,9 @@
     "security_checklist": {
       "required": false,
       "from": {
-        "path": "target"
-      }
+        "path": "invocation"
+      },
+      "note": "the target's checklist at the version security-checklist.sh status names (score=), written to a file in the record directory (git show <score>); not given when none is declared"
     },
     "previous_evaluation": {
       "required": false,
@@ -56,7 +57,7 @@
     "evaluation": {
       "file": "evaluation.json",
       "format": "json",
-      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "note": "the evaluator, writing into the output directory its prompt names (Q7, revised 2026-10-26)",
       "checks": [
         {
           "type": "keys",
@@ -121,7 +122,7 @@
           "keys": [
             "verdict"
           ],
-          "note": "Q2: applying the pass values is the Coordinator's"
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
         },
         {
           "type": "partition",
@@ -146,7 +147,8 @@
           },
           "by": ".rescore.prior_findings[].finding",
           "disposed_by": ".rescore.prior_findings[].disposition",
-          "note": "every finding of the previous evaluation has its disposition"
+          "note": "every finding of the previous evaluation has its disposition; which entry answers which finding the evaluation states in its own words",
+          "count_only": true
         }
       ]
     }
@@ -157,8 +159,5 @@
       "each_item_at_least": 7
     },
     "source": "docs/evaluation-system.md > PASS Criteria"
-  },
-  "result": {
-    "summary": "one line"
   }
 }

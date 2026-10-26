@@ -6,7 +6,7 @@
 # =============================================================================
 # The per-phase spawn policy (model + effort) lives in exactly one machine-
 # readable place: .claude/autoflow/spawn-policy.json. Every non-Workflow
-# consumer — the orchestrator before a direct spawn, the gate hook's advisory,
+# consumer — a module before a direct spawn, the gate hook's advisory,
 # the contract suites — obtains a value by running this script, never by
 # reading a prose table. Editing one config row therefore changes the next
 # spawn with no other file touched (docs/core.md > Spawn Model — Phase-by-Phase).

@@ -10,36 +10,32 @@
 # <version>/), and a realistic, zero-submodule dummy library — its own git
 # history, a foreign package.json/src/ payload, a README and a CLAUDE.md of its
 # own, and no AutoFlow file at all — is the target and the working directory of
-# every run. The PREFLIGHT scripts are run by their installed path and the gate
-# hook with CLAUDE_PLUGIN_ROOT naming the installed copy and CLAUDE_PROJECT_DIR
-# the target, as the harness runs them. `gh` is a stub that answers every
-# lookup with an empty list, so no run reaches the network. Plain bash +
-# jq/git/tar/grep (no bats, no node/npm).
+# every run. The scripts are run by their installed path and the gate hook with
+# CLAUDE_PLUGIN_ROOT naming the installed copy and CLAUDE_PROJECT_DIR the
+# target, as the harness runs them. `gh` is a stub that answers an issue's
+# lookup with a fixed body and every other lookup with an empty list, so no run
+# reaches the network. Plain bash + jq/git/tar/grep (no bats, no node/npm).
 #
 # Legs (category: packaging):
 #
 #   E1  the dummy target is realistic and unstamped
 #     E1a  foreign payload present, no .gitmodules, no AutoFlow file
 #
-#   E2  the PREFLIGHT scripts resolve the plugin root, and the state lives
-#       under the record root, outside the target (issue #466)
-#     E2a  cycle-status.sh reports the plugin record: the installed root, the
-#          plugin name and version, and `not a git work tree`; and the record
-#          root, HOME's default
-#     E2b  cycle-status.sh run from a git work tree (this checkout) reports
-#          its HEAD
-#     E2c  the target's attempt under the record root is the one cycle-status.sh
-#          reports, and the entry it prints is its resume
-#     E2d  local-checks.sh writes its record to the attempt's ledger, and the
-#          plugin root gains no ledger
+#   E2  the records live under the record root, outside the target (issue
+#       #466; ADR-0038 D4)
+#     E2a  the installed autoflow-records prints the record root, HOME's
+#          default, and the target's issue-draft directory under it
+#     E2b  autoflow-records makes no attempt: `new`, `dir`, `base` and `claim`
+#          are usage errors that create no branch and no directory
+#     E2c  criterion-ready.sh, run from a subdirectory of the target, prints
+#          the sha256 of the issue body
 #
 #   E3  the gate hook, run as the harness runs it
 #     E3a  a benign command is allowed (exit 0)
-#     E3b  the hook reads the state of the target's attempt: `git push` is
-#          admitted with no state file and denied once the attempt holds an
-#          active one with no gate scores
-#     E3c  the ledger advisory finds its helper in the plugin root, and its
-#          cache lands at the record root
+#     E3b  with no state anywhere, a push of the work branch is admitted and
+#          a push to the default branch denied (ADR-0038 D5)
+#     E3c  with no state anywhere, a write that rewrites the attempt's ledger
+#          is denied and one that appends to it admitted
 #     E3e  after every run above, the target's `git status --porcelain` is
 #          empty: AutoFlow left no file in a tree that ignores none
 #     E3d  the target's spawn policy wins over the plugin default — in the
@@ -82,10 +78,12 @@ VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
 HOOK="$ROOT/hooks/check-autoflow-gate.sh"
 find "$ROOT" -type f | LC_ALL=C sort > "$WORK/root-before.list"
 
-# The stub gh: every lookup answers an empty list; nothing reaches the network.
+# The stub gh: an issue's lookup answers a fixed body, every other lookup an
+# empty list; nothing reaches the network.
 STUB="$WORK/stub-bin"
 mkdir -p "$STUB"
-printf '#!/usr/bin/env bash\necho "[]"\n' > "$STUB/gh"
+printf '#!/usr/bin/env bash\nif [ "$1 $2" = "issue view" ]; then printf %%s %s; else echo "[]"; fi\n' \
+  "'{\"body\":\"e2e body\"}'" > "$STUB/gh"
 chmod +x "$STUB/gh"
 
 # HOME is a scratch directory: the user file and the record root (its default,
@@ -95,7 +93,7 @@ TEST_HOME="$WORK/home"
 mkdir -p "$TEST_HOME"
 RECORD_ROOT="$TEST_HOME/.autoflow"
 
-# in_target <dir> <cmd…> — a command run as PREFLIGHT runs it: the working
+# in_target <dir> <cmd…> — a command run as a session runs it: the working
 # directory the target, the developer's own session variables cleared.
 in_target() {
   local _d="$1"; shift
@@ -155,70 +153,44 @@ else
 fi
 
 # ── E2 ──────────────────────────────────────────────────────────────────────
-echo "== E2: the PREFLIGHT scripts resolve the plugin root; the state lives under the record root =="
-in_target "$T" bash "$ROOT/scripts/preflight/cycle-status.sh" >"$WORK/e2a.out" 2>&1; rc=$?
-if [ "$rc" -eq 0 ] && grep -qxF "autoflow root: $ROOT" "$WORK/e2a.out" \
-   && grep -qxF "  plugin: autoflow $VERSION" "$WORK/e2a.out" \
-   && grep -qxF "  git: not a git work tree" "$WORK/e2a.out" \
-   && grep -qxF "record root: $RECORD_ROOT" "$WORK/e2a.out" \
-   && grep -qxF "attempts: none" "$WORK/e2a.out"; then
-  pass "E2a: cycle-status.sh reports the plugin record — root $ROOT, autoflow $VERSION, not a git work tree — and the record root $RECORD_ROOT"
+echo "== E2: the records live under the record root, outside the target =="
+got_root="$(in_target "$T" "$ROOT/bin/autoflow-records" root 2>&1)"; rc1=$?
+got_drafts="$(in_target "$T" "$ROOT/bin/autoflow-records" drafts 2>&1)"; rc2=$?
+if [ "$rc1" -eq 0 ] && [ "$got_root" = "$RECORD_ROOT" ] && [ "$rc2" -eq 0 ] \
+   && [ "$got_drafts" = "$RECORD_ROOT/$KEY/drafts" ] && [ -d "$got_drafts" ]; then
+  pass "E2a: autoflow-records prints the record root $RECORD_ROOT and the drafts directory under it"
 else
-  failc "E2a" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2a.out")"
+  failc "E2a" "root rc=$rc1 '$got_root' drafts rc=$rc2 '$got_drafts'"
 fi
 
-in_target "$T" bash "$REPO_ROOT/scripts/preflight/cycle-status.sh" >"$WORK/e2b.out" 2>&1; rc=$?
-head_sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
-if [ "$rc" -eq 0 ] && grep -qxF "autoflow root: $REPO_ROOT" "$WORK/e2b.out" \
-   && grep -qE "^  git: $head_sha (clean|dirty \([0-9]+ path\(s\)\))\$" "$WORK/e2b.out"; then
-  pass "E2b: run from a git work tree (a --plugin-dir clone), cycle-status.sh reports its HEAD and dirty state"
+branch_before="$(git -C "$T" symbolic-ref --short HEAD)"
+e2b=""
+for sub in "new --issue 7" dir base claim; do
+  # shellcheck disable=SC2086
+  in_target "$T" "$ROOT/bin/autoflow-records" $sub >/dev/null 2>"$WORK/e2b.err"; rc=$?
+  [ "$rc" -eq 64 ] || e2b="$e2b [$sub: rc=$rc $(head -c 120 "$WORK/e2b.err")]"
+done
+if [ -z "$e2b" ] && [ "$(git -C "$T" symbolic-ref --short HEAD)" = "$branch_before" ] \
+   && [ "$(git -C "$T" branch --list | wc -l | tr -d ' ')" = 1 ] \
+   && [ "$(cd "$RECORD_ROOT/$KEY" && ls -A)" = drafts ]; then
+  pass "E2b: autoflow-records makes no attempt — new, dir, base and claim are usage errors that create nothing"
 else
-  failc "E2b" "rc=$rc head=$head_sha out=$(tr '\n' '|' < "$WORK/e2b.out")"
+  failc "E2b" "$e2b branch=$(git -C "$T" symbolic-ref --short HEAD) dirs=$(ls -A "$RECORD_ROOT/$KEY" | tr '\n' ' ')"
 fi
 
-# The attempt's record directory and its owner file are made when the cycle
-# creates the attempt, before its criterion review stage (autoflow-records new —
-# which fetches, so it is made here by hand), and the orchestrator writes the
-# state file at PREFLIGHT's end (docs/state-tracking.md).
-SD="$RECORD_ROOT/$KEY/2026-10-17-000000-issue-7"
-mkdir -p "$SD"
-printf '%s\n' "$T" > "$SD/checkout"
-cat > "$SD/issue-7.json" <<'STATE'
-{
-  "active": true,
-  "issue": "#7",
-  "title": "e2e",
-  "date": "2026-10-17",
-  "branch": "dev/2026-10-17-000000-issue-7",
-  "cycle": 1,
-  "mode": "new-issue",
-  "phase": "in-progress",
-  "phases": {
-    "gate_hypothesis": { "evaluator": "", "scores": {}, "verdict": "skipped (non-bug issue)" },
-    "gate_plan":       { "evaluator": "", "scores": {} },
-    "audit":           { "evaluator": "", "scores": {} },
-    "gate_quality":    { "evaluator": "", "scores": {} }
-  }
-}
-STATE
-in_target "$T" bash "$ROOT/scripts/preflight/cycle-status.sh" --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
-if [ "$rc" -eq 0 ] && grep -qxF "attempt 2026-10-17-000000-issue-7 (issue #7): owner=this state=active=true phase=in-progress mode=new-issue cycle=1" "$WORK/e2c.out" \
-   && grep -qxF "  branch: dev/2026-10-17-000000-issue-7 (local=no origin=no)" "$WORK/e2c.out" \
-   && grep -qxF "entry: resume 2026-10-17-000000-issue-7" "$WORK/e2c.out"; then
-  pass "E2c: the target's attempt under the record root ($SD) is the one cycle-status.sh reports, entered as its resume"
+# The attempt's record directory: any name under the record root, its ledger
+# issue-<N>-ledger.md, each run in a subdirectory.
+SD="$RECORD_ROOT/$KEY/attempt-7"
+mkdir -p "$SD/criterion-reconcile-1"
+printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
+LEDGER="$SD/issue-7-ledger.md"
+in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
+body_sha="$(cat "$WORK/e2c.out")"
+printf '# ledger\n\n## A1 — e2e\n- Decision: e2e\n- Grounds: e2e\n' > "$LEDGER"
+if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ]; then
+  pass "E2c: criterion-ready.sh, run from a subdirectory, prints the sha256 of the issue body"
 else
   failc "E2c" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2c.out")"
-fi
-
-LEDGER="$SD/issue-7-ledger.md"
-in_target "$T/src" bash "$ROOT/scripts/preflight/local-checks.sh" --ledger "$LEDGER" --cycle 1 \
-  >"$WORK/e2d.out" 2>&1; rc=$?
-if [ "$rc" -eq 0 ] && grep -qxF "### preflight-local-checks | cycle: 1" "$LEDGER" \
-   && grep -qxF -- "- result: PREFLIGHT local checks: none declared" "$LEDGER" \
-   && [ -z "$(find "$ROOT" -name 'issue-7-ledger.md')" ]; then
-  pass "E2d: local-checks.sh, run from a subdirectory, records into the attempt's ledger; the plugin root gains none"
-else
-  failc "E2d" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2d.out") root-ledger=$(find "$ROOT" -name 'issue-7-ledger.md' | head -1)"
 fi
 
 # ── E3 ──────────────────────────────────────────────────────────────────────
@@ -232,31 +204,29 @@ else
   failc "E3a" "rc=$rc stderr=$(tr '\n' '|' < "$WORK/e3a.err")"
 fi
 
-PUSH='git push -u origin dev/2026-10-17-000000-issue-7'
-mv "$SD/issue-7.json" "$WORK/issue-7.json.held"
-bash_payload "$PUSH" | run_hook "$T" >/dev/null 2>"$WORK/e3b0.err"; rc0=$?
-mv "$WORK/issue-7.json.held" "$SD/issue-7.json"
-bash_payload "$PUSH" | run_hook "$T" >/dev/null 2>"$WORK/e3b1.err"; rc1=$?
-if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -q 'BLOCKED' "$WORK/e3b1.err"; then
-  pass "E3b: the hook reads the target's attempt — the push is admitted with no state file and denied with the active one"
+bash_payload 'git push -u origin work-issue-7' | run_hook "$T" >/dev/null 2>"$WORK/e3b0.err"; rc0=$?
+bash_payload 'git push origin main' | run_hook "$T" >/dev/null 2>"$WORK/e3b1.err"; rc1=$?
+if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -qF "$ROOT/docs/core.md > Push and PR creation" "$WORK/e3b1.err"; then
+  pass "E3b: with no state anywhere, the work branch's push is admitted and the push to the default branch denied"
 else
-  failc "E3b" "rc-without-state=$rc0 rc-with-state=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3b1.err")"
+  failc "E3b" "rc-work-branch=$rc0 rc-default=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3b1.err")"
 fi
 
-printf '\n## no identifier here\n' >> "$LEDGER"
-out=$(bash_payload ls | run_hook "$T" 2>"$WORK/e3c.err"); rc=$?
-if [ "$rc" -eq 0 ] && grep -q 'decision-ledger identifier defect' "$WORK/e3c.err" \
-   && grep -qF "$ROOT/scripts/ledger/ledger-entry-id.sh next" "$WORK/e3c.err" \
-   && printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | test("identifier defect")' >/dev/null 2>&1 \
-   && [ -f "$RECORD_ROOT/.ledger-check-cache" ] && [ ! -e "$T/.autoflow" ] && [ ! -e "$ROOT/.autoflow/.ledger-check-cache" ]; then
-  pass "E3c: the ledger advisory runs the plugin's helper ($ROOT/scripts/ledger/) and caches at the record root"
+ledger_now="$(cat "$LEDGER")"
+jq -n --arg f "$LEDGER" '{tool_name:"Write",tool_input:{file_path:$f,content:"# rewritten\n"}}' \
+  | run_hook "$T" >/dev/null 2>"$WORK/e3c0.err"; rc0=$?
+jq -n --arg f "$LEDGER" --arg c "$ledger_now"$'\n\n## A2 — e2e\n- Decision: e2e\n- Grounds: e2e\n' \
+  '{tool_name:"Write",tool_input:{file_path:$f,content:$c}}' | run_hook "$T" >/dev/null 2>"$WORK/e3c1.err"; rc1=$?
+if [ "$rc0" -eq 2 ] && grep -qF "$ROOT/docs/decision-ledger.md" "$WORK/e3c0.err" && [ "$rc1" -eq 0 ] \
+   && [ ! -e "$T/.autoflow" ] && [ ! -e "$RECORD_ROOT/.ledger-check-cache" ]; then
+  pass "E3c: with no state anywhere, the ledger's rewrite is denied and an append admitted"
 else
-  failc "E3c" "rc=$rc stderr=$(tr '\n' '|' < "$WORK/e3c.err")"
+  failc "E3c" "rc-rewrite=$rc0 rc-append=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3c0.err" "$WORK/e3c1.err")"
 fi
 
 porcelain="$(git -C "$T" status --porcelain)"
 if [ -z "$porcelain" ]; then
-  pass "E3e: after the PREFLIGHT scripts and the hook, the target's git status --porcelain is empty — no AutoFlow file in a tree that ignores none"
+  pass "E3e: after the scripts and the hook, the target's git status --porcelain is empty — no AutoFlow file in a tree that ignores none"
 else
   failc "E3e" "the target's tree carries: $(printf '%s' "$porcelain" | tr '\n' '|')"
 fi

@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "analysis",
   "kind": "functional",
@@ -24,8 +24,7 @@
       "required": false,
       "from": {
         "ledger": [
-          "ac-decision",
-          "criterion-ready"
+          "ac-decision"
         ]
       }
     },
@@ -49,6 +48,20 @@
         "module": "hypothesis",
         "output": "evaluation"
       }
+    },
+    "findings": {
+      "required": false,
+      "from": [
+        {
+          "module": "quality",
+          "output": "evaluation"
+        },
+        {
+          "module": "review",
+          "output": "findings"
+        }
+      ],
+      "note": "the findings a re-run answers when one moves a conclusion of the analysis: the quality evaluation's recommendations, or the review's findings (docs/units/review.md > A repeated complaint)"
     }
   },
   "outputs": {
@@ -70,24 +83,11 @@
           ],
           "unique_first": true,
           "note": "criteria-apply reads this table"
-        },
-        {
-          "type": "section",
-          "heading": "Necessity",
-          "note": "whether a change is owed and whether code is the lever, with its grounds"
-        },
-        {
-          "type": "section",
-          "heading": "Decision points",
-          "note": "\"none\" when there is none"
         }
       ],
       "evaluation": [
         "every criterion of the issue body has a row of the Acceptance criteria table"
       ]
     }
-  },
-  "result": {
-    "summary": "one line, naming any decision point"
   }
 }

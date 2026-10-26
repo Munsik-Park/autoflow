@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; no device reads this file yet. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "delivery",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The cycle's branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
+  "goal": "The branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -14,6 +14,11 @@
     "branch": {
       "type": "string",
       "required": true
+    },
+    "base": {
+      "type": "string",
+      "required": false,
+      "note": "the branch the pull request is to merge into; not given, the remote's default branch"
     }
   },
   "inputs": {
@@ -64,14 +69,14 @@
       "from": {
         "results": "tool_requests"
       },
-      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations the Coordinator deferred or separated. Each is a run's tool-requests.json."
+      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations deferred or separated. Each is a run's tool-requests.json."
     },
     "deferred": {
       "required": false,
       "from": {
-        "path": "coordinator"
+        "path": "invocation"
       },
-      "note": "a JSON array of the recommendations the Coordinator deferred or separated, each {subject, finding}"
+      "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
     }
   },
   "outputs": {
@@ -94,9 +99,12 @@
       "file": "integration.md",
       "format": "markdown",
       "note": "how the change was shown working above its own tests, and what that showed"
+    },
+    "ci_failure": {
+      "file": "ci-failure.md",
+      "format": "markdown",
+      "required": false,
+      "note": "Written when a CI check failed: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment (docs/units/delivery.md > CI failure)."
     }
-  },
-  "result": {
-    "summary": "one line, with the pull request's URL and head"
   }
 }

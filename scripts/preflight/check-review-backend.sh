@@ -2,8 +2,12 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# PREFLIGHT reviewer availability report (issue #979, D5; #411; #463; #485)
+# Reviewer availability report (issue #979, D5; #411; #463; #485)
 # =============================================================================
+# A script for setting up the environment of an attempt (ADR-0038 D4, Q21),
+# and run by the review module, which reads its `reviewers:`
+# line for the reviewers it runs (docs/units/review.md > Reviewer review).
+#
 # Resolves the reviewers through the shared resolver
 # (scripts/review/lib/review-config.sh) — those the operator's
 # ~/.autoflow/config.json lists, and the default reviewers when it lists none —
@@ -26,19 +30,19 @@
 #   exit 6   → the user file cannot be read as configured: nothing in it
 #              applies, no reviewer is checked, and the fixed marker line
 #              `user-config: UNREADABLE <path> — <error>` is on stdout. The
-#              orchestrator asks the operator whether to proceed without those
-#              reviewers. Distinct from 0–4 in both modes.
+#              review module goes on without those reviewers and records the
+#              file as a tool request. Distinct from 0–4 in both modes.
 #
-# The per-cycle PREFLIGHT invocation (no `--probe`) is presence-only: a
-# side-effect-free command whose exit encodes a reviewer's auth state does not
-# exist, so auth is NOT a PREFLIGHT oracle. A present-but-unauthenticated
-# reviewer passes here; its auth failure surfaces at the REVIEW run.
+# The default invocation (no `--probe`) is presence-only: a side-effect-free
+# command whose exit encodes a reviewer's auth state does not exist, so auth is
+# NOT what it reports. A present-but-unauthenticated reviewer passes here; its
+# auth failure surfaces at the review run.
 #
 # `--probe` is a SEPARATE, on-demand mode: it makes one real authenticated
 # round-trip against each configured reviewer, over the same channel the
 # REVIEW run uses. It runs on-demand only — when the operator writes or
-# changes the reviewer configuration — and is NEVER wired into PREFLIGHT and
-# no hook consumes it. Its exit-code contract extends the presence 0/1/2:
+# changes the reviewer configuration — and is NEVER part of the environment
+# check above, and no hook consumes it. Its exit-code contract extends the presence 0/1/2:
 # 0=authenticated, 1=CLI absent (short-circuit, reuses the presence exit),
 # 2=usage error, 3=indeterminate (timeout / no-TTY), 4=present-but-round-trip-
 # failed, 6=user file unreadable (as above).
@@ -81,7 +85,7 @@ resolve_review_config check-review-backend
 echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 review_readout
 if [ "$REVIEW_USER_STATE" = unreadable ]; then
-  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it, or proceed without those reviewers — the operator's choice." >&2
+  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it; a review round goes on without those reviewers." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 
@@ -149,7 +153,7 @@ probe_finish() {
   if [ "${PROBE_RC:-1}" -eq 0 ]; then
     return 0
   fi
-  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the REVIEW run; fix credentials before your first cycle." >&2
+  echo "[check-review-backend] --probe: ${BACKEND} is present but the authenticated round-trip failed (exit ${PROBE_RC}) — you will hit this at the review run; fix credentials before the first one." >&2
   exit 4
 }
 
