@@ -612,6 +612,57 @@ No test today exercises the score thresholds, the planning or implementation spa
   removed duplicates by hand: two of audit-3's Lows restated what quality-2 recorded. How the body
   states a known gap — the finding whole, a summary, or a reference to the evaluation — is left to
   settle.
+- **The module commands, run module by module** (opensre#1, transition branch at `c673c52`/`5819d61`,
+  2026-10-26, session 6; run record `~/.autoflow/coordination/opensre-1-2026-10-26-123404-832d5eb5/`,
+  records `~/.autoflow/io-transition-test/opensre-1-2026-10-26-123404-832d5eb5/`). Twenty runs, each
+  in a session of its own started as `/autoflow:<module> <invocation.json>` with the transition
+  worktree as `--plugin-dir`: the criterion review's four (in-depth once per criterion), analysis,
+  criteria-apply, hypothesis, design, plan, a design re-run on plan-1's Medium with criteria-apply and
+  plan again, build, audit, quality, delivery (draft PR Munsik-Park/opensre#27) and review. Seventeen
+  accepted. Advisor decisions A1–A8, A3–A5 from inside the reconciler's spawn and A6–A8 from inside
+  the design unit's: a subagent's advisor spawn works (the open point d of session 4).
+- **`tool-requests.json` was stated only in the validator's header** (same run). criterion-in-depth
+  for AC1 was refused for its absence. The core's *Tools* and every command body now say every run
+  writes it, `[]` when it lacked nothing (`c673c52`); the later runs wrote it.
+- **"Its target file alone"** (same run). Two in-depth runs read the command body's "given the
+  criterion's target file alone" as forbidding the checkout's path; the body now says it is given the
+  target file and nothing of the review's verdicts, and reads the code in the checkout (`5819d61`).
+- **An evaluator's report copied by hand** (same run; Q7). The evaluator returns its report and the
+  session writes it to `<out>/evaluation.json`; the hand-back arrives indented, so each evaluation
+  session retyped 10–20 KB of JSON, and check-out checks its form, not that it is the report
+  returned. The evaluators also wrote probe scripts with Bash into the session's scratchpad and cited
+  them as grounds, a place outside the record directory that no later reader can open.
+- **One advisor, several decisions** (same run). One advisor spawn decided A4 and A5 on one answer
+  file, and another A6–A8; role-contracts' "one fresh advisor per decision" does not say whether
+  decisions that depend on each other are one decision.
+- **The criteria change while the design runs** (same run). design-2's advisor decisions A6–A8
+  changed the criteria the run had taken from criteria-apply-1; criteria-apply ran again before the
+  plan re-score. Nothing in the design contract says its output follows criteria other than its input.
+- **`## Advisor decisions` on a re-run** (same run). The design's re-run appends a delta and leaves
+  the first text as it is, so the section still says `none` while the delta's own sub-section lists
+  A6–A8.
+- **A deferred design sentence the build does not follow** (same run). plan-2's Low on the design's
+  attribute grammar went to the build as a known gap; the build followed the parser's source instead
+  and added a check. Whether not following a deferred design sentence is a design point for the
+  advisor is not written.
+- **The PR identifier has no producer** (same run). review-1 was refused at check-in: its invocation
+  named `pr` as `27`, where the contract asks `<owner>/<name>#<N>`. The delivery contract outputs no
+  PR identifier, so nothing connects review's `pr` to the run that opened it; the reviewers' wrappers
+  take `--pr <N> --repo <owner/name>`, and no document says the module converts.
+- **The review posts before check-out** (same run). review-2's aggregation wrote a rejected row's
+  grounds into the disposition cell (`rejected: …`), so check-out read a Medium that holds against
+  `max_severity: Low` and refused the run, after the comment was posted. The session moved the
+  grounds into the finding cell and a copy then passed; the run's own result stays refused, and a
+  new run of the round would post a second comment. The aggregation's form is checked only after the
+  posting the output requires (`pr_comment_posted`).
+- **Smaller gaps the sessions reported** (same run): the contract's `result.summary` that no
+  `result.json` carries; the criteria-apply note on `- Text:` / `- Into:` still in the future tense;
+  the design contract's `[design-point]` marker that the ledger grammar lacks; a `decisions` input
+  that names the whole ledger where the contract names markers; `reads_records: true` beside a note
+  that says the trace takes the record alone; no invocation field for the target's documents; the
+  audit's checklist input given by the invocation while the command body says `status` names it;
+  the integration check failing on the environment alone (a local `codex` shim) with no rule for it;
+  stopping the CI check, by the operator's word here, with no way to record it.
 
 ## Handoff log
 
@@ -623,3 +674,4 @@ No test today exercises the score thresholds, the planning or implementation spa
 | 4 | 2026-10-26 | On `design/io-contract-modules-transition` (local, not pushed), after the earlier transition sessions' documents and device removal: applied the operator's Q25–Q27 (§6) — the Coordinator leaves the documents, agent definitions and devices; the ledger names no writer and the hook keeps append-only; a module spawns the advisor and follows it, the design's `## Decision requests` becoming `## Advisor decisions`. Also: every run's `result.json` records the AutoFlow that ran it, `criterion-ready.sh status` and `emit-phase-marker.sh` go, the README's lifecycle figure goes; ADR-0038 revised (file `0038-contract-modules-with-no-state-file.md`). One-shot runs: the hook's append-only cases, `security-checklist.sh` on ledgers of both grammars, and the #509 runs, `run-transition.sh` on a copy with the renamed section. | The operator decides when the branch is pushed. | The module commands (ADR-0038 D9). |
 | 5 | 2026-10-26 | On `design/io-contract-modules-transition` (local, not pushed): the security checklist states the hook's policy denies and the ledger's append-only check, with the operator's acceptance (Q24; `4455f58`). The open points session 4 left, applied by the settled principles: the `[criterion-ready]` entry goes — the criterion review's decisions are criterion-reconcile's record, which names the body by its sha256 line, and the analysis takes it (Q4: what a module produces itself is its own output); a change to a criterion's content is the advisor's `[ac-decision]` (Q27); the issue body is not edited, the applied criteria being criteria-apply's output (Q5, Q25); identifiers stay `A<n>` (Q26); the contracts' `{path: coordinator}` becomes `{path: invocation}` (Q25), and who makes the checklist version file is not described; the nested advisor spawn needs no test, ADR-0023's measurement having recorded a subagent's spawns. ADR README rows of the ADRs ADR-0038 supersedes in part annotated. | Module commands (D9, §8), then the run module by module on the test target (§10). |
 | 6 | 2026-10-26 | On `design/io-contract-modules-transition` (local, not pushed): the module commands (ADR-0038 D9, §8). `/autoflow:cycle`, `/autoflow:cycle-u1` … `cycle-u7` and `/autoflow:criterion-review` give way to one command per module, `/autoflow:<module> <invocation.json>` — fourteen, one per contract —, generated by `gen-skill-bodies.sh` from the core by `core-units.tsv`, now classified by module, and from the documents by `role-docs.tsv`. Each body names the contract, check-in and check-out, what does the work — the session, a role's spawn on the model `spawn-policy.sh model <phase-key>` names, or the script —, the record directory for a module that reads it, and the advisor's key. The core's unit tables become *Module procedures* and *Module references*; `verify-skill-bodies.sh` reads them by module and checks that every contract has a body; `abbreviated-path.md` is removed; CLAUDE.md, README, INDEX, the tool-delivery contract, the plugin manifests and the contracts' `status` follow. The committed checks and the one-shot runs (69, 30, 32) pass. | The run module by module on the test target (§10). |
+| 7 | 2026-10-26 | The module commands run on the test target, module by module (§10, §11 *The module commands, run module by module* and the items after it): twenty runs on opensre#1, each in its own session, from the criterion review to the review of draft PR Munsik-Park/opensre#27; seventeen accepted; a subagent's advisor spawn works. Fixed during the run: every run writes `tool-requests.json` (`c673c52`), the in-depth spawn's inputs (`5819d61`). The merge review page: https://claude.ai/artifact/VArseNPJbyNyCfRYN3DkKd. | The observations above settled or left to the operator; sub-issue 3 filed; push, PRs and review. |
