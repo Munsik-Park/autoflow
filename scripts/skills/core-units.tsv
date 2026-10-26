@@ -1,22 +1,23 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
-# core-units.tsv — which unit sessions use each part of docs/core.md (issue #464, ADR-0032)
+# core-units.tsv — which module command bodies use each part of docs/core.md (issue #464, ADR-0032; ADR-0038 D9)
 #
-# The input of scripts/skills/gen-skill-bodies.sh for the unit command bodies
-# skills/cycle-u1 … skills/cycle-u7: a unit's body carries, from the core, the
-# parts whose entry names that unit or `all`. The grounds of each entry are in
-# the pull request that sets it. A line with no tab is a comment; an entry's
+# The input of scripts/skills/gen-skill-bodies.sh for the module command bodies
+# skills/<module>/SKILL.md: a module's body carries, from the core, the parts
+# whose entry names that module or `all`. The grounds of each entry are in the
+# pull request that sets it. A line with no tab is a comment; an entry's
 # columns are tab-separated:
 #
 #   scope    a heading path: each step a heading's leading text, steps joined
-#            by " > " ("## Development Lifecycle > ### Unit references")
+#            by " > " ("## Development Lifecycle > ### Module references")
 #   prefix   empty: the whole heading section. Otherwise every block of the
 #            scope whose first line starts with it — a paragraph, a bullet, a
 #            table row, a line of a fenced block (with its indented lines)
-#   units    `all`, unit names (U1 … U7, space-separated), or `split`: the
-#            section is classified by part, and every block in it needs an
-#            entry that matches it — a prefix entry matches every block of
-#            its scope that starts with the prefix (`|`: every table row)
+#   modules  `all`, module names (space-separated, the generator's MODULES),
+#            or `split`: the section is classified by part, and every block in
+#            it needs an entry that matches it — a prefix entry matches every
+#            block of its scope that starts with the prefix (`|`: every table
+#            row)
 #
 # The generator fails on a part of the core no entry classifies, a block two
 # entries match, and an entry that matches nothing.
@@ -29,34 +30,47 @@
 ## Development Lifecycle	**Decisions within a module.**	all
 ## Development Lifecycle	**Tools.**	all
 ## Development Lifecycle	**Scripts**	all
-## Development Lifecycle	**Push and PR creation**	U6 U7
-## Development Lifecycle > ### Unit Document Loading Contract		split
-## Development Lifecycle > ### Unit Document Loading Contract	**[MUST]** A module's run follows	all
-## Development Lifecycle > ### Unit Document Loading Contract	|	all
-## Development Lifecycle > ### Unit Document Loading Contract	What each module does	all
-## Development Lifecycle > ### Unit Document Loading Contract	The **reference values**	U2 U3 U4 U5
-## Development Lifecycle > ### Unit Document Loading Contract	Seven units carry the modules	all
-## Development Lifecycle > ### Unit Document Loading Contract	```	all
-## Development Lifecycle > ### Unit Document Loading Contract	U1 Criterion review	U1
-## Development Lifecycle > ### Unit Document Loading Contract	U2 Analysis	U2
-## Development Lifecycle > ### Unit Document Loading Contract	U3 Design	U3
-## Development Lifecycle > ### Unit Document Loading Contract	U4 Build and verify	U4
-## Development Lifecycle > ### Unit Document Loading Contract	U5 Completion eval.	U5
-## Development Lifecycle > ### Unit Document Loading Contract	U6 Delivery	U6
-## Development Lifecycle > ### Unit Document Loading Contract	U7 Review	U7
-## Development Lifecycle > ### Unit Document Loading Contract	Each module's procedure	all
-## Development Lifecycle > ### Unit Document Loading Contract	The rubric of every evaluation	U2 U3 U4 U5
-## Development Lifecycle > ### Unit Document Loading Contract	The evaluation contract	U2 U3 U4 U5
-## Development Lifecycle > ### Unit references		split
-## Development Lifecycle > ### Unit references	| Unit |	all
-## Development Lifecycle > ### Unit references	|------|	all
-## Development Lifecycle > ### Unit references	| U1 Criterion review |	U1
-## Development Lifecycle > ### Unit references	| U2 Analysis |	U2
-## Development Lifecycle > ### Unit references	| U3 Design |	U3
-## Development Lifecycle > ### Unit references	| U4 Build and verify |	U4
-## Development Lifecycle > ### Unit references	| U5 Completion evaluation |	U5
-## Development Lifecycle > ### Unit references	| U6 Delivery |	U6
-## Development Lifecycle > ### Unit references	| U7 Review |	U7
+## Development Lifecycle	**Push and PR creation**	delivery review
+## Development Lifecycle > ### Module procedures		split
+## Development Lifecycle > ### Module procedures	**[MUST]** A module's run follows	all
+## Development Lifecycle > ### Module procedures	|	all
+## Development Lifecycle > ### Module procedures	A module's command takes	all
+## Development Lifecycle > ### Module procedures	The **reference values**	analysis hypothesis design plan build audit quality
+## Development Lifecycle > ### Module procedures	```	all
+## Development Lifecycle > ### Module procedures	criterion-screen 	criterion-screen
+## Development Lifecycle > ### Module procedures	criterion-trace 	criterion-trace
+## Development Lifecycle > ### Module procedures	criterion-in-depth 	criterion-in-depth
+## Development Lifecycle > ### Module procedures	criterion-reconcile 	criterion-reconcile
+## Development Lifecycle > ### Module procedures	analysis 	analysis
+## Development Lifecycle > ### Module procedures	criteria-apply 	criteria-apply
+## Development Lifecycle > ### Module procedures	hypothesis 	hypothesis
+## Development Lifecycle > ### Module procedures	design 	design
+## Development Lifecycle > ### Module procedures	plan 	plan
+## Development Lifecycle > ### Module procedures	build 	build
+## Development Lifecycle > ### Module procedures	audit 	audit
+## Development Lifecycle > ### Module procedures	quality 	quality
+## Development Lifecycle > ### Module procedures	delivery 	delivery
+## Development Lifecycle > ### Module procedures	review 	review
+## Development Lifecycle > ### Module procedures	Each module's procedure	all
+## Development Lifecycle > ### Module procedures	The rubric of every evaluation	analysis hypothesis design plan build audit quality
+## Development Lifecycle > ### Module procedures	The evaluation contract	analysis hypothesis design plan build audit quality
+## Development Lifecycle > ### Module references		split
+## Development Lifecycle > ### Module references	| Module |	all
+## Development Lifecycle > ### Module references	|------|	all
+## Development Lifecycle > ### Module references	| criterion-screen |	criterion-screen
+## Development Lifecycle > ### Module references	| criterion-trace |	criterion-trace
+## Development Lifecycle > ### Module references	| criterion-in-depth |	criterion-in-depth
+## Development Lifecycle > ### Module references	| criterion-reconcile |	criterion-reconcile
+## Development Lifecycle > ### Module references	| analysis |	analysis
+## Development Lifecycle > ### Module references	| criteria-apply |	criteria-apply
+## Development Lifecycle > ### Module references	| hypothesis |	hypothesis
+## Development Lifecycle > ### Module references	| design |	design
+## Development Lifecycle > ### Module references	| plan |	plan
+## Development Lifecycle > ### Module references	| build |	build
+## Development Lifecycle > ### Module references	| audit |	audit
+## Development Lifecycle > ### Module references	| quality |	quality
+## Development Lifecycle > ### Module references	| delivery |	delivery
+## Development Lifecycle > ### Module references	| review |	review
 ## Cost Control		all
 ## Decision Ledger		all
 ## Execution Principles		all
@@ -78,17 +92,17 @@
 ## Cross-Project Boundary Rules		all
 ## Project Information		split
 ## Project Information	AutoFlow does not classify	all
-## Project Information	A project whose information names sub-repos	U6 U7
+## Project Information	A project whose information names sub-repos	delivery review
 ## Team Structure		split
 ## Team Structure	각 역할의 상세 계약은	all
-## Team Structure > ### Evaluation AI		U2 U3 U4 U5
-## Team Structure > ### Build unit (U4)		U4
+## Team Structure > ### Evaluation AI		analysis hypothesis design plan build audit quality
+## Team Structure > ### Build module		build audit
 ## Team Structure > ### Advisor		all
-## Team Structure > ### Functional-unit agents		U2 U3 U4
+## Team Structure > ### Functional-unit agents		analysis hypothesis design plan build audit
 ## Records and the hook		all
-## Evaluation System		U2 U3 U4 U5
+## Evaluation System		analysis hypothesis design plan build audit quality
 ## Git Workflow — Rules		split
 ## Git Workflow — Rules	> **Procedural details	all
-## Git Workflow — Rules > ### Commit Rules		U1 U2 U3 U4 U5 U6 U7
-## Git Workflow — Rules > ### Commit Ownership		U2 U3 U4 U5 U6 U7
+## Git Workflow — Rules > ### Commit Rules		criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis hypothesis design plan build audit quality delivery review
+## Git Workflow — Rules > ### Commit Ownership		analysis hypothesis design plan build audit quality delivery review
 ## Reference Documents		all

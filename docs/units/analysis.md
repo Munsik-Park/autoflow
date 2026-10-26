@@ -1,6 +1,6 @@
 # U2 Analysis — DIAGNOSE and GATE:HYPOTHESIS
 
-> Unit document for U2. [`core.md`](../core.md) > Unit Document Loading Contract routes to
+> The procedure of the analysis module, and the spawn of the hypothesis module. [`core.md`](../core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
 > Modules.
 

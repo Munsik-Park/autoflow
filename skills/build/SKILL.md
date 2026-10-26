@@ -1,20 +1,20 @@
 ---
-name: cycle-u1
+name: build
 description: >-
-  Run unit U1 (Criterion review — CRITERION-REVIEW) of an AutoFlow cycle
-  alone, in a session of its own, with the parts of the core U1 uses. Use only
-  when the operator starts a U1 session (/autoflow:cycle-u1 <N> [new]).
-argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
+  Run the AutoFlow build module once on an invocation file — the design
+  implemented and verified on the branch, with its build report. Use when the
+  operator runs the build module (/autoflow:build <invocation.json>).
+argument-hint: "<invocation.json>"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
-An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
+An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — unit U1, Criterion review (CRITERION-REVIEW), of issue #N's cycle alone: confirm from the attempt's records that the cycle stands at U1's entry (otherwise report the situation and stop), run U1 from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the build module (`<autoflow-root>/docs/contracts/build.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The work is one `autoflow-unit-build` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names (`<autoflow-root>/docs/units/build.md` > Unit spawn, below). The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
-**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U1 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Push and PR creation; Development Lifecycle > Unit Document Loading Contract: The reference values, U2 Analysis, U3 Design, U4 Build and verify, U5 Completion eval, U6 Delivery, U7 Review, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Unit references: U2 Analysis, U3 Design, U4 Build and verify, U5 Completion evaluation, U6 Delivery, U7 Review; Project Information: A project whose information names sub-repos; Team Structure: Evaluation AI, Build unit (U4), Functional-unit agents; Evaluation System; Git Workflow — Rules: Commit Ownership.
+**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the build module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Push and PR creation; Development Lifecycle > Module procedures: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, audit, quality, delivery, review; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, audit, quality, delivery, review; Project Information: A project whose information names sub-repos.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/criterion-review.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:QUALITY > Known blind-spot checks > *Impact scope / Doc updates — reference integrity on moves*; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -47,35 +47,46 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands, which the hook sees.
 
-### Unit Document Loading Contract
+### Module procedures
 
-**[MUST]** A module's run follows its contract's `procedure` — the unit document below for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the session's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
+**[MUST]** A module's run follows its contract's `procedure` — its document for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the module's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
 
-| Unit | Phases | Unit document | Modules |
-|------|--------|------|------|
-| U1 Criterion review | CRITERION-REVIEW | `<autoflow-root>/docs/criterion-review.md` | `criterion-screen`, `criterion-trace`, `criterion-in-depth`, `criterion-reconcile` |
-| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `<autoflow-root>/docs/units/analysis.md` | `analysis`, `hypothesis` |
-| U3 Design | ARCHITECT, GATE:PLAN | `<autoflow-root>/docs/units/design.md` | `design`, `plan` |
-| U4 Build and verify | BUILD, AUDIT | `<autoflow-root>/docs/units/build.md` | `build`, `audit` |
-| U5 Completion evaluation | GATE:QUALITY | `<autoflow-root>/docs/units/completion-evaluation.md` | `quality` |
-| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | `<autoflow-root>/docs/units/delivery.md` | `delivery` |
-| U7 Review | REVIEW | `<autoflow-root>/docs/units/review.md` | `review` |
+| Module | Command | Procedure | The work is done by |
+|------|------|------|------|
+| `criterion-screen` | `/autoflow:criterion-screen` | `<autoflow-root>/docs/criterion-review.md` | the session itself, on the model and effort the procedure's *The four modules* names |
+| `criterion-trace` | `/autoflow:criterion-trace` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-tracer` spawn (spawn-policy key `criterion-trace`) |
+| `criterion-in-depth` | `/autoflow:criterion-in-depth` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-analyzer` spawn (`criterion-in-depth`) |
+| `criterion-reconcile` | `/autoflow:criterion-reconcile` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-reconciler` spawn (`criterion-reconciliation`) |
+| `analysis` | `/autoflow:analysis` | `<autoflow-root>/docs/units/analysis.md` | an `autoflow-unit-analysis` spawn (`unit-analysis`) |
+| `criteria-apply` | `/autoflow:criteria-apply` | `<autoflow-root>/scripts/contracts/criteria-apply.sh`, a script with no procedure document | the script |
+| `hypothesis` | `/autoflow:hypothesis` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:HYPOTHESIS | an `autoflow-evaluator` spawn (`gate-hypothesis`) |
+| `design` | `/autoflow:design` | `<autoflow-root>/docs/units/design.md` | an `autoflow-unit-design` spawn (`unit-design`) |
+| `plan` | `/autoflow:plan` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:PLAN | an `autoflow-evaluator` spawn (`gate-plan`) |
+| `build` | `/autoflow:build` | `<autoflow-root>/docs/units/build.md` | an `autoflow-unit-build` spawn (`unit-build`) |
+| `audit` | `/autoflow:audit` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > AUDIT | an `autoflow-evaluator` spawn (`audit`) |
+| `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
+| `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
+| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-What each module does, and what else a unit's body carries: the module list and *Unit references* below, and *Context Injection*. The deterministic module `criteria-apply` is a script, `bash <autoflow-root>/scripts/contracts/criteria-apply.sh`, with no procedure document.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
-Seven units carry the modules until the module commands replace the unit commands (ADR-0038 D9): a unit's command body carries the procedures of its modules. The phase and gate names stay as identifiers: the spawn-policy keys, the commands and the documents' headings carry them.
+The **reference values** an evaluation's scores are read against (each item ≥ 7, average ≥ 7.5, a `Security` item at 3 or below → rework) are kept with the rubrics (`<autoflow-root>/docs/evaluation-system.md` > PASS Criteria) and carried in each evaluation contract's `reference`. An evaluation outputs its scores and their grounds, with the reference values (ADR-0038 D6).
 
 ```
-U1 Criterion review    CRITERION-REVIEW — the criterion review's four modules: criterion-screen (the review items and the screening; the review record and one target file per criterion), criterion-trace (each confirmed cause's reach and each required behavior's conflict with the rules in force), criterion-in-depth (one run per criterion with an in-depth target, on that target alone) and criterion-reconcile (the record settled against the trace and the in-depth verdicts), each item disposed of with its grounds (`<autoflow-root>/docs/criterion-review.md`)
+build                 — the design implemented and verified (test-first, run records, manual checklist, maintained docs, lint), its method its own
 ```
 
-Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and a session that runs the whole cycle receives all of it; each receives the documents its units use with them (*Context Injection*).
+Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
 
-### Unit references
+The rubric of every evaluation — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the work's: it lives in `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics*, the procedure of each evaluation contract.
 
-| Unit | Also on entry |
+The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, the 10-point scale, the output format) lives in `<autoflow-root>/docs/evaluation-system.md`; how the evaluator is spawned and prompted is `<autoflow-root>/docs/role-contracts.md` > Evaluation AI.
+
+### Module references
+
+| Module | Its command body also carries |
 |------|------|
-| U1 Criterion review | the criterion review: `<autoflow-root>/docs/criterion-review.md` |
+| build | the procedure: `<autoflow-root>/docs/units/build.md`; unit agent: `autoflow-unit-build`, contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; normative documents: `<autoflow-root>/docs/evaluation-system.md` > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds |
 
 ## Cost Control
 
@@ -169,13 +180,19 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 각 역할의 상세 계약은 `<autoflow-root>/docs/role-contracts.md`를 참조한다.
 
+### Evaluation AI — contract: `<autoflow-root>/docs/evaluation-system.md`; spawn and prompt: `<autoflow-root>/docs/role-contracts.md` > Evaluation AI
+### Build module — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; in a target scope: `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope
 ### Advisor — contract: `<autoflow-root>/docs/role-contracts.md` > Advisor
+### Functional-unit agents (analysis, design, build) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents
 
 ## Records and the hook
 
 **Record directory.** Every record of an attempt lives in the attempt's record directory `<attempt-dir>`, under the record root — outside every checkout's tree, `autoflow-records root` (default `~/.autoflow`; the operator's `~/.autoflow/config.json` > `record_root`) —, which each invocation names as `records`. Each run writes into its own subdirectory, `<attempt-dir>/<module>-<n>` (`<module>-<qualifier>-<n>` for one module run on several items in a round, `n` counting that module's runs from 1), so nothing is renamed or overwritten; a functional module reads what earlier runs left in the directory, and an evaluation module keeps to its declared inputs (ADR-0038 D4). The ledger is `<attempt-dir>/issue-{N}-ledger.md`, the name the hook's ledger check reads.
 
 **The hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`) keeps the policy denies, in every session and with no state (ADR-0038 D5): `gh pr merge`; a push to the remote default branch (`origin/HEAD`, else `main`); `gh issue create` and its REST form; a ledger write that changes text already in the ledger; an `Agent` spawn without an explicit `model`; and a backgrounded `run-suites.sh`. With no `jq` it reads the other denies from the raw input; the ledger check reads the write with `jq`, and with no `jq` it passes the write unchecked.
+
+## Evaluation System
+→ `<autoflow-root>/docs/evaluation-system.md`
 
 ## Git Workflow — Rules
 
@@ -198,6 +215,14 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - `git status` before every commit.
 - **[MUST]** Before committing, the committing role — every role that commits, the main session included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (identifying the chains, execution trust boundary, scoping, outcome vocabulary, evidence anchor): `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on the staged surface*.
 
+### Commit Ownership
+
+| Work type | Committer | PR opener |
+|-----------|-----------|-----------|
+| Feature (implementation and tests, sub-repo) | the build module of that scope | the delivery module |
+| Comment divergence fix (sub-repo code) | the build module of that scope | — (the branch's open pull request) |
+| Sub-repo pointer (gitlink) commit | the delivery module | the delivery module |
+
 ## Reference Documents
 
 - **AutoFlow phase guide**: `<autoflow-root>/docs/autoflow-guide.md`
@@ -209,266 +234,558 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 
-<!-- From <autoflow-root>/docs/criterion-review.md -->
+<!-- From <autoflow-root>/docs/units/build.md -->
 
-# Criterion Review
+# U4 Build and verify — BUILD and AUDIT
 
-An issue's acceptance criteria are reviewed against the target's code and policy before the analysis
-takes them, by each attempt for itself: an attempt — one run of the issue, on its own branch and
-record directory — begins with its own criterion review and stays independent of every other
-attempt from that review to its pull request. The review is four modules — criterion-screen,
-criterion-trace, criterion-in-depth and criterion-reconcile, each with its contract
-(`<autoflow-root>/docs/contracts/criterion-*.json`), this document the procedure of all four — and
-it disposes of every item it finds, with its grounds, in its review record. A disposition that
-changes a criterion's content is the advisor's decision, an `[ac-decision]` entry (*Authority*
-below). This is the Definition of Ready of backlog refinement: a criterion that presumes
-a fact that does not hold, that conflicts with a policy already in force, or that leaves a term
-undefined is found while it is still cheap to change — before a re-run, a re-score and an advisor
-spawn each find it one at a time in the later work.
+> The procedure of the build module, and the spawn of the audit module. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes to
+> this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
+> Modules.
 
-The review does not replace the later path for a criterion defect: the analysis still takes the
-criteria as written, and from the design on a criterion is still a hypothesis the work tests
-([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Decision-point entries > *A criterion can be wrong*).
-The review makes that premise hold more often; it does not change it.
+U4 Build and verify is two modules: the build module, whose contract is
+`<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
+evaluation module that judges test-first and audits the change
+(`<autoflow-root>/docs/contracts/audit.json`, [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) >
+*Gate rubrics* > AUDIT; [`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md)
+D1). This file states the build's goal, what it owes, the cautions it is asked to heed and the
+report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
+how it divides test and implementation work, how it runs its checks and when it stops iterating
+within its run — is its own, recorded with its grounds in its report ([`core.md`](<autoflow-root>/docs/core.md) >
+Rule Scope, principle 2).
 
-## The four modules
+- **Goal**: the design implemented within its scope on the branch the invocation names
+  (`params.branch`), and every item of the verification design verified as it says — or, where it
+  cannot be, the reason recorded.
+- **Output**: the commits the run makes on the branch, the build report (*Build report* below), a
+  green-blocker record when the design cannot be built as it stands, and the run's tool requests
+  ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
+  report and git, then scores the change on the rubric of
+  [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
+  scores its own change (*Evaluation — AUDIT* below).
+- **Result owed**: the build report's path, the commit SHAs and a one-line summary
+  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Reporting Format).
 
-- **criterion-screen** — stage 1: the review items and the screening (*Review items*, *Screening*
-  below). It writes the review record, `<out>/criterion-review.md`, and one target file per
-  criterion with an in-depth target, `<out>/targets/<criterion>.md`. It is run by a session of its
-  own, which reads what it judges the review needs — which code, documents and materials, the
-  order, how far it follows a cause or an effect, which tool checks a fact — and records under the
-  record's `## Inputs` what it read and why, and what it left out and why (Rule Scope, principle 2
-  — [`core.md`](<autoflow-root>/docs/core.md)).
-- **criterion-trace** — stage 2, an `autoflow-criterion-tracer` agent on the model
-  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model criterion-trace` names: each
-  confirmed cause's reach and each required behavior's conflict with the rules in force
-  (*Cause reach and rule conflict* below). It writes `<out>/trace.md`.
-- **criterion-in-depth** — one run per criterion with an in-depth target, an
-  `autoflow-criterion-analyzer` agent on the model `… model criterion-in-depth` names, given that
-  criterion's target file and nothing else (*In-depth analysis and reconciliation* below). It writes
-  `<out>/in-depth.md`.
-- **criterion-reconcile** — an `autoflow-criterion-reconciler` agent on the model
-  `… model criterion-reconciliation` names, given the review record, the trace and every in-depth
-  file: it settles in the code each case where they differ and writes the updated record,
-  `<out>/criterion-review.md`.
+## Unit spawn
 
-- **Reference model and effort.** The session that runs criterion-screen runs on Opus 5.5
-  (`claude-opus-5-5`) at effort `high`; another model or effort may be used. The setting for that
-  session lives here because the screen is a session's own work, not an `Agent` spawn. The agents
-  take theirs from `.claude/autoflow/spawn-policy.json` like every other spawn
-  ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), the effort the one each agent definition carries. The
-  record's `## Inputs` names the model and effort each module ran on.
-- **What a review module writes.** Its record, and criterion-screen its target files; a decision a
-  module puts to the advisor is the advisor's ledger entry (*Authority* below).
-- **Result owed**: the record's path and a one-line summary naming each decision the module put to
-  the advisor, by its ledger identifier.
+- **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
+  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
+  module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
+  acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
+  `[ac-decision]` entries, the recommendations deferred or separated (`deferred`),
+  which the build leaves to their disposition, and on a re-run the previous report and the findings
+  it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
+  directory, where earlier runs left their work and their `local/` stores, and the output directory.
+- **Documents.** The unit's agent definition carries this file with the rest of its guidance
+  ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection); the analysis report's `## Affected documents` and
+  the target's documents are read by the module's own judgment.
 
-## Inputs
+## What the build owes
 
-- **The issue as filed** — its body as GitHub holds it now, identified by the sha256
-  `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
-  criterion references, opened by the reviewer; one that cannot be opened is recorded with the
-  reason.
-- **The target's code** — each repository the issue reaches, read at a named commit (the commit the
-  attempt's branch starts from unless the issue names another). In a project with sub-repos, each sub-repo is read
-  at the commit the host's pointer names.
-- **The target's policy** — the decision records and rule documents the criteria touch: the ADRs,
-  the project's own information and rule files (a `README.md`, a `CLAUDE.local.md`, whatever the
-  project keeps — [`core.md`](<autoflow-root>/docs/core.md) > Project Information), and the documents of the
-  sub-repos the issue reaches.
+These are the rules other documents cite; everything else about the work is the module's.
 
-## Purpose and scope
+- **Scope.** The module implements every applied acceptance criterion within the scope — the
+  feature design with its `## Scope` section, and the verification design. An item the verification
+  design verifies other than by an executable test ([U3 Design](<autoflow-root>/docs/units/design.md) > *Test necessity*) is
+  still implemented; only its evidence differs. A problem met during the work that the scope does
+  not name is judged under [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change
+  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
+  correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
+  an assertion. Once the scope is implemented and verified, a further change the module judges
+  useful beyond the scope and the problems its scope judgments include is recorded under
+  `## Scope judgments`, not made.
+- **Test-first (TDD).** A test that verifies a required behavior is seen failing before the
+  implementation it verifies: a behavior not yet implemented, or a defect reproduced before its fix.
+  A test that records existing behavior the change must preserve may pass from the start. Which of
+  its tests verify a required behavior, and the order of the work — a failing run in the working
+  tree first, or a test commit first — are the module's; the result owed is each such test's failing
+  run with its evidence (*Build report* > `## Test-first`). Cautions:
+  - A test that passes from the start is not evidence of a failing run. Look again at whether it
+    checks the required behavior, and record that judgment in the report.
+  - The failing run's failure is readable in its log, the exit status included.
+  - `## Run record` holds each item's latest run. The failing run goes in `## Test-first` only.
 
-The review's **purpose** is to find, before the work commits to the criteria, a criterion that would
-lead the work wrong or short of done: one that presumes a fact that does not hold, conflicts with a
-policy in force, leaves out part of where the cause reaches or of the behavior the issue reports,
-stops at a direct cause where a root cause produces the defect, leaves a term undefined, or cannot
-be shown met. Its **object** is the issue's acceptance criteria together with the behavior they
-require, wherever in the code the reported cause and the required behavior reach — not only the
-code a criterion names. The **quality characteristics** it evaluates are, in stage 1, the review
-items below: fit with the code and policy, coverage of the reported behavior, depth of cause,
-consistency, clarity, size, testability, and verified premises — and, in the screening, whether
-each criterion holds in every case it applies to, judged on the code that decides the behavior;
-and, in stage 2, the reach of each confirmed cause beyond the points the issue reports and the
-agreement of each required behavior with the rules and behaviors the code already has.
+  The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
+  failing run precedes the implementation commit, and its failure is shown by its log
+  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Test-first*).
+- **Where a test lives.** A test the run writes for its own verification, a one-shot delivery
+  check, an observation scenario and its record live under the run's `<out>/local/` and are run by
+  their path ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools);
+  a later run reads them there, in the record directory. A test file goes into the target's tree
+  only as the exception: a file the module judges the target should keep — in this repository a
+  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
+  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
+  carries that list into the PR body with the CI job that actually ran each file
+  ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*). Such a file is wired into the target's
+  CI discovery in the same commit.
+- **Running tests.** Locally and once, the tests the change requires, the way the target runs them
+  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
+  verified by observation with a tool is looked at with that tool and its observation record written
+  under `<out>/local/`, ending in one result line — `observation: match` or
+  `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
+  environment nor the target's procedures provide, or what using a tool the environment has lacks,
+  is recorded as a tool request — naming what is missing, not the output the tool would give, and
+  what the run did instead — and never acquired.
+- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
+  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+  Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
+  review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
+  those found by reading (a restatement of the code, design discussion, another file's contract,
+  commented-out code, and content none of the cases under *What a comment carries* admits, such as a
+  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
+  kept with the reason the match is not the class) and records the result under `## Comment check`.
+  The check is a signal, not a gate.
+- **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
+  implementation and the tests each faithful to the design — the module implements the satisfiable
+  subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
+  measurement that reproduces the conflict, and `path:line` anchors at the run's commit. The design
+  module takes it as an input on its re-run.
+- **Acceptance-criterion change.** A criterion the work shows defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)
+  > *Acceptance-criterion decisions*) the module puts to the advisor with the proposed change and the
+  fact that shows the need, and it follows the decision — never working around the defect by keeping
+  the criterion's letter ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* > *An acceptance-criterion change
+  shown later*).
+- **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
+  included. A lint chain covering a staged file that cannot run in this checkout, and that no
+  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
+  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
+  `## No commit`.
 
-Which code, documents and materials the review reads to judge them, and how far it reads, is the
-module's own (*The four modules* above); the record's `## Inputs` states that scope.
+## Dividing the work
 
-**What the review leaves to the later work.** The review judges the criteria against the code and policy
-as they stand; it does not set how the change will be made. What shows only once an approach
-exists — the change's effect on other functions, the reuse of existing code, where a
-responsibility is placed, an approach that meets a rule in force — is the later work's: the design
-is the design module's ([U3 Design](<autoflow-root>/docs/units/design.md)), and a change's side effects are derived at
-BUILD, not predicted at design ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:PLAN: "Affected files
-and side effects are not scored here"). A criterion defect found there takes the path
-([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Decision-point entries > *A criterion can be
-wrong*). A choice of how to make the change is neither asked here nor written into a criterion;
-what a criterion keeps is the behavior a user, a caller or an operator observes.
+A recommendation, not a rule: whether the module divides its work, and how, stays its own, and the
+division it chose and its grounds go in the build report. This section records what a division is
+worth and where it loses.
 
-## Stages of the review
+- **What a boundary is worth.** A context's cost is what it carries times the requests that carry
+  it: what was read for finished work is read again on every later request. A boundary pays when
+  the context it drops, less what a new context takes in to start (the standing prompt and the
+  handoff below), is large and many requests follow it. A boundary that drops little more than
+  that, or that few requests follow, costs more than it saves.
+- **Where to divide.** On a build whose design names several areas that share no code, two
+  boundaries pay:
+  - between areas — an area's code is not used by the next, so the next carries none of it;
+  - after the last implementation commit — verification and integration read again what they
+    need, which costs far less than carrying every area's context.
 
-**Stage 1** — criterion-screen — checks the criteria on the review items and screens the cases
-each criterion applies to, selecting the ones for in-depth analysis. **Stage 2** — criterion-trace —
-starts from what stage 1 confirmed — each cause the code shows and the behavior each criterion
-requires — and asks how far they reach, assuming no fix (*Cause reach and rule conflict (stage 2)*
-below). The **in-depth analysis** — criterion-in-depth — examines the selected cases, criterion by
-criterion, and the **reconciliation** — criterion-reconcile — settles where a stage 2 finding or an
-in-depth verdict differs from the record. Stage 2, the in-depth analysis and the reconciliation
-each run in a fresh context.
+  Inside an area the Red→Green loop is not divided: the test, the implementation and the reading
+  of a failure use the same code.
+- **A layout.**
 
-The screening is wide — every case a criterion applies to, criterion by criterion; stage 2 crosses
-the criteria — a cause one criterion's cases show may operate where another criterion, or none,
-applies; the in-depth analysis is deep — the code that decides each selected case. A judgment made
-early in a session is carried through the rest of it: a later sign against it in the same session —
-or in a session handed its record — does not reliably overturn it. A single pass also leaves out
-cases the issue does not report, and rests a verdict that a behavior already exists on the point
-where it shows rather than on the code that decides it (issue #442). Stage 2 therefore runs apart
-from the session that wrote stage 1, so the places that session looked do not bound where stage 2
-looks; it is handed the record as its starting point, and asks a question the record did not. The
-in-depth analysis receives the cases and their code locations but no earlier verdict or grounds.
-Each module's inputs are what keeps it independent: stage 2 takes the screen's record, a
-criterion's in-depth analysis its target file, and the reconciliation the record, the trace and
-every in-depth file.
+  | Context | Its work | Policy row |
+  |---|---|---|
+  | The unit itself | reads the design and the rules, assigns the areas, checks each return, spawns the observations | `unit-build` |
+  | One per area | the area's Red→Green, its tests and lint, its commits | `unit-build-area` |
+  | Verification and integration | the run record, each verification row's check, the follow-up of the observations, the comment check, the build report | `unit-build-verify` |
+  | One per observation | the observation with its tool: running it, judging match or mismatch, probing a cause | `unit-build-observe` |
 
-## Review items (stage 1)
+  A helper is spawned as `general-purpose` with the model and the effort its row reads out
+  (`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
+  the `Agent` tool's `effort` parameter — or the parameter omitted when the row reads out the
+  inherit sentinel, which is the policy file's own value and never an argument (`effort_contract`).
+- **What crosses a boundary.** To an area: its section of the feature design, the sections every
+  area shares (`## Scope` and the common constraints the design names), its verification rows, a
+  note of the repository's conventions (how its tests and lint run, its commit rules) the unit
+  writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
+  its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
+  observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
+  root (the unit's root declaration) and the text of the rules its work follows, from the unit's
+  own definition — `<autoflow-root>/docs/core.md` > Instruction Conventions and Rule Scope, by
+  which they are read, `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
+  Change Surface Rules > *Lint chain on the staged surface* and `<autoflow-root>/docs/role-common-rules.md` >
+  Bash Execution Mode — since a `general-purpose` helper has no AutoFlow definition of its own
+  (`<autoflow-root>/docs/core.md` > Context Injection). Requirements of two areas that
+  cannot both hold take the design-contradiction path above; a design point two areas meet
+  differently the unit puts to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
+- **A deterministic run is a command, not a context.** Running tests, lint and builds, and
+  committing, take no judgment; what they cost is their output carried in the context that reads
+  it. A run goes through a command that bounds its time, keeps the full output in a log under
+  `<out>/local/`, and prints the exit status, the summary line, the names of failing tests, the
+  first error block and the log's path. That short result fills `## Run record` and `## Test-first`;
+  the log stays the evidence. A run with no bound holds the context that started it, and every
+  helper report waiting on that context. A model spawned for each run costs more than it saves:
+  each spawn writes its standing prompt anew.
+- **A judgment stays with the work it judges.** An observation's match or mismatch is judged by
+  the context that ran it, which can probe a cause while the state is in front of it; a judging
+  context split from the run reads the records and captures again and cannot probe. The comment
+  check and the scope judgments belong to the context that holds the whole diff.
+- **When a division loses.**
+  - The areas share code: what each must read again of the others' code outweighs the context
+    dropped.
+  - The build is small: the context before a boundary is near what a new context starts with, or
+    few requests follow it.
+  - A model is spawned for each deterministic run.
+  - The handoff is the whole design and every convention rather than the area's part: most of the
+    saving is lost.
 
-Each criterion is checked on the items below — *Actual and expected behavior* and *Size and
-separation* once for the issue as a whole; an item that does not apply to a criterion says so.
-Each finding carries its grounds: a commit SHA with `path:line` for a fact of the code, or the
-document, its section heading and a quoted sentence for a provision of a policy document.
+## Build report
 
-| Item | The question |
+`<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
+it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
+`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
+`none`.
+
+| Section | Holds | Read by |
+|---|---|---|
+| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
+| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
+| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
+| `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
+| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
+| `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
+| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
+| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
+| `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
+| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
+
+Anything else the module records — how it divided the work, the checks it chose to run and what
+they found — is its own, written where it judges useful.
+
+## Evaluation — AUDIT
+
+The audit module judges test-first and scores the change: one fresh Evaluation AI
+(`autoflow-evaluator`, the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit`
+names), on the rubric of [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT.
+Its agent definition carries that document. When it does not confirm test-first it scores nothing
+and records what is missing; its output is otherwise the scores and their grounds with its
+recommendations.
+
+### Security checklist
+
+The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
+in the target-owned scaffold `.claude/autoflow.local.json`
+(`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
+the one the record line of
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
+names; the audit takes the checklist at that version, written to a file (`git show <score>`), as its
+`security_checklist` input ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Security checklist*):
+
+| Exit | Verdict | The version the audit reads |
+|------|---------|-------------|
+| 0 | `none-declared` | none — the five items are scored from the change alone |
+| 0 | `unchanged` | the checklist as of the base commit (`score=<base>:<path>`) |
+| 0 | `changed-decided` | the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
+| 3 | `changed-undecided` | none yet: the change is a decision for the advisor, which the module whose work made it spawns ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and the status is run again on its answer |
+| 2 | — | none — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; it is repaired and the status run again |
+
+**A change the work makes to the checklist.** A change to the file, or to the declaration that
+points at it, has no effect on the audit of that change until the advisor accepts it: the build, whose
+work made the change, runs the status and puts a `changed-undecided` change to the advisor
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). Standing entries that disagree with neither
+naming the other are a conflict: the record is undecided with `conflict=<ids>`, and a new entry
+resolves it. The answer is a `[checklist-decision]` ledger entry
+([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*): `accepted`, carrying
+the committed version's blob and non-empty Decision and Grounds lines → the status re-run reports
+`changed-decided`; `rejected` → the change is reverted and the status re-run.
+
+## Re-entry
+
+A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
+the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
+directory — their reports and their `local/` stores — and brings the build report up to date, not
+rewritten: a row the re-run supersedes is replaced, a new commit adds its lint rows, and the sections
+GATE:QUALITY reads carry the current state.
+
+## Header contract
+
+Opted-in targets only; this repository does not opt in. Every executable spec under `tests/**`
+declares, in a column-1 comment header, what it is and what it costs — at creation, not
+retroactively. The grammar's single definition site is `<autoflow-root>/scripts/test/suite-manifest.sh`, and
+`<autoflow-root>/scripts/test/check-suite-manifest.sh` enforces it.
+
+  ```
+  # ci-subject: <path-or-glob> [<path-or-glob> ...]
+  # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
+  ```
+
+- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `<autoflow-root>/scripts/test/select-suites.sh` consumes it to decide which suites a change requires.
+- **The grammar is those two fields and nothing else.** The lint admits no other field.
+- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
+
+**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The target check, a script for setting up the environment (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7; ADR-0038 D4), names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+
+1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
+2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
+3. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
+4. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
+
+The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and the target check reports `PASS: D7`.
+
+**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
+
+**Leaf rule**: a suite executes its subject, not another suite. Enforced by `<autoflow-root>/scripts/test/check-suite-leaf.sh`.
+
+**Admission**: before creating a suite file at all, answer these two questions.
+
+- Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
+- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a run's own check under `<out>/local/`, not a suite file (on a target the default is to add no file at all).
+
+<!-- From <autoflow-root>/docs/role-contracts.md > Functional-unit agents -->
+
+## Functional-unit agents (U2 / U3 / U4)
+
+Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
+and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
+evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
+lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
+and criteria-apply is a script.
+
+| Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |
+|---|---|---|
+| `autoflow-unit-analysis` | analysis (U2 Analysis) | hypothesis |
+| `autoflow-unit-design` | design (U3 Design) | plan |
+| `autoflow-unit-build` | build (U4 Build and verify) | audit, which judges test-first |
+
+- **Method is the unit's.** How the unit reaches its goal — what else it reads, whether it spawns helpers
+  or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
+  with its grounds in the unit's artifact ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+  The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
+  evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
+  ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
+- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
+  pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
+  it puts to the advisor and follows (*Advisor* above).
+- **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
+  held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
+  GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows
+  `unit-build-area`, `unit-build-verify` and `unit-build-observe`: each is spawned as
+  `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
+  `effort` parameter, omitted when the row reads out the inherit sentinel
+  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Dividing the work*). A helper receives in its prompt
+  the AutoFlow root and the text of the rules its work follows
+  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What crosses a boundary*).
+
+---
+
+<!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
+
+## Change Surface Rules
+
+Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
+
+### Scope judgment
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+
+1. **Is it directly related to this issue?** It is when any one of these holds:
+   - it comes from the same confirmed cause;
+   - this change created it or exposed it;
+   - unless it is fixed, the behavior an acceptance criterion promises does not hold in actual use.
+2. **Is fixing it in this change desirable?** It is when it lies in the same module, is confirmed by the same verification, and fixing it separately would reopen the same code. It is not when it needs a design decision of its own, touches another ownership scope, or carries more risk than this issue.
+
+| Judgment | Disposition |
 |---|---|
-| Code and policy fit | Does the code behave as the criterion presumes, and does the criterion agree with the policies in force (an ADR, a rule document)? A criterion that presumes a behavior the code does not have, or one that a standing policy contradicts, is a finding. |
-| Cause | Where the issue reports a defect, does the criterion address only the direct cause — the point where the failure shows — or also the root cause that produces it? A criterion narrower than the cause the code shows is a finding, recorded with which of the two it covers. Establishing the cause is the analysis module's work ([U2 Analysis](<autoflow-root>/docs/units/analysis.md)); the review judges what the criterion covers against the cause the code shows. |
-| Actual and expected behavior | Set side by side, does the state the criteria describe as done cover the behavior the issue reports as it actually occurs? A criterion set that covers only part of the actual behavior is a finding, recorded with the part left uncovered. |
-| Contradiction | Can every criterion hold at once? Two criteria that cannot both be met, or one that undoes another, is a finding. |
-| Terms and scope | Is every term a test would turn on defined — a threshold ("exceeds"), a surface ("the conversation screen"), a set ("every page")? An undefined term, or a scope with no stated bound, is a finding. |
-| Size and separation | Is the issue one piece of work a single change can carry to done, or does it bundle areas that are each complete on their own — separate surfaces, separate causes, criteria that share no code or test? Several independently completable areas in one issue is a finding, recorded with the areas and a proposed split (`split`). |
-| Testability | Can the criterion be shown met or unmet by an observation, and does the environment provide what that observation needs? A criterion no observation can settle is a finding. |
-| Estimates verified | Is each estimate the body states as fact — a cause, a reproduction, an affected path — confirmed by the code or an observation? An estimate left unconfirmed is a finding, recorded as unconfirmed rather than as wrong. |
+| Directly related, fixing it here desirable | fixed in this change; the recorded judgment is the trace of its hunks |
+| Directly related, fixing it here not desirable | separated, with its **separation reason** recorded |
+| Not directly related | separated — reported in one line with its `path:line`; a separate issue is the follow-up path |
 
-## Screening (stage 1)
+- **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
+- **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
+- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
+- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
-After the review items, stage 1 screens the cases each criterion applies to:
+### Trace rule
+- **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
+- **[MUST]** Before opening the PR, run `git diff <base>...HEAD` and self-audit: any hunk whose rationale names none of them is removed.
 
-- **Cases.** For each criterion, every case it applies to: the cases the issue reports, and every
-  case in which the object or the state the criterion's words name varies — another surface the
-  same cause operates on, or a path where a rule already in the code could prevent the required
-  behavior.
-- **Locations.** For each case, where the required behavior shows, and the code that decides
-  whether and how it occurs — each as `path:line` at the commit read.
-- **Verdicts.** For each criterion and case: `finding`, `holds` or `unconfirmed`, with its grounds
-  and how far they reach — `shows` (the point where the behavior shows) or `decides` (the code that
-  decides it and the condition applied there).
-- **In-depth targets.** Every `finding`, and every `holds` or `unconfirmed` whose grounds do not
-  reach `decides`. A criterion with no target is recorded as such, and has no in-depth analysis.
+### Surrounding code
+- **[MUST]** Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
+- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC or a recorded scope judgment requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
+- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing — which **Scope judgment** does not make directly related — are reported in the run's report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this change.
 
-## Cause reach and rule conflict (stage 2)
+### Over-engineering guard
+The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the change's scope needs:
+- **Scope**: don't add features, configurability, or "improvements" beyond the change's scope (**Scope judgment**). A bug fix doesn't clean up surrounding code; a simple feature doesn't gain extra options.
+- **Documentation**: don't add docstrings, comments, or type annotations to code you didn't change. What a comment on changed code may carry is **Code comments** below.
+- **Defensive coding**: don't add error handling, fallbacks, or validation for scenarios that can't occur. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
+- **Abstractions**: don't create helpers or abstractions for a one-time operation, and don't design for hypothetical future requirements.
 
-The criterion-trace module runs as an `autoflow-criterion-tracer` agent — a fresh context that
-carries none of the screen's conversation — given the issue and the review record the screen wrote.
-Starting from each cause the record confirms in the code and the behavior each criterion requires,
-it judges two questions:
+### Code comments
+The rule governs every comment in code a change writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the change leaves untouched stay as they are (**Surrounding code**).
 
-| Question | What it judges |
-|---|---|
-| Cause reach | Does a confirmed cause operate beyond the points the issue reports — the same defect showing at another point, surface or element the cause reaches? A point where it does that no criterion covers is a finding. |
-| Rule conflict | Does the behavior a criterion requires agree with the rules and behaviors the code already has, in every case the criterion applies to? A rule or behavior in force that keeps the required behavior from holding is a finding, recorded with the rule and the case. |
+- **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
+- **What a comment carries** — only what a reader cannot recover from the code, and only in one of these cases, each about the code the comment sits on:
+  - an external constraint: the behavior of a runtime, a tool, or a protocol the code depends on;
+  - an invariant that the code does not make evident;
+  - what breaks if the code is written otherwise, in a line or two;
+  - a function's contract — its arguments, return value, and exit codes — in one line.
+- **What a comment does not carry**:
+  - a restatement of what the code does;
+  - design discussion and rejected alternatives;
+  - change history — what the code did before, what it no longer does, what an earlier version wrote;
+  - an issue, PR, review-round, or acceptance-criterion identifier;
+  - the path or the contract of another file;
+  - commented-out code.
+- **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the attempt's design documents in its record directory and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
+- **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
+- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
+- **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
-How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
-only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it (`stage 1`) or stage 2 found it
-(`new`), and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
-summary.
+The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is a commit no module owns; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
 
-## In-depth analysis and reconciliation
+### Orphans from this change
+- **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
+- **[MUST]** Do not remove pre-existing unused symbols unless an AC or a recorded scope judgment requires it.
 
-**In-depth analysis.** For each criterion with an in-depth target, a fresh context examines each
-target case: the criterion-in-depth module, an `autoflow-criterion-analyzer` agent, which carries
-none of the screen's conversation. It is given one target file, the screen's
-`targets/<criterion>.md`, holding only the issue body, the criterion's text, the target cases, each
-case's code locations (`path:line`) and the commit they were read at — no verdict, grounds or
-conclusion. The verdict rests on the code that decides whether and how the required behavior occurs
-and the condition applied there, never on the point where it shows alone. Where the behavior occurs
-only under a condition, the analysis checks whether a situation that does not meet the condition
-actually arises — from which input, state or usage flow; where one does, the behavior does not hold
-in that situation. It writes `<out>/in-depth.md` — per case the verdict, the deciding code and
-condition, and the grounds — and returns that path and a one-line summary.
+### Lint chain on the staged surface
+This section is the rule's only home. Its search terms:
 
-**Reconciliation.** The criterion-reconcile module, an `autoflow-criterion-reconciler` agent —
-again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
-2 finding or an in-depth verdict differs from the record, it confirms in the code which one holds and
-settles it. A criterion that does not hold in a case it applies to is a finding for that case,
-recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
-item it cannot decide with confidence it puts to the advisor (*Authority* below). It
-updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
-`## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
-`<out>/criterion-review.md`, and returns its path and a one-line summary.
+```
+git grep -n -i -E 'lint[- ]chain|lint-outcome|lint outcome|ci-deferred|unexecuted|not-covered|modified-in-branch'
+```
 
-**What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
-verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
-receives the issue and the stage 1 record and none of the screen's conversation, and the
-in-depth context receives the target file and nothing of the review's verdicts or grounds. Each
-context's agent definition carries its part of this document ([`core.md`](<autoflow-root>/docs/core.md) >
-Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
-principle 2 — [`core.md`](<autoflow-root>/docs/core.md)). Each agent is spawned as its `subagent_type` on the model its
-policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at most five are in flight at once
-([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Concurrent spawns*), and its prompt states the delivery as
-"return … as your report".
+- **[MUST]** Before a commit is made, the committing role runs every lint chain of the target repository that covers at least one staged file over the staged files, and confirms zero errors attributable to them. Auto-fixable formatting is applied and staged in the same commit.
 
-## Review record
+**Which chains exist, and how each runs, is the target's practice.** AutoFlow prescribes no lint command and no discovery order to a target. The committing role finds, at the location it commits in, how that target lints a change: its documents (`CLAUDE.md` > Development Commands, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a commit hook) and its pull-request CI. From them it judges which chains exist, the command that runs each in the working checkout, the files each covers, and which CI lint steps gate this pull request. A CI step that does not run for this pull request — its trigger, path filter, or job or step condition excludes it — gates nothing here and is not counted as a chain; the condition that excludes it is recorded as the ground. Where a CI step and a local command both stand for one chain, the local command run is one that selects and checks the files the step does. The judgment and its grounds go into the report (**Evidence anchor** below).
 
-`<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
-in its own run directory. It carries the line `Issue body sha256: <sha256>` — the issue body
-reviewed, as `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it — on a
-line of its own, and every section below; a section with nothing to record says `none`.
+**Execution trust boundary** — **[MUST]** the command run at commit time is one the baseline — the base the branch is to merge into, at its merge-base with `HEAD` (`git merge-base HEAD origin/<base>`; the remote's default branch unless the invocation names another, `params.base`) — already carries. Before running it, the committing role confirms that the command's text at its source — the document entry, the script definition or the CI step body it was taken from — and any script file that text invokes by path are unchanged versus the baseline. A command this branch altered or added is not executed: the chain is reported `not-run` with the reason `modified-in-branch`, whichever source it came from. A command is run exactly as its source states it — a read-only check, not licence to run any other step, argument or command its source names.
 
-| Section | Holds |
-|---|---|
-| `## Inputs` | the scope the review set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort each module ran on |
-| `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
-| `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
-| `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
-| `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and its row names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
-| `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
+**Not executable in the checkout** — a chain the committing role cannot run in the working checkout (a CI step whose work is a third-party action reference with no local command that does the same, a tool the environment lacks) is reported `not-run` naming the step or command and the reason. A chain that cannot be run imposes a reporting obligation, not a blocking one: the commit proceeds. Not blocking the commit is not clearing the gate — GATE:QUALITY's `Commit conventions` clears the chain only by its reason class (**`not-run` reason classes** below). Making a chain locally executable belongs to the target repository's ops and is outside this rule's authority; a tool the work needs is used, or requested, as Verification and Tools > *The tools the work needs* says.
 
-The record is situation-first where a person reads it — to follow what was decided and why
-([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*): what each finding means
-for the issue's behavior comes before its anchors.
+**Scoping** — run the chain restricted to the staged files where the chain supports scoping. Where the chain only runs whole-tree, run it whole-tree and require that no reported error names a staged file; pre-existing errors on untouched files are not this change's surface (**Surrounding code**).
 
-## Authority
+**Outcome vocabulary** — the report carries one word per chain the committing role identified, and the word set is total over the reachable states:
 
-The review decides the disposition of every item it finds: an item the code or a policy settles, or
-one the review can reasonably choose, it decides and records with its grounds, and the dispositions
-are the only list it writes. A change to a criterion's content, and an item a module of the review
-cannot decide with confidence — in the record it writes, criterion-screen's or criterion-reconcile's —,
-the module puts to a fresh advisor and decides as the advisor decided ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); the row names the advisor's ledger entry, and an
-advisor decision on a criterion's content is an `[ac-decision]` entry
-([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
+- `clean` — the chain ran and reported nothing attributable to the staged files;
+- `fixed-and-staged` — the chain ran and reported fixable findings, and the fixes are in this commit;
+- `detected` — the chain ran and reported findings attributable to the staged files that were not auto-fixed; the commit does not proceed until they are resolved;
+- `not-run` — the chain covers a staged file but did not execute; the word attaches to the fact of non-execution, regardless of why it did not execute, and the report names the chain, the reason, and exactly one reason class from **`not-run` reason classes** below;
+- `not-covered` — the chain exists and no staged file is in the set of files it covers;
+- `not-applicable` — the committing role found no lint chain in the target; the report carries this word once, in place of any per-chain line.
 
-The record criterion-reconcile writes holds the review's decisions, and its `Issue body sha256:`
-line names the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
-analysis report restates them, with the `[ac-decision]` entries applied
-([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
-were made on.
+**`not-run` reason classes** — **[MUST]** every `not-run` line carries exactly one of two classes. The class, not the word, decides whether the lint record's reader — GATE:QUALITY's `Commit conventions` ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY) — clears the chain:
 
-## What reads it
+- `ci-deferred` — the chain cannot run at the commit boundary (**Not executable in the checkout** because no local command does what its CI step does, or withheld by the **Execution trust boundary** as `modified-in-branch`) **and** a named pull-request CI job runs that same chain over the staged files for this pull request. It is cleared as a deferral;
+- `unexecuted` — anything else: executable but not run, a tool the environment lacks, or no covering pull-request job can be named. It is not cleared: it is an omission, filled where it is found (Verification and Tools > *A missing run is filled where it is found*).
 
-- **The analysis module** — the review record is one of its inputs
-  ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *Criterion review record*).
-- **criteria-apply** — the `[ac-decision]` entries the dispositions that change a criterion are
-  recorded as ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
+- **[MUST]** Fail-closed default: a chain whose reason class cannot be established is `unexecuted`. The permissive class is the one earned by evidence; the absence of evidence yields the blocking one.
 
-## Issues filed before this procedure
+A `ci-deferred` deferral is discharged at the delivery module's CI confirmation, which confirms the PR's check rollup is green — at least one check present and every element green (`<autoflow-root>/scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format item 5) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When no CI runs for the pull request (`confirm-ci-green.sh` exit `11` judged not run), the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*).
 
-No issue is exempt by its filing date, and no bulk back-fill is run: an issue is reviewed when an
-attempt of it is begun, and an issue taken up again after an earlier attempt is reviewed again by
-the new attempt, whatever the earlier one left: every attempt begins with its own review.
+- **[MUST]** A chain that did not execute is reported `not-run`, never `clean`.
+
+**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format item 5, whose single-anchor requirement it satisfies as a per-chain enumeration followed by the grounds of the identification (form and cardinality there).
+
+### Refactor scope
+A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**, and one judged directly related goes to the build report's out-of-scope-observations section for the evaluator to dispose of (`<autoflow-root>/docs/units/build.md` > Build report).
+
+### GATE:QUALITY linkage
+GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+
+A high-scoring change:
+- resolves the confirmed cause, not only the reported symptom
+- stays inside the module or component that owns that cause
+- includes the local cleanup the fix itself requires — the code and symbols this change renders unreachable or unused, removed in the same commit; cleanup merely noticed nearby does not qualify (**Surrounding code**), and **Orphans from this change** is the symbol-removal instance of this same test, not its limit
+- fixes each directly related problem its scope judgments include, and leaves out a directly related problem only with a recorded separation reason
+- leaves every surface outside the scope untouched — behavior, APIs, configuration, and documentation are examples of such a surface, not the boundary — and keeps, inside it, the existing behavior that neither the acceptance criteria, the confirmed cause nor a problem its scope judgments include asks to change, a protection or the order of checks included; recording such a change as a known gap does not bring it into scope
+
+`Minimal implementation` asks whether each hunk is needed. The question is asked against the smallest change that satisfies the acceptance criteria, with the tests its verification design requires, and resolves the confirmed cause: a hunk beyond it stands only on its own recorded ground. It fails when a hunk traces to no acceptance criterion, confirmed cause or recorded scope judgment — "I noticed it while I was here" cleanup (**Surrounding code**) or depth creep beyond what the scope needs (**Over-engineering guard**) — regardless of code quality, and when a hunk rests on a scope judgment that meets none of question 1's three conditions. It fails symmetrically when the change is too narrow to resolve the confirmed cause: a change that leaves the confirmed cause in place is not sufficient, and does not score well for being small.
+
+`Impact scope` asks the same question from the other side: whether the change reaches what its scope requires. A directly related problem that the attempt's own records show — a scope judgment, a build observation, an earlier evaluation's recommendation — and that the change leaves out with no separation reason recorded lowers it, as does a separation reason that answers neither half of question 2.
+
+**Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the build report's `## Comment check` section (`<autoflow-root>/docs/units/build.md` > Build report) — its `comment-ratio` line and its hits — with the comments in the diff:
+- *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
+- *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold, and names the comment blocks it rests on.
+
+The evaluator records each such finding in the item's `reason` and in `recommendations`, and does not lower the item's score for it: in a target a comment finding never fails the gate (`<autoflow-root>/docs/evaluation-system.md` > *Code comments in a target*, which also names the defects a comment can carry on their own ground and that this exclusion does not cover). In this repository the item is scored without this comment weighing.
+
+---
+
+<!-- From <autoflow-root>/docs/units/completion-evaluation.md > Recommendation triage -->
+
+## Recommendation triage
+
+An evaluation's `recommendations` — at GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY alike —
+are findings the evaluator recorded, each with its subject, the item it was found under, its severity
+and the finding ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). They
+are disposed of as a reviewer's findings are: whether each holds is weighed first
+([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
+grounds. Where a fix is made is the judgment of the AI acting on the finding
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
+judgment, and no rule branches on it.
+
+- **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
+  the build — or, for a fix no module owns, in a commit of its own. The
+  recommending evaluation's re-score judges it: the finding's `rescore.prior_findings` entry is
+  `cleared` or `remains`.
+- **Does not hold.** It is rebutted with the grounds that show it, and the recommending
+  evaluation's re-score judges the rebuttal (*Whether a finding holds*).
+- **Deferred.** It is left for later and stated on the pull request: the issue that takes it, or
+  the gap stated in a line ([`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *한계와 known gaps*). A known
+  gap worth fixing becomes an issue.
+- **Separated.** Not directly related — none of question 1's three conditions of
+  [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
+  judgment* holds —, it is separated with its ground and a separate issue as the follow-up path.
+- **A criterion defect is decided.** A recommendation that records an acceptance criterion
+  defective — the evaluator records one as a fact, the criterion as its subject
+  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format) — or one whose fix
+  could keep a criterion's letter only by adding a rule the criterion did not state
+  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*), is neither
+  fixed, separated nor deferred as it stands: the module acting on it puts the change to the advisor,
+  whose decision is recorded as `[ac-decision]` entries ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* >
+  *An acceptance-criterion change shown later*).
+- **A fact below the decision layer** ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts* item 1) that an
+  evaluation of the analysis or the design records is not a defect of the artifact it scores; it is
+  taken up where the build derives it, and judged with that work at GATE:QUALITY.
+
+The AI acting on a recommendation puts it to the advisor, and follows the decision
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), when (a) the fix needs a contract or
+acceptance-criterion change; (b) the fix direction is
+ambiguous, or a directly related recommendation looks undesirable to fix in this change (question 2)
+and would be left; (c) a re-score keeps the previous finding `remains` after its fix — the same
+complaint answered twice — and the re-score's grounds do not settle the next fix.
+
+**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) >
+Documentation Policy). Its search terms:
+
+```
+git grep -n -i -E 'recommendation triage|recommendations triaged|deferred or separated|disposed of as a reviewer'
+```
+
+<!-- From <autoflow-root>/docs/evaluation-system.md > Gate rubrics > GATE:QUALITY > Known blind-spot checks > Impact scope / Doc updates — reference integrity on moves -->
+
+- **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
+  or renames files, sections, or identifiers, require evidence of a repo-wide
+  inbound-reference sweep (direct references, test-harness expectations, paraphrased
+  mentions). A dangling reference in a **normative document** caps the affected item at 6.
+  The cap binds normative documents only; a stale name in a **historical record** is the
+  evaluator's judgment.
+  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
+    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
+    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
+    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
+    `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
+    `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
+    (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a
+    role to read — the command bodies under `<autoflow-root>/skills/` and the usage documents
+    `<autoflow-root>/docs/INDEX.md` routes, outside the records under `<autoflow-root>/docs/records/`.
+  - *Historical records* are what is kept as a record of a past state and followed by no one:
+    per-issue manual-verification records, report-excerpt fixtures
+    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and completed attempts'
+    records. A fixture that an executing test reads is still a historical record for this check,
+    while the test that reads it is normative.
+  - For a stale name in a historical record the evaluator judges whether a reader following the
+    normative documents would be misled by it, and records the judgment with its grounds in the
+    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
+    rests on that recorded ground alone, never on the name's presence; a record whose stale names
+    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
+
+<!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
+
+### Whether a finding holds
+
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
+
+**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
+
+```
+git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|each) (finding|recommendation|item) holds'
+```
 
 <!-- From <autoflow-root>/docs/decision-ledger.md -->
 

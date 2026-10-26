@@ -67,9 +67,8 @@ Then, in your project:
 
 - **Run a module** on an invocation file — the module's parameters, its
   inputs, the attempt's record directory and the run's output directory
-  ([`docs/core.md`](docs/core.md) > Development Lifecycle). Until the module commands replace them,
-  the commands `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u7` and
-  `/autoflow:criterion-review` carry the modules' procedures (ADR-0038 D9).
+  ([`docs/core.md`](docs/core.md) > Development Lifecycle): `/autoflow:<module> <invocation.json>`,
+  one command per module, carries the module's procedure (ADR-0038 D9).
 - **Nothing to ignore**: every record — an attempt's ledger, each run's outputs and `local/`
   store, issue drafts — is under the record root (`autoflow-records root` prints it), each
   attempt's record directory there. Set
@@ -125,7 +124,7 @@ autoflow/
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
 ├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
-├── skills/                            # /autoflow:cycle, /autoflow:cycle-u1 … cycle-u7 — one unit — and /autoflow:criterion-review — its criterion review stage alone (generated from docs/core.md and the documents scripts/skills/role-docs.tsv names)
+├── skills/                            # /autoflow:<module> — one command per module (generated from docs/core.md and the documents scripts/skills/role-docs.tsv names)
 ├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root and the issue drafts directory
 │
 ├── .github/
@@ -160,10 +159,9 @@ autoflow/
 
 [`docs/core.md`](docs/core.md) is the operating manual: how a module runs, the
 authority rules, agent roles and permissions, evaluation criteria, and the Git
-workflow. It reaches a session through the body of `/autoflow:cycle` (a unit's
-`/autoflow:cycle-u1` … `/autoflow:cycle-u7` carry the parts its unit uses, and
-`/autoflow:criterion-review` the criterion review alone), and a subagent through its agent definition; each
-command body carries its unit's document and the other documents the session follows after the
+workflow. It reaches a session through the body of a module's command, `/autoflow:<module>`, which
+carries the parts of the core its module uses, and a subagent through its agent definition; each
+command body carries its module's document and the other documents the session follows after the
 core, and each agent definition the core parts and documents its role follows (ADR-0035).
 
 ### 2. Multi-Agent Separation

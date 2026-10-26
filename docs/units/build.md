@@ -1,6 +1,6 @@
 # U4 Build and verify — BUILD and AUDIT
 
-> Unit document for U4. [`core.md`](../core.md) > Unit Document Loading Contract routes to
+> The procedure of the build module, and the spawn of the audit module. [`core.md`](../core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
 > Modules.
 

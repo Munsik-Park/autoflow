@@ -5,11 +5,10 @@
 # Test: the generated carriers and the AutoFlow path notation (issue #454 PR-3)
 # =============================================================================
 # The rules reach a role through the carrier it starts with — a main session
-# through the command bodies /autoflow:cycle, /autoflow:cycle-u1 … cycle-u7 and
-# /autoflow:criterion-review, a subagent through its agent definition, a
-# reviewer through its rule file — generated from docs/core.md and the
-# documents scripts/skills/role-docs.tsv names (ADR-0027 D2, ADR-0032,
-# ADR-0035), and an AutoFlow path is written `<autoflow-root>/…` wherever a
+# through the command body of a module, /autoflow:<module>, a subagent through
+# its agent definition, a reviewer through its rule file — generated from
+# docs/core.md and the documents scripts/skills/role-docs.tsv names (ADR-0027
+# D2, ADR-0035, ADR-0038 D9), and an AutoFlow path is written `<autoflow-root>/…` wherever a
 # role reads it (ADR-0027 D3). The bodies are the ones `gen-skill-bodies.sh
 # --list` names, the carriers the ones `--list-all` names. Plain bash +
 # awk/sed/grep/cmp (no bats, no node/npm).
@@ -32,19 +31,19 @@
 #     K1  read from the classification and the core apart from the
 #         generator's block parser: each entry's first line (a section entry's
 #         heading and first body line), where it is unique in the core, is in
-#         exactly the unit bodies the entry names; a body missing a line is
+#         exactly the module bodies the entry names; a body missing a line is
 #         caught
-#     K2  the /autoflow:cycle body's core part is the whole core
+#     K2  every module contract (docs/contracts/*.json) has a command body,
+#         and every command body a contract
 #     K3  read from role-docs.tsv and the documents apart from the generator:
 #         each entry's first line (the document's, its section heading or its
 #         block) follows the entry's `<!-- From … -->` line in every carrier
 #         the entry names; a carrier missing an entry is caught
-#     K4  every document, and every section of it, the core's Unit Document
-#         Loading Contract and Unit references tables name for a unit is
-#         carried by that unit's body and by the /autoflow:cycle body — by its
-#         own `From` line, or as a heading inside a carried section of the
-#         same document; a body missing a named section, and one whose
-#         enclosing section lacks it, are caught
+#     K4  every document, and every section of it, the core's Module
+#         references table names for a module is carried by that module's
+#         body — by its own `From` line, or as a heading inside a carried
+#         section of the same document; a body missing a named section is
+#         caught
 #
 #   B   root declaration
 #     B1  every body and every agent definition declare the root through
@@ -73,6 +72,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GEN="$REPO_ROOT/scripts/skills/gen-skill-bodies.sh"
 BODIES="$(bash "$GEN" --list)"
+MODS="$(printf '%s\n' "$BODIES" | sed -e 's|^skills/||' -e 's|/SKILL.md$||' | tr '\n' ' ')"
 CARRIERS="$(bash "$GEN" --list-all)"
 
 PASS_COUNT=0
@@ -198,11 +198,11 @@ scratch() {
 
 SCR="$WORK/regen"
 scratch "$SCR"
-printf 'hand edit\n' >> "$SCR/skills/cycle-u3/SKILL.md"
+printf 'hand edit\n' >> "$SCR/skills/design/SKILL.md"
 printf 'hand edit\n' >> "$SCR/agents/autoflow-evaluator.md"
 if bash "$SCR/scripts/skills/gen-skill-bodies.sh" --check >/dev/null 2>"$WORK/g2.err"; then
   failc "G2" "--check accepted a hand-edited body"
-elif grep -q 'skills/cycle-u3/SKILL.md differs' "$WORK/g2.err" && grep -q 'agents/autoflow-evaluator.md differs' "$WORK/g2.err"; then
+elif grep -q 'skills/design/SKILL.md differs' "$WORK/g2.err" && grep -q 'agents/autoflow-evaluator.md differs' "$WORK/g2.err"; then
   pass "G2: a hand-edited body and a hand-edited agent definition are caught (--check exit 1, naming each)"
 else
   failc "G2" "unexpected diagnostic: $(head -c 300 "$WORK/g2.err")"
@@ -223,7 +223,7 @@ g3 g3a 'heading "## New Section": no entry'
 scratch "$WORK/g3b"
 awk '{ print } /^AutoFlow does not classify/ { print ""; print "A new paragraph." }' "$REPO_ROOT/docs/core.md" > "$WORK/g3b/docs/core.md"
 g3 g3b 'line "A new paragraph.": no entry in the split section "## Project Information"'
-scratch "$WORK/g3c"; printf '## Cost Control\tA vanished bullet\tU6\n' >> "$WORK/g3c/scripts/skills/core-units.tsv"
+scratch "$WORK/g3c"; printf '## Cost Control\tA vanished bullet\tdelivery\n' >> "$WORK/g3c/scripts/skills/core-units.tsv"
 g3 g3c 'A vanished bullet": matches nothing'
 scratch "$WORK/g3d"; printf 'agents/autoflow-evaluator.md\tdocs/units/build.md\t## A Vanished Section\n' >> "$WORK/g3d/scripts/skills/role-docs.tsv"
 g3 g3d 'docs/units/build.md has no single section "## A Vanished Section"'
@@ -248,13 +248,14 @@ echo "== K: each body's core part follows the classification =="
 # classification, the lines it names — a prefix entry's line, the one line in
 # its scope that starts with the prefix; a section entry's heading and the first
 # line of its body — where such a line occurs once in the core, are in the
-# bodies of the units the entry names and in no other unit body. Prints each
-# "Uk:<line>" that disagrees; the last line is the number of entries read.
+# bodies of the modules the entry names and in no other module body. Prints
+# each "<module>:<line>" that disagrees; the last line is the number of entries
+# read.
 k1() {
   local row scope rest pfx units line read n=0 k b want got
   local -a lines
   sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' "$REPO_ROOT/docs/core.md" | awk 'f || /^## / { f = 1; print }' > "$WORK/k1.core"
-  for k in U1 U2 U3 U4 U5 U6 U7; do core_part "$1/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md" > "$WORK/k1.$k"; done
+  for k in $MODS; do core_part "$1/$k/SKILL.md" > "$WORK/k1.$k"; done
   while IFS= read -r row; do
     scope="${row%%	*}"; rest="${row#*	}"; pfx="${rest%%	*}"; units="${rest#*	}"
     [ "$units" != split ] || continue
@@ -273,8 +274,7 @@ k1() {
     for line in "${lines[@]}"; do
       [ -n "$line" ] && [ "$(grep -cxF -- "$line" "$WORK/k1.core")" -eq 1 ] || continue
       read=1
-      for k in U1 U2 U3 U4 U5 U6 U7; do
-        b="$1/cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md"
+      for k in $MODS; do
         case " $units " in *" all "*|*" $k "*) want=1 ;; *) want=0 ;; esac
         grep -qxF -- "$line" "$WORK/k1.$k" && got=1 || got=0
         [ "$want" = "$got" ] || echo "$k:$(printf '%s' "$line" | cut -c1-50)"
@@ -287,23 +287,24 @@ k1() {
 k1 "$REPO_ROOT/skills" > "$WORK/k1.out"
 k1n=$(tail -1 "$WORK/k1.out"); k1bad=$(sed '$d' "$WORK/k1.out" | tr '\n' ' ')
 cp -R "$REPO_ROOT/skills" "$WORK/k1skills"
-sed '/^U4 Build and verify /d' "$REPO_ROOT/skills/cycle-u4/SKILL.md" > "$WORK/k1skills/cycle-u4/SKILL.md"
+sed '/^build  /d' "$REPO_ROOT/skills/build/SKILL.md" > "$WORK/k1skills/build/SKILL.md"
 k1spec=$(k1 "$WORK/k1skills" | sed '$d' | tr '\n' ' ')
 if [ "$k1n" -lt 40 ]; then
   failc "K1" "only $k1n classification entries read (vacuous)"
 elif [ -n "$k1bad" ]; then
-  failc "K1" "a unit body disagrees with the classification: $k1bad"
-elif [ "$k1spec" != "U4:$(grep -m1 '^U4 Build and verify ' "$REPO_ROOT/skills/cycle-u4/SKILL.md" | cut -c1-50) " ]; then
-  failc "K1" "a U4 body without its module line was read as '$k1spec'"
+  failc "K1" "a module body disagrees with the classification: $k1bad"
+elif [ "$k1spec" != "build:$(grep -m1 '^build  ' "$REPO_ROOT/skills/build/SKILL.md" | cut -c1-50) " ]; then
+  failc "K1" "a build body without its module line was read as '$k1spec'"
 else
-  pass "K1: $k1n classification entries read apart from the generator; each one's lines are in exactly its units' bodies; a body missing a line is caught"
+  pass "K1: $k1n classification entries read apart from the generator; each one's lines are in exactly its modules' bodies; a body missing a line is caught"
 fi
 
-awk 'f || /^## / { f = 1; print }' "$REPO_ROOT/docs/core.md" | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' > "$WORK/k2.want"
-if core_part "$REPO_ROOT/skills/cycle/SKILL.md" | cmp -s "$WORK/k2.want" -; then
-  pass "K2: the /autoflow:cycle body carries the whole core"
+k2c=$(for f in "$REPO_ROOT"/docs/contracts/*.json; do f="${f##*/}"; echo "${f%.json}"; done | LC_ALL=C sort | tr '\n' ' ')
+k2b=$(printf '%s\n' $MODS | LC_ALL=C sort | tr '\n' ' ')
+if [ -n "$k2c" ] && [ "$k2c" = "$k2b" ]; then
+  pass "K2: every module contract has a command body and every command body a contract ($(printf '%s\n' $MODS | wc -l | tr -d ' ') modules)"
 else
-  failc "K2" "the /autoflow:cycle body's core part differs from the core"
+  failc "K2" "contracts: $k2c; bodies: $k2b"
 fi
 
 # k3 <carriers-root> — read without the generator: for each role-docs.tsv entry
@@ -352,18 +353,18 @@ else
   pass "K3: $k3n role-docs.tsv entries read apart from the generator; each one's first line follows its From line in every carrier it names (the whole text is G1's); a carrier missing one is caught"
 fi
 
-# K4 — the documents and sections the core's tables name for a unit, in that
-# unit's body and the whole-cycle body. A table item is a document link, then
+# K4 — the documents and sections the core's Module references table names for
+# a module, in that module's body. A table item is a document link, then
 # its sections — " > <Section>" or " (<Section>, <Section>)" — or none: the
 # whole document. An item is met by the body's `From` line of the whole
 # document, or of a section of it whose last step starts with the item's, or
 # by a heading starting with the item's section in the text that a `From` line
 # of a section of the same document opens, up to the next `From` line.
-# k4_items — "<Uk>\t<document>\t<section>" per item of the two tables.
+# k4_items — "<module>\t<document>\t<section>" per item of the table.
 k4_items() {
-  awk '/^### Unit Document Loading Contract|^### Unit references/ { on = 1; next } /^##/ { on = 0 }
-    on && /^\| U[1-7] / {
-      k = substr($0, 3, 2); l = $0
+  awk '/^### Module references/ { on = 1; next } /^##/ { on = 0 }
+    on && /^\| [a-z][a-z-]* \|/ {
+      k = $0; sub(/^\| /, "", k); sub(/ \|.*$/, "", k); l = $0
       while (match(l, /\[`<autoflow-root>\/docs\/[^`]*\.md`\]\([^)]*\)/)) {
         d = substr(l, RSTART + 18, RLENGTH); sub(/`\].*$/, "", d)
         l = substr(l, RSTART + RLENGTH)
@@ -382,7 +383,7 @@ k4() {
   local n=0 k d sec b
   while IFS=$'\t' read -r k d sec; do
     n=$((n + 1))
-    for b in "cycle-$(printf '%s' "$k" | tr 'U' 'u')/SKILL.md" cycle/SKILL.md; do
+    for b in "$k/SKILL.md"; do
       grep -qxF "<!-- From <autoflow-root>/$d -->" "$1/$b" && continue
       [ -n "$sec" ] && awk -v h="<!-- From <autoflow-root>/$d > " -v s="$sec" '
         index($0, "<!-- From ") == 1 {
@@ -402,18 +403,17 @@ k4 "$REPO_ROOT/skills" > "$WORK/k4.out"
 k4n=$(tail -1 "$WORK/k4.out"); k4bad=$(sed '$d' "$WORK/k4.out" | tr '\n' ' ')
 cp -R "$REPO_ROOT/skills" "$WORK/k4skills"
 sed 's|^<!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->$|<!-- dropped -->|' \
-  "$REPO_ROOT/skills/cycle-u5/SKILL.md" > "$WORK/k4skills/cycle-u5/SKILL.md"
-sed 's|^### Scope judgment$|### dropped|' "$REPO_ROOT/skills/cycle/SKILL.md" > "$WORK/k4skills/cycle/SKILL.md"
+  "$REPO_ROOT/skills/quality/SKILL.md" > "$WORK/k4skills/quality/SKILL.md"
 k4spec=$(k4 "$WORK/k4skills" | sed '$d' | tr '\n' ' ')
-k4want="skills/cycle/SKILL.md:docs/submodule-common-rules.md > Scope judgment skills/cycle/SKILL.md:docs/submodule-common-rules.md > Scope judgment skills/cycle-u5/SKILL.md:docs/submodule-common-rules.md > Change Surface Rules "
+k4want="skills/quality/SKILL.md:docs/submodule-common-rules.md > Change Surface Rules "
 if [ "$k4n" -lt 15 ]; then
   failc "K4" "only $k4n items read from the core's tables (vacuous)"
 elif [ -n "$k4bad" ]; then
-  failc "K4" "a document or section the core names for a unit is not in its body: $k4bad"
+  failc "K4" "a document or section the core names for a module is not in its body: $k4bad"
 elif [ "$k4spec" != "$k4want" ]; then
-  failc "K4" "a U5 body without its Change Surface Rules section and a cycle body whose Change Surface Rules lacks its Scope judgment heading were read as '$k4spec'"
+  failc "K4" "a quality body without its Change Surface Rules section was read as '$k4spec'"
 else
-  pass "K4: the $k4n documents and sections the core's tables name for the units are in each unit's body and the /autoflow:cycle body; a body missing a named section, and one whose enclosing section lacks it, are caught"
+  pass "K4: the $k4n documents and sections the core's Module references table names are in each module's body; a body missing a named section is caught"
 fi
 
 # ── B: root declaration ──────────────────────────────────────────────────────

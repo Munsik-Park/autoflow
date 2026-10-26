@@ -1,20 +1,21 @@
 ---
-name: cycle-u4
+name: review
 description: >-
-  Run unit U4 (Build and verify — BUILD, AUDIT) of an AutoFlow cycle alone,
-  in a session of its own, with the parts of the core U4 uses. Use only when
-  the operator starts a U4 session (/autoflow:cycle-u4 <N>).
-argument-hint: "<issue-number>"
+  Run the AutoFlow review module once on an invocation file — the pull
+  request reviewed by every configured reviewer, and one aggregated verdict
+  posted on it. Use when the operator runs the review module (/autoflow:review
+  <invocation.json>).
+argument-hint: "<invocation.json>"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
-An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
+An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: `<N>`) — unit U4, Build and verify (BUILD, AUDIT), of issue #N's cycle alone: confirm from the attempt's records that the cycle stands at U4's entry (otherwise report the situation and stop), run U4 from its entry to its exit transition, and end the session with the report the invoking prompt asks for.
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the review module (`<autoflow-root>/docs/contracts/review.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round's reviews are aggregated by an `autoflow-analyzer` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
-**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that U4 uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Push and PR creation; Development Lifecycle > Unit Document Loading Contract: U1 Criterion review, U2 Analysis, U3 Design, U5 Completion eval, U6 Delivery, U7 Review; Development Lifecycle > Unit references: U1 Criterion review, U2 Analysis, U3 Design, U5 Completion evaluation, U6 Delivery, U7 Review; Project Information: A project whose information names sub-repos.
+**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the review module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/build.md`; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; `<autoflow-root>/docs/evaluation-system.md` > Gate rubrics > GATE:QUALITY > Known blind-spot checks > *Impact scope / Doc updates — reference integrity on moves*; `<autoflow-root>/docs/units/review.md` > Review triage > Whether a finding holds; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/review.md`; `<autoflow-root>/docs/reviewer-backend.md`; `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -47,42 +48,42 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands, which the hook sees.
 
-### Unit Document Loading Contract
+**Push and PR creation**: the delivery module pushes the branch and opens each pull request as a draft with its own `git push` / `gh pr create`, and confirms CI is green, or records on the pull request that CI did not run, never reading that as green. What the PR body carries, the host PR's `Closes #N` included, is the module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
 
-**[MUST]** A module's run follows its contract's `procedure` — the unit document below for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the session's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
+### Module procedures
 
-| Unit | Phases | Unit document | Modules |
-|------|--------|------|------|
-| U1 Criterion review | CRITERION-REVIEW | `<autoflow-root>/docs/criterion-review.md` | `criterion-screen`, `criterion-trace`, `criterion-in-depth`, `criterion-reconcile` |
-| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | `<autoflow-root>/docs/units/analysis.md` | `analysis`, `hypothesis` |
-| U3 Design | ARCHITECT, GATE:PLAN | `<autoflow-root>/docs/units/design.md` | `design`, `plan` |
-| U4 Build and verify | BUILD, AUDIT | `<autoflow-root>/docs/units/build.md` | `build`, `audit` |
-| U5 Completion evaluation | GATE:QUALITY | `<autoflow-root>/docs/units/completion-evaluation.md` | `quality` |
-| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | `<autoflow-root>/docs/units/delivery.md` | `delivery` |
-| U7 Review | REVIEW | `<autoflow-root>/docs/units/review.md` | `review` |
+**[MUST]** A module's run follows its contract's `procedure` — its document for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the module's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
 
-What each module does, and what else a unit's body carries: the module list and *Unit references* below, and *Context Injection*. The deterministic module `criteria-apply` is a script, `bash <autoflow-root>/scripts/contracts/criteria-apply.sh`, with no procedure document.
+| Module | Command | Procedure | The work is done by |
+|------|------|------|------|
+| `criterion-screen` | `/autoflow:criterion-screen` | `<autoflow-root>/docs/criterion-review.md` | the session itself, on the model and effort the procedure's *The four modules* names |
+| `criterion-trace` | `/autoflow:criterion-trace` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-tracer` spawn (spawn-policy key `criterion-trace`) |
+| `criterion-in-depth` | `/autoflow:criterion-in-depth` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-analyzer` spawn (`criterion-in-depth`) |
+| `criterion-reconcile` | `/autoflow:criterion-reconcile` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-reconciler` spawn (`criterion-reconciliation`) |
+| `analysis` | `/autoflow:analysis` | `<autoflow-root>/docs/units/analysis.md` | an `autoflow-unit-analysis` spawn (`unit-analysis`) |
+| `criteria-apply` | `/autoflow:criteria-apply` | `<autoflow-root>/scripts/contracts/criteria-apply.sh`, a script with no procedure document | the script |
+| `hypothesis` | `/autoflow:hypothesis` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:HYPOTHESIS | an `autoflow-evaluator` spawn (`gate-hypothesis`) |
+| `design` | `/autoflow:design` | `<autoflow-root>/docs/units/design.md` | an `autoflow-unit-design` spawn (`unit-design`) |
+| `plan` | `/autoflow:plan` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:PLAN | an `autoflow-evaluator` spawn (`gate-plan`) |
+| `build` | `/autoflow:build` | `<autoflow-root>/docs/units/build.md` | an `autoflow-unit-build` spawn (`unit-build`) |
+| `audit` | `/autoflow:audit` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > AUDIT | an `autoflow-evaluator` spawn (`audit`) |
+| `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
+| `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
+| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-The **reference values** an evaluation's scores are read against (each item ≥ 7, average ≥ 7.5, a `Security` item at 3 or below → rework) are kept with the rubrics (`<autoflow-root>/docs/evaluation-system.md` > PASS Criteria) and carried in each evaluation contract's `reference`. An evaluation outputs its scores and their grounds, with the reference values (ADR-0038 D6).
-
-Seven units carry the modules until the module commands replace the unit commands (ADR-0038 D9): a unit's command body carries the procedures of its modules. The phase and gate names stay as identifiers: the spawn-policy keys, the commands and the documents' headings carry them.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-U4 Build and verify    BUILD           — the build module (one `autoflow-unit-build` spawn) implements and verifies the design (test-first, run records, manual checklist, maintained docs, lint), its method its own
-                       AUDIT           — the audit evaluation module: an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)
+review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
 ```
 
-Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and a session that runs the whole cycle receives all of it; each receives the documents its units use with them (*Context Injection*).
+Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
 
-The rubric of every evaluation — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the work's: it lives in `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics*, the procedure of each evaluation contract.
+### Module references
 
-The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, the 10-point scale, the output format) lives in `<autoflow-root>/docs/evaluation-system.md`; how the evaluator is spawned and prompted is `<autoflow-root>/docs/role-contracts.md` > Evaluation AI.
-
-### Unit references
-
-| Unit | Also on entry |
+| Module | Its command body also carries |
 |------|------|
-| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh`; recommendation triage: `<autoflow-root>/docs/units/completion-evaluation.md` > Recommendation triage; normative documents: `<autoflow-root>/docs/evaluation-system.md` > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: `<autoflow-root>/docs/units/review.md` > Whether a finding holds |
+| review | the procedure: `<autoflow-root>/docs/units/review.md`; reviewers: `<autoflow-root>/docs/reviewer-backend.md`; change surface: `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules; comments in a target: `<autoflow-root>/docs/units/completion-evaluation.md` > Code comments in a target |
 
 ## Cost Control
 
@@ -172,23 +173,19 @@ For details, see `<autoflow-root>/docs/repo-boundary-rules.md`.
 
 AutoFlow does not classify a project's repository structure and keeps no file of project facts. When work on a repository starts, the AI reads the project's own information and rule files where they exist — a `README.md`, a `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs, such as how the repositories are composed (a host and its sub-repos, forks and upstreams) and where issues are filed. The operator writes those files while setting up the project, and they may already exist. A fact the work needs that no such file states the AI establishes from the repository itself where it can — its remotes, its `.gitmodules` — and otherwise records as a tool request: the missing fact, and the file that would state it.
 
+A project whose information names sub-repos delivers each changed sub-repo on its own pull request, and the host pull request's pointer names the commit it delivers: `<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*.
+
 ## Team Structure
 
 각 역할의 상세 계약은 `<autoflow-root>/docs/role-contracts.md`를 참조한다.
 
-### Evaluation AI — contract: `<autoflow-root>/docs/evaluation-system.md`; spawn and prompt: `<autoflow-root>/docs/role-contracts.md` > Evaluation AI
-### Build unit (U4) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; in a target scope: `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope
 ### Advisor — contract: `<autoflow-root>/docs/role-contracts.md` > Advisor
-### Functional-unit agents (U2 / U3 / U4) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents
 
 ## Records and the hook
 
 **Record directory.** Every record of an attempt lives in the attempt's record directory `<attempt-dir>`, under the record root — outside every checkout's tree, `autoflow-records root` (default `~/.autoflow`; the operator's `~/.autoflow/config.json` > `record_root`) —, which each invocation names as `records`. Each run writes into its own subdirectory, `<attempt-dir>/<module>-<n>` (`<module>-<qualifier>-<n>` for one module run on several items in a round, `n` counting that module's runs from 1), so nothing is renamed or overwritten; a functional module reads what earlier runs left in the directory, and an evaluation module keeps to its declared inputs (ADR-0038 D4). The ledger is `<attempt-dir>/issue-{N}-ledger.md`, the name the hook's ledger check reads.
 
 **The hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`) keeps the policy denies, in every session and with no state (ADR-0038 D5): `gh pr merge`; a push to the remote default branch (`origin/HEAD`, else `main`); `gh issue create` and its REST form; a ledger write that changes text already in the ledger; an `Agent` spawn without an explicit `model`; and a backgrounded `run-suites.sh`. With no `jq` it reads the other denies from the raw input; the ledger check reads the write with `jq`, and with no `jq` it passes the write unchecked.
-
-## Evaluation System
-→ `<autoflow-root>/docs/evaluation-system.md`
 
 ## Git Workflow — Rules
 
@@ -230,330 +227,478 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 
-<!-- From <autoflow-root>/docs/units/build.md -->
+<!-- From <autoflow-root>/docs/units/review.md -->
 
-# U4 Build and verify — BUILD and AUDIT
+# U7 Review — REVIEW
 
-> Unit document for U4. [`core.md`](<autoflow-root>/docs/core.md) > Unit Document Loading Contract routes to
+> The procedure of the review module. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
 > Modules.
 
-U4 Build and verify is two modules: the build module, whose contract is
-`<autoflow-root>/docs/contracts/build.json` and whose procedure is this file, and the audit
-evaluation module that judges test-first and audits the change
-(`<autoflow-root>/docs/contracts/audit.json`, [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) >
-*Gate rubrics* > AUDIT; [`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md)
-D1). This file states the build's goal, what it owes, the cautions it is asked to heed and the
-report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
-how it divides test and implementation work, how it runs its checks and when it stops iterating
-within its run — is its own, recorded with its grounds in its report ([`core.md`](<autoflow-root>/docs/core.md) >
-Rule Scope, principle 2).
+U7 Review is one module, the review module, whose contract is
+`<autoflow-root>/docs/contracts/review.json` and whose procedure is this file
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1,
+[`ADR-0033`](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)): one round of a pull request's
+review. It has no unit agent: the session that runs it runs the reviewers, and the aggregation of the
+round's reviews into one verdict is made by a spawned role. A script only reads and reports.
 
-- **Goal**: the design implemented within its scope on the branch the invocation names
-  (`params.branch`), and every item of the verification design verified as it says — or, where it
-  cannot be, the reason recorded.
-- **Output**: the commits the run makes on the branch, the build report (*Build report* below), a
-  green-blocker record when the design cannot be built as it stands, and the run's tool requests
-  ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
-- **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
-  report and git, then scores the change on the rubric of
-  [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
-  scores its own change (*Evaluation — AUDIT* below).
-- **Result owed**: the build report's path, the commit SHAs and a one-line summary
-  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Reporting Format).
+- **Goal**: the pull request reviewed by every configured reviewer, and one aggregated verdict over
+  their reviews posted on it: each finding once, with its severity and whether it holds.
+- **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
+  previous round's findings file; the attempt's record directory, where the earlier rounds' records
+  and the work's records are.
+- **Output**: each reviewer's review record (*Reviewer review*), the findings file and the round's
+  comment, posted on the pull request (*Review aggregation*).
+- **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
+  itself is the reviewer's wrapper), by exit code.
+- **Checks**: check-out confirms that the findings file's `pr:` line names the reviewed pull request,
+  that its one `max_severity:` line is the highest severity among the rows that hold, and that the
+  comment is posted on the pull request (`review.json`); the reviews and their aggregation stand
+  outside the work they review.
+- **Result owed**: the report of *End* below.
 
-## Unit spawn
+## Reviewer review
 
-- **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
-  `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
-  module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
-  acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's
-  `[ac-decision]` entries, the recommendations deferred or separated (`deferred`),
-  which the build leaves to their disposition, and on a re-run the previous report and the findings
-  it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
-  directory, where earlier runs left their work and their `local/` stores, and the output directory.
-- **Documents.** The unit's agent definition carries this file with the rest of its guidance
-  ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection); the analysis report's `## Affected documents` and
-  the target's documents are read by the module's own judgment.
+A run reviews the one pull request its invocation names (`params.pr`, `<owner>/<name>#<N>`), on its
+own diff; each pull request of a change — the host PR and each sub-repo PR alike — is reviewed by a
+run of its own, and a sub-repo PR's review is required, not optional. A run is one round of that
+PR's review (`params.round`, from `1`): it runs every reviewer, and their records go to one
+aggregation (*Review aggregation* below), which posts the round's comment
+([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)).
 
-## What the build owes
+The reviewers are the ones the `reviewers:` line of `bash <autoflow-root>/scripts/preflight/check-review-backend.sh`
+names, read rather than recalled — those the operator's `~/.autoflow/config.json` lists, and
+`claude` and `codex` when it lists none ([`reviewer-backend.md`](<autoflow-root>/docs/reviewer-backend.md) > *Config
+location*). Each runs as its own script, launched in the background:
 
-These are the rules other documents cite; everything else about the work is the module's.
+```
+bash <autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>] [--records <attempt-dir>]
+bash <autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]
+bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> --reviewer <name> [--repo <owner/name>] [--log <the run's captured output>]
+```
 
-- **Scope.** The module implements every applied acceptance criterion within the scope — the
-  feature design with its `## Scope` section, and the verification design. An item the verification
-  design verifies other than by an executable test ([U3 Design](<autoflow-root>/docs/units/design.md) > *Test necessity*) is
-  still implemented; only its evidence differs. A problem met during the work that the scope does
-  not name is judged under [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change
-  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
-  correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
-  an assertion. Once the scope is implemented and verified, a further change the module judges
-  useful beyond the scope and the problems its scope judgments include is recorded under
-  `## Scope judgments`, not made.
-- **Test-first (TDD).** A test that verifies a required behavior is seen failing before the
-  implementation it verifies: a behavior not yet implemented, or a defect reproduced before its fix.
-  A test that records existing behavior the change must preserve may pass from the start. Which of
-  its tests verify a required behavior, and the order of the work — a failing run in the working
-  tree first, or a test commit first — are the module's; the result owed is each such test's failing
-  run with its evidence (*Build report* > `## Test-first`). Cautions:
-  - A test that passes from the start is not evidence of a failing run. Look again at whether it
-    checks the required behavior, and record that judgment in the report.
-  - The failing run's failure is readable in its log, the exit status included.
-  - `## Run record` holds each item's latest run. The failing run goes in `## Test-first` only.
+Each wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs its
+reviewer over the PR with that reviewer's rule file and, where one is configured, its lenses file
+([`reviewer-backend.md`](<autoflow-root>/docs/reviewer-backend.md) > *Rule files*), on the model and effort the same
+file names; the reviewer writes its review and nothing else. `--records` names the attempt's record
+directory the invocation gives (`records`), where the `claude` reviewer reads the earlier runs'
+work — the analysis report, the design documents, the decision ledger and the build report.
+`<record>` is the review record's absolute path below; nothing a wrapper or its reviewer writes
+stays in the target's tree.
 
-  The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
-  failing run precedes the implementation commit, and its failure is shown by its log
-  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Test-first*).
-- **Where a test lives.** A test the run writes for its own verification, a one-shot delivery
-  check, an observation scenario and its record live under the run's `<out>/local/` and are run by
-  their path ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools);
-  a later run reads them there, in the record directory. A test file goes into the target's tree
-  only as the exception: a file the module judges the target should keep — in this repository a
-  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
-  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
-  carries that list into the PR body with the CI job that actually ran each file
-  ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*). Such a file is wired into the target's
-  CI discovery in the same commit.
-- **Running tests.** Locally and once, the tests the change requires, the way the target runs them
-  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
-  verified by observation with a tool is looked at with that tool and its observation record written
-  under `<out>/local/`, ending in one result line — `observation: match` or
-  `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
-  environment nor the target's procedures provide, or what using a tool the environment has lacks,
-  is recorded as a tool request — naming what is missing, not the output the tool would give, and
-  what the run did instead — and never acquired.
-- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
-  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
-  Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
-  review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
-  those found by reading (a restatement of the code, design discussion, another file's contract,
-  commented-out code, and content none of the cases under *What a comment carries* admits, such as a
-  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
-  kept with the reason the match is not the class) and records the result under `## Comment check`.
-  The check is a signal, not a gate.
-- **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
-  implementation and the tests each faithful to the design — the module implements the satisfiable
-  subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
-  measurement that reproduces the conflict, and `path:line` anchors at the run's commit. The design
-  module takes it as an input on its re-run.
-- **Acceptance-criterion change.** A criterion the work shows defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)
-  > *Acceptance-criterion decisions*) the module puts to the advisor with the proposed change and the
-  fact that shows the need, and it follows the decision — never working around the defect by keeping
-  the criterion's letter ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* > *An acceptance-criterion change
-  shown later*).
-- **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
-  included. A lint chain covering a staged file that cannot run in this checkout, and that no
-  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  `## No commit`.
+The run is made in a checkout of the repository — the same origin — whose checked-out branch is the
+pull request's head branch at its head: the `claude` reviewer reads that working tree beside the
+pull request's diff.
 
-## Dividing the work
+**The reviews of the target's side.** A review a system on the target's side runs on the pull
+request by itself — a review bot's review or review comment — is a review of the round too. It is
+not launched and leaves no record: the aggregator reads it from the pull request (*Review
+aggregation*). Whether to wait for one that has not yet arrived is the module's judgment.
 
-A recommendation, not a rule: whether the module divides its work, and how, stays its own, and the
-division it chose and its grounds go in the build report. This section records what a division is
-worth and where it loses.
+**An unreadable operator file.** When the operator's `~/.autoflow/config.json` cannot be read as
+configured, `check-review-backend.sh` exits `6` and each wrapper starts no reviewer and exits `6`;
+each prints the marker line `user-config: UNREADABLE <path> — <error>`, which
+`review-start-check.sh` reports as exit `4`. The round goes on without those reviewers, on the
+reviews of the target's side: the aggregation names the missing reviewers with that reason, and the
+run records the unreadable file — its path and the error — as a tool request.
 
-- **What a boundary is worth.** A context's cost is what it carries times the requests that carry
-  it: what was read for finished work is read again on every later request. A boundary pays when
-  the context it drops, less what a new context takes in to start (the standing prompt and the
-  handoff below), is large and many requests follow it. A boundary that drops little more than
-  that, or that few requests follow, costs more than it saves.
-- **Where to divide.** On a build whose design names several areas that share no code, two
-  boundaries pay:
-  - between areas — an area's code is not used by the next, so the next carries none of it;
-  - after the last implementation commit — verification and integration read again what they
-    need, which costs far less than carrying every area's context.
+Each review lands in a **review record**, `<out>/reviews/<reviewer>.md` — `<reviewer>` the
+reviewer's name (`claude`, `codex`).
 
-  Inside an area the Red→Green loop is not divided: the test, the implementation and the reading
-  of a failure use the same code.
-- **A layout.**
+`review-start-check.sh` confirms a run began with a signal scoped to its own PR and reviewer — that
+reviewer's process or a codex session rollout whose prompt names that pull request, or the
+wrapper's completion marker:
 
-  | Context | Its work | Policy row |
-  |---|---|---|
-  | The unit itself | reads the design and the rules, assigns the areas, checks each return, spawns the observations | `unit-build` |
-  | One per area | the area's Red→Green, its tests and lint, its commits | `unit-build-area` |
-  | Verification and integration | the run record, each verification row's check, the follow-up of the observations, the comment check, the build report | `unit-build-verify` |
-  | One per observation | the observation with its tool: running it, judging match or mismatch, probing a cause | `unit-build-observe` |
-
-  A helper is spawned as `general-purpose` with the model and the effort its row reads out
-  (`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <row>`, `… effort <row>`), the effort passed as
-  the `Agent` tool's `effort` parameter — or the parameter omitted when the row reads out the
-  inherit sentinel, which is the policy file's own value and never an argument (`effort_contract`).
-- **What crosses a boundary.** To an area: its section of the feature design, the sections every
-  area shares (`## Scope` and the common constraints the design names), its verification rows, a
-  note of the repository's conventions (how its tests and lint run, its commit rules) the unit
-  writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
-  its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
-  observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
-  root (the unit's root declaration) and the text of the rules its work follows, from the unit's
-  own definition — `<autoflow-root>/docs/core.md` > Instruction Conventions and Rule Scope, by
-  which they are read, `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/submodule-common-rules.md` >
-  Change Surface Rules > *Lint chain on the staged surface* and `<autoflow-root>/docs/role-common-rules.md` >
-  Bash Execution Mode — since a `general-purpose` helper has no AutoFlow definition of its own
-  (`<autoflow-root>/docs/core.md` > Context Injection). Requirements of two areas that
-  cannot both hold take the design-contradiction path above; a design point two areas meet
-  differently the unit puts to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
-- **A deterministic run is a command, not a context.** Running tests, lint and builds, and
-  committing, take no judgment; what they cost is their output carried in the context that reads
-  it. A run goes through a command that bounds its time, keeps the full output in a log under
-  `<out>/local/`, and prints the exit status, the summary line, the names of failing tests, the
-  first error block and the log's path. That short result fills `## Run record` and `## Test-first`;
-  the log stays the evidence. A run with no bound holds the context that started it, and every
-  helper report waiting on that context. A model spawned for each run costs more than it saves:
-  each spawn writes its standing prompt anew.
-- **A judgment stays with the work it judges.** An observation's match or mismatch is judged by
-  the context that ran it, which can probe a cause while the state is in front of it; a judging
-  context split from the run reads the records and captures again and cannot probe. The comment
-  check and the scope judgments belong to the context that holds the whole diff.
-- **When a division loses.**
-  - The areas share code: what each must read again of the others' code outweighs the context
-    dropped.
-  - The build is small: the context before a boundary is near what a new context starts with, or
-    few requests follow it.
-  - A model is spawned for each deterministic run.
-  - The handoff is the whole design and every convention rather than the area's part: most of the
-    saving is lost.
-
-## Build report
-
-`<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
-`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
-`none`.
-
-| Section | Holds | Read by |
+| Exit | Meaning | What follows |
 |---|---|---|
-| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
-| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
-| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
-| `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
-| `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
-| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
-| `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
-| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
+| `0` | started, or already completed with exit 0 | the session ends its turn and waits for the run's completion notification ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Wait discipline*) |
+| `1` | no signal within the window (30 s) | the review is launched again, or the reviewer is named unavailable for the round with the reason — the module's judgment |
+| `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | the same |
+| `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the round goes on without those reviewers (*An unreadable operator file* above); no relaunch |
 
-Anything else the module records — how it divided the work, the checks it chose to run and what
-they found — is its own, written where it judges useful.
+A reviewer that is unavailable for a round — its CLI absent (`check-review-backend.sh` reports it),
+its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
+on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
+no review at all — no configured reviewer left a record, and the target's side left none — is a
+review-infrastructure failure, a harness-level block the run records in its result, situation-first
+([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*).
 
-## Evaluation — AUDIT
+Cautions:
 
-The audit module judges test-first and scores the change: one fresh Evaluation AI
-(`autoflow-evaluator`, the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model audit`
-names), on the rubric of [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT.
-Its agent definition carries that document. When it does not confirm test-first it scores nothing
-and records what is missing; its output is otherwise the scores and their grounds with its
-recommendations.
+- A review that started is left to finish on its own clock, however long that takes; it is not
+  relaunched because it is slow.
+- Every round runs every reviewer on the pull request's current head
+  (`gh pr view <N> --json headRefOid`).
+- The reviewers of a round may run at once, and runs on the host PR and each sub-repo PR alongside
+  each other; each review is confirmed with its own `--pr` and, for a sub-repo PR, `--repo`.
 
-### Security checklist
+## Review triage
 
-The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
-in the target-owned scaffold `.claude/autoflow.local.json`
-(`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
-the one the record line of
-`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names; the audit takes the checklist at that version, written to a file (`git show <score>`), as its
-`security_checklist` input ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > AUDIT > *Security checklist*):
+Per reviewed PR, after its round's reviews complete.
 
-| Exit | Verdict | The version the audit reads |
-|------|---------|-------------|
-| 0 | `none-declared` | none — the five items are scored from the change alone |
-| 0 | `unchanged` | the checklist as of the base commit (`score=<base>:<path>`) |
-| 0 | `changed-decided` | the changed version a `[checklist-decision]` entry accepted (`score=HEAD:<path>`, or `none` for a dropped declaration) |
-| 3 | `changed-undecided` | none yet: the change is a decision for the advisor, which the module whose work made it spawns ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and the status is run again on its answer |
-| 2 | — | none — a malformed declaration, a declared file not committed, an uncommitted edit to the declaration or the checklist, or no resolvable base; it is repaired and the status run again |
+### Review aggregation
 
-**A change the work makes to the checklist.** A change to the file, or to the declaration that
-points at it, has no effect on the audit of that change until the advisor accepts it: the build, whose
-work made the change, runs the status and puts a `changed-undecided` change to the advisor
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). Standing entries that disagree with neither
-naming the other are a conflict: the record is undecided with `conflict=<ids>`, and a new entry
-resolves it. The answer is a `[checklist-decision]` ledger entry
-([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*): `accepted`, carrying
-the committed version's blob and non-empty Decision and Grounds lines → the status re-run reports
-`changed-decided`; `rejected` → the change is reverted and the status re-run.
+**1. The reviews are aggregated by a spawned analysis role.** The session does not read the
+review records or the comment body itself (Cost Control). An anonymous direct subagent —
+`subagent_type: autoflow-analyzer`, on the model
+`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — is
+the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
+reviewer unavailable for the round with the reason, the decision ledger, the earlier rounds'
+findings files and comments in the record directory, and, for a PR whose repository has
+submodules, their paths (its `.gitmodules`) — the locations outside that review's target. It also
+reads the reviews of the target's side from the pull request itself and names each one's author as
+its source.
 
-## Re-entry
+Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
+severity the reviews disagree on, and weighs each finding (*Whether a finding holds*) is its own; what
+it leaves behind is fixed:
 
-A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
-the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
-directory — their reports and their `local/` stores — and brings the build report up to date, not
-rewritten: a row the re-run supersedes is replaced, a new commit adds its lint rows, and the sections
-GATE:QUALITY reads carry the current state.
+- **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
+  a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
+  grounds it does not hold; a reviewer unavailable for the round named with the reason. Its body is kept as
+  `<out>/comment.md`.
+- **The findings file** (below).
 
-## Header contract
+It returns `{max_severity, findings}`.
 
-Opted-in targets only; this repository does not opt in. Every executable spec under `tests/**`
-declares, in a column-1 comment header, what it is and what it costs — at creation, not
-retroactively. The grammar's single definition site is `<autoflow-root>/scripts/test/suite-manifest.sh`, and
-`<autoflow-root>/scripts/test/check-suite-manifest.sh` enforces it.
+- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
+- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
 
-  ```
-  # ci-subject: <path-or-glob> [<path-or-glob> ...]
-  # budget-secs: <positive integer> | SUITE_BUDGET_CEILING_SECS
-  ```
+### Whether a finding holds
 
-- `ci-subject` — the trigger surface. It is a coverage declaration and the selector's input: `<autoflow-root>/scripts/test/select-suites.sh` consumes it to decide which suites a change requires.
-- **The grammar is those two fields and nothing else.** The lint admits no other field.
-- `budget-secs` — the wall-clock ceiling for one run, **derived from the suite's own CI step duration**, never from local wall-clock. A suite with no CI-measured duration yet declares `SUITE_BUDGET_CEILING_SECS` verbatim. The workflow step's `timeout-minutes` must equal `ceil(budget-secs / 60)`.
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-**Adopting the contract over existing suites**. *At creation, not retroactively* fixes what a **cycle** owes: no cycle is deficient for a suite it did not create. It does not exempt a suite from selection — `<autoflow-root>/scripts/test/select-suites.sh` BLOCKs every selection while any enumerated suite lacks a usable `ci-subject` header — so a target that opted into the suite plane and whose `tests/**` held suites before it did migrates them once, as target-owned work outside any cycle, before its first BUILD. The target check, a script for setting up the environment (`<autoflow-root>/scripts/preflight/target-check.sh`, leg D7; ADR-0038 D4), names each one, and `bash <autoflow-root>/scripts/test/select-suites.sh --check-headers` lists them on demand. For each listed file:
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
 
-1. **Suite or helper** — every `*.sh` / `*.bats` under `tests/**` is enumerated, and the runner executes it. A file other suites source is not a spec: it moves under `tests/lib/`, the one exclusion (`suite_is_excluded`), and needs no header.
-2. **`ci-subject`** — every path whose change can move the suite's verdict: the scripts it executes, the files it reads or greps, the configuration it parses. The suite's own path is matched without being listed. An uncertain subject takes a directory token (`scripts/`) or a glob (`src/**`) rather than a guess at single files; `**` selects the suite on every change.
-3. **`budget-secs`** — `ceil(measured CI step duration × SUITE_BUDGET_HEADROOM_PERCENT / 100)` when the suite already has a CI step duration, otherwise `SUITE_BUDGET_CEILING_SECS` verbatim; a local wall-clock figure is never the source.
-4. **CI steps** — where the target's CI runs these suites, `check-suite-manifest.sh` requires one step per suite behind a `select` step that runs `select-suites.sh`, each carrying `id: s-<basename>`, the guard `if: contains(format(' {0} ', steps.select.outputs.suites), ' tests/<file> ')` and `timeout-minutes` equal to `ceil(budget-secs / 60)`. A step that runs several suites is split into one step per suite.
+**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
-The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and the target check reports `PASS: D7`.
+```
+git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|each) (finding|recommendation|item) holds'
+```
 
-**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
+### A repeated complaint
 
-**Leaf rule**: a suite executes its subject, not another suite. Enforced by `<autoflow-root>/scripts/test/check-suite-leaf.sh`.
+A change can loop: each fix answers the case a reviewer — or an evaluation's recommendation — named
+while the property it asserts stays unmet, and the next review or re-score names another case. No
+spawn checks for this on every round. Whoever reads the finding — the aggregator here, the analysis
+module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
+complaint (the same property asserted, a different witness case; the earlier rounds' findings files
+and comments, and the earlier evaluations in the record directory, are what it compares against)
+says so where it writes the finding: in the finding's cell of the findings file, under the analysis
+report's `## Decision points`, or in its own report. What follows — restating the acceptance
+criterion as one rule over the whole input, a further case-specific change, or leaving the property
+a known gap — the module acting on the finding decides; a change to the criterion, and a choice it
+doubts, it puts to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and a
+redefined criterion is recorded as `[ac-decision]` entries. A complaint already decided is not decided again without a new verified
+fact ([`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger). The same finding with the same witness — a fix
+that did not take — is not this case.
 
-**Admission**: before creating a suite file at all, answer these two questions.
+## End
 
-- Does an existing standing lint already hold the property tree-wide? If so the check is that lint's, not a new arm's.
-- Does the defect the check catches surface only *before* deployment — one local run settles it, or it is pinned to this cycle's landed diff? Then it is a run's own check under `<out>/local/`, not a suite file (on a target the default is to add no file at all).
+The run ends when its round's comment is posted. Its report names the pull request's URL and head
+commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
+findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
+pull request whose pointer names a sub-repo pull request's commit, that dependency.
 
-<!-- From <autoflow-root>/docs/role-contracts.md > Functional-unit agents -->
+**[MUST]** AutoFlow merges nothing and promotes no draft. The hook denies `gh pr merge` and a push
+to the default branch.
 
-## Functional-unit agents (U2 / U3 / U4)
+What follows an external merge or close — the attempt's branches and records included — is outside
+AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
 
-Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
-and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
-evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
-lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
-and criteria-apply is a script.
+<!-- From <autoflow-root>/docs/reviewer-backend.md -->
 
-| Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |
-|---|---|---|
-| `autoflow-unit-analysis` | analysis (U2 Analysis) | hypothesis |
-| `autoflow-unit-design` | design (U3 Design) | plan |
-| `autoflow-unit-build` | build (U4 Build and verify) | audit, which judges test-first |
+# Reviewer Contract
 
-- **Method is the unit's.** How the unit reaches its goal — what else it reads, whether it spawns helpers
-  or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
-  with its grounds in the unit's artifact ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
-  The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
-  evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
-  ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
-- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
-  pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
-  it puts to the advisor and follows (*Advisor* above).
-- **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
-  held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
-  GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows
-  `unit-build-area`, `unit-build-verify` and `unit-build-observe`: each is spawned as
-  `general-purpose` with the row's model and with the row's effort passed as the `Agent` tool's
-  `effort` parameter, omitted when the row reads out the inherit sentinel
-  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *Dividing the work*). A helper receives in its prompt
-  the AutoFlow root and the text of the rules its work follows
-  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What crosses a boundary*).
+The review module reviews every pull request the delivery module opens with the reviewers the operator's
+configuration names and aggregates their reviews into one verdict
+([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md),
+[ADR-0033](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)). This document
+is the single home for the reviewers — who reviews, on what input, what each one
+leaves, their configuration, and their start-confirmation oracle. How a round
+runs and how its reviews are aggregated is
+[`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review* and *Review
+aggregation*.
 
----
+## Reviewers
+
+Every reviewer is run by its own script, in the reviewed repository's working
+directory, with an environment fitted to its CLI; no two reviewers share one.
+
+| Reviewer | Input | Runtime |
+|----------|-------|---------|
+| `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
+| `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
+| the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Review aggregation*) |
+
+A new reviewer is a name the resolver supports
+(`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper and its
+rule file.
+
+## Rule files
+
+The review rules every reviewer applies — posture, severity levels, method,
+lenses and Output Format — are
+`<autoflow-root>/docs/review/review.md`. Each reviewer's own rule file, beside
+it, names what that reviewer reads and where its review goes:
+`<autoflow-root>/docs/review/review-claude.md`,
+`<autoflow-root>/docs/review/review-codex.md`, each of which carries the review
+rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
+carries the rule file's text, and states what `<autoflow-root>` is.
+
+Per reviewer, two keys of the configuration (*Config location*) replace or add
+to these:
+
+- `.review.<reviewer>.rules` — another rule file in place of
+  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, so it carries
+  or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
+  stops (exit `2`) before the reviewer starts.
+- `.review.<reviewer>.lenses` — a file of further review lenses (the defect
+  axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt carries
+  beside the rule file. Absent from a repository, it is left out of that
+  repository's review, with a line on stderr.
+
+A relative path is read from the root of the checkout the wrapper runs in, so
+one entry can name each target's own file.
+
+## Contract
+
+```
+Contract: reviewer
+  Output : one review record per reviewer, PR and round —
+           <out>/reviews/<reviewer>.md, in the review run's output directory —
+           in the <autoflow-root>/docs/review/review.md Output Format, in Korean.
+  A reviewer posts no PR comment and changes no label.
+
+Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
+  Input  : every review record of the PR and round, and the reviews the
+           target's side left on the PR.
+  Output : one PR comment; the PR's findings file (source and disposition per
+           finding). A finding the aggregator rejects is recorded with its
+           grounds and counts toward no verdict.
+```
+
+Each wrapper takes the record path:
+
+```
+<autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>]
+<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
+```
+
+Each stops (exit `3`) when the PR is not that OPEN PR on that head branch, and
+treats a run that leaves no record as failed (exit `5`).
+
+## Config location
+
+The reviewers are configured in one file, the operator's
+`~/.autoflow/config.json` (`$HOME/.autoflow/config.json`), created once by the
+plugin's SessionStart hook (*Operator file* below). A target's
+`.claude/autoflow.local.json` is not read for reviewers: the reviewers AutoFlow
+runs are the same in every project
+([ADR-0033](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)).
+
+```json
+{ "review": { "reviewers": ["claude", "codex"] } }
+```
+
+The file is read by `<autoflow-root>/scripts/review/lib/review-config.sh`,
+type-aware (the key's JSON type first, then its value). `.review.reviewers`
+lists the reviewers that run. When it is absent, `null` or `[]` it names none of
+its own, and the default reviewers run — `claude` and `codex`; so do they when
+the file is absent. Each reviewer's model, effort, rule file and lenses file
+come from the same file (*Rule files*, *Model and effort*).
+
+The file **cannot be read as configured** when it is present while `jq` is not
+on PATH, is not valid JSON, has a non-object `.review`, a `reviewers` value that
+is not an array of supported names, or a per-reviewer value *Model and effort*
+or *Rule files* rejects. It never fails closed. It is checked whole — every
+condition above, the list and every supported reviewer's settings — on every
+run, so every consumer reaches the same verdict on the same file. When it
+cannot be read, nothing in it applies and no reviewer runs: the readout names
+it (`source: user <path>`), and every consumer prints the fixed marker line
+`user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
+from exit `2` and from every exit below; no wrapper starts its reviewer. The
+review module goes on without those reviewers, on the reviews of the target's
+side, and records the unreadable file as a tool request
+([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*); a fixed file is read
+anew by the next run.
+
+### Operator file
+
+The plugin's SessionStart hook, `<autoflow-root>/hooks/ensure-user-config.sh`,
+runs at every session start in every project the plugin is enabled in. When
+`~/.autoflow/config.json` is absent it creates it, outside the target's tree,
+with
+
+```json
+{ "review": { "reviewers": [] } }
+```
+
+— no reviewer named, so the default reviewers run until the operator lists them
+there — and only then tells the operator where it is and what it holds. An
+existing file is never changed, broken or not. Concurrent session starts create
+it once: the content is written to a temporary file and published with a hard
+link, which fails when the file exists, so a file another session created is
+never overwritten, only the creating session notifies, and no reader sees a
+partial file. The same file holds the operator's other AutoFlow values — the
+record root, `record_root` ([`core.md`](<autoflow-root>/docs/core.md) > Records and the hook). Each key is read and validated by its own reader: an error in
+`.review` does not touch the record root, and an error in `record_root` does not
+touch the reviewers; a file that is not valid JSON, or no `jq`, leaves both
+unreadable.
+
+## Model and effort
+
+Each reviewer's model and reasoning effort can be pinned in the operator file
+(*Config location*). Every key is optional:
+
+```json
+{
+  "review": {
+    "reviewers": ["claude", "codex"],
+    "codex": { "model": "gpt-6-sol", "effort": "high" }
+  }
+}
+```
+
+**Single source of truth.** `<autoflow-root>/scripts/review/lib/review-config.sh` is the one
+parser, validator and flag-mapper for the whole `review` section. It is
+**sourced** by the live wrappers (`claude-review-pr.sh`, `codex-review-pr.sh`)
+and `check-review-backend.sh` (presence path and `--probe`) from the plugin
+root. It alone reads the file; no consumer reads it on its own.
+
+**Flag mapping** (`build_review_backend_args`, the only place it is written):
+
+| Reviewer | model | effort |
+|----------|-------|--------|
+| `claude` | `claude --model <model>` | `claude --effort <effort>` |
+| `codex` | `codex exec --model <model>` | `codex exec -c model_reasoning_effort=<effort>` |
+
+**Precedence** (per value, most specific first):
+
+| Value | Order |
+|-------|-------|
+| model | `.review.<reviewer>.model` → the reviewer's default (`claude`: `opus`; `codex`: `gpt-6-sol`) |
+| effort | `.review.<reviewer>.effort` → **inherit** |
+
+**Inherit means no flag.** When the effort key is absent (or JSON `null`) the
+wrapper passes none, and the CLI applies its own configuration (`claude`: its
+settings; `codex`: `~/.codex/config.toml`, `model_reasoning_effort`). The model
+default lives in the resolver so that a file that pins nothing still reviews on
+it.
+
+**Supported effort values** (the vocabulary lives in `review-config.sh` and is
+edited there when a CLI's set evolves — model identifiers are not validated):
+
+| Reviewer | Accepted `effort` | Source |
+|----------|-------------------|--------|
+| `claude` | `low` `medium` `high` `xhigh` `max` | `claude --help` > `--effort` (Claude Code 2.1.304). |
+| `codex` | `none` `minimal` `low` `medium` `high` `xhigh` `max` `ultra` `persistent` | the named variants of `enum ReasoningEffort`, `codex-rs/protocol/src/openai_models.rs`. |
+
+**Rejected values** — part of "cannot be read as configured" (*Config
+location*: the `UNREADABLE` result), always **before the reviewer launches**:
+
+- `.review.<reviewer>` is present but not an object;
+- `.review.<reviewer>.model`, `.effort`, `.rules` or `.lenses` is present but
+  empty (`""`) or not a string;
+- `.review.<reviewer>.effort` is a string outside that reviewer's vocabulary.
+
+**Readout lines.** Every consumer prints where the configuration came from and
+the operator file's state, in the same form:
+
+```
+source: user <path> | none
+user-config: absent [<path>] | ok <path> | UNREADABLE <path> — <error>
+```
+
+Every diagnostic and remedy names the operator file.
+
+**Start marker.** A wrapper's marker names the reviewer and the effective
+model and effort — `[codex-review] starting codex for PR #<N>
+(model=gpt-6-sol effort=high) at …`, or `effort=inherit` when none is pinned —
+and prints nothing else from the environment (no credentials, no unrelated
+variables). `--probe` prints the same summary as
+`[check-review-backend] --probe: <reviewer> (model=… effort=…)` before its
+round-trip, and passes the identical flags.
+
+**Session vs. reviewer.** These pins govern only the reviewer subprocess;
+the review module's session's own model and effort follow the user's session
+settings, and the aggregator's the `handoff-review-triage` row of
+`.claude/autoflow/spawn-policy.json`. None of them reads another.
+
+## Availability (advisory)
+
+`<autoflow-root>/scripts/preflight/check-review-backend.sh` resolves the
+reviewers through the shared resolver, prints them as one
+`reviewers: <names|none>` line on stdout — the readout REVIEW runs them from
+([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*) — followed by the
+`source:` and `user-config:` lines (*Model and effort* > Readout lines), and
+probes each reviewer's CLI **presence only** (`command -v`):
+
+| Exit | Meaning |
+|------|---------|
+| `0` | every configured reviewer's CLI is present |
+| `1` | a configured reviewer's CLI is absent — named on stderr with its remedies (install it, or list the reviewers to run without it in the operator file) |
+| `2` | usage error |
+| `6` | the operator file cannot be read as configured — the marker line `user-config: UNREADABLE <path> — <error>`; no reviewer is checked |
+
+It is a script for setting up the environment, and the review module reads its
+`reviewers:` line; its result is no ledger entry
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
+CLI does **not** stop a run: the review runs the other reviewers without it and
+the aggregated comment names the omission
+([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*). With an unreadable
+operator file (exit `6`) the review goes on without those reviewers and records
+the file as a tool request (*ibid.*). Auth is **not** probed here: a
+present-but-unauthenticated reviewer passes and its auth failure surfaces at the
+review run, where it counts as a failed run.
+
+## On-demand auth probe (`--probe`)
+
+`<autoflow-root>/scripts/preflight/check-review-backend.sh --probe` is a **separate on-demand
+mode**: it performs **one real authenticated round-trip** against each
+configured reviewer — the same model-API connection a `claude -p` or a
+`codex exec` opens.
+
+**Triggers — on-demand only:** the operator runs it after writing or changing
+the reviewer configuration. It is **not** run per run, is **not** part of
+building the environment, and **no hook consumes it** — a probe failure is narrated, never used
+to gate a run.
+
+**Exit-code contract** (extends the presence `0/1/2`):
+
+| Exit | Meaning |
+|------|---------|
+| `0` | Round-trip succeeded for every configured reviewer. |
+| `1` | A configured reviewer's CLI is **absent** (no round-trip is attempted for it). |
+| `2` | Usage error. |
+| `3` | **Indeterminate** — the probe could not reach a verdict (timeout / no-TTY interactive-login required). Bounded by `PROBE_TIMEOUT_SECS` (default 20s). |
+| `4` | A reviewer's CLI is **present but the round-trip failed** (unauthenticated / rejected) — the condition that surfaces at the REVIEW run. |
+| `6` | The operator file cannot be read as configured (*Config location*); no round-trip is attempted. The probe's report goes to the operator who ran it. |
+
+## Start-confirmation oracle
+
+`<autoflow-root>/scripts/review/review-start-check.sh --pr <N> [--reviewer <name>] [--repo <owner/name>] [--log <the run's output>]`
+reads these signals for a reviewer's run and reports the first one it finds
+([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*): a running process
+of that reviewer's CLI (`--reviewer`; reviewers run side by side on one PR) whose prompt names
+`pull request #<N>`, or, for `codex`, a session rollout under
+`~/.codex/sessions/` written since the launch whose prompt does; an advancing
+rollout `mtime` is codex's long-run health signal, and the review runs in the
+background to completion. Each wrapper closes its CLI's stdin (`< /dev/null`)
+and prints the completion marker `[review] <reviewer> completed for PR #<N>
+(exit=…)` when the subprocess returns; a non-zero exit means the run failed or
+left no record. A wrapper that stopped on an unreadable operator file prints the
+marker line `user-config: UNREADABLE …` instead and no completion marker;
+`review-start-check.sh --log` reports it as exit `4`.
+
+## Trade-offs
+
+- **Two vendors, two inputs.** The `claude` review reads the attempt's design
+  artifacts; the `codex` review reads only the pull request. The measurement
+  behind issue #411 found their findings largely disjoint, so the aggregation
+  keeps a finding only one of them raised.
+- **Account allowance.** The `claude` review runs on the same account allowance
+  as the session that runs the review, once per pull request and round.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 
@@ -690,98 +835,37 @@ The evaluator records each such finding in the item's `reason` and in `recommend
 
 ---
 
-<!-- From <autoflow-root>/docs/units/completion-evaluation.md > Recommendation triage -->
+<!-- From <autoflow-root>/docs/units/completion-evaluation.md > Code comments in a target -->
 
-## Recommendation triage
+## Code comments in a target
 
-An evaluation's `recommendations` — at GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY alike —
-are findings the evaluator recorded, each with its subject, the item it was found under, its severity
-and the finding ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). They
-are disposed of as a reviewer's findings are: whether each holds is weighed first
-([U7 Review](<autoflow-root>/docs/units/review.md) > *Whether a finding holds*), and every one leaves with a disposition and its
-grounds. Where a fix is made is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). The severity is information for that
-judgment, and no rule branches on it.
+A comment in a target's code that diverges from its code, or that carries what a comment does not
+carry, never routes the cycle.
 
-- **Fixed.** The fix is made where the change it needs belongs — the analysis report, the design,
-  the build — or, for a fix no module owns, in a commit of its own. The
-  recommending evaluation's re-score judges it: the finding's `rescore.prior_findings` entry is
-  `cleared` or `remains`.
-- **Does not hold.** It is rebutted with the grounds that show it, and the recommending
-  evaluation's re-score judges the rebuttal (*Whether a finding holds*).
-- **Deferred.** It is left for later and stated on the pull request: the issue that takes it, or
-  the gap stated in a line ([`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *한계와 known gaps*). A known
-  gap worth fixing becomes an issue.
-- **Separated.** Not directly related — none of question 1's three conditions of
-  [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment* holds —, it is separated with its ground and a separate issue as the follow-up path.
-- **A criterion defect is decided.** A recommendation that records an acceptance criterion
-  defective — the evaluator records one as a fact, the criterion as its subject
-  ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format) — or one whose fix
-  could keep a criterion's letter only by adding a rule the criterion did not state
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*), is neither
-  fixed, separated nor deferred as it stands: the module acting on it puts the change to the advisor,
-  whose decision is recorded as `[ac-decision]` entries ([U3 Design](<autoflow-root>/docs/units/design.md) > *Report routing* >
-  *An acceptance-criterion change shown later*).
-- **A fact below the decision layer** ([U3 Design](<autoflow-root>/docs/units/design.md) > *Output artifacts* item 1) that an
-  evaluation of the analysis or the design records is not a defect of the artifact it scores; it is
-  taken up where the build derives it, and judged with that work at GATE:QUALITY.
-
-The AI acting on a recommendation puts it to the advisor, and follows the decision
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), when (a) the fix needs a contract or
-acceptance-criterion change; (b) the fix direction is
-ambiguous, or a directly related recommendation looks undesirable to fix in this change (question 2)
-and would be left; (c) a re-score keeps the previous finding `remains` after its fix — the same
-complaint answered twice — and the re-score's grounds do not settle the next fix.
-
-**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) >
-Documentation Policy). Its search terms:
-
-```
-git grep -n -i -E 'recommendation triage|recommendations triaged|deferred or separated|disposed of as a reviewer'
-```
-
-<!-- From <autoflow-root>/docs/evaluation-system.md > Gate rubrics > GATE:QUALITY > Known blind-spot checks > Impact scope / Doc updates — reference integrity on moves -->
-
-- **Impact scope / Doc updates — reference integrity on moves**: when the diff relocates
-  or renames files, sections, or identifiers, require evidence of a repo-wide
-  inbound-reference sweep (direct references, test-harness expectations, paraphrased
-  mentions). A dangling reference in a **normative document** caps the affected item at 6.
-  The cap binds normative documents only; a stale name in a **historical record** is the
-  evaluator's judgment.
-  - *Normative documents* — the one definition, cited from everywhere else — are what an agent
-    or the operator reads and follows in a phase, what executes, and what is delivered: (a) the
-    rules, unit documents, role contracts, evaluation criteria and agent definitions a phase loads
-    (`CLAUDE.md`, `<autoflow-root>/docs/core.md`, `<autoflow-root>/docs/autoflow-guide.md`, `<autoflow-root>/docs/units/*`, `<autoflow-root>/docs/role-contracts.md`,
-    `<autoflow-root>/docs/role-common-rules.md`, `<autoflow-root>/docs/submodule-common-rules.md`, `<autoflow-root>/docs/evaluation-system.md`,
-    `<autoflow-root>/agents/*`, and the sections of an ADR that state a decision still in force);
-    (b) the scripts, hooks and workflows that run; (c) every document the plugin delivers for a
-    role to read — the command bodies under `<autoflow-root>/skills/` and the usage documents
-    `<autoflow-root>/docs/INDEX.md` routes, outside the records under `<autoflow-root>/docs/records/`.
-  - *Historical records* are what is kept as a record of a past state and followed by no one:
-    per-issue manual-verification records, report-excerpt fixtures
-    (`tests/fixtures/*`), an ADR's change-history and superseded sections, and completed attempts'
-    records. A fixture that an executing test reads is still a historical record for this check,
-    while the test that reads it is normative.
-  - For a stale name in a historical record the evaluator judges whether a reader following the
-    normative documents would be misled by it, and records the judgment with its grounds in the
-    item's `reason` (and in `recommendations` when it does not lower the score). A score reduction
-    rests on that recorded ground alone, never on the name's presence; a record whose stale names
-    mislead no one is left as it is, and rewriting it is not a remedy the evaluator asks for.
-
-<!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
-
-### Whether a finding holds
-
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
-
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
-
-**This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
-
-```
-git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|each) (finding|recommendation|item) holds'
-```
+- **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
+  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Code comments*),
+  is a `Low` finding. It never raises a review's verdict above `Low`
+  (`<autoflow-root>/docs/review/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
+  it ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Code comments in a target*). It is
+  therefore never the cause of a low score on any item. Only that
+  finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
+  personal data, for example — takes the severity its impact sets, as any finding does.
+- **Fix — a commit no module owns.** A comment surfaced by this evaluation's `recommendations`,
+  the build report's `## Comment check` or a reviewer's finding is fixed by one commit that deletes
+  comment lines or corrects their sentences and changes nothing else, and it ends there: no re-run, no re-score, and no review round. The commit still runs the lint chain over its staged files
+  ([`core.md`](<autoflow-root>/docs/core.md) > Commit Rules); one made after the delivery module's push is pushed, and
+  CI is confirmed on the new head. A comment whose correct wording is uncertain is deleted, not
+  rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
+  comment, or that removes a defect of its own ground (above), is not this fix.
+- **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and
+  which lines those are is the working AI's judgment in that target, with no list kept (*Code
+  comments* > *Directives are code*). A defect in one takes the severity of the behavior it
+  changes.
+- **This repository is excluded.** Here a comment takes the reviewer's severity as judged, and its
+  fix is made like any other change.
+- *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
+  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); the build module of that scope makes
+  the same single commit on the same terms.
 
 <!-- From <autoflow-root>/docs/decision-ledger.md -->
 
@@ -1157,37 +1241,6 @@ Distinct from the advisor sub-agent above: Claude Code's advisor tool
 (<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
 mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
 is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
-
----
-
-<!-- From <autoflow-root>/docs/role-contracts.md > Evaluation AI -->
-
-## Evaluation AI (subagent)
-
-This section is the side of the session that runs an evaluation module: how the Evaluation AI is
-spawned, prompted and its result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
-output — is [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md), the one document its agent definition carries with the sections it names.
-
-- Independent evaluator that does not participate in planning or implementation.
-- A fresh agent is spawned every call.
-- Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
-- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
-
-### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](<autoflow-root>/docs/core.md) > Cost Control.
-3. **[MUST]** The portion the spawning session writes is 5 lines or fewer (excluding target file contents).
-4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
-5. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Finding coverage*).
-
-### Recording the result
-
-The Evaluation AI returns one JSON object, and the session that runs the evaluation module writes it,
-verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recommendations, and no
-verdict ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format). The module's
-check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
-`outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
-against ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
 
 ---
 

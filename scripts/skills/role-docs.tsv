@@ -93,63 +93,55 @@ agents/*.md	docs/role-common-rules.md	## Communication > ### Result delivery pat
 agents/*.md	docs/submodule-common-rules.md	## Reporting Format
 agents/*.md	docs/submodule-common-rules.md	## Verification and Tools
 
-# Command bodies: the unit's document and the documents on its entry
-# (docs/core.md > Unit Document Loading Contract, Unit references).
-skills/cycle-u1/SKILL.md	docs/criterion-review.md
-skills/cycle-u2/SKILL.md	docs/units/analysis.md
-skills/cycle-u2/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/cycle-u2/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
-skills/cycle-u2/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/cycle-u2/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
-skills/cycle-u3/SKILL.md	docs/units/design.md
-skills/cycle-u3/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/cycle-u3/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
-skills/cycle-u3/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/cycle-u3/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
-skills/cycle-u4/SKILL.md	docs/units/build.md
-skills/cycle-u4/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/cycle-u4/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/cycle-u4/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
-skills/cycle-u4/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
-skills/cycle-u4/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/cycle-u5/SKILL.md	docs/units/completion-evaluation.md
-skills/cycle-u5/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/cycle-u5/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
-skills/cycle-u5/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/cycle-u6/SKILL.md	docs/units/delivery.md
-skills/cycle-u6/SKILL.md	docs/pr-body-guide.md
-skills/cycle-u6/SKILL.md	docs/title-guide.md
-skills/cycle-u6/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/cycle-u7/SKILL.md	docs/units/review.md
-skills/cycle-u7/SKILL.md	docs/reviewer-backend.md
-skills/cycle-u7/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/cycle-u7/SKILL.md	docs/units/completion-evaluation.md	## Code comments in a target
-skills/criterion-review/SKILL.md	docs/criterion-review.md
-
-# The whole cycle in one session: every unit's.
-skills/cycle/SKILL.md	docs/criterion-review.md
-skills/cycle/SKILL.md	docs/units/analysis.md
-skills/cycle/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/cycle/SKILL.md	docs/units/design.md
-skills/cycle/SKILL.md	docs/units/build.md
-skills/cycle/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/cycle/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
-skills/cycle/SKILL.md	docs/units/completion-evaluation.md
-skills/cycle/SKILL.md	docs/units/delivery.md
-skills/cycle/SKILL.md	docs/pr-body-guide.md
-skills/cycle/SKILL.md	docs/title-guide.md
-skills/cycle/SKILL.md	docs/units/review.md
-skills/cycle/SKILL.md	docs/reviewer-backend.md
+# Command bodies: each module's documents
+# (docs/core.md > Module procedures, Module references).
+skills/criterion-screen/SKILL.md	docs/criterion-review.md
+skills/criterion-trace/SKILL.md	docs/criterion-review.md
+skills/criterion-in-depth/SKILL.md	docs/criterion-review.md
+skills/criterion-reconcile/SKILL.md	docs/criterion-review.md
+skills/analysis/SKILL.md	docs/units/analysis.md
+skills/analysis/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/analysis/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/analysis/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/analysis/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
+skills/hypothesis/SKILL.md	docs/units/analysis.md	## Evaluation — GATE:HYPOTHESIS
+skills/design/SKILL.md	docs/units/design.md
+skills/design/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/design/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/design/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/design/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
+skills/plan/SKILL.md	docs/units/design.md	## Evaluation — GATE:PLAN
+skills/build/SKILL.md	docs/units/build.md
+skills/build/SKILL.md	docs/role-contracts.md	## Functional-unit agents
+skills/build/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/build/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
+skills/build/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
+skills/build/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/audit/SKILL.md	docs/units/build.md	## Evaluation — AUDIT
+skills/quality/SKILL.md	docs/units/completion-evaluation.md
+skills/quality/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/quality/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
+skills/quality/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
+skills/delivery/SKILL.md	docs/units/delivery.md
+skills/delivery/SKILL.md	docs/pr-body-guide.md
+skills/delivery/SKILL.md	docs/title-guide.md
+skills/delivery/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/review/SKILL.md	docs/units/review.md
+skills/review/SKILL.md	docs/reviewer-backend.md
+skills/review/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
+skills/review/SKILL.md	docs/units/completion-evaluation.md	## Code comments in a target
 
 # Every command body: the homes the core names for what the session itself
 # writes and asks — the ledger's entries, an issue draft, the advisor's
-# procedure, the evaluator's spawn (the units that spawn one) and what carries
+# procedure, the evaluator's spawn (the evaluation modules) and what carries
 # a spawn's report — and the rules every actor follows.
 skills/*/SKILL.md	docs/decision-ledger.md
 skills/*/SKILL.md	docs/issue-proposal.md
 skills/*/SKILL.md	docs/role-contracts.md	## Advisor
-skills/cycle/SKILL.md	docs/role-contracts.md	## Evaluation AI
-skills/cycle-u[2-5]/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/hypothesis/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/plan/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/audit/SKILL.md	docs/role-contracts.md	## Evaluation AI
+skills/quality/SKILL.md	docs/role-contracts.md	## Evaluation AI
 skills/*/SKILL.md	docs/role-common-rules.md	## Communication > ### Result delivery path by spawn mode
 skills/*/SKILL.md	docs/submodule-common-rules.md	## Reporting Format
 skills/*/SKILL.md	docs/submodule-common-rules.md	## Verification and Tools

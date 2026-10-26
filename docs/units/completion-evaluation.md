@@ -1,6 +1,6 @@
 # U5 Completion evaluation — GATE:QUALITY
 
-> Unit document for U5. [`core.md`](../core.md) > Unit Document Loading Contract routes to
+> The procedure of the quality module. [`core.md`](../core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
 > Modules.
 

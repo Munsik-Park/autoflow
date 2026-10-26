@@ -112,7 +112,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 
 # U4 Build and verify — BUILD and AUDIT
 
-> Unit document for U4. [`core.md`](<autoflow-root>/docs/core.md) > Unit Document Loading Contract routes to
+> The procedure of the build module, and the spawn of the audit module. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
 > Modules.
 

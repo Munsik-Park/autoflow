@@ -49,10 +49,9 @@ every target, under the operator's `$HOME` (*Operator-level file* below).
 
 - The methodology prose is tool-versioned content. It reaches a role only
   through the carrier the role starts with — a session through the body of
-  the AutoFlow command that starts it (`/autoflow:cycle`;
-  `/autoflow:cycle-u1` … `/autoflow:cycle-u7` for one unit, carrying the
-  parts of the core the unit uses — ADR-0032; or `/autoflow:criterion-review`
-  for the cycle's criterion review stage alone), a subagent through its
+  the AutoFlow command that starts it (`/autoflow:<module>`, one per module,
+  carrying the parts of the core the module uses — ADR-0038 D9), a subagent
+  through its
   AutoFlow agent definition, a reviewer through its rule file, which its
   wrapper's prompt carries, and a spawn with no AutoFlow definition through
   the prompt its spawner writes — or as an AutoFlow document a role reads by

@@ -76,7 +76,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 # U3 Design — ARCHITECT and GATE:PLAN
 
-> Unit document for U3. [`core.md`](<autoflow-root>/docs/core.md) > Unit Document Loading Contract routes to
+> The procedure of the design module, and the spawn of the plan module. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes to
 > this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
 > Modules.
 

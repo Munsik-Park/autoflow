@@ -1,6 +1,6 @@
 # AutoFlow Core
 
-<!-- The source of the /autoflow:cycle, /autoflow:cycle-u1 … /autoflow:cycle-u7 and /autoflow:criterion-review command bodies: scripts/skills/gen-skill-bodies.sh generates skills/*/SKILL.md from this file (ADR-0027 D2, ADR-0032), a unit's body by the classification scripts/skills/core-units.tsv, and the parts scripts/skills/role-docs.tsv names into the agent definitions (ADR-0035). Edit this file — and the classification, for a part added or one whose units change — then regenerate. -->
+<!-- The source of the module command bodies (/autoflow:<module>): scripts/skills/gen-skill-bodies.sh generates skills/<module>/SKILL.md from this file (ADR-0027 D2, ADR-0038 D9), a module's body by the classification scripts/skills/core-units.tsv, and the parts scripts/skills/role-docs.tsv names into the agent definitions (ADR-0035). Edit this file — and the classification, for a part added or one whose modules change — then regenerate. -->
 
 ## Instruction Conventions
 
@@ -35,58 +35,72 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Push and PR creation**: the delivery module pushes the branch and opens each pull request as a draft with its own `git push` / `gh pr create`, and confirms CI is green, or records on the pull request that CI did not run, never reading that as green. What the PR body carries, the host PR's `Closes #N` included, is the module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
 
-### Unit Document Loading Contract
+### Module procedures
 
-**[MUST]** A module's run follows its contract's `procedure` — the unit document below for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the session's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
+**[MUST]** A module's run follows its contract's `procedure` — its document for a functional module, the gate's section of `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* for an evaluation module — which the module's command body or the role's agent definition carries after the core (*Context Injection*). The procedure is the source of truth for the module's work; this core file does not restate it. Do not run a module from memory of a prior run — the body is the document of the installed version.
 
-| Unit | Phases | Unit document | Modules |
-|------|--------|------|------|
-| U1 Criterion review | CRITERION-REVIEW | [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) | `criterion-screen`, `criterion-trace`, `criterion-in-depth`, `criterion-reconcile` |
-| U2 Analysis | DIAGNOSE, GATE:HYPOTHESIS | [`<autoflow-root>/docs/units/analysis.md`](units/analysis.md) | `analysis`, `hypothesis` |
-| U3 Design | ARCHITECT, GATE:PLAN | [`<autoflow-root>/docs/units/design.md`](units/design.md) | `design`, `plan` |
-| U4 Build and verify | BUILD, AUDIT | [`<autoflow-root>/docs/units/build.md`](units/build.md) | `build`, `audit` |
-| U5 Completion evaluation | GATE:QUALITY | [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) | `quality` |
-| U6 Delivery | DELIVER, INTEGRATE, HANDOFF | [`<autoflow-root>/docs/units/delivery.md`](units/delivery.md) | `delivery` |
-| U7 Review | REVIEW | [`<autoflow-root>/docs/units/review.md`](units/review.md) | `review` |
+| Module | Command | Procedure | The work is done by |
+|------|------|------|------|
+| `criterion-screen` | `/autoflow:criterion-screen` | `<autoflow-root>/docs/criterion-review.md` | the session itself, on the model and effort the procedure's *The four modules* names |
+| `criterion-trace` | `/autoflow:criterion-trace` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-tracer` spawn (spawn-policy key `criterion-trace`) |
+| `criterion-in-depth` | `/autoflow:criterion-in-depth` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-analyzer` spawn (`criterion-in-depth`) |
+| `criterion-reconcile` | `/autoflow:criterion-reconcile` | `<autoflow-root>/docs/criterion-review.md` | an `autoflow-criterion-reconciler` spawn (`criterion-reconciliation`) |
+| `analysis` | `/autoflow:analysis` | `<autoflow-root>/docs/units/analysis.md` | an `autoflow-unit-analysis` spawn (`unit-analysis`) |
+| `criteria-apply` | `/autoflow:criteria-apply` | `<autoflow-root>/scripts/contracts/criteria-apply.sh`, a script with no procedure document | the script |
+| `hypothesis` | `/autoflow:hypothesis` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:HYPOTHESIS | an `autoflow-evaluator` spawn (`gate-hypothesis`) |
+| `design` | `/autoflow:design` | `<autoflow-root>/docs/units/design.md` | an `autoflow-unit-design` spawn (`unit-design`) |
+| `plan` | `/autoflow:plan` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:PLAN | an `autoflow-evaluator` spawn (`gate-plan`) |
+| `build` | `/autoflow:build` | `<autoflow-root>/docs/units/build.md` | an `autoflow-unit-build` spawn (`unit-build`) |
+| `audit` | `/autoflow:audit` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > AUDIT | an `autoflow-evaluator` spawn (`audit`) |
+| `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
+| `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
+| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-What each module does, and what else a unit's body carries: the module list and *Unit references* below, and *Context Injection*. The deterministic module `criteria-apply` is a script, `bash <autoflow-root>/scripts/contracts/criteria-apply.sh`, with no procedure document.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` ([`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 The **reference values** an evaluation's scores are read against (each item ≥ 7, average ≥ 7.5, a `Security` item at 3 or below → rework) are kept with the rubrics ([`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > PASS Criteria) and carried in each evaluation contract's `reference`. An evaluation outputs its scores and their grounds, with the reference values (ADR-0038 D6).
 
-Seven units carry the modules until the module commands replace the unit commands (ADR-0038 D9): a unit's command body carries the procedures of its modules. The phase and gate names stay as identifiers: the spawn-policy keys, the commands and the documents' headings carry them.
-
 ```
-U1 Criterion review    CRITERION-REVIEW — the criterion review's four modules: criterion-screen (the review items and the screening; the review record and one target file per criterion), criterion-trace (each confirmed cause's reach and each required behavior's conflict with the rules in force), criterion-in-depth (one run per criterion with an in-depth target, on that target alone) and criterion-reconcile (the record settled against the trace and the in-depth verdicts), each item disposed of with its grounds (`<autoflow-root>/docs/criterion-review.md`)
-U2 Analysis            DIAGNOSE        — the analysis module (one `autoflow-unit-analysis` spawn) writes the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
-                       GATE:HYPOTHESIS — the hypothesis evaluation module: one Evaluation AI, one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
-U3 Design              ARCHITECT       — the design module (one `autoflow-unit-design` spawn) writes the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
-                       GATE:PLAN       — the plan evaluation module: one Evaluation AI (4 items × 10 points)
-U4 Build and verify    BUILD           — the build module (one `autoflow-unit-build` spawn) implements and verifies the design (test-first, run records, manual checklist, maintained docs, lint), its method its own
-                       AUDIT           — the audit evaluation module: an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)
-U5 Completion eval.    GATE:QUALITY    — the quality evaluation module: one Evaluation AI (10 items × 10 points)
-U6 Delivery            DELIVER         — the delivery module pushes the branch with its own `git push` (a changed sub-repo's branch too)
-                       INTEGRATE       — the change shown working above its own tests: the system build, health check and functional test, or the project's integration suite
-                       HANDOFF         — draft pull requests opened by the module's own commands → CI green, or recorded as not run; a script reads and reports CI
-U7 Review              REVIEW          — the review module: the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
+criterion-screen      — the review items and the screening: the review record and one target file per criterion with an in-depth target (`<autoflow-root>/docs/criterion-review.md`)
+criterion-trace       — each confirmed cause's reach and each required behavior's conflict with the rules in force
+criterion-in-depth    — one run per criterion with an in-depth target, on that target alone
+criterion-reconcile   — the record settled against the trace and the in-depth verdicts, each item disposed of with its grounds
+analysis              — the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
+criteria-apply        — the applied acceptance criteria: the analysis report's table with the standing `[ac-decision]` entries applied
+hypothesis            — one Evaluation AI, one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
+design                — the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
+plan                  — one Evaluation AI (4 items × 10 points)
+build                 — the design implemented and verified (test-first, run records, manual checklist, maintained docs, lint), its method its own
+audit                 — an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)
+quality               — one Evaluation AI (10 items × 10 points)
+delivery              — the branch pushed with the module's own `git push` (a changed sub-repo's branch too); the change shown working above its own tests (the system build, health check and functional test, or the project's integration suite); draft pull requests opened by the module's own commands → CI green, or recorded as not run; a script reads and reports CI
+review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
 ```
 
-Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every unit: a session that runs one unit receives the parts its unit uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and a session that runs the whole cycle receives all of it; each receives the documents its units use with them (*Context Injection*).
+Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and the documents the module uses with them (*Module references* below, *Context Injection*).
 
 The rubric of every evaluation — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — is the evaluator's, not the work's: it lives in [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > *Gate rubrics*, the procedure of each evaluation contract.
 
 The evaluation contract (fresh-spawn Evaluation AI, the evaluator's standard, the 10-point scale, the output format) lives in [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md); how the evaluator is spawned and prompted is [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI.
 
-### Unit references
+### Module references
 
-| Unit | Also on entry |
+| Module | Its command body also carries |
 |------|------|
-| U1 Criterion review | the criterion review: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) |
-| U2 Analysis | unit agent: `autoflow-unit-analysis`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds; including or separating a problem: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Scope judgment |
-| U3 Design | unit agent: `autoflow-unit-design`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds; including or separating a problem: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Scope judgment |
-| U4 Build and verify | unit agent: `autoflow-unit-build`; contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh`; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; normative documents: [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds |
-| U5 Completion evaluation | change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; normative documents: [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds |
-| U6 Delivery | PR body: [`<autoflow-root>/docs/pr-body-guide.md`](pr-body-guide.md); PR title: [`<autoflow-root>/docs/title-guide.md`](title-guide.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules |
-| U7 Review | reviewers: [`<autoflow-root>/docs/reviewer-backend.md`](reviewer-backend.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; comments in a target: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Code comments in a target |
+| criterion-screen | the criterion review: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) |
+| criterion-trace | the criterion review: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) |
+| criterion-in-depth | the criterion review: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) |
+| criterion-reconcile | the criterion review: [`<autoflow-root>/docs/criterion-review.md`](criterion-review.md) |
+| analysis | the procedure: [`<autoflow-root>/docs/units/analysis.md`](units/analysis.md); unit agent: `autoflow-unit-analysis`, contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds; including or separating a problem: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Scope judgment |
+| criteria-apply | none beyond every command body's |
+| hypothesis | the spawn: [`<autoflow-root>/docs/units/analysis.md`](units/analysis.md) > Evaluation — GATE:HYPOTHESIS; the evaluator's spawn and prompt: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI |
+| design | the procedure: [`<autoflow-root>/docs/units/design.md`](units/design.md); unit agent: `autoflow-unit-design`, contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds; including or separating a problem: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Scope judgment |
+| plan | the spawn: [`<autoflow-root>/docs/units/design.md`](units/design.md) > Evaluation — GATE:PLAN; the evaluator's spawn and prompt: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI |
+| build | the procedure: [`<autoflow-root>/docs/units/build.md`](units/build.md); unit agent: `autoflow-unit-build`, contract: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Functional-unit agents; change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; recommendation triage: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Recommendation triage; normative documents: [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds |
+| audit | the spawn: [`<autoflow-root>/docs/units/build.md`](units/build.md) > Evaluation — AUDIT; the evaluator's spawn and prompt: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI; checklist: the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist` and resolved by `<autoflow-root>/scripts/gate/security-checklist.sh` |
+| quality | the procedure: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md); the evaluator's spawn and prompt: [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md) > Evaluation AI; change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; normative documents: [`<autoflow-root>/docs/evaluation-system.md`](evaluation-system.md) > Impact scope / Doc updates — reference integrity on moves; whether a finding holds: [`<autoflow-root>/docs/units/review.md`](units/review.md) > Whether a finding holds |
+| delivery | the procedure: [`<autoflow-root>/docs/units/delivery.md`](units/delivery.md); PR body: [`<autoflow-root>/docs/pr-body-guide.md`](pr-body-guide.md); PR title: [`<autoflow-root>/docs/title-guide.md`](title-guide.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules |
+| review | the procedure: [`<autoflow-root>/docs/units/review.md`](units/review.md); reviewers: [`<autoflow-root>/docs/reviewer-backend.md`](reviewer-backend.md); change surface: [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules; comments in a target: [`<autoflow-root>/docs/units/completion-evaluation.md`](units/completion-evaluation.md) > Code comments in a target |
 
 ## Cost Control
 
@@ -183,9 +197,9 @@ A project whose information names sub-repos delivers each changed sub-repo on it
 각 역할의 상세 계약은 [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md)를 참조한다.
 
 ### Evaluation AI — contract: `<autoflow-root>/docs/evaluation-system.md`; spawn and prompt: `<autoflow-root>/docs/role-contracts.md` > Evaluation AI
-### Build unit (U4) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; in a target scope: `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope
+### Build module — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; in a target scope: `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope
 ### Advisor — contract: `<autoflow-root>/docs/role-contracts.md` > Advisor
-### Functional-unit agents (U2 / U3 / U4) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents
+### Functional-unit agents (analysis, design, build) — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents
 
 ## Records and the hook
 

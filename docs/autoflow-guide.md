@@ -72,10 +72,9 @@ entry, or a file the invocation names.
 | review | functional | [`units/review.md`](units/review.md) | the pull request (`params.pr`) | the reviews, the findings file, the posted comment |
 
 A re-run takes, besides these, the outputs of the run before it and the findings it answers, as
-each contract's optional inputs name. The seven unit documents group the modules as the unit
-commands still do ([`core.md`](core.md) > Unit Document Loading Contract): U1 the criterion review's
-four, U2 analysis and hypothesis, U3 design and plan, U4 build and audit, U5 quality, U6 delivery,
-U7 review.
+each contract's optional inputs name. Each module runs by its command,
+`/autoflow:<module> <invocation.json>`, whose body carries its procedure
+([`core.md`](core.md) > Module procedures).
 
 The rubrics of all four evaluations — GATE:HYPOTHESIS, GATE:PLAN, AUDIT and GATE:QUALITY — are the
 evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate rubrics*.
