@@ -62,8 +62,8 @@
 #             of its row (by the Contract column) in the procedure document's
 #             "Evaluation | Gate | Contract | Items" table, and the first
 #             column of the "Item" table in its procedure section, when that
-#             section has one; and, run on every contract, that the generated
-#             part of docs/module-usage.md is the contracts'
+#             section has one; and, run on every contract, that the per-module
+#             part of docs/autoflow-guide.md is the contracts'
 #             (scripts/contracts/gen-module-usage.sh). It prints each
 #             disagreement.
 #
@@ -704,9 +704,9 @@ lint() {
       while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
     fi
   done
-  # the module usage document's generated part is the contracts'
+  # the guide's per-module part is the contracts'
   if [ $# -eq 0 ] && ! bash "$ROOT/scripts/contracts/gen-module-usage.sh" --check 2>/dev/null; then
-    f=module-usage.md; say "differs from the contracts — run: bash scripts/contracts/gen-module-usage.sh"
+    f=autoflow-guide.md; say "differs from the contracts — run: bash scripts/contracts/gen-module-usage.sh"
   fi
   return $bad
 }

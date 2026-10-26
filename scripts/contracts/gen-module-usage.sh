@@ -2,16 +2,16 @@
 # SPDX-FileCopyrightText: 2026 Munsik-Park
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# gen-module-usage.sh — the generated part of docs/module-usage.md (epic #507)
+# gen-module-usage.sh — the per-module part of docs/autoflow-guide.md (epic #507)
 # =============================================================================
-# docs/module-usage.md says how each module is run and how one module's output
-# becomes another's input. Its text down to the marker line is written by hand;
-# what follows the marker — one section per module: its kind, goal, procedure,
-# params, inputs with where each comes from, outputs, and an invocation
-# skeleton — is generated from the contracts, docs/contracts/<module>.json, so
-# the document and the contracts change together.
+# docs/autoflow-guide.md says how each module is run and how one module's output
+# becomes another's input. Between its BEGIN and END marker lines, under
+# "## Modules", one section per module — its kind, goal, procedure, params,
+# inputs with where each comes from, outputs, and an invocation skeleton — is
+# generated from the contracts, docs/contracts/<module>.json, so the guide and
+# the contracts change together; the rest of the guide is written by hand.
 #
-#   gen-module-usage.sh            write the generated part
+#   gen-module-usage.sh            write the per-module part
 #   gen-module-usage.sh --check    exit 0 when the committed document equals the
 #                                  generator's output, 1 otherwise
 # =============================================================================
@@ -20,13 +20,14 @@ set -euo pipefail
 export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DOC="$ROOT/docs/module-usage.md"
-MARK='<!-- Generated below from docs/contracts/*.json by scripts/contracts/gen-module-usage.sh — edit the contracts, then regenerate. -->'
+DOC="$ROOT/docs/autoflow-guide.md"
+BEGIN='<!-- BEGIN generated from docs/contracts/*.json by scripts/contracts/gen-module-usage.sh — edit the contracts, then regenerate. -->'
+END='<!-- END generated -->'
 ORDER="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality delivery review"
 
 case "${1:-}" in "" | --check) ;; *) echo "usage: gen-module-usage.sh [--check]" >&2; exit 2 ;; esac
 [ -f "$DOC" ] || { echo "gen-module-usage: $DOC not found" >&2; exit 2; }
-grep -qxF "$MARK" "$DOC" || { echo "gen-module-usage: $DOC has no marker line" >&2; exit 2; }
+grep -qxF "$BEGIN" "$DOC" && grep -qxF "$END" "$DOC" || { echo "gen-module-usage: $DOC has no BEGIN or END marker line" >&2; exit 2; }
 
 section() { # <contract file>
   jq -r '
@@ -68,16 +69,15 @@ section() { # <contract file>
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 {
-  awk -v m="$MARK" '{ print } $0 == m { exit }' "$DOC"
-  echo
-  echo "## Modules"
+  awk -v m="$BEGIN" '{ print } $0 == m { exit }' "$DOC"
   echo
   for m in $ORDER; do section "$ROOT/docs/contracts/$m.json"; done
-} | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$TMP"
+  awk -v m="$END" 'f { print } $0 == m { f = 1; print }' "$DOC"
+} > "$TMP"
 
 if [ "${1:-}" = --check ]; then
   cmp -s "$TMP" "$DOC" && exit 0
-  echo "gen-module-usage: docs/module-usage.md differs from the generator's output — run: bash scripts/contracts/gen-module-usage.sh" >&2
+  echo "gen-module-usage: docs/autoflow-guide.md differs from the generator's output — run: bash scripts/contracts/gen-module-usage.sh" >&2
   exit 1
 fi
 cp "$TMP" "$DOC"
