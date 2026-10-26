@@ -427,12 +427,14 @@ check_pr() { # <output name> <checks json>
         while IFS= read -r p; do
           while IFS= read -r id; do
             [ -n "$id" ] || continue
-            # the id as a whole identifier: AC10 does not state AC1, nor AC-1-2
-            # AC-1 — a hyphen with a letter or digit beyond it continues an id
+            # the id as a whole identifier: a letter, digit or underscore next to
+            # it, or a mark with one beyond it (AC10, AC-1-2, AC1.c, AC1/x),
+            # continues another id; whitespace, or a mark with none beyond it,
+            # ends one (AC1. — (AC1) — AC1, AC2)
             jq -e --arg id "$id" '.body as $b | ($id | length) as $l
               | any($b | indices($id)[]; . as $i
-                  | ($i == 0 or ((($b[$i-1:$i] | test("[A-Za-z0-9_]")) or ($i >= 2 and ($b[$i-2:$i] | test("^[A-Za-z0-9]-$")))) | not))
-                    and ((($b[$i+$l:$i+$l+1] | test("[A-Za-z0-9_]")) or ($b[$i+$l:$i+$l+2] | test("^-[A-Za-z0-9]$"))) | not))' <<<"$pr" >/dev/null \
+                  | ($i == 0 or ((($b[$i-1:$i] | test("[A-Za-z0-9_]")) or ($i >= 2 and ($b[$i-2:$i] | test("^[A-Za-z0-9][^A-Za-z0-9_\\s]$")))) | not))
+                    and ((($b[$i+$l:$i+$l+1] | test("[A-Za-z0-9_]")) or ($b[$i+$l:$i+$l+2] | test("^[^A-Za-z0-9_\\s][A-Za-z0-9]$"))) | not))' <<<"$pr" >/dev/null \
               || defect "$n: the body does not state '$id' (from $name)"
           done < <(jq -r "[$(jq -r .source.ids <<<"$c")] | .[] | strings" "$p" 2>/dev/null)
         done < <(input_paths "$name") ;;
