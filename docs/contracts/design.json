@@ -101,18 +101,7 @@
     "verification_design": {
       "file": "verification-design.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "mentions",
-          "covers": [
-            {
-              "input": "applied_criteria",
-              "ids": ".criteria[].id"
-            }
-          ],
-          "note": "every applied acceptance criterion is named, with how it is verified or why it is not (Q8, Q14); where and in what form is the module's own"
-        }
-      ]
+      "checks": []
     }
   },
   "rules": [

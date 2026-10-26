@@ -77,8 +77,9 @@ audit, quality — and deterministic — criteria-apply (the design review, §4)
 - uses the tools its work needs; one that is missing is recorded as a tool request and the run still
   ends (Q10);
 - is prescribed by its goal: a procedure says what the work must achieve, not a form that must be
-  present (Q16). The contract checks the inputs and that the output disposes of every item the work
-  owes — every applied criterion, every scope item the design includes (Q14).
+  present (Q16). The output disposes of every item the work owes — every applied criterion, every
+  scope item the design includes (Q14) —, which the evaluations judge; the contract checks the
+  inputs and the facts of the output (Q29, Q31).
 
 The work and its evaluation are separate modules. A unit that bundled them (U2 = DIAGNOSE +
 GATE:HYPOTHESIS, U3 = ARCHITECT + GATE:PLAN, U4 = BUILD + AUDIT) is two modules.

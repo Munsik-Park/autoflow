@@ -357,16 +357,6 @@ check_markdown() { # <output name> <file> <checks json> <files map>
             jq -e --arg id "$id" 'index($id) != null' <<<"$have" >/dev/null || defect "$n: '$id' has no row in $desc"
           done < <(source_ids "$s" "$files" | sed 's/`//g; s/^[[:space:]]*//; s/[[:space:]]*$//')
         done < <(jq -c '.covers // [] | .[]' <<<"$c") ;;
-      mentions)
-        # every id a source names appears in the document, as a word; where and
-        # in what form is the module's own
-        while IFS= read -r s; do
-          [ -n "$s" ] || continue
-          while IFS= read -r id; do
-            [ -n "$id" ] || continue
-            grep -qwF -- "$id" "$f" || defect "$n: '$id' is not named"
-          done < <(source_ids "$s" "$files" | sed 's/`//g; s/^[[:space:]]*//; s/[[:space:]]*$//')
-        done < <(jq -c '.covers // [] | .[]' <<<"$c") ;;
       *) defect "$n: the contract names a check this validator does not know: $t" ;;
     esac
   done < <(jq -c '.[]' <<<"$checks")
@@ -583,7 +573,7 @@ check_out() {
 
 # --- lint ---------------------------------------------------------------------
 # The check types each format implements above; lint refuses any other.
-KNOWN_TYPES='{"markdown": ["section", "line", "table", "rank", "mentions"],
+KNOWN_TYPES='{"markdown": ["section", "line", "table", "rank"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
   "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
   "pull-request-comment": ["pr_comment_posted"]}'

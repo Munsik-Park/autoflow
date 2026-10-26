@@ -102,18 +102,7 @@
     "report": {
       "file": "build-report.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "mentions",
-          "covers": [
-            {
-              "input": "applied_criteria",
-              "ids": ".criteria[].id"
-            }
-          ],
-          "note": "every applied acceptance criterion is named, with how it was verified and what the run showed, or why it was not (Q14); where and in what form is the module's own"
-        }
-      ]
+      "checks": []
     },
     "green_blocker": {
       "file": "green-blocker.md",
