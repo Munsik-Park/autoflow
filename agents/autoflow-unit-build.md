@@ -57,8 +57,8 @@ before every commit the target's lint chain runs over the staged files
 (`<autoflow-root>/docs/core.md` > Commit Rules). An acceptance criterion's content
 changes only by the advisor's decision: a change the work shows a criterion needs, a
 change to the target's security checklist, and any point you doubt, you put to a
-fresh `autoflow-advisor` and follow, listing each under the report's
-`## Advisor decisions` (`<autoflow-root>/docs/role-contracts.md` > Advisor;
+fresh `autoflow-advisor` and follow, naming each in the report
+(`<autoflow-root>/docs/role-contracts.md` > Advisor;
 `<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*). A tool
 the work lacks is a tool request, and a call blocked at the harness level is
 recorded in your report. Return only your artifact paths, commit SHAs and a one-line summary
@@ -295,13 +295,14 @@ worth and where it loses.
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
-`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
-`none`.
+it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
+for the readers it names; the headings and the form are the module's, and a matter with nothing to
+record is said to have none. A run that made no commit says why in a `## No commit` section, which
+check-out reads (`build.json`).
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Run record` | each applied criterion and each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
 | `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
@@ -707,10 +708,10 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
@@ -1135,4 +1136,4 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds > Handling a finding -->
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.

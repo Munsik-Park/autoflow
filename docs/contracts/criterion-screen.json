@@ -24,27 +24,9 @@
     "review_record": {
       "file": "criterion-review.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "line",
-          "pattern": "^Issue body sha256: [0-9a-f]{64}$",
-          "note": "the sha256 of the issue body reviewed, on a line of its own"
-        },
-        {
-          "type": "section",
-          "heading": "Dispositions"
-        },
-        {
-          "type": "table",
-          "under": "Dispositions",
-          "first": "Item",
-          "rows_disposed": true,
-          "unique_first": true,
-          "note": "one row per item the review found — each criterion, and each problem found beyond them — with the disposition the module decided and its grounds"
-        }
-      ],
+      "checks": [],
       "evaluation": [
-        "every criterion of the issue, and every problem the review finds beyond them, is an item of \"## Dispositions\" with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
+        "every criterion of the issue, and every problem the review finds beyond them, is disposed of, with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
         "the record names each criterion that has no in-depth target"
       ]
     },

@@ -209,9 +209,10 @@ policy row names ([`core.md`](core.md) > Spawn Model), at most five are in fligh
 ## Review record
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
-in its own run directory. It carries the line `Issue body sha256: <sha256>` — the issue body
-reviewed, as `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it — on a
-line of its own, and every section below; a section with nothing to record says `none`.
+in its own run directory. It names the issue body reviewed by its sha256, as
+`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records what the
+table below lists; the headings and the form are the module's, and a matter with nothing to record
+is said to have none.
 
 | Section | Holds |
 |---|---|
@@ -220,7 +221,7 @@ line of its own, and every section below; a section with nothing to record says 
 | `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
 | `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
 | `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | a table whose first column is `Item`: one row per item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and its row names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
+| `## Dispositions` | every item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
 | `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
 
 The record is situation-first where a person reads it — to follow what was decided and why
@@ -238,8 +239,8 @@ the module puts to a fresh advisor and decides as the advisor decided ([`role-co
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
-The record criterion-reconcile writes holds the review's decisions, and its `Issue body sha256:`
-line names the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
+The record criterion-reconcile writes holds the review's decisions and names, by
+its sha256, the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
 analysis report restates them, with the `[ac-decision]` entries applied
 ([`core.md`](core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
 were made on.

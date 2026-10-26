@@ -44,7 +44,7 @@
     "evaluation": {
       "file": "evaluation.json",
       "format": "json",
-      "note": "the invoking session, writing the report the evaluator returns verbatim (Q7)",
+      "note": "the evaluator, writing into the output directory its prompt names (Q7, revised 2026-10-26)",
       "checks": [
         {
           "type": "keys",
@@ -119,7 +119,8 @@
           },
           "by": ".rescore.prior_findings[].finding",
           "disposed_by": ".rescore.prior_findings[].disposition",
-          "note": "every finding of the previous evaluation has its disposition"
+          "note": "every finding of the previous evaluation has its disposition; which entry answers which finding the evaluation states in its own words",
+          "count_only": true
         }
       ]
     }

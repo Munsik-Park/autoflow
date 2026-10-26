@@ -39,7 +39,7 @@ artifact, never push, merge or file an issue directly, and a run's evidence is i
 log. An acceptance criterion's content changes only by the advisor's decision: a
 change you find the design needs, and a design point you cannot settle on the
 grounds at hand or doubt, you put to a fresh `autoflow-advisor`, follow its decision
-in your documents, and list under the feature design's `## Advisor decisions`
+in your documents, and state each in the feature design
 (`<autoflow-root>/docs/role-contracts.md` > Advisor;
 `<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*). A tool the
 work lacks is a tool request, and a call blocked at the harness level is recorded in
@@ -125,26 +125,18 @@ principle 2).
    and rejected with the ground for each rejection. It cites the verification design for what each
    verification exists to catch, rather than restating it.
 
-   **[MUST]** The document carries a `## Scope` section: the scope beyond the acceptance
-   criteria. Each problem judged under
+   The document states the scope beyond the acceptance criteria: each problem judged under
    [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-   judgment* — the analysis's `## Scope judgments` and any the design found — is listed as
-   included or separated, with the conditions it meets and, for a directly related problem left
-   out, its separation reason. Each item the design includes carries an id, the first cell of its
-   row in a table whose first column is `Item`, so the verification design disposes of it as of a
-   criterion. A section with nothing beyond the criteria says `none`. Scope is a decision, settled
-   here, not derived below.
+   judgment* — the analysis's scope judgments and any the design found — included or separated,
+   with the conditions it meets and, for a directly related problem left out, its separation
+   reason; each item the design includes is named, so the verification design disposes of it as of
+   a criterion. Scope is a decision, settled here, not derived below.
 
-   **[MUST]** The document carries a `## Advisor decisions` section: each decision the design put
-   to the advisor (*Report routing* below), one entry each — the ledger entry's identifier, the
-   decision, and how the documents follow it:
-   - an **acceptance-criterion content change** — excluding, revising or splitting an issue
-     acceptance criterion, or adding one ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
-     *Acceptance-criterion decisions*);
-   - a **design point** the module cannot settle on the grounds at hand, or doubts
-     ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
-
-   A design that put no decision to the advisor says `none`.
+   It also states each decision the design put to the advisor (*Report routing* below) — the
+   ledger entry's identifier, the decision, and how the documents follow it: an
+   **acceptance-criterion content change** ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+   *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
+   at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -156,17 +148,16 @@ principle 2).
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** — `<out>/verification-design.md`. It holds one table whose
-   first column is `Item`: one row for each applied acceptance criterion, by its id, and one for each
-   item the feature design's `## Scope` includes, by its id — every item the work owes, each with its
-   disposition: how it is verified and what that verification catches, or why it is not verified.
-   The other columns, and the words each row uses, are the module's. A row is never deleted: a
-   criterion verified by anything other than an executable test keeps its row and says how it is
-   verified instead, and why. The per-criterion disposition is a design output; what the layer split
-   above removes from it is depth, not rows — a row names the kind of oracle it gets, and the
-   condition clause that implements it is BUILD's. Its readers: GATE:PLAN's `Verification fit` reads
-   each row against its item, the build verifies each row and reports each item's outcome, and the
-   pull request carries each row not verified by an executable test with its reason
+2. **Verification Design Document** — `<out>/verification-design.md`. Every item the work owes —
+   each applied acceptance criterion, by its id, and each item the feature design includes — is
+   disposed of: how it is verified and what that verification catches, or why it is not verified.
+   Its form and its words are the module's. An item verified by anything other than an executable
+   test says how it is verified instead, and why. The per-criterion disposition is a design output;
+   what the layer split above removes from it is depth, not items — each names the kind of oracle it
+   gets, and the condition clause that implements it is BUILD's. Its readers: GATE:PLAN's
+   `Verification fit` reads each disposition against its item, the build verifies each and reports
+   each item's outcome, and the pull request carries each item not verified by an executable test
+   with its reason
    ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
 
 - For an item that is hard to verify: first find the tool that verifies it directly (*Tools*
@@ -237,7 +228,7 @@ settling it on an observation by a person, on an environment it cannot drive, or
 ## Report routing
 
 The decisions the design puts to the advisor, and what it does with the advisor's decision
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). Each is listed under `## Advisor decisions`.
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). The feature design states each (*Output artifacts* above).
 
 - **An acceptance-criterion content change.** Excluding, revising or splitting an issue
   acceptance criterion, or adding one, is never the design's to apply: the design puts the change to
@@ -558,10 +549,10 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
@@ -986,7 +977,7 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds > Handling a finding -->
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
 <!-- From <autoflow-root>/docs/development-guideline.md > 4. ADR Policy > When to create an ADR -->
 

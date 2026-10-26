@@ -83,16 +83,6 @@
           ],
           "unique_first": true,
           "note": "criteria-apply reads this table"
-        },
-        {
-          "type": "section",
-          "heading": "Necessity",
-          "note": "whether a change is owed and whether code is the lever, with its grounds"
-        },
-        {
-          "type": "section",
-          "heading": "Decision points",
-          "note": "\"none\" when there is none"
         }
       ],
       "evaluation": [

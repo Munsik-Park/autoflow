@@ -47,34 +47,22 @@ name — the title, how the body is composed, when the push happens — is the m
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
   invocation names (`params.base`), or the remote's default branch when it names none.
 
-What a pull request usually carries — offered as what to weigh, not as a checklist:
+The body lets the operator decide on the pull request. It states:
 
-- a title in the [`title-guide.md`](../title-guide.md) convention and a body written to
-  [`pr-body-guide.md`](../pr-body-guide.md);
-- on the host PR, the close keyword for the issue (`Closes #N`); a sub-repo PR references the issue
-  and carries no close keyword (*Multi-repo delivery* below);
-- the acceptance-criterion check — one line per applied criterion: whether it is met, the commit it
-  was confirmed at and where the evidence is, under a head naming the commit the results stand at
-  ([`pr-body-guide.md`](../pr-body-guide.md) > *수용 기준 대조*);
-- the `## Verification dispositions` list — the reviewer reads it (`<autoflow-root>/docs/review/review.md` > Before
-  Reviewing): every item the verification design verifies other than by an executable test, with
-  how it is verified instead and why, from its row; each item's run record or observation record,
-  from the build report's `## Run record` and `## Manual checklist`; and each test file the change
-  added to the target's tree, with its reason and the CI job that ran it, or that none did and its
-  disposition (*CI* > *Added test files*). Form:
-  [`pr-body-guide.md`](../pr-body-guide.md) > *Verification dispositions*;
-- the tool requests: every tool request of the work — each run's `tool-requests.json` the
-  invocation names (`tool_requests`) — with what it left unverified, so the operator decides on it:
-  provide the tool and run again, close the pull request and set the tool up apart, or merge and add
-  the tool;
-- the known gaps ([`pr-body-guide.md`](../pr-body-guide.md) > *한계와 known gaps*): each directly
-  related problem the work separated, with its separation reason
-  ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment*), and each recommendation deferred or separated (`deferred`;
-  [U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) by its
-  disposition — the issue that takes it, or the gap stated in a line —, not the finding's text whole;
-- when the branch already has an open pull request, the push updates it, and its body is brought up
-  to the current records before the reviewer reads it again.
+- each applied acceptance criterion with its outcome and where its evidence is;
+- what the work verified other than by an executable test, and how — the reviewer reads it
+  (`<autoflow-root>/docs/review/review.md` > Before Reviewing);
+- what the work could not verify, and why: the tool requests of its runs (`tool_requests`), so the
+  operator decides on them;
+- what the change leaves undone: the problems it separated and the recommendations deferred
+  (`deferred`);
+- CI's result, or that CI did not run.
+
+The host PR closes the issue (`Closes #N`); a sub-repo PR references it and closes nothing
+(*Multi-repo delivery* below). The title and the body's form are the module's, with
+[`title-guide.md`](../title-guide.md) and [`pr-body-guide.md`](../pr-body-guide.md) to draw on. When
+the branch already has an open pull request, the push updates it, and its body is brought up to the
+current records before the reviewer reads it again.
 
 ## Integration
 

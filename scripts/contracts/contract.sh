@@ -354,6 +354,16 @@ check_markdown() { # <output name> <file> <checks json> <files map>
             jq -e --arg id "$id" 'index($id) != null' <<<"$have" >/dev/null || defect "$n: '$id' has no row in $desc"
           done < <(source_ids "$s" "$files" | sed 's/`//g; s/^[[:space:]]*//; s/[[:space:]]*$//')
         done < <(jq -c '.covers // [] | .[]' <<<"$c") ;;
+      mentions)
+        # every id a source names appears in the document, as a word; where and
+        # in what form is the module's own
+        while IFS= read -r s; do
+          [ -n "$s" ] || continue
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            grep -qwF -- "$id" "$f" || defect "$n: '$id' is not named"
+          done < <(source_ids "$s" "$files" | sed 's/`//g; s/^[[:space:]]*//; s/[[:space:]]*$//')
+        done < <(jq -c '.covers // [] | .[]' <<<"$c") ;;
       *) defect "$n: the contract names a check this validator does not know: $t" ;;
     esac
   done < <(jq -c '.[]' <<<"$checks")
@@ -416,6 +426,21 @@ check_json() { # <output name> <file> <checks json>
         local by dby src name p
         by=$(jq -r .by <<<"$c"); dby=$(jq -r '.disposed_by // empty' <<<"$c")
         name=$(jq -r .source.input <<<"$c")
+        if jq -e '.count_only // false' <<<"$c" >/dev/null; then
+          # as many entries as the source has items, each disposed of; which entry
+          # answers which item is the module's to state
+          local want got
+          want=0
+          while IFS= read -r p; do
+            want=$((want + $(jq -r "[$(jq -r .source.ids <<<"$c")] | length" "$p" 2>/dev/null || echo 0)))
+          done < <(input_paths "$name")
+          got=$(jq -r "[$by] | length" "$f" 2>/dev/null || echo 0)
+          [ "$got" -ge "$want" ] || defect "$n: $by has $got entries for the $want items of $name"
+          if [ -n "$dby" ]; then
+            jq -e "[$dby] | all(tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
+          fi
+          continue
+        fi
         while IFS= read -r p; do
           while IFS= read -r id; do
             [ -n "$id" ] || continue
@@ -555,7 +580,7 @@ check_out() {
 
 # --- lint ---------------------------------------------------------------------
 # The check types each format implements above; lint refuses any other.
-KNOWN_TYPES='{"markdown": ["section", "line", "table", "rank"],
+KNOWN_TYPES='{"markdown": ["section", "line", "table", "rank", "mentions"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
   "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
   "pull-request-comment": ["pr_comment_posted"]}'

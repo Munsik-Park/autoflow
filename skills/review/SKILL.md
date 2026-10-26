@@ -351,22 +351,25 @@ its source.
 
 Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
 severity the reviews disagree on, and weighs each finding (*Whether a finding holds*) is its own; what
-it leaves behind is fixed:
+it leaves behind:
 
-- **One PR comment**, in Korean, per round: each finding once, with the reviewers that raised it;
-  a finding only one reviewer raised kept like any other; each rejected finding listed apart with the
-  grounds it does not hold; a reviewer unavailable for the round named with the reason. Its body is kept as
-  `<out>/comment.md`.
-- **The findings file** (below).
+- every reviewer's finding, each once, with the reviewers that raised it;
+- each finding's severity and whether it holds, a finding that does not hold with the grounds it
+  does not;
+- the highest severity among the findings that hold;
+- the same, posted on the pull request as one comment in Korean, its body kept as `<out>/comment.md`,
+  and kept as `<out>/findings.md`, which names the reviewed pull request.
 
-It returns `{max_severity, findings}`.
+A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
+is made is not the aggregator's to state: it is the judgment of the AI acting on the finding
+([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). It returns
+`{max_severity, findings}`.
 
-- **[MUST] One findings file per round.** Each run's aggregation writes `<out>/findings.md` for the reviewed PR `<owner>/<name>#<pr>`; a later round writes its own in its own run directory. The file carries a `pr: <owner>/<name>#<N>` line naming the reviewed PR, exactly one `max_severity: <level>` line — the highest level among the findings that hold, `Low Confidence` included, in colon notation, `max_severity: None` when none remains (never an omitted line) — and one table row per finding, `| <Severity> | <path>:<line> | <finding> | <source> | <disposition> |` — severity first, location second (a path relative to the reviewed PR's repository root), `<source>` the names of the reviewers that raised it (`claude`, `codex`, a review bot's login), and `<disposition>` empty, or `rejected` for a finding that does not hold — always the row's last cell, so a `|` quoted in the finding cell moves no other cell. A `rejected` row is a record: it counts toward no verdict. Where the fix of a finding that holds is made is not the aggregator's to state: it is the judgment of the AI acting on the finding ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6).
-- **[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
+**[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
 
 ### Whether a finding holds
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and writes a finding that does not hold, or holds in part, into the finding cell of its row with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
 The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
 
@@ -384,7 +387,7 @@ spawn checks for this on every round. Whoever reads the finding — the aggregat
 module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
 complaint (the same property asserted, a different witness case; the earlier rounds' findings files
 and comments, and the earlier evaluations in the record directory, are what it compares against)
-says so where it writes the finding: in the finding's cell of the findings file, under the analysis
+says so where it writes the finding: with the finding in the findings file, under the analysis
 report's `## Decision points`, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property
 a known gap — the module acting on the finding decides; a change to the criterion, and a choice it
@@ -723,10 +726,10 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.

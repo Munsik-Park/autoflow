@@ -97,49 +97,21 @@
     "feature_design": {
       "file": "feature-design.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "section",
-          "heading": "Scope"
-        },
-        {
-          "type": "table",
-          "under": "Scope",
-          "first": "Item",
-          "required": false,
-          "unique_first": true,
-          "note": "the items the design includes beyond the criteria, each with its id; absent when it includes none"
-        },
-        {
-          "type": "section",
-          "heading": "Advisor decisions",
-          "note": "each decision the run put to the advisor, by its ledger entry; \"none\" when it put none"
-        }
-      ]
+      "checks": []
     },
     "verification_design": {
       "file": "verification-design.md",
       "format": "markdown",
       "checks": [
         {
-          "type": "table",
-          "first": "Item",
-          "outside_delta": true,
-          "rows_disposed": true,
+          "type": "mentions",
           "covers": [
             {
               "input": "applied_criteria",
               "ids": ".criteria[].id"
-            },
-            {
-              "output": "feature_design",
-              "table": {
-                "under": "Scope",
-                "first": "Item"
-              }
             }
           ],
-          "note": "Every item the work owes has a disposition: each applied acceptance criterion and each item the feature design's \"## Scope\" includes (Q8, Q14). How an item is verified, or why it is not, is the module's judgment in its own words. The table the first run wrote is the one outside every \"## Delta — round <n>\" section: a re-run appends a delta and leaves that table as it stands (docs/units/design.md > Re-entry)."
+          "note": "every applied acceptance criterion is named, with how it is verified or why it is not (Q8, Q14); where and in what form is the module's own"
         }
       ]
     }

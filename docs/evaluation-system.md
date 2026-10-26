@@ -211,7 +211,7 @@ Binds the GATE:QUALITY form only.
 
 The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the scope the feature design states. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read that scope, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
 - A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
 - A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
 
@@ -439,7 +439,7 @@ range (`commits`) — and the work's outputs:
 - the applied acceptance criteria (`applied_criteria`, the criteria-apply module's output);
 - the analysis report (`analysis`): its `## Scope judgments`;
 - the two design documents: the feature design (`feature_design`) — the decisions the change is
-  checked against, and its `## Scope` section — and the verification design
+  checked against, and the scope it states — and the verification design
   (`verification_design`);
 - the build report (`build_report` — [U4 Build and verify](units/build.md) > Build report): its run
   record, manual checklist, maintained documents and lint record, its `## Scope judgments`, section
@@ -451,7 +451,7 @@ range (`commits`) — and the work's outputs:
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
 
-The cycle's scope records are the feature design's `## Scope` section, every
+The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
@@ -583,8 +583,8 @@ not lower the item.
 
 ## Evaluation Output Format
 
-The evaluator returns one JSON object; it holds no Write tool, so the session that runs the
-evaluation module writes the object, verbatim, to `<out>/evaluation.json`
+The evaluator writes one JSON object to `<out>/evaluation.json`, in the output directory its prompt
+names
 ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D3). The keys are the
 evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`), with
 `test_first` at AUDIT and `refine_observations` at GATE:QUALITY:
@@ -597,7 +597,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
   "scores": { "<item>": { "score": 8, "reason": "evidence" } },
   "rescore": {
     "rescored": ["<item>"], "inherited": ["<item>"],
-    "prior_findings": [ { "finding": "<the previous evaluation's finding, verbatim>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
+    "prior_findings": [ { "finding": "<the previous evaluation's finding>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
   },
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",

@@ -278,34 +278,22 @@ name — the title, how the body is composed, when the push happens — is the m
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
   invocation names (`params.base`), or the remote's default branch when it names none.
 
-What a pull request usually carries — offered as what to weigh, not as a checklist:
+The body lets the operator decide on the pull request. It states:
 
-- a title in the [`title-guide.md`](<autoflow-root>/docs/title-guide.md) convention and a body written to
-  [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md);
-- on the host PR, the close keyword for the issue (`Closes #N`); a sub-repo PR references the issue
-  and carries no close keyword (*Multi-repo delivery* below);
-- the acceptance-criterion check — one line per applied criterion: whether it is met, the commit it
-  was confirmed at and where the evidence is, under a head naming the commit the results stand at
-  ([`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *수용 기준 대조*);
-- the `## Verification dispositions` list — the reviewer reads it (`<autoflow-root>/docs/review/review.md` > Before
-  Reviewing): every item the verification design verifies other than by an executable test, with
-  how it is verified instead and why, from its row; each item's run record or observation record,
-  from the build report's `## Run record` and `## Manual checklist`; and each test file the change
-  added to the target's tree, with its reason and the CI job that ran it, or that none did and its
-  disposition (*CI* > *Added test files*). Form:
-  [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *Verification dispositions*;
-- the tool requests: every tool request of the work — each run's `tool-requests.json` the
-  invocation names (`tool_requests`) — with what it left unverified, so the operator decides on it:
-  provide the tool and run again, close the pull request and set the tool up apart, or merge and add
-  the tool;
-- the known gaps ([`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) > *한계와 known gaps*): each directly
-  related problem the work separated, with its separation reason
-  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-  judgment*), and each recommendation deferred or separated (`deferred`;
-  [U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) by its
-  disposition — the issue that takes it, or the gap stated in a line —, not the finding's text whole;
-- when the branch already has an open pull request, the push updates it, and its body is brought up
-  to the current records before the reviewer reads it again.
+- each applied acceptance criterion with its outcome and where its evidence is;
+- what the work verified other than by an executable test, and how — the reviewer reads it
+  (`<autoflow-root>/docs/review/review.md` > Before Reviewing);
+- what the work could not verify, and why: the tool requests of its runs (`tool_requests`), so the
+  operator decides on them;
+- what the change leaves undone: the problems it separated and the recommendations deferred
+  (`deferred`);
+- CI's result, or that CI did not run.
+
+The host PR closes the issue (`Closes #N`); a sub-repo PR references it and closes nothing
+(*Multi-repo delivery* below). The title and the body's form are the module's, with
+[`title-guide.md`](<autoflow-root>/docs/title-guide.md) and [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) to draw on. When
+the branch already has an open pull request, the push updates it, and its body is brought up to the
+current records before the reviewer reads it again.
 
 ## Integration
 
@@ -505,7 +493,7 @@ reviewers to infer hidden design intent from unrelated repository documents.
 ### 5. Verification dispositions (검증 처분의 노출)
 
 AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는다 — verification design이
-실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 design `## Scope`가 포함한
+실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
 항목)을, 그 row에 적힌 검증 방법과 사유와 함께 나열한다. 처분을 부르는 말은 design의 것이다.
 
 - 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
@@ -688,10 +676,10 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.

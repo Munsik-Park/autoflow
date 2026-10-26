@@ -183,13 +183,14 @@ worth and where it loses.
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
-`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
-`none`.
+it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
+for the readers it names; the headings and the form are the module's, and a matter with nothing to
+record is said to have none. A run that made no commit says why in a `## No commit` section, which
+check-out reads (`build.json`).
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Run record` | each applied criterion and each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
 | `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |

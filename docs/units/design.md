@@ -49,26 +49,18 @@ principle 2).
    and rejected with the ground for each rejection. It cites the verification design for what each
    verification exists to catch, rather than restating it.
 
-   **[MUST]** The document carries a `## Scope` section: the scope beyond the acceptance
-   criteria. Each problem judged under
+   The document states the scope beyond the acceptance criteria: each problem judged under
    [`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope
-   judgment* — the analysis's `## Scope judgments` and any the design found — is listed as
-   included or separated, with the conditions it meets and, for a directly related problem left
-   out, its separation reason. Each item the design includes carries an id, the first cell of its
-   row in a table whose first column is `Item`, so the verification design disposes of it as of a
-   criterion. A section with nothing beyond the criteria says `none`. Scope is a decision, settled
-   here, not derived below.
+   judgment* — the analysis's scope judgments and any the design found — included or separated,
+   with the conditions it meets and, for a directly related problem left out, its separation
+   reason; each item the design includes is named, so the verification design disposes of it as of
+   a criterion. Scope is a decision, settled here, not derived below.
 
-   **[MUST]** The document carries a `## Advisor decisions` section: each decision the design put
-   to the advisor (*Report routing* below), one entry each — the ledger entry's identifier, the
-   decision, and how the documents follow it:
-   - an **acceptance-criterion content change** — excluding, revising or splitting an issue
-     acceptance criterion, or adding one ([`decision-ledger.md`](../decision-ledger.md) >
-     *Acceptance-criterion decisions*);
-   - a **design point** the module cannot settle on the grounds at hand, or doubts
-     ([`core.md`](../core.md) > Rule Scope, principle 3).
-
-   A design that put no decision to the advisor says `none`.
+   It also states each decision the design put to the advisor (*Report routing* below) — the
+   ledger entry's identifier, the decision, and how the documents follow it: an
+   **acceptance-criterion content change** ([`decision-ledger.md`](../decision-ledger.md) >
+   *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
+   at hand, or doubts ([`core.md`](../core.md) > Rule Scope, principle 3).
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -80,17 +72,16 @@ principle 2).
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** — `<out>/verification-design.md`. It holds one table whose
-   first column is `Item`: one row for each applied acceptance criterion, by its id, and one for each
-   item the feature design's `## Scope` includes, by its id — every item the work owes, each with its
-   disposition: how it is verified and what that verification catches, or why it is not verified.
-   The other columns, and the words each row uses, are the module's. A row is never deleted: a
-   criterion verified by anything other than an executable test keeps its row and says how it is
-   verified instead, and why. The per-criterion disposition is a design output; what the layer split
-   above removes from it is depth, not rows — a row names the kind of oracle it gets, and the
-   condition clause that implements it is BUILD's. Its readers: GATE:PLAN's `Verification fit` reads
-   each row against its item, the build verifies each row and reports each item's outcome, and the
-   pull request carries each row not verified by an executable test with its reason
+2. **Verification Design Document** — `<out>/verification-design.md`. Every item the work owes —
+   each applied acceptance criterion, by its id, and each item the feature design includes — is
+   disposed of: how it is verified and what that verification catches, or why it is not verified.
+   Its form and its words are the module's. An item verified by anything other than an executable
+   test says how it is verified instead, and why. The per-criterion disposition is a design output;
+   what the layer split above removes from it is depth, not items — each names the kind of oracle it
+   gets, and the condition clause that implements it is BUILD's. Its readers: GATE:PLAN's
+   `Verification fit` reads each disposition against its item, the build verifies each and reports
+   each item's outcome, and the pull request carries each item not verified by an executable test
+   with its reason
    ([U6 Delivery](delivery.md) > *Push and pull request*).
 
 - For an item that is hard to verify: first find the tool that verifies it directly (*Tools*
@@ -161,7 +152,7 @@ settling it on an observation by a person, on an environment it cannot drive, or
 ## Report routing
 
 The decisions the design puts to the advisor, and what it does with the advisor's decision
-([`role-contracts.md`](../role-contracts.md) > Advisor). Each is listed under `## Advisor decisions`.
+([`role-contracts.md`](../role-contracts.md) > Advisor). The feature design states each (*Output artifacts* above).
 
 - **An acceptance-criterion content change.** Excluding, revising or splitting an issue
   acceptance criterion, or adding one, is never the design's to apply: the design puts the change to

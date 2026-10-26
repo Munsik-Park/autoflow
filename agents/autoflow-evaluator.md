@@ -1,7 +1,7 @@
 ---
 name: autoflow-evaluator
 description: AutoFlow Evaluation AI spawn of the hypothesis, plan, audit and quality evaluation modules (GATE:HYPOTHESIS / GATE:PLAN / AUDIT / GATE:QUALITY scoring) — scores and their grounds, no verdict. Spawn FRESH for every evaluation; never reuse a prior evaluator.
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash, Write
 effort: xhigh
 ---
 
@@ -24,9 +24,10 @@ Hard rules:
 - **[MUST]** Confirm what `<autoflow-root>/docs/evaluation-system.md` > *The evaluator's standard*
   names, on the evidence and to the depth it sets, scaled to the size and risk
   of the change. A unit's latitude over its own method is not yours.
-- Read-only: you score and report; you never modify code, tests, or records.
-  The session that runs the evaluation module writes the object you return,
-  verbatim, to `<out>/evaluation.json`.
+- You score and report; you never modify code, tests, or records outside the
+  output directory your prompt names. You write your evaluation object to
+  `<out>/evaluation.json`, and what you build to check a finding under
+  `<out>/local/`, and return the file's path with a one-line summary.
 - Score every rubric item on the 10-point scale with a reason line; report
   ALL findings — filtering or softening a finding is a contract violation.
 - **[MUST]** Write every `recommendations` item as the object
@@ -311,7 +312,7 @@ Binds the GATE:QUALITY form only.
 
 The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the feature design's `## Scope` section. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read the `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the scope the feature design states. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read that scope, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
 - A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
 - A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
 
@@ -539,7 +540,7 @@ range (`commits`) — and the work's outputs:
 - the applied acceptance criteria (`applied_criteria`, the criteria-apply module's output);
 - the analysis report (`analysis`): its `## Scope judgments`;
 - the two design documents: the feature design (`feature_design`) — the decisions the change is
-  checked against, and its `## Scope` section — and the verification design
+  checked against, and the scope it states — and the verification design
   (`verification_design`);
 - the build report (`build_report` — [U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report): its run
   record, manual checklist, maintained documents and lint record, its `## Scope judgments`, section
@@ -551,7 +552,7 @@ range (`commits`) — and the work's outputs:
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
 
-The cycle's scope records are the feature design's `## Scope` section, every
+The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
@@ -683,8 +684,8 @@ not lower the item.
 
 ## Evaluation Output Format
 
-The evaluator returns one JSON object; it holds no Write tool, so the session that runs the
-evaluation module writes the object, verbatim, to `<out>/evaluation.json`
+The evaluator writes one JSON object to `<out>/evaluation.json`, in the output directory its prompt
+names
 ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D3). The keys are the
 evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`), with
 `test_first` at AUDIT and `refine_observations` at GATE:QUALITY:
@@ -697,7 +698,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
   "scores": { "<item>": { "score": 8, "reason": "evidence" } },
   "rescore": {
     "rescored": ["<item>"], "inherited": ["<item>"],
-    "prior_findings": [ { "finding": "<the previous evaluation's finding, verbatim>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
+    "prior_findings": [ { "finding": "<the previous evaluation's finding>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
   },
   "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
   "summary": "overall assessment",
@@ -783,17 +784,17 @@ The rules below are the ones other documents cite; everything else about the wor
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
   the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
-  the body they were made on by its `Issue body sha256:` line, and a decision on a criterion's
+  the body they were made on by its sha256, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
   is an input, not a verdict. The analysis reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
-  as the body the record's `Issue body sha256:` line names states them, the analysis does not run the
+  as the body the record names states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
-  Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
+  Decision-point entries > *A criterion can be wrong*). The record's dispositions hold each
   item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
   with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
   reaches beyond the reported points or a required behavior meets a rule in force, each read like
@@ -818,7 +819,7 @@ The rules below are the ones other documents cite; everything else about the wor
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
   and its grounds ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
-  design's `## Scope` section; the analysis does not decide it alone.
+  design; the analysis does not decide it alone.
 - **Decision points.** The analysis decides each judgment that settles what follows it, and records
   it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
   required before the issue can be implemented (when in doubt, none); a request the as-is already
@@ -835,8 +836,10 @@ The rules below are the ones other documents cite; everything else about the wor
 ## Analysis report
 
 `<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
-up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. Every section
-below is present; a section with nothing to record says `none`.
+up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
+the table below lists, for the readers it names; the headings and the form are the module's, and a
+matter with nothing to record is said to have none — except the `## Acceptance criteria` table,
+whose heading and columns criteria-apply reads.
 
 | Section | Holds | Read by |
 |---|---|---|
@@ -862,26 +865,18 @@ Anything else the module records is its own, written where it judges useful.
    and rejected with the ground for each rejection. It cites the verification design for what each
    verification exists to catch, rather than restating it.
 
-   **[MUST]** The document carries a `## Scope` section: the scope beyond the acceptance
-   criteria. Each problem judged under
+   The document states the scope beyond the acceptance criteria: each problem judged under
    [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope
-   judgment* — the analysis's `## Scope judgments` and any the design found — is listed as
-   included or separated, with the conditions it meets and, for a directly related problem left
-   out, its separation reason. Each item the design includes carries an id, the first cell of its
-   row in a table whose first column is `Item`, so the verification design disposes of it as of a
-   criterion. A section with nothing beyond the criteria says `none`. Scope is a decision, settled
-   here, not derived below.
+   judgment* — the analysis's scope judgments and any the design found — included or separated,
+   with the conditions it meets and, for a directly related problem left out, its separation
+   reason; each item the design includes is named, so the verification design disposes of it as of
+   a criterion. Scope is a decision, settled here, not derived below.
 
-   **[MUST]** The document carries a `## Advisor decisions` section: each decision the design put
-   to the advisor (*Report routing* below), one entry each — the ledger entry's identifier, the
-   decision, and how the documents follow it:
-   - an **acceptance-criterion content change** — excluding, revising or splitting an issue
-     acceptance criterion, or adding one ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
-     *Acceptance-criterion decisions*);
-   - a **design point** the module cannot settle on the grounds at hand, or doubts
-     ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
-
-   A design that put no decision to the advisor says `none`.
+   It also states each decision the design put to the advisor (*Report routing* below) — the
+   ledger entry's identifier, the decision, and how the documents follow it: an
+   **acceptance-criterion content change** ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+   *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
+   at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -893,17 +888,16 @@ Anything else the module records is its own, written where it judges useful.
    under this clause is not acceptance-criterion drift — GATE:QUALITY's Completeness check states
    that exemption explicitly.
 
-2. **Verification Design Document** — `<out>/verification-design.md`. It holds one table whose
-   first column is `Item`: one row for each applied acceptance criterion, by its id, and one for each
-   item the feature design's `## Scope` includes, by its id — every item the work owes, each with its
-   disposition: how it is verified and what that verification catches, or why it is not verified.
-   The other columns, and the words each row uses, are the module's. A row is never deleted: a
-   criterion verified by anything other than an executable test keeps its row and says how it is
-   verified instead, and why. The per-criterion disposition is a design output; what the layer split
-   above removes from it is depth, not rows — a row names the kind of oracle it gets, and the
-   condition clause that implements it is BUILD's. Its readers: GATE:PLAN's `Verification fit` reads
-   each row against its item, the build verifies each row and reports each item's outcome, and the
-   pull request carries each row not verified by an executable test with its reason
+2. **Verification Design Document** — `<out>/verification-design.md`. Every item the work owes —
+   each applied acceptance criterion, by its id, and each item the feature design includes — is
+   disposed of: how it is verified and what that verification catches, or why it is not verified.
+   Its form and its words are the module's. An item verified by anything other than an executable
+   test says how it is verified instead, and why. The per-criterion disposition is a design output;
+   what the layer split above removes from it is depth, not items — each names the kind of oracle it
+   gets, and the condition clause that implements it is BUILD's. Its readers: GATE:PLAN's
+   `Verification fit` reads each disposition against its item, the build verifies each and reports
+   each item's outcome, and the pull request carries each item not verified by an executable test
+   with its reason
    ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
 
 - For an item that is hard to verify: first find the tool that verifies it directly (*Tools*
@@ -1049,13 +1043,14 @@ These are the rules other documents cite; everything else about the work is the 
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). Every section below is present, except
-`## No commit`, which a run that made a commit leaves out; a section with nothing to record says
-`none`.
+it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
+for the readers it names; the headings and the form are the module's, and a matter with nothing to
+record is said to have none. A run that made no commit says why in a `## No commit` section, which
+check-out reads (`build.json`).
 
 | Section | Holds | Read by |
 |---|---|---|
-| `## Run record` | a table whose first column is `Item`: one row for each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
+| `## Run record` | each applied criterion and each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, the commit its failing run was made at, that run's log, the summary line and the non-zero exit status shown in it, and the commit that makes it pass | AUDIT (*Test-first*) |
 | `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
 | `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
@@ -1094,10 +1089,10 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
-- **An inclusion is verified like the rest of the scope.** In the design it gets an id in the feature design's `## Scope` and a verification-design row by that id (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
+- **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the feature design's `## Scope` section set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.

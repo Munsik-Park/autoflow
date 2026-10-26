@@ -494,7 +494,7 @@ mod_work() {
       printf 'The work is one `autoflow-unit-%s` spawn on the model `%s unit-%s` names (`<autoflow-root>/docs/units/%s.md` > Unit spawn, below).' "$1" "$sp" "$1" "$1" ;;
     hypothesis|plan|audit|quality)
       key="gate-$1"; [ "$1" = audit ] && key=audit
-      printf 'The work is one fresh `autoflow-evaluator` spawn on the model `%s %s` names, given the inputs the invocation names; the session writes the report it returns verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below).' "$sp" "$key" ;;
+      printf 'The work is one fresh `autoflow-evaluator` spawn on the model `%s %s` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below).' "$sp" "$key" ;;
     delivery)            printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it; a failed CI check is read by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
     review)              printf 'The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round'"'"'s reviews are aggregated by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
   esac

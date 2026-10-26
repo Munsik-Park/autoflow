@@ -39,10 +39,10 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
 - Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
-- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI holds no Write tool, so its return value is the only delivery path for its scores (`<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). Contract: *Spawn mode by role lifetime* above.
+- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI writes its evaluation into the output directory the prompt names and returns the file's path (*Recording the result* below). Contract: *Spawn mode by role lifetime* above.
 
 ### Evaluation AI Prompt Rules
-1. **[MUST]** Include in the prompt: evaluation type and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
+1. **[MUST]** Include in the prompt: evaluation type, the output directory (`out`), and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
 2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
 3. **[MUST]** The portion the spawning session writes is 5 lines or fewer (excluding target file contents).
 4. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
@@ -50,9 +50,9 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 ### Recording the result
 
-The Evaluation AI returns one JSON object, and the session that runs the evaluation module writes it,
-verbatim, to `<out>/evaluation.json` — its scores, their grounds and its recommendations, and no
-verdict ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
+The Evaluation AI writes one JSON object to `<out>/evaluation.json` — its scores, their grounds and
+its recommendations, and no verdict —, keeps what it builds to check a finding under `<out>/local/`,
+and returns the file's path with a one-line summary ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
 against ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D6).

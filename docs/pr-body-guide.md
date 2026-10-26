@@ -50,7 +50,7 @@ reviewers to infer hidden design intent from unrelated repository documents.
 ### 5. Verification dispositions (검증 처분의 노출)
 
 AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는다 — verification design이
-실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 design `## Scope`가 포함한
+실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
 항목)을, 그 row에 적힌 검증 방법과 사유와 함께 나열한다. 처분을 부르는 말은 design의 것이다.
 
 - 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.

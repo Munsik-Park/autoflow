@@ -104,19 +104,14 @@
       "format": "markdown",
       "checks": [
         {
-          "type": "table",
-          "first": "Item",
-          "rows_disposed": true,
+          "type": "mentions",
           "covers": [
             {
-              "input": "verification_design",
-              "table": {
-                "first": "Item",
-                "outside_delta": true
-              }
+              "input": "applied_criteria",
+              "ids": ".criteria[].id"
             }
           ],
-          "note": "every item of the verification design with its outcome — how it was verified and what the run showed, or why it was not"
+          "note": "every applied acceptance criterion is named, with how it was verified and what the run showed, or why it was not (Q14); where and in what form is the module's own"
         }
       ]
     },

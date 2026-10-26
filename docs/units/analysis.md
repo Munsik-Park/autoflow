@@ -91,17 +91,17 @@ The rules below are the ones other documents cite; everything else about the wor
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
   the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
-  the body they were made on by its `Issue body sha256:` line, and a decision on a criterion's
+  the body they were made on by its sha256, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](../criterion-review.md)); the record
   is an input, not a verdict. The analysis reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
-  as the body the record's `Issue body sha256:` line names states them, the analysis does not run the
+  as the body the record names states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](../decision-ledger.md) >
-  Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
+  Decision-point entries > *A criterion can be wrong*). The record's dispositions hold each
   item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
   with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
   reaches beyond the reported points or a required behavior meets a rule in force, each read like
@@ -126,7 +126,7 @@ The rules below are the ones other documents cite; everything else about the wor
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
   and its grounds ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
-  design's `## Scope` section; the analysis does not decide it alone.
+  design; the analysis does not decide it alone.
 - **Decision points.** The analysis decides each judgment that settles what follows it, and records
   it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
   required before the issue can be implemented (when in doubt, none); a request the as-is already
@@ -141,8 +141,10 @@ The rules below are the ones other documents cite; everything else about the wor
 ## Analysis report
 
 `<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
-up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. Every section
-below is present; a section with nothing to record says `none`.
+up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
+the table below lists, for the readers it names; the headings and the form are the module's, and a
+matter with nothing to record is said to have none — except the `## Acceptance criteria` table,
+whose heading and columns criteria-apply reads.
 
 | Section | Holds | Read by |
 |---|---|---|

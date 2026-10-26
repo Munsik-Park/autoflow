@@ -40,34 +40,7 @@
     "findings": {
       "file": "findings.md",
       "format": "markdown",
-      "checks": [
-        {
-          "type": "line",
-          "pattern": "^pr: ([^/\\s]+/[^#\\s]+#[0-9]+)$",
-          "equals_param": "pr",
-          "note": "the reviewed pull request, as <owner>/<name>#<N>: params.pr"
-        },
-        {
-          "type": "line",
-          "pattern": "^max_severity: (Critical|High|Medium|Low Confidence|Low|None)$",
-          "once": true,
-          "note": "exactly one line: the highest level among the findings that hold, None when none remains"
-        },
-        {
-          "type": "rank",
-          "pattern": "^max_severity: (Critical|High|Medium|Low Confidence|Low|None)$",
-          "order": [
-            "Low Confidence",
-            "Low",
-            "Medium",
-            "High",
-            "Critical"
-          ],
-          "none": "None",
-          "exclude_last_cell": "rejected",
-          "note": "max_severity is the highest severity among the finding rows — | <Severity> | <path>:<line> | <finding> | <source> | <disposition> | — whose disposition, the last cell, is not rejected (docs/units/review.md > Review aggregation)"
-        }
-      ],
+      "checks": [],
       "evaluation": [
         "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
         "every finding of every review is in the file"

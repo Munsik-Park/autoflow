@@ -103,8 +103,9 @@ retry loops, goes with its SVG pair and their renderer.
 `mode`, `phase`, `phases.*` —, `docs/state-tracking.md`, the schema `tests/fixtures/gate-schema.json`,
 the entry evaluation `scripts/preflight/cycle-status.sh`, the in-tree migration
 `scripts/migrate/migrate-in-tree-records.sh` and the route `scripts/gate/remedy-route.sh` are
-removed. An evaluation's result is its output file (`<out>/evaluation.json`), written verbatim by
-the session that runs the evaluation module from what the evaluator returns (Q7). The rules the
+removed. An evaluation's result is its output file (`<out>/evaluation.json`), which the evaluator
+writes into the output directory its prompt names, with what it built to check a finding under
+`<out>/local/` (Q7, revised by Q28). The rules the
 removed document carried that stay — the policy denies (D5), the record location, the hook's
 behavior with no `jq` — move to the documents that keep them.
 

@@ -17,8 +17,7 @@ a target's code is treated.
   and documented as the rules ask.
 - **Output**: the evaluation object [`evaluation-system.md`](../evaluation-system.md) > Evaluation
   Output Format defines — ten scores with their grounds, `refine_observations`, `recommendations`,
-  and `rescore` on a re-score —, which the session that runs the module writes verbatim to
-  `<out>/evaluation.json`.
+  and `rescore` on a re-score —, which the evaluator writes to `<out>/evaluation.json`.
 - **Independence**: a fresh Evaluation AI (`autoflow-evaluator`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-quality` names) for every
   run, never the author of what it scores, read-only
