@@ -122,9 +122,9 @@ REPLACED=$(jq -c '
             elif ($t | length) == 0 then .defects += ["\($d.entry): \($r.how) \($r.id), which is no earlier [ac-decision] entry"]
             else .gone += [$t[].key] end))
   | .gone as $g
-  # a standing entry keeps the AC ids of the entries it replaces (over)
+  # a standing entry keeps the AC ids that the entries it replaces added (over)
   | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not)
-       | .key as $k | .value | . + {over: ([.replaces[].id] as $ids | [$E[:$k][] | select(.value.entry as $e | any($ids[]; . == $e)) | .value.AC])}],
+       | .key as $k | .value | . + {over: ([.replaces[].id] as $ids | [$E[:$k][] | select(.value.entry as $e | any($ids[]; . == $e)) | select(.value.Disposition == "added") | .value.AC])}],
      defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
 
 # conflicts: standing entries on one AC id whose conclusions differ. A conflict
