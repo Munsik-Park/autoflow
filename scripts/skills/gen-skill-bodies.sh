@@ -509,7 +509,7 @@ name: criterion-review
 description: >-
   Run the criterion review stage of an AutoFlow cycle alone, also the entry of
   the abbreviated path — an attempt's review of the issue's acceptance criteria
-  against the target's code and policy, ending at its [criterion-ready] entry;
+  against the target's code and policy, ending at its review record;
   the attempt then goes on by /autoflow:cycle <N> or on the abbreviated path.
   Use only when the operator asks for the criterion review by itself
   (/autoflow:criterion-review <N> [new]).

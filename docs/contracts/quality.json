@@ -69,7 +69,7 @@
     "deferred": {
       "required": false,
       "from": {
-        "path": "coordinator"
+        "path": "invocation"
       },
       "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition} (Q1: the triage result is a content input; the form is delivery.json's)"
     },

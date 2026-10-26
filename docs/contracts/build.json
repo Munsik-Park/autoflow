@@ -79,7 +79,7 @@
     "deferred": {
       "required": false,
       "from": {
-        "path": "coordinator"
+        "path": "invocation"
       },
       "note": "a JSON array of the recommendations deferred or separated after earlier evaluations, each {subject, finding, disposition}; the build leaves them to their disposition (the form is delivery.json's)"
     }

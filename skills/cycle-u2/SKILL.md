@@ -93,7 +93,7 @@ These rules apply to every run.
 
 ## Decision Ledger
 
-A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the invocation names, fixes settled decisions — the entries that settle what a module cannot settle itself. What an entry records, its identifier grammar, and the decision-point entries (`[ac-decision]`, `[checklist-decision]`, `[criterion-ready]`) are `<autoflow-root>/docs/decision-ledger.md`.
+A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md` in the record directory the invocation names, fixes settled decisions — the entries that settle what a module cannot settle itself. What an entry records, its identifier grammar, and the decision-point entries (`[ac-decision]`, `[checklist-decision]`) are `<autoflow-root>/docs/decision-ledger.md`.
 
 - **[MUST]** A recorded decision is not re-litigated without a **new verified fact** — a fact unavailable when the entry was written and deterministically checkable (a commit SHA, a `Tests: N passed` line, a `file:line` content read at a named commit), not a re-reading or re-interpretation of material already on the record. A settled decision is likewise not overturned by re-reading the issue body. One exception: a verified error in the record itself (`<autoflow-root>/docs/decision-ledger.md` > Entries).
 - **[MUST]** The ledger is append-only: entries are never edited or deleted, and a write never changes text already in the ledger — enforced by the gate hook (*Records and the hook* below). A superseding decision adds a new entry that cites the new fact — or, under the verified-error exception, the reproduced error — and names the entry it supersedes on a `- Supersedes:` line.
@@ -263,7 +263,7 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
 - **The spawn.** One `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) runs the
   module. Its prompt states the goal, names the inputs the invocation gives by path — the issue
-  (`params.issue`), the criterion review record, the decision ledger's `[criterion-ready]` and
+  (`params.issue`), the criterion review record, the decision ledger's
   `[ac-decision]` entries, the target's documents, and on a re-run the previous report and its
   evaluation, or the findings it answers (a quality evaluation's or a review's) — the attempt's
   record directory, where earlier runs left their work, and the output directory the report goes to.
@@ -323,14 +323,15 @@ The rules below are the ones other documents cite; everything else about the wor
   not edited to match it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
-  the criterion review's modules, and the decisions they led to are recorded in the ledger's
-  `[criterion-ready]` and `[ac-decision]` entries ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md));
-  the record that review left is an input, not a verdict. The analysis reads its findings as an
+  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
+  the body they were made on by its `Issue body sha256:` line, and a decision on a criterion's
+  content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
+  is an input, not a verdict. The analysis reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
-  as the body the `[criterion-ready]` entry records states them, the analysis does not run the
+  as the body the record's `Issue body sha256:` line names states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each
@@ -568,9 +569,8 @@ allocation — are [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger.
 
 **What the ledger holds.** The advisor's decisions, each with its answer file
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor); the `[ac-decision]` entries that record a change
-to an acceptance criterion, the criterion review's included (*Acceptance-criterion decisions* below);
-and the `[criterion-ready]` entry that records the criterion review's settled decisions
-(*Criterion-readiness confirmations* below). A module's own decisions and records are its own outputs
+to an acceptance criterion, the criterion review's included (*Acceptance-criterion decisions* below).
+A module's own decisions and records are its own outputs
 ([`units/design.md`](<autoflow-root>/docs/units/design.md), [`units/build.md`](<autoflow-root>/docs/units/build.md) > Build report), which name
 the ledger entries the run followed. An evaluation's result, a count of re-runs and the checks of the
 environment are not ledger entries (*ibid.* D8).
@@ -675,20 +675,6 @@ decision. An entry stands unless a later counted entry replaces it by name (*Rep
 above). The standing entries decide only when they agree: all `accepted` → the change is covered; all
 `rejected` → it is not, and the change is reverted before AUDIT reads it; both → a conflict, reported as
 `conflict=<ids>` on an undecided (exit `3`) record and resolved by a new entry, never by recency.
-
-**Criterion-readiness confirmations** (`[criterion-ready]`). The attempt's criterion review checks
-the issue's acceptance criteria and disposes of every item it finds; an item its module cannot decide
-with confidence is decided by the advisor that module spawns ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)
-> *Authority*). Once every item is decided, one entry records the decisions, in the trailing-marker
-grammar: the heading `## A<n> — <title> [criterion-ready]`, followed by a `- Decision:` line, a
-`- Record:` line (the review record's path relative to the attempt's record directory — the
-criterion-reconcile run's `criterion-reconcile-<n>/criterion-review.md` —, never an absolute path or
-one with a `.` or `..` component), an `- Issue body sha256:` line (the value
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints for the body the entry
-records), and the ordinary Grounds line. The entry that stands is the **last** one carrying the marker
-in the attempt's own ledger — never another attempt's —, and it confirms the body its sha256 names; an
-edit to the body is confirmed by a new entry, never by editing this one. A criterion change after the
-review is an `[ac-decision]`.
 
 <!-- From <autoflow-root>/docs/issue-proposal.md -->
 
@@ -802,8 +788,8 @@ the record to the issue's number; it belongs to the issue, not to any one attemp
 
 `--dry-run` runs every check and creates nothing, leaving the draft in place.
 
-Filing is not readiness: a filed issue reaches DIAGNOSE only once its attempt's criterion review
-stage has reviewed its acceptance criteria and recorded the `[criterion-ready]` entry
+Filing is not readiness: each attempt of the issue reviews its acceptance criteria in its own
+criterion review, and the analysis takes the criteria as that review's record settles them
 ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)).
 
 ## Exit codes

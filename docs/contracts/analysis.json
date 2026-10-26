@@ -24,8 +24,7 @@
       "required": false,
       "from": {
         "ledger": [
-          "ac-decision",
-          "criterion-ready"
+          "ac-decision"
         ]
       }
     },

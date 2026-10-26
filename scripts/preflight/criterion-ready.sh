@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
 # Criterion readiness — the sha256 of an issue body, the value a criterion
-# review record and a [criterion-ready] entry name the body by (issues #430,
-# #465; docs/criterion-review.md, docs/decision-ledger.md)
+# review record names the body by (issues #430, #465; docs/criterion-review.md)
 # =============================================================================
 # Reads and reports (ADR-0025 D8). It changes nothing: no ledger entry, no
 # file, no issue edit. Whether an issue's acceptance criteria are right is not
@@ -13,7 +12,7 @@
 # Subcommand:
 #   hash --issue N   print the sha256 of the issue body as GitHub holds it
 #                    now — the value the review record's `Issue body sha256:`
-#                    line and a [criterion-ready] entry record
+#                    line records
 #
 # Exit codes:
 #   0   hash printed

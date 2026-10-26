@@ -171,8 +171,11 @@ each is a tool request (Q10).
 
 **D8 — The ledger holds decisions, and names no writer** (operator decision 2026-10-26, Q26:
 "그 문서를 작성하는 사람을 제한하는데 실제 그 제한이 필요하거나 구분할 필요가 있지 않아요"). Its
-entries settle what a module cannot settle itself — `[criterion-ready]`, `[ac-decision]`,
-`[checklist-decision]`, a design point, every decision of the advisor's (Q4). An entry records a
+entries settle what a module cannot settle itself — `[ac-decision]`, `[checklist-decision]`, a
+design point, every decision of the advisor's (Q4). The criterion review's decisions are its record,
+the one criterion-reconcile writes, which names the body they were made on by its
+`Issue body sha256:` line: what a module produces itself is its own output (Q4), so the
+`[criterion-ready]` entry goes, and the analysis takes the record. An entry records a
 decision and its grounds; a later entry replaces an earlier one only by naming it on
 `- Supersedes:`, on a new verified fact or a verified error; standing entries whose conclusions
 disagree, with neither naming the other, are a conflict, and neither is applied; the ledger is
@@ -266,13 +269,12 @@ credential the environment does not provide is a tool request (Q10). The advisor
 
 ### Neutral / Trade-Offs
 
-- The operator's `security-checklist.md` names the hook's state validation; its text changes with
-  the operator's acceptance, as the file's maintainer rule requires.
-- `scripts/contracts/criteria-apply.sh` (#509) still reads `- Authority: operator decision` and
-  `- Overrides:` as it did; entries written to D8 carry neither, and the script is brought to D8 on
-  #509's branch.
-- The contracts' input source `{path: coordinator}` keeps its value until the module commands
-  (D9) name the inputs the invocation carries.
+- `security-checklist.md` states the hook's policy denies and the ledger's append-only check in place
+  of its state-validation items, with the operator's acceptance (Q24).
+- `scripts/contracts/criteria-apply.sh` gives every `[ac-decision]` entry the same effect on #509's
+  branch, and reads an earlier ledger's `- Overrides:` as `- Supersedes:`.
+- A contract's input that the invocation gives as a file, neither another module's output nor a
+  target document, names its source `{path: invocation}`.
 
 ## Relation to other decisions
 

@@ -74,7 +74,7 @@
     "deferred": {
       "required": false,
       "from": {
-        "path": "coordinator"
+        "path": "invocation"
       },
       "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
     }

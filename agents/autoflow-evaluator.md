@@ -782,14 +782,15 @@ The rules below are the ones other documents cite; everything else about the wor
   not edited to match it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
-  the criterion review's modules, and the decisions they led to are recorded in the ledger's
-  `[criterion-ready]` and `[ac-decision]` entries ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md));
-  the record that review left is an input, not a verdict. The analysis reads its findings as an
+  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
+  the body they were made on by its `Issue body sha256:` line, and a decision on a criterion's
+  content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
+  is an input, not a verdict. The analysis reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
-  as the body the `[criterion-ready]` entry records states them, the analysis does not run the
+  as the body the record's `Issue body sha256:` line names states them, the analysis does not run the
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's `## Dispositions` holds each

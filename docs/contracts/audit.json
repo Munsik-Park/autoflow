@@ -41,7 +41,7 @@
     "security_checklist": {
       "required": false,
       "from": {
-        "path": "coordinator"
+        "path": "invocation"
       },
       "note": "the target's checklist at the version security-checklist.sh status names (score=), written to a file in the record directory (git show <score>); not given when none is declared"
     },

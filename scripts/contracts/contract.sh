@@ -651,7 +651,7 @@ lint() {
           elif ($all[$f.module].outputs | has($f.output) | not) then "input \($k): module \($f.module) has no output \($f.output)"
           else empty end
         elif has("ledger") then empty
-        elif has("path") then (if .path | IN("target", "coordinator") then empty else "input \($k): path is not target or coordinator" end)
+        elif has("path") then (if .path | IN("target", "invocation") then empty else "input \($k): path is not target or invocation" end)
         elif has("results") then (if .results == "tool_requests" then empty else "input \($k): results is not tool_requests" end)
         else "input \($k): from names no module, ledger, path or results" end' <<<"$c") || say "inputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"

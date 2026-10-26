@@ -6,9 +6,9 @@ record directory — begins with its own criterion review and stays independent 
 attempt from that review to its pull request. The review is four modules — criterion-screen,
 criterion-trace, criterion-in-depth and criterion-reconcile, each with its contract
 (`<autoflow-root>/docs/contracts/criterion-*.json`), this document the procedure of all four — and
-it disposes of every item it finds, with its grounds. The dispositions that change a criterion are
-recorded as `[ac-decision]` entries, and the review's decisions as its `[criterion-ready]` entry
-(*Authority* below). This is the Definition of Ready of backlog refinement: a criterion that presumes
+it disposes of every item it finds, with its grounds, in its review record. A disposition that
+changes a criterion's content is the advisor's decision, an `[ac-decision]` entry (*Authority*
+below). This is the Definition of Ready of backlog refinement: a criterion that presumes
 a fact that does not hold, that conflicts with a policy already in force, or that leaves a term
 undefined is found while it is still cheap to change — before a re-run, a re-score and an advisor
 spawn each find it one at a time in the later work.
@@ -231,55 +231,28 @@ for the issue's behavior comes before its anchors.
 
 The review decides the disposition of every item it finds: an item the code or a policy settles, or
 one the review can reasonably choose, it decides and records with its grounds, and the dispositions
-are the only list it writes. An item a module of the review cannot decide with confidence — in the
-record it writes, criterion-screen's or criterion-reconcile's — the module puts to a fresh advisor and
-decides as the advisor decided ([`role-contracts.md`](role-contracts.md) > Advisor;
+are the only list it writes. A change to a criterion's content, and an item a module of the review
+cannot decide with confidence — in the record it writes, criterion-screen's or criterion-reconcile's —,
+the module puts to a fresh advisor and decides as the advisor decided ([`role-contracts.md`](role-contracts.md) > Advisor;
 [`core.md`](core.md) > Rule Scope, principle 3); the row names the advisor's ledger entry, and an
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
-The dispositions that change a criterion are recorded as `[ac-decision]` entries, one per criterion,
-and once every item is decided the `[criterion-ready]` entry records the decisions (*Confirmation*
-below). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
+The record criterion-reconcile writes holds the review's decisions, and its `Issue body sha256:`
+line names the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
 analysis report restates them, with the `[ac-decision]` entries applied
 ([`core.md`](core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
 were made on.
 
-## Confirmation
-
-The confirmation — the `[criterion-ready]` entry — is the record of the review's decisions once every
-item is decided (*Authority* above), a decision-ledger entry in the attempt's ledger
-`<attempt-dir>/issue-{N}-ledger.md` (grammar: [`decision-ledger.md`](decision-ledger.md) >
-Decision-point entries > *Criterion-readiness confirmations*):
-
-```markdown
-## A<n> — criteria settled [criterion-ready]
-- Decision: the acceptance criteria of #N, as the issue body now states them, are settled
-- Record: <the review record's path in the attempt's record directory: criterion-reconcile-<n>/criterion-review.md>
-- Issue body sha256: <criterion-ready.sh hash --issue N, run after the last edit>
-- Grounds: the decisions recorded — the dispositions and the advisor's decisions (their entries)
-```
-
-The identifier comes from `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called
-immediately before the append ([`core.md`](core.md) > Decision Ledger).
-
-**The confirmation is bound to the attempt and to the body.** The entry that stands is the last
-`[criterion-ready]` entry in the attempt's own ledger — never another attempt's —, and it confirms
-the body its `- Issue body sha256:` names. A body edited after the entry is not the one it confirms
-until its review runs again and a new entry records the edited body.
-
 ## What reads it
 
 - **The analysis module** — the review record is one of its inputs
-  ([U2 Analysis](units/analysis.md) > *Criterion review record*), and the `[criterion-ready]` entry
-  for the current body another.
+  ([U2 Analysis](units/analysis.md) > *Criterion review record*).
 - **criteria-apply** — the `[ac-decision]` entries the dispositions that change a criterion are
   recorded as ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
 ## Issues filed before this procedure
 
-No issue is exempt by its filing date, and no bulk back-fill is run: an issue filed without a
-`[criterion-ready]` entry is reviewed on its turn, when an attempt of it is next begun, and the
-review's decisions are recorded once they are settled. An issue taken up again after an earlier
-attempt is reviewed again by the new attempt, whatever the earlier one left: every attempt begins
-with its own review.
+No issue is exempt by its filing date, and no bulk back-fill is run: an issue is reviewed when an
+attempt of it is begun, and an issue taken up again after an earlier attempt is reviewed again by
+the new attempt, whatever the earlier one left: every attempt begins with its own review.
