@@ -878,35 +878,25 @@ module* route to it, and the module documents cite it.
 
 ### Procedure
 
-1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
-   domain terms, the decision with each option and what it changes, the module's reading — the
-   option it leans to, its grounds, and the point where those grounds stop settling it — and the
-   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
-   from that reading rather than gathering the material anew.
-2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
-   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
-   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
-   record directory the invocation names — and the issue. Where two or more decisions are open and
-   none depends on another's answer, their advisors may be spawned together, and a decision that
-   depends on another's answer is spawned after that answer is recorded; whether to spawn them
-   together or one after another is the module's judgment, within the concurrent-spawn limit
-   (`<autoflow-root>/docs/core.md` > Cost Control).
-3. **Decide and record.** The advisor weighs the material itself, writes its answer to
-   `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
-   entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
-   fields the decision's kind requires ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)). Its identifier comes from
-   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the append; the
-   call reserves the identifier, so advisors spawned together receive distinct ones
-   ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
-   the file on disk and checks (*Independence* below), so the prior content is never re-written. It
-   returns the identifier and the answer in one line.
-4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
-   follows the decision in its work, and names the entry by its identifier in its output. An advisor
-   that reports the decision blocked at the harness level turns it into a harness-level block.
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` for a fresh `autoflow-advisor`
+   (anonymous; model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
+   the situation, the decisions it asks for, its own reading and the point where that reading stops.
+   Decisions that depend on each other's answers go in one request; a decision that stands apart
+   goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue.
+2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
+   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)).
+   A decision it finds the request needs but does not ask for, it names in its answer for the module
+   to put in a request of its own. Each identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the
+   append; the ledger is append-only, which the gate hook keeps (*Independence* below).
+3. **Follow.** The module follows each decision in its work and names its entry in its output. An
+   advisor that reports a decision blocked at the harness level turns it into a harness-level block.
 
 ### Independence
 
-The advisor is never the author of what it judges: it is a fresh spawn per decision, not the agent
+The advisor is never the author of what it judges: it is a fresh spawn per request, not the agent
 or session whose work raised the point, and its record carries its own grounds. The record stays as
 written:
 

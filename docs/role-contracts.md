@@ -17,7 +17,7 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
 | Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) and CI-failure reader ([`units/delivery.md`](units/delivery.md) > *CI failure*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, or reads the failing check's output and records where its fix is made with its grounds, and returns |
 | Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
-| Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides one decision from its request file, writes its answer record and its ledger entry, and returns the identifier and the answer in one line; a fresh advisor is spawned for every decision |
+| Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer in one line; a fresh advisor is spawned for every request |
 | Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
 The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and review modules are run by their session, which spawns the CI-failure reader and the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
@@ -130,35 +130,25 @@ module* route to it, and the module documents cite it.
 
 ### Procedure
 
-1. **Request.** The module writes `<out>/advisor-request-<k>.md` situation-first: the situation in
-   domain terms, the decision with each option and what it changes, the module's reading — the
-   option it leans to, its grounds, and the point where those grounds stop settling it — and the
-   anchors (the output paths, the report or finding the decision surfaced in). The advisor starts
-   from that reading rather than gathering the material anew.
-2. **Spawn.** The module spawns one fresh `autoflow-advisor` per decision, anonymous, model from
-   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor` (its effort is the definition's
-   `effort:` line). The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
-   record directory the invocation names — and the issue. Where two or more decisions are open and
-   none depends on another's answer, their advisors may be spawned together, and a decision that
-   depends on another's answer is spawned after that answer is recorded; whether to spawn them
-   together or one after another is the module's judgment, within the concurrent-spawn limit
-   (`<autoflow-root>/docs/core.md` > Cost Control).
-3. **Decide and record.** The advisor weighs the material itself, writes its answer to
-   `<attempt-dir>/issue-{N}-advisor-<ID>.md` in the same situation-first order, and appends one
-   entry per decision to the ledger, carrying a `- Record:` line to the answer file and the marker and
-   fields the decision's kind requires ([`decision-ledger.md`](decision-ledger.md)). Its identifier comes from
-   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the append; the
-   call reserves the identifier, so advisors spawned together receive distinct ones
-   ([`decision-ledger.md`](decision-ledger.md) > Entry identifier > *Allocation*). It appends with `Edit`, which the gate hook applies to
-   the file on disk and checks (*Independence* below), so the prior content is never re-written. It
-   returns the identifier and the answer in one line.
-4. **Follow.** The module verifies the anchor — the ledger heading and the record file exist —,
-   follows the decision in its work, and names the entry by its identifier in its output. An advisor
-   that reports the decision blocked at the harness level turns it into a harness-level block.
+1. **Request.** The module writes `<out>/advisor-request-<k>.md` for a fresh `autoflow-advisor`
+   (anonymous; model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
+   the situation, the decisions it asks for, its own reading and the point where that reading stops.
+   Decisions that depend on each other's answers go in one request; a decision that stands apart
+   goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
+   record directory the invocation names — and the issue.
+2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
+   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](decision-ledger.md)).
+   A decision it finds the request needs but does not ask for, it names in its answer for the module
+   to put in a request of its own. Each identifier comes from
+   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the
+   append; the ledger is append-only, which the gate hook keeps (*Independence* below).
+3. **Follow.** The module follows each decision in its work and names its entry in its output. An
+   advisor that reports a decision blocked at the harness level turns it into a harness-level block.
 
 ### Independence
 
-The advisor is never the author of what it judges: it is a fresh spawn per decision, not the agent
+The advisor is never the author of what it judges: it is a fresh spawn per request, not the agent
 or session whose work raised the point, and its record carries its own grounds. The record stays as
 written:
 
