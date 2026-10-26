@@ -68,7 +68,7 @@ into one BUILD (ADR-0025):
 ## Connecting modules
 
 - An input names where it comes from (the tables below): another module's output, given by its path
-  (the build's commits by the range its `result.json` records); ledger entries, given as the ledger
+  (the build's commits as the range `{branch, from, to}` its `result.json` records); ledger entries, given as the ledger
   file; a document of the target; or a file the invocation gives. The review's `pr` is
   `<owner>/<name>#<N>`, the pull request the delivery's `result.json` records.
 - A re-run takes its previous output and the findings it answers, the inputs named `previous_…` and
@@ -367,7 +367,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `evaluation` | `<out>/evaluation.json` |
 
 ```json
-{"contract":1,"module":"audit","params":{"issue":"<issue-number>"},"inputs":{"commits":"<path>","build_report":"<path>","verification_design":"<path>"},"out":"<record directory>/audit-<n>"}
+{"contract":1,"module":"audit","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"build_report":"<path>","verification_design":"<path>"},"out":"<record directory>/audit-<n>"}
 ```
 
 ### `quality`
@@ -398,7 +398,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `evaluation` | `<out>/evaluation.json` |
 
 ```json
-{"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":"<path>","applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
+{"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
 ```
 
 ### `delivery`
@@ -431,7 +431,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `ci_failure` | `<out>/ci-failure.md` |
 
 ```json
-{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":"<path>","applied_criteria":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","quality_evaluation":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","quality_evaluation":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
 ```
 
 ### `review`

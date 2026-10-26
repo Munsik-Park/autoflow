@@ -33,8 +33,11 @@ for f in "$ROOT"/docs/contracts/*.json; do
 done
 grep -qxF "$BEGIN" "$DOC" && grep -qxF "$END" "$DOC" || { echo "gen-module-usage: $DOC has no BEGIN or END marker line" >&2; exit 2; }
 
+# every contract, by module: an input from a "git" output is a commit range, not a path
+ALL=$(jq -s 'map({key: .module, value: .}) | from_entries' "$ROOT"/docs/contracts/*.json)
+
 section() { # <contract file>
-  jq -r '
+  jq -r --argjson all "$ALL" '
     def src: if type == "array" then map(src) | join(", or ")
       elif has("module") then "`\(.module)` → `\(.output)`"
       elif has("ledger") then "the ledger: " + (.ledger | map("`[\(.)]`") | join(", ")) + " entries"
@@ -63,7 +66,10 @@ section() { # <contract file>
     "```json",
     ({contract: 1, module: .module,
       params: (.params // {} | with_entries(select(.value.required)) | map_values("<\(.type // "value")>")),
-      inputs: (.inputs // {} | with_entries(select(.value.required)) | map_values("<path>"))}
+      inputs: (.inputs // {} | with_entries(select(.value.required)) | map_values(
+        (.from | if type == "array" then .[0] else . end) as $f
+        | if ($f | has("module")) and $all[$f.module].outputs[$f.output].format == "git"
+          then {branch: "<branch>", from: "<commit>", to: "<commit>"} else "<path>" end))}
      + (if .reads_records then {records: "<record directory>"} else {} end)
      + {out: "<record directory>/\(.module)-<n>"} | tojson),
     "```",

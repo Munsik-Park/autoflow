@@ -398,7 +398,7 @@ check_json() { # <output name> <file> <checks json>
           got=$(jq -r "[$by] | length" "$f" 2>/dev/null || echo 0)
           [ "$got" -ge "$want" ] || defect "$n: $by has $got entries for the $want items of $name"
           if [ -n "$dby" ]; then
-            jq -e "[$dby] | all((. // \"\") | tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
+            jq -e "[try ($dby)] | all((. // \"\") | tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
           fi
           continue
         fi
