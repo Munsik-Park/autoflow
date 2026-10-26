@@ -96,8 +96,7 @@ sub-repo's branch, which the delivery module pushes and opens its pull request f
 
 ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
 meets the decision spawns it and follows its decision. This section is the procedure's single home;
-[`core.md`](core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
-module* route to it, and the module documents cite it.
+[`core.md`](core.md) > Development Lifecycle > *Decisions within a module* routes to it, and the module documents cite it.
 
 ### Decisions the advisor makes
 
@@ -118,7 +117,7 @@ module* route to it, and the module documents cite it.
     ([`criterion-review.md`](criterion-review.md) > *Authority*);
   - every change to the target's security checklist (`[checklist-decision]`;
     [`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*);
-  - any other point the module doubts ([`core.md`](core.md) > Rule Scope, principle 3).
+  - any other point the module doubts ([`core.md`](core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial). The run records it in its output situation-first ([`core.md`](core.md) > Execution
   Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
@@ -136,7 +135,7 @@ module* route to it, and the module documents cite it.
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
    record directory the invocation names — and the issue.
 2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
-   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   beside the request, in the module's output directory, and records each decision as its own ledger entry
    with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](decision-ledger.md)).
    A decision it finds the request needs but does not ask for, it names in its answer for the module
    to put in a request of its own. Each identifier comes from

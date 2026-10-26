@@ -65,7 +65,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.

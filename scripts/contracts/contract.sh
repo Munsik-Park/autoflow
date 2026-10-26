@@ -145,12 +145,10 @@ finish() { # <stage>
 all_contracts() { for f in "$ROOT"/docs/contracts/*.json; do jq -c . "$f" 2>/dev/null; done | jq -sc 'map({key: .module, value: .}) | from_entries'; }
 
 # The checks of an output that need nothing but its file: a "covers" compares
-# it with the producer's own inputs or outputs, a "when" on an input and an
-# "equals_param" read the producer's invocation — all were the producer's
-# check-out's (Q19).
+# it with the producer's own inputs or outputs, and a "when" on an input reads
+# the producer's invocation — both were the producer's check-out's (Q19).
 SELF_CONTAINED='map(select(.type != "covers" and ((.when // {}) | has("input") | not))
   | if .type == "table" then del(.covers) else . end
-  | if .type == "line" then del(.equals_param) else . end
   | if .type == "keys" then .spec |= map_values(if (.required_when // {}) | has("input") then del(.required_when) else . end) else . end)'
 
 form_defects() { # <format> <file> <checks json>: the defects, as a JSON array
@@ -299,36 +297,6 @@ check_markdown() { # <output name> <file> <checks json> <files map>
           || { defect "$n: no section '## $h'"; continue; }
         jq -e --arg h "$h" 'any(.sections[] | select(.heading == $h) | .body[]; test("\\S"))' <<<"$model" >/dev/null \
           || defect "$n: section '## $h' is empty (write \"none\" when there is nothing)" ;;
-      line)
-        # "once": exactly one line matches; "equals_param": the pattern's first
-        # group, on every line that matches, is the param's value.
-        local lp nm ep want got
-        lp=$(jq -r .pattern <<<"$c")
-        nm=$(jq --arg p "$lp" '[.lines[] | select(test($p))] | length' <<<"$model")
-        [ "$nm" -gt 0 ] || { defect "$n: no line matches $lp"; continue; }
-        if jq -e '.once // false' <<<"$c" >/dev/null && [ "$nm" -gt 1 ]; then defect "$n: $nm lines match $lp, not one"; fi
-        ep=$(jq -r '.equals_param // empty' <<<"$c")
-        if [ -n "$ep" ]; then
-          want=$(param "$ep")
-          while IFS= read -r got; do
-            [ "$got" = "$want" ] || defect "$n: a line matching $lp names '$got', not $ep '$want'"
-          done < <(jq -r --arg p "$lp" '.lines[] | select(test($p)) | match($p).captures[0].string // ""' <<<"$model")
-        fi ;;
-      rank)
-        # The pattern's first group, on the first line that matches, is the
-        # highest level of "order" among the table rows whose first cell is a
-        # level and whose last cell is not "exclude_last_cell" — "none" when
-        # no row holds. A missing line is the line check's to name.
-        local rp have top
-        rp=$(jq -r .pattern <<<"$c")
-        have=$(jq -r --arg p "$rp" '[.lines[] | select(test($p)) | match($p).captures[0].string // ""] | first // empty' <<<"$model")
-        [ -n "$have" ] || continue
-        top=$(jq -r --argjson c "$c" "$MD_JQ"'
-          [.lines[] | select(test("^\\s*\\|")) | cells | map(gsub("[`*]"; "") | gsub("^\\s+|\\s+$"; ""))
-           | select(length > 1 and .[-1] != ($c.exclude_last_cell // null))
-           | .[0] as $s | $c.order | index($s) | select(. != null)]
-          | if length == 0 then $c.none else $c.order[max] end' <<<"$model")
-        [ "$have" = "$top" ] || defect "$n: the line matching $rp reads '$have', but the highest row that holds is '$top'" ;;
       table)
         local tbl desc
         tbl=$(jq -c --argjson c "$c" "$MD_JQ"' pick($c)' <<<"$model")
@@ -430,7 +398,7 @@ check_json() { # <output name> <file> <checks json>
           got=$(jq -r "[$by] | length" "$f" 2>/dev/null || echo 0)
           [ "$got" -ge "$want" ] || defect "$n: $by has $got entries for the $want items of $name"
           if [ -n "$dby" ]; then
-            jq -e "[$dby] | all(tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
+            jq -e "[$dby] | all((. // \"\") | tostring | test(\"\\\\S\"))" "$f" >/dev/null 2>&1 || defect "$n: an entry of $by carries no ${dby##*.}"
           fi
           continue
         fi
@@ -573,7 +541,7 @@ check_out() {
 
 # --- lint ---------------------------------------------------------------------
 # The check types each format implements above; lint refuses any other.
-KNOWN_TYPES='{"markdown": ["section", "line", "table", "rank"],
+KNOWN_TYPES='{"markdown": ["section", "table"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
   "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
   "pull-request-comment": ["pr_comment_posted"]}'
@@ -680,8 +648,7 @@ lint() {
         else
           ($v.checks // [])[] as $ch
           | (if ($known[$v.format] | index($ch.type)) == null then "output \($o): check type \($ch.type) is not one the validator implements for \($v.format)" else empty end),
-            ([$ch.branch_param, $ch.pr_param, $ch.equals_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
-            (if $ch.type == "rank" and (($ch.pattern | type) != "string" or ($ch.order | type) != "array" or ($ch.none | type) != "string") then "output \($o): a rank check names a pattern, an order and none" else empty end),
+            ([$ch.branch_param, $ch.pr_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
             ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input][] | select(. != null)
               | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
             ([($ch.covers // [])[].output, $ch.absent_reason.output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared"),

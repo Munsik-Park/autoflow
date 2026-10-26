@@ -27,6 +27,10 @@ ORDER="criterion-screen criterion-trace criterion-in-depth criterion-reconcile a
 
 case "${1:-}" in "" | --check) ;; *) echo "usage: gen-module-usage.sh [--check]" >&2; exit 2 ;; esac
 [ -f "$DOC" ] || { echo "gen-module-usage: $DOC not found" >&2; exit 2; }
+for f in "$ROOT"/docs/contracts/*.json; do
+  m=$(basename "$f" .json)
+  case " $ORDER " in *" $m "*) ;; *) echo "gen-module-usage: docs/contracts/$m.json is not in ORDER" >&2; exit 2 ;; esac
+done
 grep -qxF "$BEGIN" "$DOC" && grep -qxF "$END" "$DOC" || { echo "gen-module-usage: $DOC has no BEGIN or END marker line" >&2; exit 2; }
 
 section() { # <contract file>

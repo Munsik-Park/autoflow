@@ -29,7 +29,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -71,7 +71,7 @@ The rules that apply these principles to running and confirming tests and to sec
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 | `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
 delivery              — the branch pushed with the module's own `git push` (a changed sub-repo's branch too); the change shown working above its own tests (the system build, health check and functional test, or the project's integration suite); draft pull requests opened by the module's own commands → CI green, or recorded as not run; a script reads and reports CI
@@ -252,9 +252,10 @@ reports. One reading is made by a spawned role — what a failed CI check shows 
   record `<out>/integration.md` (*Integration*), the CI-failure record `<out>/ci-failure.md` when a
   check failed (*CI failure*), and the run's tool requests.
 - **What a script reads and reports**: CI confirmation (*CI*), by exit code.
-- **Checks**: check-out confirms each pull request open and a draft, its body stating every
-  applied criterion, every tool request of the work and every deferred recommendation's disposition,
-  and its CI green or the body's `CI: not run` line (`delivery.json`). The integration checks and CI
+- **Checks**: check-out confirms each pull request open and a draft, and its CI green or the
+  body's `CI: not run` line (`delivery.json`); whether the body states every applied criterion,
+  every tool request of the work and every deferred recommendation's disposition is the review's to
+  judge. The integration checks and CI
   stand outside the module's own claim; a CI that did not run is recorded as not run, never read as
   green.
 - **Result owed**: each PR's URL and head commit and the CI result on it.
@@ -363,7 +364,7 @@ header carries the full contract; the exit codes read as follows.
 | Exit | Meaning | What follows |
 |---|---|---|
 | `0` | green — at least one check present, every one green, on a PR whose mergeable state was confirmed | *Added test files*; the run ends |
-| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: the branch is brought onto `origin/<base>`, the pull request's base (rebase or merge), pushed again and CI read again; a conflict on a sub-repo pointer another change advanced → *Multi-repo delivery* below |
+| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: the branch is brought onto `origin/<base>`, the pull request's base (rebase or merge), pushed again and CI read again; a head that now carries a change the quality evaluation did not score — a conflict resolved by hand — is stated in the report and the PR body; a conflict on a sub-repo pointer another change advanced → *Multi-repo delivery* below |
 | `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event. When the target's CI does not run for this pull request — no workflow, or a trigger, path filter or condition that excludes it — the PR body carries the line `CI: not run`, alone on its line, with the ground below it, and what CI was to run for it (a `ci-deferred` lint chain, an added test file) is listed as not run; whether CI is not running or late is the module's judgment, recorded with its ground (ADR-0034 D5) |
 | `12` | a check concluded failure | *CI failure* below |
 | `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line; check the token's `actions: read`) | the run ends with CI unsettled, stated in its result |
@@ -395,8 +396,8 @@ that clears it is made — the implementation, a test asset, a document, or the 
 it would discard or change a decision the design settled — and the grounds for that judgment, and
 returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
 to the advisor and records the advisor's decision with its ledger entry
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope,
-principle 3); a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) >
+Development Lifecycle > *Decisions within a module*); a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
 Development Lifecycle > *Tools*). The run ends with the record.
 
 ## Multi-repo delivery
@@ -678,7 +679,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
-- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
+- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
@@ -828,7 +829,7 @@ level-3 record headings with no identifier; no reader reads either.
 
 **Advisor decisions.** A decision a module puts to the advisor
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) is recorded as one entry per decision, carrying a
-`- Record:` line to the advisor's answer file (`<attempt-dir>/issue-{N}-advisor-<ID>.md`) and the
+`- Record:` line to where the advisor's answer is, and the
 marker and fields its kind requires below.
 
 **Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
@@ -865,7 +866,7 @@ adds its `- Record:` line:
 - Into: AC2b — <the second criterion's text>
 - Decision: <the decision, one line>
 - Grounds: <the grounds>
-- Record: issue-N-advisor-A4.md
+- Record: <where the advisor's answer is>
 ```
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
@@ -1076,8 +1077,7 @@ Each limit below is an under-block, with layer three as the catch:
 
 ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
 meets the decision spawns it and follows its decision. This section is the procedure's single home;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
-module* route to it, and the module documents cite it.
+[`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module* routes to it, and the module documents cite it.
 
 ### Decisions the advisor makes
 
@@ -1098,7 +1098,7 @@ module* route to it, and the module documents cite it.
     ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
   - every change to the target's security checklist (`[checklist-decision]`;
     [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
-  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
   Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
@@ -1116,7 +1116,7 @@ module* route to it, and the module documents cite it.
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
    record directory the invocation names — and the issue.
 2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
-   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   beside the request, in the module's output directory, and records each decision as its own ledger entry
    with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)).
    A decision it finds the request needs but does not ask for, it names in its answer for the module
    to put in a request of its own. Each identifier comes from

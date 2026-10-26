@@ -36,7 +36,7 @@ level-3 record headings with no identifier; no reader reads either.
 
 **Advisor decisions.** A decision a module puts to the advisor
 ([`role-contracts.md`](role-contracts.md) > Advisor) is recorded as one entry per decision, carrying a
-`- Record:` line to the advisor's answer file (`<attempt-dir>/issue-{N}-advisor-<ID>.md`) and the
+`- Record:` line to where the advisor's answer is, and the
 marker and fields its kind requires below.
 
 **Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
@@ -73,7 +73,7 @@ adds its `- Record:` line:
 - Into: AC2b — <the second criterion's text>
 - Decision: <the decision, one line>
 - Grounds: <the grounds>
-- Record: issue-N-advisor-A4.md
+- Record: <where the advisor's answer is>
 ```
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the

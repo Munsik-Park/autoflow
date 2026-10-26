@@ -93,7 +93,9 @@ The rules below are the ones other documents cite; everything else about the wor
   the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
   the body they were made on by its sha256, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](../criterion-review.md)); the record
-  is an input, not a verdict. The analysis reads its findings as an
+  is an input, not a verdict. An issue body that differs from the one the record names is a
+  criterion change made outside the review, which the analysis puts to the advisor. The analysis
+  reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing

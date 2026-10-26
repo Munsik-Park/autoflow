@@ -235,7 +235,7 @@ one the review can reasonably choose, it decides and records with its grounds, a
 are the only list it writes. A change to a criterion's content, and an item a module of the review
 cannot decide with confidence — in the record it writes, criterion-screen's or criterion-reconcile's —,
 the module puts to a fresh advisor and decides as the advisor decided ([`role-contracts.md`](role-contracts.md) > Advisor;
-[`core.md`](core.md) > Rule Scope, principle 3); the row names the advisor's ledger entry, and an
+[`core.md`](core.md) > Development Lifecycle > *Decisions within a module*); the row names the advisor's ledger entry, and an
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 

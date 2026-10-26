@@ -92,7 +92,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -786,7 +786,9 @@ The rules below are the ones other documents cite; everything else about the wor
   the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
   the body they were made on by its sha256, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
-  is an input, not a verdict. The analysis reads its findings as an
+  is an input, not a verdict. An issue body that differs from the one the record names is a
+  criterion change made outside the review, which the analysis puts to the advisor. The analysis
+  reads its findings as an
   earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
@@ -876,7 +878,7 @@ Anything else the module records is its own, written where it judges useful.
    ledger entry's identifier, the decision, and how the documents follow it: an
    **acceptance-criterion content change** ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
    *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
-   at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+   at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
@@ -1091,7 +1093,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
-- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision (principle 3).
+- A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule

@@ -20,10 +20,9 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
   comment, posted on the pull request (*Review aggregation*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms that the findings file's `pr:` line names the reviewed pull request,
-  that its one `max_severity:` line is the highest severity among the rows that hold, and that the
-  comment is posted on the pull request (`review.json`); the reviews and their aggregation stand
-  outside the work they review.
+- **Checks**: check-out confirms that the comment is posted on the pull request (`review.json`);
+  what the findings file holds is the aggregation's goal (*Review aggregation*), and the reviews and
+  their aggregation stand outside the work they review.
 - **Result owed**: the report of *End* below.
 
 ## Reviewer review
@@ -140,7 +139,7 @@ is made is not the aggregator's to state: it is the judgment of the AI acting on
 
 Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope, principle 3); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) > Documentation Policy). Its search terms:
 

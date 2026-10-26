@@ -73,7 +73,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -117,7 +117,7 @@ is made is not the aggregator's to state: it is the judgment of the AI acting on
 
 Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -157,8 +157,8 @@ that clears it is made — the implementation, a test asset, a document, or the 
 it would discard or change a decision the design settled — and the grounds for that judgment, and
 returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
 to the advisor and records the advisor's decision with its ledger entry
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope,
-principle 3); a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
+([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) >
+Development Lifecycle > *Decisions within a module*); a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
 Development Lifecycle > *Tools*). The run ends with the record.
 
 <!-- From <autoflow-root>/docs/review/review.md > Severity -->
@@ -173,8 +173,7 @@ Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`
 
 ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
 meets the decision spawns it and follows its decision. This section is the procedure's single home;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
-module* route to it, and the module documents cite it.
+[`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module* routes to it, and the module documents cite it.
 
 ### Decisions the advisor makes
 
@@ -195,7 +194,7 @@ module* route to it, and the module documents cite it.
     ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
   - every change to the target's security checklist (`[checklist-decision]`;
     [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
-  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
   Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
@@ -213,7 +212,7 @@ module* route to it, and the module documents cite it.
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
    record directory the invocation names — and the issue.
 2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
-   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   beside the request, in the module's output directory, and records each decision as its own ledger entry
    with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)).
    A decision it finds the request needs but does not ask for, it names in its answer for the module
    to put in a request of its own. Each identifier comes from

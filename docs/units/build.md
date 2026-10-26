@@ -221,8 +221,8 @@ The target's own: AutoFlow ships no checklist and names no item. A target declar
 in the target-owned scaffold `.claude/autoflow.local.json`
 (`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
 the one the record line of
-`bash <autoflow-root>/scripts/gate/security-checklist.sh status --ledger <attempt-dir>/issue-{N}-ledger.md`
-names; the audit takes the checklist at that version, written to a file (`git show <score>`), as its
+`bash <autoflow-root>/scripts/gate/security-checklist.sh status --base origin/<base> --ledger <attempt-dir>/issue-{N}-ledger.md`
+names, `<base>` the branch the pull request merges into; the audit takes the checklist at that version, written to a file (`git show <score>`), as its
 `security_checklist` input ([`evaluation-system.md`](../evaluation-system.md) > AUDIT > *Security checklist*):
 
 | Exit | Verdict | The version the audit reads |

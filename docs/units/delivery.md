@@ -21,9 +21,10 @@ reports. One reading is made by a spawned role — what a failed CI check shows 
   record `<out>/integration.md` (*Integration*), the CI-failure record `<out>/ci-failure.md` when a
   check failed (*CI failure*), and the run's tool requests.
 - **What a script reads and reports**: CI confirmation (*CI*), by exit code.
-- **Checks**: check-out confirms each pull request open and a draft, its body stating every
-  applied criterion, every tool request of the work and every deferred recommendation's disposition,
-  and its CI green or the body's `CI: not run` line (`delivery.json`). The integration checks and CI
+- **Checks**: check-out confirms each pull request open and a draft, and its CI green or the
+  body's `CI: not run` line (`delivery.json`); whether the body states every applied criterion,
+  every tool request of the work and every deferred recommendation's disposition is the review's to
+  judge. The integration checks and CI
   stand outside the module's own claim; a CI that did not run is recorded as not run, never read as
   green.
 - **Result owed**: each PR's URL and head commit and the CI result on it.
@@ -132,7 +133,7 @@ header carries the full contract; the exit codes read as follows.
 | Exit | Meaning | What follows |
 |---|---|---|
 | `0` | green — at least one check present, every one green, on a PR whose mergeable state was confirmed | *Added test files*; the run ends |
-| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: the branch is brought onto `origin/<base>`, the pull request's base (rebase or merge), pushed again and CI read again; a conflict on a sub-repo pointer another change advanced → *Multi-repo delivery* below |
+| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read | no waiting on CI: the branch is brought onto `origin/<base>`, the pull request's base (rebase or merge), pushed again and CI read again; a head that now carries a change the quality evaluation did not score — a conflict resolved by hand — is stated in the report and the PR body; a conflict on a sub-repo pointer another change advanced → *Multi-repo delivery* below |
 | `11` | mergeable, and no check was published within the bound (`CI_POLL_TIMEOUT_SECS`, default 900) | not green: look at the CI trigger (webhook delivery, workflow trigger conditions), or push again to force a `synchronize` event. When the target's CI does not run for this pull request — no workflow, or a trigger, path filter or condition that excludes it — the PR body carries the line `CI: not run`, alone on its line, with the ground below it, and what CI was to run for it (a `ci-deferred` lint chain, an added test file) is listed as not run; whether CI is not running or late is the module's judgment, recorded with its ground (ADR-0034 D5) |
 | `12` | a check concluded failure | *CI failure* below |
 | `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line; check the token's `actions: read`) | the run ends with CI unsettled, stated in its result |
@@ -164,8 +165,8 @@ that clears it is made — the implementation, a test asset, a document, or the 
 it would discard or change a decision the design settled — and the grounds for that judgment, and
 returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
 to the advisor and records the advisor's decision with its ledger entry
-([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Rule Scope,
-principle 3); a failure output it cannot obtain is a tool request ([`core.md`](../core.md) >
+([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) >
+Development Lifecycle > *Decisions within a module*); a failure output it cannot obtain is a tool request ([`core.md`](../core.md) >
 Development Lifecycle > *Tools*). The run ends with the record.
 
 ## Multi-repo delivery

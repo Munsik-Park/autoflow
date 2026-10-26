@@ -10,11 +10,11 @@ argument-hint: "<invocation.json>"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: the invocation file) — one run of the plan module (`<autoflow-root>/docs/contracts/plan.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The work is one fresh `autoflow-evaluator` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-plan` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below). Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the plan module (`<autoflow-root>/docs/contracts/plan.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The work is one fresh `autoflow-evaluator` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-plan` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below). Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` (*Spawn Model*, below).
 
-**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the plan module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Push and PR creation; Development Lifecycle > Module procedures: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, build, audit, quality, delivery, review; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, build, audit, quality, delivery, review; Project Information: A project whose information names sub-repos; Team Structure: Build module.
+**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the plan module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle: Decisions within a module, Push and PR creation; Development Lifecycle > Module procedures: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, build, audit, quality, delivery, review; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, build, audit, quality, delivery, review; Project Information: A project whose information names sub-repos; Team Structure: Build module.
 
-**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/design.md` > Evaluation — GATE:PLAN; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
+**The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/design.md` > Evaluation — GATE:PLAN; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Evaluation AI; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
 ## Instruction Conventions
 
@@ -28,7 +28,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -40,8 +40,6 @@ The rules that apply these principles to running and confirming tests and to sec
 **A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory and, for a functional module, the attempt's record directory (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root).
 
 **A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge; the contract checks the inputs and the facts of the output (ADR-0038 D1). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
-
-**Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 2). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
 **Tools.** A tool the work needs is used. One the environment lacks — or what using a tool the environment has lacks, or a material an acceptance criterion or the issue body references that cannot be opened — is recorded as a tool request: what is missing, and what the run did instead, including each verification it left unrun for the lack. The run does what it can without it and ends; the requests go in `<out>/tool-requests.json` — which every run writes, `[]` when it lacked nothing — and the run's report, and the delivery module states them in the pull request for the operator (`<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*; ADR-0038 D1).
 
@@ -68,7 +66,7 @@ The rules that apply these principles to running and confirming tests and to sec
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 | `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 The **reference values** an evaluation's scores are read against (each item ≥ 7, average ≥ 7.5, a `Security` item at 3 or below → rework) are kept with the rubrics (`<autoflow-root>/docs/evaluation-system.md` > PASS Criteria) and carried in each evaluation contract's `reference`. An evaluation outputs its scores and their grounds, with the reference values (ADR-0038 D6).
 
@@ -282,7 +280,7 @@ level-3 record headings with no identifier; no reader reads either.
 
 **Advisor decisions.** A decision a module puts to the advisor
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) is recorded as one entry per decision, carrying a
-`- Record:` line to the advisor's answer file (`<attempt-dir>/issue-{N}-advisor-<ID>.md`) and the
+`- Record:` line to where the advisor's answer is, and the
 marker and fields its kind requires below.
 
 **Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
@@ -319,7 +317,7 @@ adds its `- Record:` line:
 - Into: AC2b — <the second criterion's text>
 - Decision: <the decision, one line>
 - Grounds: <the grounds>
-- Record: issue-N-advisor-A4.md
+- Record: <where the advisor's answer is>
 ```
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
@@ -523,91 +521,6 @@ Each limit below is an under-block, with layer three as the catch:
   or a command-substituted form (which the scan does *not* strip — it goes
   unmatched). The threat model is the routine self-authorized filing, not a
   determined evasion.
-
-<!-- From <autoflow-root>/docs/role-contracts.md > Advisor -->
-
-## Advisor (decisions a module puts to it)
-
-ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
-meets the decision spawns it and follows its decision. This section is the procedure's single home;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
-module* route to it, and the module documents cite it.
-
-### Decisions the advisor makes
-
-- **The working AI decides what it can**, and records each decision with its grounds in its output
-  ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
-  analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
-- **The module puts to the advisor**, and follows the advisor's decision:
-  - a change to an acceptance criterion's content that the work after the criterion review shows
-    (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
-  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
-  - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
-    meet what the hypothesis evaluation asks;
-  - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
-    of a build meet differently;
-  - a finding whose fix the AI acting on it cannot place with confidence, and a rebuttal the
-    re-score or the reviewer keeps while the two sides still disagree;
-  - an item the criterion review could not decide with confidence
-    ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
-  - every change to the target's security checklist (`[checklist-decision]`;
-    [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
-  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
-- **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
-  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
-  tool, credential, installation or material the environment does not provide — for a tool it has,
-  what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
-  request: the run does what it can without it and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development
-  Lifecycle > *Tools*).
-
-### Procedure
-
-1. **Request.** The module writes `<out>/advisor-request-<k>.md` for a fresh `autoflow-advisor`
-   (anonymous; model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
-   the situation, the decisions it asks for, its own reading and the point where that reading stops.
-   Decisions that depend on each other's answers go in one request; a decision that stands apart
-   goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
-   record directory the invocation names — and the issue.
-2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
-   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
-   with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)).
-   A decision it finds the request needs but does not ask for, it names in its answer for the module
-   to put in a request of its own. Each identifier comes from
-   `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>`, called immediately before the
-   append; the ledger is append-only, which the gate hook keeps (*Independence* below).
-3. **Follow.** The module follows each decision in its work and names its entry in its output. An
-   advisor that reports a decision blocked at the harness level turns it into a harness-level block.
-
-### Independence
-
-The advisor is never the author of what it judges: it is a fresh spawn per request, not the agent
-or session whose work raised the point, and its record carries its own grounds. The record stays as
-written:
-
-- **Append-only — the gate hook** (`<autoflow-root>/hooks/check-autoflow-gate.sh`, *Section 1e*,
-  state-independent): a `Write` / `Edit` / `MultiEdit` to an `issue-*-ledger.md` is applied to the
-  file on disk and must keep the whole prior content as its prefix, so no entry is rewritten or
-  removed. A decision changes only by a new entry that names the one it replaces
-  (`<autoflow-root>/docs/decision-ledger.md` > *Replacement is explicit*).
-- **The record convention**: a consumer lets an entry replace another only by an explicit
-  `- Supersedes:` line (`<autoflow-root>/scripts/gate/security-checklist.sh`,
-  `<autoflow-root>/scripts/contracts/criteria-apply.sh`, which locates an entry by its `[ac-decision]`
-  marker).
-
-The threat the hook answers is an agent overstepping in routine work — rewriting a ledger it meant to
-append to — not a determined evasion (the same model as `<autoflow-root>/docs/issue-proposal.md`).
-Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
-that only imitates an entry (a heading-less field line, a malformed heading).
-
-### Claude Code's advisor tool (`advisorModel`)
-
-Distinct from the advisor sub-agent above: Claude Code's advisor tool
-(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
-is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
-
----
 
 <!-- From <autoflow-root>/docs/role-contracts.md > Evaluation AI -->
 

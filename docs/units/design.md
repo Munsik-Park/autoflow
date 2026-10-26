@@ -60,7 +60,7 @@ principle 2).
    ledger entry's identifier, the decision, and how the documents follow it: an
    **acceptance-criterion content change** ([`decision-ledger.md`](../decision-ledger.md) >
    *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
-   at hand, or doubts ([`core.md`](../core.md) > Rule Scope, principle 3).
+   at hand, or doubts ([`core.md`](../core.md) > Development Lifecycle > *Decisions within a module*).
 
    **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from

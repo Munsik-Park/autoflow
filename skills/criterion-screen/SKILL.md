@@ -30,7 +30,7 @@ This section is the single home of the four principles; every other document cit
 
 1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
 2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide. A decision of the kinds AutoFlow puts to the advisor, and any other point the AI doubts, the module decides by spawning a fresh `autoflow-advisor`, and it follows the advisor's decision, which the ledger records with its grounds. The run goes on unless a call is blocked at the harness level (`<autoflow-root>/docs/role-contracts.md` > Advisor).
+3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
 4. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
@@ -70,7 +70,7 @@ The rules that apply these principles to running and confirming tests and to sec
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a failed CI check is read by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 | `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
-A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn returns its report, which the session writes verbatim to `<out>/evaluation.json` (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
+A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
 criterion-screen      — the review items and the screening: the review record and one target file per criterion with an in-depth target (`<autoflow-root>/docs/criterion-review.md`)
@@ -455,7 +455,7 @@ one the review can reasonably choose, it decides and records with its grounds, a
 are the only list it writes. A change to a criterion's content, and an item a module of the review
 cannot decide with confidence — in the record it writes, criterion-screen's or criterion-reconcile's —,
 the module puts to a fresh advisor and decides as the advisor decided ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3); the row names the advisor's ledger entry, and an
+[`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); the row names the advisor's ledger entry, and an
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
 
@@ -518,7 +518,7 @@ level-3 record headings with no identifier; no reader reads either.
 
 **Advisor decisions.** A decision a module puts to the advisor
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) is recorded as one entry per decision, carrying a
-`- Record:` line to the advisor's answer file (`<attempt-dir>/issue-{N}-advisor-<ID>.md`) and the
+`- Record:` line to where the advisor's answer is, and the
 marker and fields its kind requires below.
 
 **Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
@@ -555,7 +555,7 @@ adds its `- Record:` line:
 - Into: AC2b — <the second criterion's text>
 - Decision: <the decision, one line>
 - Grounds: <the grounds>
-- Record: issue-N-advisor-A4.md
+- Record: <where the advisor's answer is>
 ```
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
@@ -766,8 +766,7 @@ Each limit below is an under-block, with layer three as the catch:
 
 ADR-0025 D7 made a dedicated advisor the first judgment at a decision point; the module whose work
 meets the decision spawns it and follows its decision. This section is the procedure's single home;
-[`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3, and > Development Lifecycle > *Decisions within a
-module* route to it, and the module documents cite it.
+[`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module* routes to it, and the module documents cite it.
 
 ### Decisions the advisor makes
 
@@ -788,7 +787,7 @@ module* route to it, and the module documents cite it.
     ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) > *Authority*);
   - every change to the target's security checklist (`[checklist-decision]`;
     [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
-  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 3).
+  - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
   denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
   Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
@@ -806,7 +805,7 @@ module* route to it, and the module documents cite it.
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
    record directory the invocation names — and the issue.
 2. **Decide and record.** The advisor answers the decisions the request asks for, writes its answer
-   to `<attempt-dir>/issue-{N}-advisor-<ID>.md`, and records each decision as its own ledger entry
+   beside the request, in the module's output directory, and records each decision as its own ledger entry
    with its grounds and a `- Record:` line to the answer file ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md)).
    A decision it finds the request needs but does not ask for, it names in its answer for the module
    to put in a request of its own. Each identifier comes from

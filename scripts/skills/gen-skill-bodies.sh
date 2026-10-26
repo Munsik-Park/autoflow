@@ -515,10 +515,12 @@ gen_module() {
   else
     printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the %s module (`<autoflow-root>/docs/contracts/%s.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. %s' \
       "$m" "$m" "$(mod_work "$m")"
-    case " criterion-screen criterion-reconcile analysis design build delivery review " in
-      *" $m "*) printf ' The invocation'"'"'s `records` is the attempt'"'"'s record directory, where earlier runs left their work.' ;;
-    esac
-    printf ' Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor'"'"'s key is `advisor` (*Spawn Model*, below).\n\n'
+    if jq -e '.reads_records' "$ROOT/docs/contracts/$m.json" >/dev/null; then
+      printf ' The invocation'"'"'s `records` is the attempt'"'"'s record directory, where earlier runs left their work.'
+      printf ' Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor'"'"'s key is `advisor` (*Spawn Model*, below).\n\n'
+    else
+      printf ' Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` (*Spawn Model*, below).\n\n'
+    fi
   fi
   printf '**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the %s module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: %s.\n\n' \
     "$m" "${out:-none}"
