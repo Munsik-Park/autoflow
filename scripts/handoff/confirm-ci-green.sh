@@ -19,8 +19,8 @@
 #
 # Observe-only: it performs no merge, no CI re-trigger, and no conflict
 # resolution. Conflict *resolution* lives in the docs (a sub-repo pointer →
-# docs/units/delivery.md > Multi-repo delivery; other conflict → rebase on
-# the PR's base). This script owns only the *confirmation*.
+# docs/units/delivery.md > Multi-repo delivery; other conflict → stated in
+# the report). This script owns only the *confirmation*.
 #
 # Usage:
 #   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
