@@ -49,7 +49,10 @@
 # applied in order.
 #
 # excluded removes the criterion; revised replaces its text; split replaces
-# it, in place, by the criteria its Into lines name; added appends one. A
+# it, in place, by the criteria its Into lines name; added appends one. An
+# excluded entry that replaces the entry which added its criterion leaves the
+# criterion out: with the replaced entry no longer applied, there is nothing
+# to remove, and the decision stands. A
 # decision on an id that is not present at its turn, an id that would be
 # taken twice, or an entry missing a line its disposition needs refuses the
 # run: <out>/result.json names each, and nothing is applied.
@@ -118,7 +121,11 @@ REPLACED=$(jq -c '
           | if $r.id == null then .defects += ["\($d.entry): a \($r.how) line names no entry"]
             elif ($t | length) == 0 then .defects += ["\($d.entry): \($r.how) \($r.id), which is no earlier [ac-decision] entry"]
             else .gone += [$t[].key] end))
-  | .gone as $g | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not) | .value], defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
+  | .gone as $g
+  # a standing entry keeps the AC ids of the entries it replaces (over)
+  | {standing: [$E[] | select(.key as $k | any($g[]; . == $k) | not)
+       | .key as $k | .value | . + {over: ([.replaces[].id] as $ids | [$E[:$k][] | select(.value.entry as $e | any($ids[]; . == $e)) | .value.AC])}],
+     defects}' <<<"$ENTRIES") || die "cannot resolve the replacements"
 
 # conflicts: standing entries on one AC id whose conclusions differ. A conflict
 # keeps every entry, so the application below still names what fails at its turn.
@@ -143,6 +150,7 @@ RESULT=$(jq -n --argjson c "$CRITERIA" --argjson r "$REPLACED" '
     | if ($d.AC // "") == "" then .defects += ["\($n): no AC line"]
       elif ($d.Disposition // "") == "excluded" then
         if has_id($d.AC) then .c |= map(select(.id != $d.AC)) | .applied += [$n]
+        elif any(($d.over // [])[]; . == $d.AC) then .applied += [$n]
         else .defects += ["\($n): excluded \($d.AC), which is not present"] end
       elif $d.Disposition == "revised" then
         if ($d.Text // "") == "" then .defects += ["\($n): revised with no Text line"]
