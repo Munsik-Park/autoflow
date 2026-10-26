@@ -269,7 +269,7 @@ principle 2).
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-design` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the analysis report, its hypothesis evaluation, the
-  decision ledger's `[ac-decision]` and design-point entries, the target's documents the design needs
+  decision ledger — its `[ac-decision]` entries and the advisor's other decisions —, the target's documents the design needs
   (e.g. the relevant `docs/records/adr/*`, `docs/records/design-rationale.md`) — the attempt's record
   directory, and the output directory the two documents go to.
 - **A re-run** is known by the previous documents being given, with the material it answers: the

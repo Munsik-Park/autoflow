@@ -121,8 +121,5 @@
       "required": false,
       "note": "Written when the design cannot be built as it stands: the decision that blocks and why. The design module takes it as an input on its re-run."
     }
-  },
-  "result": {
-    "summary": "one line, with the commit SHAs"
   }
 }

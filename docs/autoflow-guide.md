@@ -113,7 +113,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 
 ### `criterion-trace`
 
-- Kind: functional; given the record directory (`records`)
+- Kind: functional; given its declared inputs only
 - Goal: How far each cause the review confirmed reaches beyond the points the issue reports, and whether each behaviour a criterion requires conflicts with the rules the code already has — assuming no fix.
 - Procedure: `<autoflow-root>/docs/criterion-review.md`
 
@@ -130,7 +130,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `trace` | `<out>/trace.md` |
 
 ```json
-{"contract":1,"module":"criterion-trace","params":{"issue":"<issue-number>"},"inputs":{"review_record":"<path>"},"records":"<record directory>","out":"<record directory>/criterion-trace-<n>"}
+{"contract":1,"module":"criterion-trace","params":{"issue":"<issue-number>"},"inputs":{"review_record":"<path>"},"out":"<record directory>/criterion-trace-<n>"}
 ```
 
 ### `criterion-in-depth`
@@ -269,7 +269,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `applied_criteria` | yes | `criteria-apply` → `applied_criteria` |
 | `analysis` | yes | `analysis` → `report` |
 | `hypothesis_evaluation` | yes | `hypothesis` → `evaluation` |
-| `decisions` | no | the ledger: `[ac-decision]`, `[design-point]` entries |
+| `decisions` | no | the ledger: `[ac-decision]` entries |
 | `target_documents` | no | a document of the target |
 | `previous_feature_design` | no | `design` → `feature_design` |
 | `previous_verification_design` | no | `design` → `verification_design` |

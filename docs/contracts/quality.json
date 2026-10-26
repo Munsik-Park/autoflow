@@ -198,8 +198,5 @@
       "security_rework_at_or_below": 3
     },
     "source": "docs/evaluation-system.md > PASS Criteria"
-  },
-  "result": {
-    "summary": "one line"
   }
 }

@@ -150,8 +150,5 @@
     },
     "source": "docs/evaluation-system.md > PASS Criteria",
     "note": "Q2: AutoFlow provides these with the evaluation, which outputs its scores and their grounds against them."
-  },
-  "result": {
-    "summary": "one line"
   }
 }

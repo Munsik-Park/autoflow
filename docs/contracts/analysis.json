@@ -89,8 +89,5 @@
         "every criterion of the issue body has a row of the Acceptance criteria table"
       ]
     }
-  },
-  "result": {
-    "summary": "one line, naming any decision point"
   }
 }

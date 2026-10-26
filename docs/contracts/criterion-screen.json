@@ -40,8 +40,5 @@
         "a target holds only the issue body, the criterion's text, the target cases, each case's code locations (path:line) and the commit read — no verdict, ground or conclusion of this review, since the in-depth module judges the cases in a context that never saw them (docs/criterion-review.md > In-depth analysis and reconciliation)"
       ]
     }
-  },
-  "result": {
-    "summary": "one line"
   }
 }

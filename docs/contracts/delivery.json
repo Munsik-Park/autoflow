@@ -106,8 +106,5 @@
       "required": false,
       "note": "Written when a CI check failed: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment (docs/units/delivery.md > CI failure)."
     }
-  },
-  "result": {
-    "summary": "one line, with the pull request's URL and head"
   }
 }

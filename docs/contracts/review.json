@@ -58,8 +58,5 @@
         }
       ]
     }
-  },
-  "result": {
-    "summary": "one line, with the highest severity among the findings that hold"
   }
 }

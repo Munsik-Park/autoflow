@@ -38,8 +38,7 @@
       "required": false,
       "from": {
         "ledger": [
-          "ac-decision",
-          "design-point"
+          "ac-decision"
         ]
       }
     },
@@ -115,9 +114,6 @@
         }
       ]
     }
-  },
-  "result": {
-    "summary": "one line"
   },
   "rules": [
     {

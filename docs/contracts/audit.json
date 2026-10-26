@@ -159,8 +159,5 @@
       "each_item_at_least": 7
     },
     "source": "docs/evaluation-system.md > PASS Criteria"
-  },
-  "result": {
-    "summary": "one line"
   }
 }
