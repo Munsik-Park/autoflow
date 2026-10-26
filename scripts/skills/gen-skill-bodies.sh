@@ -488,7 +488,7 @@ mod_work() {
   case "$1" in
     criterion-screen)    printf 'The session does the work itself, as `<autoflow-root>/docs/criterion-review.md` (below) states it, on the model and effort its *The four modules* names.' ;;
     criterion-trace)     printf 'The work is one `autoflow-criterion-tracer` spawn on the model `%s criterion-trace` names, given the inputs the invocation names and the output directory (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
-    criterion-in-depth)  printf 'The work is one `autoflow-criterion-analyzer` spawn on the model `%s criterion-in-depth` names, given the criterion'"'"'s target file alone and the output directory (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
+    criterion-in-depth)  printf 'The work is one `autoflow-criterion-analyzer` spawn on the model `%s criterion-in-depth` names, given the criterion'"'"'s target file and the output directory and nothing of the review'"'"'s verdicts or grounds — the target'"'"'s code it reads in the checkout (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
     criterion-reconcile) printf 'The work is one `autoflow-criterion-reconciler` spawn on the model `%s criterion-reconciliation` names, given the inputs the invocation names and the output directory (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
     analysis|design|build)
       printf 'The work is one `autoflow-unit-%s` spawn on the model `%s unit-%s` names (`<autoflow-root>/docs/units/%s.md` > Unit spawn, below).' "$1" "$sp" "$1" "$1" ;;
