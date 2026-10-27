@@ -12,7 +12,8 @@
 #   bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>
 #
 # The invocation names the module, its params, its inputs — a file by its
-# path, the build's commits by their range — the attempt's record directory
+# path, several files as an array of paths, the build's commits by their
+# range — the attempt's record directory
 # when the module reads it, and the run's output directory inside it:
 #
 #   { "contract": 1, "module": "design", "params": { "issue": 507 },

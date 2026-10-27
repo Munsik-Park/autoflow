@@ -425,7 +425,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `verification_design` | yes | `design` → `verification_design` |
 | `build_report` | yes | `build` → `report` |
 | `quality_evaluation` | yes | `quality` → `evaluation` |
-| `tool_requests` | no | the `tool-requests.json` of earlier runs |
+| `tool_requests` | no | the `tool-requests.json` of every earlier run |
 | `deferred` | no | a file the invocation gives |
 
 | Output | File |

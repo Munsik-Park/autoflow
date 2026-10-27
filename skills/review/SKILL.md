@@ -865,8 +865,8 @@ carry, never routes the cycle.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged, and its
   fix is made like any other change.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
-  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); the build module of that scope makes
-  the same single commit on the same terms.
+  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); its fix is the same single commit, on
+  the same terms, in that scope.
 
 <!-- From <autoflow-root>/docs/decision-ledger.md -->
 
@@ -929,8 +929,8 @@ same grammar ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md) 
 the entries below ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1); choosing how a criterion is
 *verified* is the design's, provided the row states its reason, which the reviewers then judge at
 REVIEW (the three-tier guard — [`units/design.md`](<autoflow-root>/docs/units/design.md) > *Report routing*). The change
-excludes, revises or splits a criterion, or adds one. An added criterion is changed by superseding
-the entry that added it with a new `added` entry. The decision is recorded as one entry per
+excludes, revises or splits a criterion, or adds one. An added criterion's text is changed by
+superseding the entry that added it with a new `added` entry. The decision is recorded as one entry per
 decided AC, in the same trailing-marker grammar: the heading `## A<n> — <title> [ac-decision]`,
 followed by the entry's own `- AC: <ac id>` line (for an added criterion, the id it takes), a
 `- Disposition:` line valued `excluded` / `revised` / `split` / `added`, the criterion's text as
