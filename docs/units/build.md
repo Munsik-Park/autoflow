@@ -59,13 +59,14 @@ These are the rules other documents cite; everything else about the work is the 
 - **Test-first (TDD).** A test that verifies a required behavior — a behavior not yet implemented,
   or a defect reproduced before its fix — is seen failing on the code without the implementation it
   verifies and passing on the code with it, each run shown by its log. A test that records existing
-  behavior the change must preserve may pass from the start. Which of its tests verify a required
-  behavior, the order of the work, and how the failing run gets the code without the
-  implementation — a test commit first, a run at an earlier commit, or the implementation set aside
-  for that run only — are the module's. The failing run's log shows the failure, the exit status
-  included, and the code it ran on: the commit, and the change set aside for that run if any. A
-  recorded judgment stands in for no failing run. The failing run goes in `## Test-first` only;
-  `## Run record` holds each item's latest run.
+  behavior the change must preserve may pass from the start; a test of a required behavior that
+  passes on the code without the implementation is looked at again — does it check that behavior?
+  Which of its tests verify a required behavior, the order of the work, and how the failing run
+  gets the code without the implementation — a test commit first, a run at an earlier commit, or
+  the implementation set aside for that run only — are the module's. The failing run's log shows
+  the failure, the exit status included, and the code it ran on: the commit, and the change set
+  aside for that run if any. No recorded judgment stands in for a failing run. The failing run goes
+  in `## Test-first` only; `## Run record` holds each item's latest run.
 
   The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
   failing run on the code without the implementation and the passing run on the code with it, each

@@ -37,9 +37,10 @@ implementation work — is yours, recorded with its grounds in your report
   from your build report and git, then scores the change. Work test-first: a test
   that verifies a required behavior is seen failing on the code without the
   implementation it verifies and passing on the code with it, each run shown by
-  its log — the failing log with its exit status and the code it ran on. The
-  order of the work, and how the failing run gets the code without the
-  implementation, are yours; a recorded judgment stands in for no failing run.
+  its log — the failing log with its non-zero exit status and the code it ran
+  on, the change set aside for that run included. The order of the work, and how
+  the failing run gets the code without the implementation, are yours; no
+  recorded judgment stands in for a failing run.
   Test-first is judged by that evaluator, not enforced by a split of roles.
   `## Run record` holds each item's latest run, and the failing run goes in
   `## Test-first` only. How you work inside the run, and when its work is done,
@@ -171,13 +172,14 @@ These are the rules other documents cite; everything else about the work is the 
 - **Test-first (TDD).** A test that verifies a required behavior — a behavior not yet implemented,
   or a defect reproduced before its fix — is seen failing on the code without the implementation it
   verifies and passing on the code with it, each run shown by its log. A test that records existing
-  behavior the change must preserve may pass from the start. Which of its tests verify a required
-  behavior, the order of the work, and how the failing run gets the code without the
-  implementation — a test commit first, a run at an earlier commit, or the implementation set aside
-  for that run only — are the module's. The failing run's log shows the failure, the exit status
-  included, and the code it ran on: the commit, and the change set aside for that run if any. A
-  recorded judgment stands in for no failing run. The failing run goes in `## Test-first` only;
-  `## Run record` holds each item's latest run.
+  behavior the change must preserve may pass from the start; a test of a required behavior that
+  passes on the code without the implementation is looked at again — does it check that behavior?
+  Which of its tests verify a required behavior, the order of the work, and how the failing run
+  gets the code without the implementation — a test commit first, a run at an earlier commit, or
+  the implementation set aside for that run only — are the module's. The failing run's log shows
+  the failure, the exit status included, and the code it ran on: the commit, and the change set
+  aside for that run if any. No recorded judgment stands in for a failing run. The failing run goes
+  in `## Test-first` only; `## Run record` holds each item's latest run.
 
   The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
   failing run on the code without the implementation and the passing run on the code with it, each
@@ -423,8 +425,8 @@ implementation and the passing run on the code with it, each shown by its log �
 with its non-zero exit status and the code it ran on, the commit and any change set aside for that
 run. It finds that evidence where this project's composition puts it, and records in the output's
 `test_first` what it read for each test and what it found — `confirmed: true` when every test's
-failing and passing runs are so shown, `false` with what is missing or contradicts the record. A
-recorded judgment stands in for no failing run. When it is not confirmed the evaluator scores nothing:
+failing and passing runs are so shown, `false` with what is missing or contradicts the record. No
+recorded judgment stands in for a failing run. When it is not confirmed the evaluator scores nothing:
 the output carries `test_first`, the summary and the findings.
 
 #### Security checklist
@@ -454,11 +456,12 @@ audited commit.
 #### Re-entry re-score
 
 Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
-sets and does not re-derive the whole audit. It judges test-first for each test whose
-`## Test-first` record the build re-run added or replaced, whether or not the re-run made a commit;
-a test whose record is unchanged keeps its previous judgment. The change since that evaluation is
-the commits made after the ones it audited: it re-scores that change against the checklist,
-re-checks each prior finding only where that change touches its file, and inherits the rest.
+sets and does not re-derive the whole audit. The change since that evaluation is the commits made
+after the ones it audited: it judges test-first for the tests that change added or rewrote and for
+each test whose `## Test-first` record the build re-run added or replaced, whether or not the re-run
+made a commit; re-scores that change against the checklist; re-checks each prior finding only where
+that change touches its file; and inherits the rest, a test neither touched keeping its previous
+test-first judgment.
 
 #### Scoring (5 items × 10 points)
 

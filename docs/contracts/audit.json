@@ -4,7 +4,7 @@
   "module": "audit",
   "kind": "evaluation",
   "reads_records": false,
-  "goal": "A judgment of whether the build's tests failed before the implementation where they were meant to, and scores of the change on the project's security items.\n",
+  "goal": "A judgment of whether the build's tests meant to fail failed on the code without the implementation and passed on the code with it, and scores of the change on the project's security items.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > AUDIT",
   "evaluator": {
     "agent": "autoflow-evaluator",
@@ -79,7 +79,7 @@
                 "confirmed",
                 "read"
               ],
-              "note": "what the evaluator read, and whether it confirms that the tests meant to fail before the implementation did; when it does not, no scores are given"
+              "note": "what the evaluator read, and whether it confirms that the tests meant to fail failed on the code without the implementation and passed on the code with it; when it does not, no scores are given"
             },
             "scores": {
               "type": "object",
