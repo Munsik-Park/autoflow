@@ -35,7 +35,8 @@
       "file": "reviews/*.md",
       "format": "markdown",
       "many": true,
-      "note": "one per configured reviewer; a reviewer unavailable for the round is named with the reason in the findings"
+      "required": false,
+      "note": "one per configured reviewer that ran; a reviewer unavailable for the round is named with the reason in the findings, and the round goes on without it (docs/units/review.md > An unreadable operator file)"
     },
     "findings": {
       "file": "review-findings.md",
