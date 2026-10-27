@@ -363,8 +363,9 @@ the committed version's blob and non-empty Decision and Grounds lines → the st
 A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
 the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
 directory — their reports and their `local/` stores — and brings the build report up to date, not
-rewritten: a row the re-run supersedes is replaced, a new commit adds its lint rows, and the sections
-GATE:QUALITY reads carry the current state.
+rewritten: a row the re-run supersedes is replaced, a test the re-run changes has its
+`## Test-first` record replaced with its new failing and passing runs, a new commit adds its lint
+rows, and the sections GATE:QUALITY reads carry the current state.
 
 ## Header contract
 
@@ -456,12 +457,11 @@ audited commit.
 #### Re-entry re-score
 
 Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
-sets and does not re-derive the whole audit. The change since that evaluation is the commits made
-after the ones it audited: it judges test-first for the tests that change added or rewrote and for
-each test whose `## Test-first` record the build re-run added or replaced, whether or not the re-run
-made a commit; re-scores that change against the checklist; re-checks each prior finding only where
-that change touches its file; and inherits the rest, a test neither touched keeping its previous
-test-first judgment.
+sets and does not re-derive the whole audit. It judges test-first for each test whose
+`## Test-first` record the build re-run added or replaced, whether or not the re-run made a commit;
+a test whose record is unchanged keeps its previous judgment. The change since that evaluation is
+the commits made after the ones it audited: it re-scores that change against the checklist,
+re-checks each prior finding only where that change touches its file, and inherits the rest.
 
 #### Scoring (5 items × 10 points)
 

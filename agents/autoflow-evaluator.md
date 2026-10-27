@@ -515,12 +515,11 @@ audited commit.
 #### Re-entry re-score
 
 Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
-sets and does not re-derive the whole audit. The change since that evaluation is the commits made
-after the ones it audited: it judges test-first for the tests that change added or rewrote and for
-each test whose `## Test-first` record the build re-run added or replaced, whether or not the re-run
-made a commit; re-scores that change against the checklist; re-checks each prior finding only where
-that change touches its file; and inherits the rest, a test neither touched keeping its previous
-test-first judgment.
+sets and does not re-derive the whole audit. It judges test-first for each test whose
+`## Test-first` record the build re-run added or replaced, whether or not the re-run made a commit;
+a test whose record is unchanged keeps its previous judgment. The change since that evaluation is
+the commits made after the ones it audited: it re-scores that change against the checklist,
+re-checks each prior finding only where that change touches its file, and inherits the rest.
 
 #### Scoring (5 items × 10 points)
 
@@ -698,7 +697,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 {
   "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation | doc_evaluation",
   "issue": "#N",
-  "test_first": { "confirmed": true, "read": ["<test — the record and the log read, and what they show>"] },
+  "test_first": { "confirmed": true, "read": ["<test — the record and the logs read (failing and passing), and what they show>"] },
   "scores": { "<item>": { "score": 8, "reason": "evidence" } },
   "rescore": {
     "rescored": ["<item>"], "inherited": ["<item>"],

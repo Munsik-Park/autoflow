@@ -487,8 +487,9 @@ the committed version's blob and non-empty Decision and Grounds lines → the st
 A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
 the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
 directory — their reports and their `local/` stores — and brings the build report up to date, not
-rewritten: a row the re-run supersedes is replaced, a new commit adds its lint rows, and the sections
-GATE:QUALITY reads carry the current state.
+rewritten: a row the re-run supersedes is replaced, a test the re-run changes has its
+`## Test-first` record replaced with its new failing and passing runs, a new commit adds its lint
+rows, and the sections GATE:QUALITY reads carry the current state.
 
 ## Header contract
 
