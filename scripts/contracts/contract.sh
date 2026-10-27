@@ -34,7 +34,8 @@
 #             on its branch. Where an input came from is not checked. The run's
 #             directory is named <module>[-<qualifier>]-<n>, inside the record
 #             directory a module that reads it is given (Q20). It records what
-#             check-out needs (a branch's head) in <out>/.check-in.json. On a
+#             check-out needs (a branch's head) in <out>/.check-in.json, and a
+#             second check-in of the same run keeps the first's. On a
 #             refusal it writes <out>/result.json and nothing else.
 # check-out — every output the contract declares is there and passes its
 #             checks, and the run's tool requests are recorded
@@ -258,7 +259,9 @@ check_in() {
   done
 
   finish check-in
-  jq -n --arg m "$MODULE" --argjson s "$start" '{module: $m, start_heads: $s}' >"$OUT/.check-in.json"
+  # a second check-in of the same run keeps the first's heads, so the commits made in between stay in the range
+  [ -f "$OUT/.check-in.json" ] \
+    || jq -n --arg m "$MODULE" --argjson s "$start" '{module: $m, start_heads: $s}' >"$OUT/.check-in.json"
 }
 
 # --- check-out ----------------------------------------------------------------

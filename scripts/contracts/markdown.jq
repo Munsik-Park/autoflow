@@ -23,7 +23,7 @@ def model:
           | (if (.sections | length) > 0 then .sections[-1].body += [$l] else . end)
           | if ($l | test("^\\s*\\|")) then
               if .intable then
-                if (.tables[-1].sep | not) and ($l | test("^\\s*\\|?\\s*:?-{3,}")) then .tables[-1].sep = true
+                if (.tables[-1].sep | not) and ($l | test("^\\s*\\|?\\s*:?-+")) then .tables[-1].sep = true
                 else .tables[-1].rows += [$l | cells | map(norm)] end
               else .intable = true
                 | .tables += [{under: .sec, delta: .delta, header: ($l | cells | map(norm)), sep: false, rows: []}]

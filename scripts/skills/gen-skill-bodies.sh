@@ -59,7 +59,7 @@
 #   gen-skill-bodies.sh --list-all print every generated carrier's path
 #   gen-skill-bodies.sh --core <module>
 #                                  print the core part of a module's body
-# Pure bash + awk + sed; BSD and GNU tools alike.
+# bash + awk + sed, and jq for the contracts; BSD and GNU tools alike.
 # =============================================================================
 
 set -euo pipefail

@@ -27,6 +27,7 @@
 #   - Text: <text>          revised, added: the criterion as decided
 #   - Into: <id> — <text>   split: one line per criterion it makes
 #   - Supersedes: <id>      (only on an entry that replaces one)
+# An AC or Into id is read as the analysis table's are, backticks aside.
 # Text and Into are the lines Q5 adds; today's grammar has only AC and
 # Disposition, which say what changes but not into what. An entry's identifier
 # is the heading's leading capital letter and number (O<n>, A<n>, …); the
@@ -75,8 +76,22 @@ ANALYSIS=$(jq -r '.inputs.analysis' "$INV")
 LEDGER=$(jq -r '.inputs.decisions // empty' "$INV")
 MD_JQ=$(cat "$ROOT/scripts/contracts/markdown.jq") || die "cannot read markdown.jq"
 
+# The AutoFlow that ran the module, as contract.sh's autoflow_run records it
+# (ADR-0027 D4): a refusal's result carries it too.
+autoflow_run() {
+  local v head='' dirty=''
+  v=$(jq -r '.version // empty' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null)
+  if [ "$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" = "$(cd -P -- "$ROOT" && pwd)" ]; then
+    head=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)
+    if [ -n "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then dirty=true; else dirty=false; fi
+  fi
+  jq -nc --arg v "$v" --arg r "$ROOT" --arg h "$head" --arg d "$dirty" \
+    '{version: $v, root: $r} + (if $h == "" then {} else {head: $h, dirty: ($d == "true")} end)'
+}
+
 refuse() { # <defects json>
-  jq -n --argjson d "$1" '{contract: 1, module: "criteria-apply", status: "refused", outputs: {}, defects: $d, tool_requests: []}' \
+  jq -n --argjson d "$1" --argjson a "$(autoflow_run)" \
+    '{contract: 1, module: "criteria-apply", status: "refused", outputs: {}, defects: $d, tool_requests: [], autoflow: $a}' \
     >"$OUT/result.json"
   jq -r '.[] | "refused: " + .' <<<"$1" >&2
   exit 1
@@ -99,14 +114,14 @@ if [ -n "$LEDGER" ]; then
                       {entry: ($l | capture("^## (?<id>[A-Z][0-9]+)").id // $l), into: [], replaces: []}
                     else null end)
         elif .cur and ($l | test("^- (AC|Disposition|Text):")) then
-          ($l | capture("^- (?<k>[A-Za-z]+):\\s*(?<v>.*)$")) as $m | .cur[$m.k] = ($m.v | gsub("\\s+$"; ""))
+          ($l | capture("^- (?<k>[A-Za-z]+):\\s*(?<v>.*)$")) as $m | .cur[$m.k] = ($m.v | gsub("\\s+$"; "") | if $m.k == "AC" then gsub("`"; "") else . end)
         elif .cur and ($l | test("^- (Supersedes|Overrides):")) then
           ($l | capture("^- (?<k>[A-Za-z]+):(?<v>.*)$")) as $m
           | [$m.v | match("\\b[A-Z][0-9]+\\b"; "g").string] as $ids
           | .cur.replaces += (if $ids == [] then [{how: $m.k, id: null}] else [$ids[] | {how: $m.k, id: .}] end)
         elif .cur and ($l | test("^- Into:")) then
           (($l | capture("^- Into:\\s*(?<id>\\S+)\\s+—\\s+(?<text>.*)$")) // null) as $m
-          | .cur.into += [if $m then {id: $m.id, text: ($m.text | gsub("\\s+$"; ""))} else {bad: $l} end]
+          | .cur.into += [if $m then {id: ($m.id | gsub("`"; "")), text: ($m.text | gsub("\\s+$"; ""))} else {bad: $l} end]
         else . end)
     | (if .cur then .out + [.cur] else .out end)' "$LEDGER") || die "cannot read the ledger: $LEDGER"
 fi
