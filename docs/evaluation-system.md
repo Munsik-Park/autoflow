@@ -535,9 +535,9 @@ reference value. Each violation caps the named item at 6, below the each-item re
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
   each verification-design row verified by a run it is the row's recorded run — the command, the
   log and the summary line read from it, resolved as *Execution discipline* above sets. For a row
-  the AI verified by observation it is the row's observation record ([U4 Build and
-  verify](units/build.md) > Build report > `## Manual checklist`), confirmed by reading the record
-  and opening the artifacts it cites — a screenshot is read as an image — never by observing again;
+  the AI verified by observation it is the row's observation record
+  ([U4 Build and verify](units/build.md) > Build report > `## Manual checklist`), confirmed by
+  reading the record and opening the artifacts it cites — a screenshot is read as an image — never by observing again;
   a row with no record, or a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *A missing run
     is filled where it is found*). A row with no run record — or with no log behind it — is `not-run`, and the evaluator does
