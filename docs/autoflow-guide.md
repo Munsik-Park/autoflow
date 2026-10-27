@@ -351,7 +351,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `audit`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: A judgment of whether the build's tests failed before the implementation where they were meant to, and scores of the change on the project's security items.
+- Goal: A judgment of whether the build's tests meant to fail failed on the code without the implementation and passed on the code with it, and scores of the change on the project's security items.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > AUDIT`
 
 | Param | Required | Form |
