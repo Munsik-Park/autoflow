@@ -50,3 +50,6 @@ jobs:
 
       - name: tests-tree hygiene lint
         run: bash scripts/test/check-tests-tree-hygiene.sh
+
+      - name: module contract lint
+        run: bash scripts/contracts/contract.sh lint

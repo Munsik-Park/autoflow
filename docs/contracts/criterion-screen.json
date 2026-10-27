@@ -1,0 +1,44 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-screen",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on without any verdict.",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "target_documents": {
+      "required": false,
+      "from": {
+        "path": "target"
+      }
+    }
+  },
+  "outputs": {
+    "review_record": {
+      "file": "criterion-review.md",
+      "format": "markdown",
+      "checks": [],
+      "evaluation": [
+        "every criterion of the issue, and every problem the review finds beyond them, is disposed of, with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
+        "the record names each criterion that has no in-depth target"
+      ]
+    },
+    "targets": {
+      "file": "targets/*.md",
+      "format": "markdown",
+      "many": true,
+      "required": false,
+      "note": "one per criterion with an in-depth target",
+      "evaluation": [
+        "a target holds only the issue body, the criterion's text, the target cases, each case's code locations (path:line) and the commit read — no verdict, ground or conclusion of this review, since the in-depth module judges the cases in a context that never saw them (docs/criterion-review.md > In-depth analysis and reconciliation)"
+      ]
+    }
+  }
+}

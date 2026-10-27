@@ -30,7 +30,7 @@
       "agent_type": "autoflow-evaluator",
       "model": "opus",
       "effort": "xhigh",
-      "work_type": "rubric, 5 items × 10 points (intent: decision grounds, verification fit, scope, tools, security)"
+      "work_type": "rubric, 4 items × 10 points (intent: decision grounds, verification fit, scope, security)"
     },
     "audit": {
       "agent_type": "autoflow-evaluator",

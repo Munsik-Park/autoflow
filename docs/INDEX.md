@@ -2,7 +2,7 @@
 
 Use this page as the first stop before assigning or implementing an issue.
 It routes two document classes that live in separate trees: the **usage
-documents** an agent reads and follows while a cycle runs — the source of the
+documents** an agent reads and follows while a module runs — the source of the
 rules — and the **design and decision records** under
 `<autoflow-root>/docs/records/`, read for a decision's history and grounds, the source of no
 rule. Both ship in the plugin; a role's carrier carries the usage documents its
@@ -23,16 +23,15 @@ These documents are the operating source of truth.
 
 | Document | Role |
 | --- | --- |
-| [Core](core.md) | AutoFlow operating manual and phase router — the source of the `/autoflow:cycle`, `/autoflow:cycle-u1` … `/autoflow:cycle-u7` (one unit, the parts of the core it uses) and `/autoflow:criterion-review` (the criterion review stage alone) command bodies (ADR-0027 D2, ADR-0032, ADR-0033). |
-| [State Tracking](state-tracking.md) | The state file's naming, schema and fields, the hook gates, and its state at completion. |
-| [AutoFlow Guide](autoflow-guide.md) | Lifecycle overview and diagram; index of the functional-unit documents under `units/`. |
-| [U2 Analysis](units/analysis.md) | The U2 Analysis unit: goal, cautions, analysis report and routing; the other units are listed in the AutoFlow Guide. |
-| [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries — the advisor's first judgment and the operator's override (`[ac-decision]`, `[checklist-decision]`). |
+| [Core](core.md) | AutoFlow operating manual — the authority rules, how a module runs, the records and the hook — and the source of the module command bodies, `/autoflow:<module>`, each with the parts of the core its module uses (ADR-0027 D2, ADR-0038 D9). |
+| [AutoFlow Guide](autoflow-guide.md) | Index of the modules: how a module is run and how one module's output becomes another's input, and each module's kind, procedure, params, inputs with their sources and outputs (generated from the contracts). |
+| Module contracts (`<autoflow-root>/docs/contracts/<module>.json`) | Each module's parameters, inputs and outputs, checked by `<autoflow-root>/scripts/contracts/contract.sh` (ADR-0038 D1). |
+| [U2 Analysis](units/analysis.md) | The analysis module: goal, cautions and analysis report; the other modules are listed in the AutoFlow Guide. |
+| [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
-| [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through the carrier each role starts with (command bodies, agent definitions, reviewers' rule files), target-identity separation, the packaging and PREFLIGHT checks, and the target's own spawn policy. |
-| [Reviewer Contract](reviewer-backend.md) | REVIEW reviewers: the reviewers the operator file names, each run by its own script, and the reviews of the target's side, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
-| [Criterion Review](criterion-review.md) | The cycle's first stage, CRITERION-REVIEW: an attempt's review of the issue's acceptance criteria against the target's code and policy, the `[criterion-ready]` entry recording the review's settled decisions — the stage's exit — and the readiness fact PREFLIGHT reads. |
-| [Abbreviated Path](abbreviated-path.md) | The path beside the full cycle — criterion review, work outside an AutoFlow cycle, review: its composition, end condition, rework rule, what the coordinating session reads and decides, the checks that bind it, and how its attempt is reported and cleared. |
+| [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through the carrier each role starts with (command bodies, agent definitions, reviewers' rule files), target-identity separation, the packaging check and the target check, and the target's own spawn policy. |
+| [Reviewer Contract](reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, and the reviews of the target's side, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
+| [Criterion Review](criterion-review.md) | The criterion review's four modules: an attempt's review of the issue's acceptance criteria against the target's code and policy, each item disposed of with its grounds in the review record. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 
 ### Quick Routing
@@ -43,8 +42,7 @@ These documents are the operating source of truth.
 | Sub-repo implementation (a project with sub-repos) | `<autoflow-root>/docs/repo-boundary-rules.md` |
 | Issue decomposition or readiness | `<autoflow-root>/docs/development-guideline.md` |
 | Filing a new issue | `<autoflow-root>/docs/issue-proposal.md` |
-| An attempt's criterion review stage | `<autoflow-root>/docs/criterion-review.md` |
-| An attempt worked and reviewed outside an AutoFlow cycle | `<autoflow-root>/docs/abbreviated-path.md` |
+| An attempt's criterion review | `<autoflow-root>/docs/criterion-review.md` |
 | Tool distribution, install/upgrade, or version pinning | `<autoflow-root>/docs/tool-delivery-contract.md` |
 | Reviewers, review aggregation | `<autoflow-root>/docs/reviewer-backend.md` |
 

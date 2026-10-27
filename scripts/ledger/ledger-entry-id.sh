@@ -6,73 +6,69 @@
 # =============================================================================
 # The decision ledger (<attempt-dir>/issue-{N}-ledger.md, the attempt's record directory — docs/core.md > Decision
 # Ledger) is append-only and written by writers that cannot see each
-# other's in-flight state — the orchestrator and the advisor.
+# other's in-flight state — two advisors spawned together, for one.
 # Without an issuance protocol each writer picks the "next" serial from its
 # own memory of the file, so two entries collide on one identifier and every
 # later citation of that identifier is ambiguous.
 #
 # This script is that protocol. `next` derives the identifier from the file on
-# disk at call time and RESERVES it before printing it, so two writers of one
-# namespace that both call `next` before either appends — two advisors spawned
-# together (issue #448) — still receive different identifiers. A reservation is
-# an empty directory `<ledger-path minus .md>.ids/<NS><serial>` beside the
-# ledger, created with `mkdir`, which succeeds for exactly one caller; the
-# store holds nothing else, and the ledger file itself is never touched here.
+# disk at call time and RESERVES it before printing it, so two writers that
+# both call `next` before either appends — two advisors spawned together
+# (issue #448) — still receive different identifiers. A reservation is an
+# empty directory `<ledger-path minus .md>.ids/A<serial>` beside the ledger,
+# created with `mkdir`, which succeeds for exactly one caller; the store holds
+# nothing else, and the ledger file itself is never touched here.
 # A reserved identifier that is never appended (the append denied, the writer
 # stopped) leaves a gap in the serial; a gap is not a defect, and `check` does
 # not report one.
 #
 # Usage:
-#   ledger-entry-id.sh next  <ledger-path> <namespace>   -> prints <NS><serial>
-#   ledger-entry-id.sh check <ledger-path>               -> reports defects
+#   ledger-entry-id.sh next  <ledger-path>   -> prints A<serial>
+#   ledger-entry-id.sh check <ledger-path>   -> reports defects
 #
-# Namespaces (docs/decision-ledger.md > Entry identifier — the single documentary
-# home of the writer -> namespace mapping): `O` = orchestrator, `A` = advisor.
-# `E` and `F` are legacy namespaces: readable, never issuable.
+# An identifier is the letter A and a serial (docs/decision-ledger.md > Entry
+# identifier). A ledger written before that grammar may carry O, E and F
+# identifiers, each with a serial of its own: `check` reads them, and `next`
+# counts A's serial alone.
 #
 # Exit codes:
 #   next   0 = identifier printed on stdout | 1 = no identifier could be
-#          reserved (the store is not writable) | 2 = usage / unissuable namespace
+#          reserved (the store is not writable) | 2 = usage
 #   check  0 = clean | 1 = defect found (reported on stderr) | 2 = usage
 # `check` separates 1 from 2 so a caller can distinguish "the ledger has a
-# defect" from "I was called wrong" — the hook's advisory step relies on it.
+# defect" from "I was called wrong".
 # =============================================================================
 
 set -uo pipefail
 
-ISSUABLE_NAMESPACES="O A"
+# The letter every identifier `next` issues.
+NS="A"
 
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  ledger-entry-id.sh next  <ledger-path> <namespace>
+  ledger-entry-id.sh next  <ledger-path>
   ledger-entry-id.sh check <ledger-path>
 
-Namespaces issuable by `next`: O (orchestrator), A (advisor).
-E and F are legacy — readable by `check`, never issued.
+`next` issues A<serial>; `check` also reads the O, E and F identifiers of a
+ledger written before that grammar.
 EOF
 }
 
 # Heading grammar shared by both subcommands: a settled-decision entry is a
-# LEVEL-2 heading `## <NS><serial> — <title> (cycle <C>, <PHASE>)`. Level-3
-# headings are record entries (preflight-plugin, preflight-local-checks,
-# preflight-review-config) and carry no identifier by design, so both
+# LEVEL-2 heading `## A<serial> — <title>`, a marker at its end when its kind
+# has one (a heading written before ADR-0038 may carry `(cycle <C>, <PHASE>)`
+# after its title). Level-3 headings carry no identifier and are not entries
+# (ledgers written before ADR-0038 hold preflight records under them), so both
 # subcommands ignore them.
 
-# next <ledger-path> <namespace>
+# next <ledger-path>
 cmd_next() {
-  local file="${1:-}" ns="${2:-}" store max res n cand tries
-  if [ -z "$file" ] || [ -z "$ns" ]; then
+  local file="${1:-}" ns="$NS" store max res n cand tries
+  if [ "$#" -ne 1 ] || [ -z "$file" ]; then
     usage
     return 2
   fi
-  case " $ISSUABLE_NAMESPACES " in
-    *" $ns "*) ;;
-    *)
-      echo "ledger-entry-id: namespace '$ns' is not issuable (issuable: $ISSUABLE_NAMESPACES)" >&2
-      return 2
-      ;;
-  esac
 
   store="${file%.md}.ids"
   if ! mkdir -p "$store" 2>/dev/null; then
@@ -80,10 +76,10 @@ cmd_next() {
     return 1
   fi
 
-  # Highest serial ALREADY IN THE FILE, within this namespace only. Namespace
-  # isolation keeps an A append from moving O's counter. A ledger that does not
-  # exist yet counts 0, so its first entry is <NS>1 — the first-append case,
-  # not an error: the writer creates the file with its header and appends it.
+  # Highest A serial ALREADY IN THE FILE; an earlier ledger's O, E and F
+  # identifiers keep serials of their own. A ledger that does not exist yet
+  # counts 0, so its first entry is A1 — the first-append case, not an error:
+  # the writer creates the file with its header and appends it.
   max=0
   if [ -f "$file" ]; then
     max=$(awk -v ns="$ns" '
@@ -162,8 +158,8 @@ check_one() {
 # check <ledger-path>
 cmd_check() {
   local file="${1:-}"
-  # Exactly one ledger, by design. Every caller — the hook's advisory step, or
-  # a writer that runs it by hand — passes a single path, and an aggregate scan would
+  # Exactly one ledger, by design. Every caller — a writer that runs it by
+  # hand — passes a single path, and an aggregate scan would
   # blur which ledger a defect line belongs to, since the line names a number
   # inside a file it does not identify. A second argument is therefore a usage
   # error with the same disposition as none at all, not a wider scan.

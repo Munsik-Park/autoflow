@@ -1,0 +1,154 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "plan",
+  "kind": "evaluation",
+  "reads_records": false,
+  "goal": "Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached.\n",
+  "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN",
+  "evaluator": {
+    "agent": "autoflow-evaluator",
+    "spawn": "fresh, every run"
+  },
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "feature_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
+    "verification_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "verification_design"
+      }
+    },
+    "applied_criteria": {
+      "required": true,
+      "from": {
+        "module": "criteria-apply",
+        "output": "applied_criteria"
+      }
+    },
+    "decisions": {
+      "required": false,
+      "from": {
+        "ledger": [
+          "ac-decision"
+        ]
+      }
+    },
+    "previous_evaluation": {
+      "required": false,
+      "from": {
+        "module": "plan",
+        "output": "evaluation"
+      },
+      "note": "previous_evaluation is given on a re-score; its unchanged items are inherited by citation."
+    }
+  },
+  "outputs": {
+    "evaluation": {
+      "file": "evaluation.json",
+      "format": "json",
+      "note": "the evaluator, writing into the output directory its prompt names (Q7, revised 2026-10-26)",
+      "checks": [
+        {
+          "type": "keys",
+          "spec": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "const": "plan_evaluation"
+            },
+            "issue": {
+              "type": "string",
+              "required": true,
+              "pattern": "^#[0-9]+$"
+            },
+            "scores": {
+              "type": "object",
+              "keys_exactly": [
+                "Decision grounds",
+                "Verification fit",
+                "Scope",
+                "Security"
+              ],
+              "note": "each value a number 0-10, or { score, reason }",
+              "required": true
+            },
+            "rescore": {
+              "type": "object",
+              "required_when": {
+                "input": "previous_evaluation"
+              }
+            },
+            "summary": {
+              "type": "string",
+              "required": true
+            },
+            "recommendations": {
+              "type": "array",
+              "required": true,
+              "items_keys": [
+                "subject",
+                "item",
+                "finding"
+              ]
+            }
+          }
+        },
+        {
+          "type": "forbidden_keys",
+          "keys": [
+            "verdict"
+          ],
+          "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
+        },
+        {
+          "type": "partition",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "of_keys": ".scores",
+          "into": [
+            ".rescore.rescored",
+            ".rescore.inherited"
+          ],
+          "note": "every rubric item is scored afresh or inherited"
+        },
+        {
+          "type": "covers",
+          "when": {
+            "input": "previous_evaluation"
+          },
+          "source": {
+            "input": "previous_evaluation",
+            "ids": ".recommendations[].finding"
+          },
+          "by": ".rescore.prior_findings[].finding",
+          "disposed_by": ".rescore.prior_findings[].disposition",
+          "note": "every finding of the previous evaluation has its disposition; which entry answers which finding the evaluation states in its own words",
+          "count_only": true
+        }
+      ]
+    }
+  },
+  "reference": {
+    "pass": {
+      "average_at_least": 7.5,
+      "each_item_at_least": 7,
+      "security_rework_at_or_below": 3
+    },
+    "source": "docs/evaluation-system.md > PASS Criteria",
+    "note": "Q2: AutoFlow provides these with the evaluation, which outputs its scores and their grounds against them."
+  }
+}

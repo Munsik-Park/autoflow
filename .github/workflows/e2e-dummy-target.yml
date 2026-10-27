@@ -4,11 +4,11 @@
 #
 # Runs tests/plugin/verify-e2e-dummy-target.sh: the plugin package laid out as
 # an install lays it out, against a structurally-real, zero-submodule dummy
-# library target that carries no AutoFlow file (ADR-0027). The PREFLIGHT scripts
-# and the gate hook resolve the plugin root, the state lives under the record
-# root outside the target (whose tree stays clean), the target's spawn policy
-# wins over the plugin default, the hook's
-# advisories find their helpers and the target check runs fail-closed —
+# library target that carries no AutoFlow file (ADR-0027). The scripts and the
+# gate hook resolve the plugin root, the records live under the record root
+# outside the target (whose tree stays clean), the hook's denies hold with no
+# state, the target's spawn policy wins over the plugin default, the hook's
+# advisory finds its helper and the target check runs fail-closed —
 # deployment-level checks only (ADR-0024 D1; issue #293). It runs on every pull
 # request and every push to main, with no `paths:` filter.
 #

@@ -343,7 +343,7 @@ if [ -f "$GATE_SH" ] && [ -x "$GATE_SH" ]; then
   OUT=$(printf '%s' "$BENIGN_PAYLOAD" | CLAUDE_PLUGIN_ROOT=/plugin CLAUDE_PROJECT_DIR="$BENIGN_DIR" bash "$GATE_SH" 2>&1)
   CODE=$?
   if [ "$CODE" -eq 0 ]; then
-    pass "AC3 8a: benign command with no active state file -> exit 0 (allow)"
+    pass "AC3 8a: benign command -> exit 0 (allow)"
   else
     failc "AC3 8a" "expected exit 0, got $CODE; output: $OUT"
   fi

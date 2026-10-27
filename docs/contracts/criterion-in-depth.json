@@ -1,0 +1,38 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-in-depth",
+  "kind": "functional",
+  "reads_records": false,
+  "goal": "A verdict on each target case of one criterion, resting on the code that decides whether and how the required behaviour occurs and the condition applied there.\n",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "criterion": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "inputs": {
+    "target": {
+      "required": true,
+      "from": {
+        "module": "criterion-screen",
+        "output": "targets"
+      },
+      "note": "Only the target file: the module never sees the review's verdicts or grounds."
+    }
+  },
+  "outputs": {
+    "in_depth": {
+      "file": "in-depth.md",
+      "format": "markdown",
+      "evaluation": [
+        "every case of the target has its verdict, the deciding code and condition, and the grounds"
+      ]
+    }
+  }
+}

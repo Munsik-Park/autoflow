@@ -67,15 +67,11 @@ fragment:
 ```sh
 # `-c key=value` / `-C <path>` may sit between `git` and `push`
 GIT_PUSH='git([[:space:]]+-[cC][[:space:]]*[^[:space:]]+)*[[:space:]]+push\b'
-#   ${CMD_BOUNDARY}${GIT_PUSH}                       # Gate 3 (score-gated push)
-#   ${CMD_BOUNDARY}(${GIT_PUSH}|gh …pr create)\b     # is_score_gated_surface
 #   ^[[:space:]]*${GIT_PUSH}                          # per-segment P2 deny
 ```
 
-Define the fragment **once at global scope** (before the Bash guard and
-before `is_score_gated_surface`); every consumer — the P2 default-branch
-deny, Gate 3, and `is_score_gated_surface` (also reached on the Agent
-path) — references that one value.
+Define the fragment **once at global scope**, before the Bash guard; every
+consumer — the P2 default-branch deny — references that one value.
 
 **Scope (P1 threat model):** only `-c`/`-C` are matched; other global options
 (`--no-pager`, `--git-dir=`, `--work-tree=`, …) interposed before `push`
@@ -226,90 +222,40 @@ leave B's token and body as ordinary text, an unterminated heredoc keeps its
 body, and a body line ending in a bare `\` is folded into its terminator so the
 body stays in the buffer.
 
-## Rule P2 — Unconditional Denies Precede the Activity Check
+## Rule P2 — Every Deny Is Unconditional
 
-A hook has two classes of gate:
-
-1. **Absolute prohibitions** — actions AutoFlow must never perform via the
-   agent's tools regardless of state (e.g. `gh pr merge`, push to the
-   default branch). These MUST be placed in an unconditional block that
-   executes **before** any active-issue / state lookup.
-2. **Conditional gates** — score- or phase-dependent checks (e.g. push only
-   after AUDIT + GATE:QUALITY pass). These run **after** the activity check.
-
-A hook orders its sections `1. Unconditional blocks` → then
-`2. Activity check — bypass if no current-issue`.
+A hook's denies are absolute prohibitions — actions AutoFlow must never
+perform via the agent's tools (`gh pr merge`, a push to the remote default
+branch, `gh issue create`, a ledger rewrite, a spawn without `model`, a
+backgrounded suite run). None reads a state: each holds in every session, in
+every repository the plugin is installed in
+([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D5).
 
 Behavioural consequence: the agent's Bash
 tool can never run `gh pr merge` or a default-branch push in a governed
-repo, even outside an active flow. Merging is performed by humans /
+repo. Merging is performed by humans /
 external review through GitHub, not through the agent.
 
-## Rule P3 — Declared-Role Spawn Classification
+## Rule P3 — A Role Is Read From Structural Fields Only
 
-Hook gates MUST NOT classify an `Agent` spawn by prompt-keyword inference.
+Hook gates MUST NOT classify an `Agent` spawn by prompt-keyword inference. A
+deny that reads a spawn reads a structural field of the `Agent` call: its own
+`model`. The role an AutoFlow spawn fills is its `subagent_type`
+(`<autoflow-root>/agents/`; under a plugin install `autoflow:autoflow-<role>`),
+which the non-gating spawn-policy advisory reads. No deny maps a role to a
+gate, denies an undeclared spawn, or depends on which session or sub-agent
+makes a call.
 
-Instead, the spawn declares its role through a **structural channel** and
-the hook owns the role→gate mapping:
-
-| Channel | Declaration |
-|---------|-------------|
-| Direct spawn | `subagent_type` = `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor` / `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` / `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` (defined in `<autoflow-root>/agents/`) — under a plugin install these register as `autoflow:autoflow-analyzer` etc.; the hook matches both the bare and the `<plugin>:<agent>` form |
-| Research | built-in read-only types `Explore` / `Plan` / `claude-code-guide` |
-| Unit-agent caller | the hook input's caller `agent_type` is `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` — the spawn needs no declaration of its own |
-
-`subagent_type` is the **sole** declaration channel for a spawn the orchestrator
-or a role makes. A spawn a functional-unit agent makes is classified by its
-caller instead (ADR-0025 D5): the caller is a structural field the harness sets
-on a sub-agent's calls, never the prompt, so the rule against inference holds.
-
-The `<plugin>:<agent>` prefix is accepted for the `autoflow-*` types only —
-the built-in research types stay bare (no namespace).
-
-**Teammate-`name` disposition**: a payload carrying a teammate `name`
-is undeclared → denied during an active cycle, **even when `subagent_type` names
-a research or `autoflow-*` type**. A contradictory declaration is blocked rather
-than arbitrated, with the `name` side carrying no role at all.
-
-Mapping (hook-owned — a spawn never selects its own gate): `planning` —
-`autoflow-unit-design` →
-GATE:HYPOTHESIS (skip-verdict bypass for non-bug issues); `implementation` —
-`autoflow-unit-build` → GATE:PLAN;
-`analysis` — `autoflow-analyzer`,
-`autoflow-criterion-tracer`, `autoflow-criterion-analyzer`,
-`autoflow-criterion-reconciler`,
-`autoflow-unit-analysis` — / `evaluation` / `advisor` / research → pass.
-
-**Unit-agent caller inheritance**: a spawn whose caller is a unit agent is
-admitted without a declaration — a teammate `name` included — and judged by
-the caller's class (`unit-analysis` → analysis, `unit-design` → planning,
-`unit-build` → implementation). When the spawn also declares a role that has a
-gate of its own, that gate applies too, so an existing role type is never judged
-more loosely because a unit spawned it. The caller is the immediate one: the
-hook sees no ancestry, so a helper's own spawn is classified by its own
-declaration. On a malformed or multi-active state a unit caller's spawn is on the
-score-gated surface and fails closed. The explicit-`model` rule is unchanged. An
-**undeclared** spawn while a cycle is active is denied with a
-self-describing message. Outside an active cycle (no state file, or
-`active:false`) undeclared spawns are not gated; on a malformed state only
-research and evaluation roles are admitted (fail-closed).
-
-**Decision-ledger integrity** (state-independent, ADR-0025 D7), on a write into
-an `issue-*-ledger.md`:
+**Decision-ledger integrity**, on a write into an `issue-*-ledger.md`:
 
 - *Append-only.* A `Write` / `Edit` / `MultiEdit` is applied to the file on
   disk (a literal replacement portable to `/bin/bash` 3.2) and must keep the
   whole prior content as its prefix.
-- *Authorship of the added text.* A `- Authority: advisor decision` line or an
-  `## A<n> ` heading only from caller `autoflow-advisor`; a
-  `- Authority: operator decision` line or an `## O<n> ` heading only from the
-  main session (no caller `agent_type`); the advisor adds no `operator decision`
-  and no `O` / `F` / `E` heading.
 
 A shell write to a ledger and text that only imitates an entry are outside the
 matched surface: the threat is routine overstepping, not a determined evasion.
 
-The hook classifies the declaration channel only; it does not enforce spawn mode. A payload carrying a teammate `name` is not admitted by the mapping above: it is denied as undeclared, and [`core.md`](core.md) > Spawn Model — Phase-by-Phase names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
+The hook does not enforce spawn mode: [`core.md`](core.md) > Spawn Model — Phase-by-Phase names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
 
 ## Verification Requirement
 
@@ -317,10 +263,10 @@ Each repo's gate-hardening change ships a regression matrix that asserts BOTH
 directions:
 
 - **Deny holds**: `cd x && git push`, `a && gh pr merge`, `git push origin
-  <default>` are blocked; `gh pr merge` blocked even with no/inactive state.
-- **No over-block**: a legitimate `git push -u origin dev-YYYY-MM-DD-…` — with a
-  default branch or base `dev` too — and a
+  <default>` are blocked, in every session.
+- **No over-block**: a legitimate `git push -u origin <work branch>` — a
+  `dev-…` branch with a default branch named `dev` included — and a
   non-merge `gh pr create` are allowed.
 
 The legitimate-allow cases are mandatory — an over-broad pattern that
-blocks the normal HANDOFF push is a release blocker.
+blocks the delivery module's push is a release blocker.

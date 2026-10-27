@@ -30,8 +30,8 @@
 #   4   the wrapper's output (--log) carries the marker line
 #       `user-config: UNREADABLE <path> — <error>`: the operator's
 #       ~/.autoflow/config.json could not be read, so no reviewer started —
-#       the orchestrator asks the operator whether to proceed without those
-#       reviewers (issue #463)
+#       the review round goes on without those reviewers (issue #463;
+#       docs/units/review.md > Reviewer review)
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]

@@ -1,6 +1,6 @@
 # PR Body Authoring Guide
 
-PR body 작성 시 참고하는 가이드. AI orchestrator와 수동 PR 작성자 모두 대상.
+PR body 작성 시 참고하는 가이드. delivery module과 수동 PR 작성자 모두 대상.
 
 ## Principles
 
@@ -39,8 +39,8 @@ context / AC 를 판단 근거로 삼았는지 `path > section` 형태로 명시
 - ADR / design note / architecture context 를 명시적으로 링크. ADR 불필요 시
   사유 한 줄 ("ADR not required: ...").
 - linked issue 의 AC 를 PR 에서 도달 가능하게 (이슈 링크 + AC 섹션, 또는 body 에 명시).
-- `<attempt-dir>/*` scratch 는 리뷰 입력으로 링크하지 않고, 리뷰어가 봐야 할 근거는
-  linked issue 나 commit 된 문서로 옮긴다.
+- 기록 폴더(`<attempt-dir>/*`)의 scratch 는 리뷰 입력으로 링크하지 않고, 리뷰어가 봐야 할 근거는
+  linked issue 나 commit 된 문서, 또는 PR body 로 옮긴다.
 
 정책: Repository documents may be used as review evidence only when the PR links or
 names the relevant document/section, or when the reviewer independently discovers
@@ -49,31 +49,31 @@ reviewers to infer hidden design intent from unrelated repository documents.
 
 ### 5. Verification dispositions (검증 처분의 노출)
 
-AutoFlow cycle의 host PR body는 `## Verification dispositions` 섹션을 싣는다 — issue의 acceptance
-criterion 중 automated test로 검증되지 않는 모든 항목을, 그 disposition
-(`existing-coverage` / `delivery-check` / `manual` / `environment-dependent` /
-`none`) 과 verification design row에 적힌 한 줄 reason과 함께 나열한다.
+AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는다 — verification design이
+실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
+항목)을, 그 row에 적힌 검증 방법과 사유와 함께 나열한다. 처분을 부르는 말은 design의 것이다.
 
-- 운영자 주도 PR(AutoFlow cycle 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
+- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
   verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
-- 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design unit이 검증
-  방법의 축소를 결정하고, REVIEW의 reviewer가 그 reason의 타당성을 판단하며,
-  criterion의 **내용**이 바뀔 때만 orchestrator가 1차 판단하고, 근거로 정할 수 없으면 advisor가 판단한다
+- 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
+  방법의 축소를 결정하고, review module의 reviewer가 그 reason의 타당성을 판단하며,
+  criterion의 **내용**이 바뀔 때는 그 변경을 보인 모듈이 advisor를 spawn해 정하고 그 결정을 따른다
   ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](units/design.md) >
-  Output artifacts > *Test necessity* 와 *Report routing*.
-- 형식은 AC id + disposition + reason 한 줄. reason은 verification design의 셀을
+  *Test necessity* 와 *Report routing*.
+- 형식은 항목 id + 검증 방법 + reason 한 줄. reason은 verification design의 셀을
   옮겨 적고 새로 쓰지 않는다.
-- issue AC 전부가 `automated` 이면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
-- `cycle` 층의 `automated` row(`Type` 셀에 `standing:` 토큰이 없는 row)는 같은 섹션에 그
-  row의 **run record** — build report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
+- 모든 항목이 실행 가능한 test로 검증되면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
+- target 트리에 남지 않는 한 번 실행한 test는 같은 섹션에 그 항목의 **run record** — build
+  report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
   ([U6 Delivery](units/delivery.md) > *Push and pull request*).
-- AI가 도구로 실행한 `manual` row는 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
-  한 줄로 싣는다. 사람이 실행하는 `manual` row는 reason에 도구를 확보할 수 없었던 이유가 들어
-  있다 ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *The tools the work needs*; [U3 Design](units/design.md) > *Tools*).
-- cycle이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
-  남겨 두는 이유, 그리고 HANDOFF의 CI 확인에서 확인한, 그 파일을 실제로 실행한 CI job(실행한 job이 없으면 그
+- AI가 도구로 관찰해 검증한 항목은 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
+  한 줄로 싣는다. 사람의 관찰이나 mock으로 검증한 항목은 reason에 그 이유를 싣고, 도구가 없어서라면
+  그 도구 요청을 *7. 도구 요청*에 적는다 ([`submodule-common-rules.md`](submodule-common-rules.md) >
+  Verification and Tools > *The tools the work needs*; [U3 Design](units/design.md) > *Tools*).
+- 변경이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
+  남겨 두는 이유, 그리고 delivery module의 CI 확인에서 확인한, 그 파일을 실제로 실행한 CI job(실행한 job이 없으면 그
   사실과 처분, target에 CI가 없으면 `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
-  ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle leaves in the target's tree*;
+  ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a change leaves in the target's tree*;
   [U6 Delivery](units/delivery.md) > *CI* > *Added test files*).
 
 예:
@@ -85,8 +85,8 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
   build마다 검사한다.
 - AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
   사라진다. 부재 비용 0.
-- AC1 — automated (cycle): `bash <attempt-dir>/issue-42-local/ac1-retry.sh` → `PASS 3/3`
-- AC3 — manual (AI: browser): `<attempt-dir>/issue-42-local/ac3-observation.md` →
+- AC1 — one-shot test: `bash <attempt-dir>/build-1/local/ac1-retry.sh` → `PASS 3/3`
+- AC3 — AI observation (browser): `<attempt-dir>/build-1/local/ac3-observation.md` →
   `observation: match` — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
 - Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
   따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
@@ -94,15 +94,15 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 ### 6. 수용 기준 대조
 
-운영자 주도 PR과 AutoFlow cycle PR 모두, PR body에 linked issue의 수용 기준을 대조하는 절을
+운영자 주도 PR과 AutoFlow PR 모두, PR body에 linked issue의 수용 기준을 대조하는 절을
 싣는다.
 
 - 절 머리에 결과가 어느 commit 기준인지 밝힌다: "`<sha>` 시점의 결과".
-- 기준마다 한 줄로 쓴다: 기준 번호(cycle PR은 분석 report `## Acceptance criteria`의 AC id),
+- 기준마다 한 줄로 쓴다: 기준 번호(AutoFlow PR은 applied criteria의 id),
   충족 여부, 확인한 commit, 근거 위치(`path` > section, `path:line`, 실행 기록의 summary line 등).
 - 충족하지 못했거나 일부만 충족한 기준은 그렇게 적고 사유를 같은 줄에 붙인다. 후속 처리는
   *3. 한계와 known gaps*에 적는다.
-- 이 절은 cycle PR의 *5. Verification dispositions*를 대신하지 않는다. dispositions는 검증 방법의
+- 이 절은 AutoFlow PR의 *5. Verification dispositions*를 대신하지 않는다. dispositions는 검증 방법의
   처분이고, 이 절은 기준의 충족 여부다.
 - 항목은 제시만 한다. 이 형식을 검사하는 장치는 없다.
 
@@ -113,10 +113,17 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 `a1b2c3d` 시점의 결과.
 
-- 1 — 충족 · `a1b2c3d` · `src/retry.ts:40-58`, `<attempt-dir>/issue-42-local/ac1-retry.log` → `PASS 3/3`
+- 1 — 충족 · `a1b2c3d` · `src/retry.ts:40-58`, `<attempt-dir>/build-1/local/ac1-retry.log` → `PASS 3/3`
 - 2 — 충족 · `9f8e7d6` · `docs/retry.md` > Backoff
 - 3 — 일부 충족: 설정 파일 경로만 반영, 환경변수 경로는 후속 #43 · `a1b2c3d` · `src/config.ts:12`
 ```
+
+### 7. 도구 요청
+
+AutoFlow PR body는 작업의 모든 도구 요청 — invocation이 주는 각 실행의 `tool-requests.json`
+(`tool_requests`) — 을 싣는다. 요청마다 없었던 것, 대신 한 것, 그 때문에 검증하지 못한 것을 한 줄로
+적어, 운영자가 도구를 갖추고 다시 실행할지, PR을 닫고 도구를 따로 갖출지, merge하고 도구를 더할지
+정할 수 있게 한다 ([U6 Delivery](units/delivery.md) > *Push and pull request*).
 
 ---
 
@@ -124,7 +131,7 @@ criterion 중 automated test로 검증되지 않는 모든 항목을, 그 dispos
 
 본 가이드는 권고. PR 유형에 따라 일부 섹션은 적용되지 않을 수 있다.
 
-- [U6 Delivery](units/delivery.md) > *Push and pull request* 가 본 가이드를 cross-reference (AI orchestrator).
+- [U6 Delivery](units/delivery.md) > *Push and pull request* 가 본 가이드를 cross-reference (delivery module).
 - 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).

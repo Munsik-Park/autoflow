@@ -7,7 +7,7 @@
 # The security checklist AUDIT scores against is the TARGET's: what its service
 # must satisfy is its own security requirement. AutoFlow ships no checklist and
 # names no item; it owns how AUDIT scores (a fresh Evaluation AI, the five
-# rubric items, the PASS thresholds). A target declares where its checklist
+# rubric items, the reference values). A target declares where its checklist
 # lives in the target-owned scaffold `.claude/autoflow.local.json`:
 #
 #   { "audit": { "security_checklist": "docs/security-checklist.md" } }
@@ -16,37 +16,33 @@
 # `.audit.security_checklist` → none declared: AUDIT scores the five rubric
 # items against the change without a checklist and records that it had none.
 #
-# This script decides WHICH VERSION of the declared checklist a cycle's AUDIT
-# reads. A target-owned checklist could be loosened by the cycle it grades —
+# This script decides WHICH VERSION of the declared checklist an attempt's AUDIT
+# reads. A target-owned checklist could be loosened by the attempt it grades —
 # self-certification (docs/core.md > Rule Scope, principle 1). So AUDIT reads the
-# checklist as of the cycle's base commit, and a change the cycle makes to it —
+# checklist as of the attempt's base commit, and a change the attempt makes to it —
 # the file, or the declaration that points at it — is read only on a decision
 # recorded in the issue ledger (docs/decision-ledger.md > *Security-checklist
-# decisions*): the advisor's first judgment, or the operator's override
-# (ADR-0025 D7):
+# decisions*), the advisor's:
 #
-#   ## A<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (advisor)
-#   ## O<n> — <title> (cycle <C>, AUDIT) [checklist-decision]   (operator)
+#   ## A<n> — <title> [checklist-decision]
 #   - Checklist: <the declared path at HEAD, or none>
 #   - Blob: <git rev-parse HEAD:<path>, or none>
 #   - Disposition: accepted | rejected
 #   - Decision: <the decision, one line>
 #   - Grounds: <why, one line>
-#   - Authority: advisor decision | operator decision
-#   - Supersedes: <id>  |  Overrides: A<n>   (only on an entry that replaces one)
+#   - Record: <the advisor's answer file>
+#   - Supersedes: <id>   (only on an entry that replaces one)
 #
-# An entry counts only when its Decision and Grounds lines are non-empty, its
-# Disposition is `accepted` or `rejected`, and its Authority matches its
-# namespace — `advisor decision` on an `A<n>` entry, `operator decision` on an
-# `O<n>` entry; the decider and the grounds are what make it a decision (PR #297
-# review, Medium 1), and the gate hook admits an `A<n>` entry only from the
-# advisor and an `O<n>` entry only from the main session — and only while its
-# Checklist and Blob equal HEAD's, so a later edit to the checklist is a new
-# change that needs its own decision. A decision changes only by a later entry
-# that names the one it replaces (`- Supersedes: <id>`, or an operator's
-# `- Overrides: A<n>`); an advisor entry cannot replace an operator entry.
-# Standing entries that disagree are a conflict: reported, never settled by
-# recency, and left undecided until an entry resolves it.
+# A ledger written before that grammar may carry O entries and an
+# `- Overrides:` line, read as `- Supersedes:`.
+#
+# An entry counts only when its Decision and Grounds lines are non-empty and
+# its Disposition is `accepted` or `rejected` — the decision and its grounds are
+# what make it one (PR #297 review, Medium 1) — and only while its Checklist and
+# Blob equal HEAD's, so a later edit to the checklist is a new change that needs
+# its own decision. A decision changes only by a later entry that names the one
+# it replaces. Standing entries that disagree are a conflict: reported, never
+# settled by recency, and left undecided until an entry resolves it.
 #
 # Subcommand
 #   status [--base <rev>] [--ledger <path>]
@@ -57,13 +53,14 @@
 #       changed-undecided  changed, no covering entry, or standing     exit 3
 #                          entries that disagree (`conflict=<ids>`)
 #     `score=` names what AUDIT reads (`<rev>:<path>`, or `none`); on exit 3 it
-#     is `pending` — the orchestrator spawns the advisor before AUDIT.
-#     --base  the base is `git merge-base HEAD <rev>` (default: the checked-out
-#             branch's base — its `gh-merge-base` on origin, issue #490 — then
-#             origin/HEAD's branch, then origin/main, then main).
+#     is `pending` — the module whose work made the change puts it to the
+#     advisor (docs/decision-ledger.md > *Security-checklist decisions*).
+#     --base  the base is `git merge-base HEAD <rev>`: <rev> is the branch the
+#             pull request merges into (`origin/<base>`). Without it:
+#             origin/HEAD's branch, then origin/main, then main.
 #     --ledger  the issue ledger; without it no change is covered.
 #
-# Exit codes: 0 = resolved; 3 = a change needs a decision (the advisor's first);
+# Exit codes: 0 = resolved; 3 = a change needs a decision (the advisor's);
 #   2 = usage, or a state the record cannot be made from (a malformed
 #   declaration, a declared file not committed at that commit, an uncommitted
 #   edit to the declaration or the checklist, an unresolvable base, jq absent).
@@ -113,17 +110,14 @@ blob_at() {
 }
 
 resolve_base() {
-  local r cand def br gb
+  local r cand def
   if [ -n "$1" ]; then
     git rev-parse -q --verify "$1^{commit}" >/dev/null || die "--base '$1' does not resolve to a commit"
     git merge-base HEAD "$1" || die "no merge-base between HEAD and '$1'"
     return 0
   fi
   def="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  br="$(git symbolic-ref -q --short HEAD 2>/dev/null || true)"
-  gb=""
-  [ -z "$br" ] || gb="$(git config "branch.$br.gh-merge-base" 2>/dev/null || true)"
-  for cand in ${gb:+"origin/$gb"} "$def" origin/main main; do
+  for cand in "$def" origin/main main; do
     [ -n "$cand" ] || continue
     if git rev-parse -q --verify "$cand^{commit}" >/dev/null; then
       r="$(git merge-base HEAD "$cand" 2>/dev/null)" && { printf '%s\n' "$r"; return 0; }
@@ -135,7 +129,7 @@ resolve_base() {
 # decision_id <ledger> <path|none> <blob|none> → the entry covering HEAD's
 # checklist, `CONFLICT:<id>,<id>…` when the standing entries disagree, or empty.
 # An entry stands unless a LATER counted entry names it on a `- Supersedes:` or
-# `- Overrides:` line; an advisor entry never displaces an operator entry. The
+# `- Overrides:` line. The
 # standing entries decide only when they agree: all `accepted` → the last of
 # them covers the change; all `rejected` → nothing covers it; both → a conflict,
 # reported and left undecided (the ledger's supersession rule — nothing is
@@ -147,10 +141,9 @@ decision_id() {
     function trim(s) { gsub(/`/, "", s); gsub(/^[ \t]+|[ \t\r]+$/, "", s); return s }
     function close_entry(   ok) {
       ok = (id != "" && path == want_path && blob == want_blob \
-            && (disp == "accepted" || disp == "rejected") && dec != "" && grounds != "" \
-            && ((id ~ /^O/ && auth ~ /^operator decision\.?$/) || (id ~ /^A/ && auth ~ /^advisor decision\.?$/)))
+            && (disp == "accepted" || disp == "rejected") && dec != "" && grounds != "")
       if (ok) { n++; eid[n] = id; edisp[n] = disp; erepl[n] = repl }
-      id = ""; path = ""; blob = ""; disp = ""; dec = ""; grounds = ""; auth = ""; repl = ""
+      id = ""; path = ""; blob = ""; disp = ""; dec = ""; grounds = ""; repl = ""
     }
     /^#+ / {
       close_entry()
@@ -162,7 +155,6 @@ decision_id() {
     id != "" && /^- Disposition:/ { disp = trim(substr($0, length("- Disposition:") + 1)); next }
     id != "" && /^- Decision:/    { dec = trim(substr($0, length("- Decision:") + 1)); next }
     id != "" && /^- Grounds:/     { grounds = trim(substr($0, length("- Grounds:") + 1)); next }
-    id != "" && /^- Authority:/   { auth = trim(substr($0, length("- Authority:") + 1)); next }
     id != "" && /^- (Supersedes|Overrides):/ { v = $0; sub(/^- [A-Za-z]+:/, "", v); repl = repl " " v; next }
     END {
       close_entry()
@@ -171,7 +163,7 @@ decision_id() {
         for (k = 1; k <= m; k++) {
           if (t[k] == "") continue
           for (j = 1; j < i; j++)
-            if (eid[j] == t[k] && !(eid[i] ~ /^A/ && eid[j] ~ /^O/)) gone[j] = 1
+            if (eid[j] == t[k]) gone[j] = 1
         }
       }
       acc = 0; rej = 0; last = ""; ids = ""

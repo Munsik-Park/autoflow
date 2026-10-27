@@ -12,20 +12,12 @@
 # command body from docs/core.md, and every carrier's documents by the
 # classification scripts/skills/role-docs.tsv:
 #
-#   skills/cycle/SKILL.md            /autoflow:cycle <N> [new] — the whole cycle
-#                                    in one session; the command header, then
-#                                    the whole core in its own order
-#   skills/cycle-u1/SKILL.md …       /autoflow:cycle-u1 <N> [new] …
-#   skills/cycle-u7/SKILL.md         /autoflow:cycle-u7 [<N>] — one unit alone
-#                                    (issue #464, ADR-0032; U7, its issue number
-#                                    optional, ADR-0033); the command header,
-#                                    then the parts of the core the unit uses,
-#                                    in the core's order, by the classification
+#   skills/<module>/SKILL.md         /autoflow:<module> <invocation.json> — one
+#                                    run of one module (ADR-0038 D9); the
+#                                    command header, then the parts of the core
+#                                    the module uses, in the core's order, by
+#                                    the classification
 #                                    scripts/skills/core-units.tsv
-#   skills/criterion-review/SKILL.md /autoflow:criterion-review <N> [new] —
-#                                    U1's criterion review stage alone; the
-#                                    command header, then the core sections the
-#                                    stage is bound by
 #   agents/<name>.md                 an agent definition: its own text, down to
 #   docs/review/review-<name>.md     the generation marker, then what follows
 #                                    it, generated; a reviewer's rule file
@@ -44,7 +36,7 @@
 # The classification reads the core in blocks: a heading; a paragraph; a
 # bullet, a table row or a `**`-led line, with the lines that continue it; a
 # fenced block's fence and each of its unindented lines, with the indented lines
-# under it. Every block takes the units of the entry that matches it — a prefix
+# under it. Every block takes the modules of the entry that matches it — a prefix
 # entry over the block's first line, else its deepest section entry — and a
 # section entry `split` admits no block of its own. A part no entry classifies,
 # a block two prefix entries match, and an entry that matches nothing fail the
@@ -65,8 +57,9 @@
 #                                  differs) otherwise
 #   gen-skill-bodies.sh --list     print each generated command body's path
 #   gen-skill-bodies.sh --list-all print every generated carrier's path
-#   gen-skill-bodies.sh --core Uk  print the core part of unit Uk's body
-# Pure bash + awk + sed; BSD and GNU tools alike.
+#   gen-skill-bodies.sh --core <module>
+#                                  print the core part of a module's body
+# bash + awk + sed, and jq for the contracts; BSD and GNU tools alike.
 # =============================================================================
 
 set -euo pipefail
@@ -77,8 +70,8 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORE="$ROOT/docs/core.md"
 MAP="$ROOT/scripts/skills/core-units.tsv"
 DOCS="$ROOT/scripts/skills/role-docs.tsv"
-UNITS="U1 U2 U3 U4 U5 U6 U7"
-BODIES="cycle cycle-u1 cycle-u2 cycle-u3 cycle-u4 cycle-u5 cycle-u6 cycle-u7 criterion-review"
+MODULES="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality delivery review"
+BODIES="$MODULES"
 
 MODE=write
 case "${1:-}" in
@@ -87,8 +80,8 @@ case "${1:-}" in
   --list) for _s in $BODIES; do echo "skills/$_s/SKILL.md"; done; exit 0 ;;
   --list-all) MODE=list ;;
   --core) MODE=core
-          case " $UNITS " in *" ${2:-none} "*) ;; *) echo "usage: gen-skill-bodies.sh --core U1…U7" >&2; exit 2 ;; esac ;;
-  *) echo "usage: gen-skill-bodies.sh [--check | --list | --list-all | --core Uk]" >&2; exit 2 ;;
+          case " $MODULES " in *" ${2:-none} "*) ;; *) echo "usage: gen-skill-bodies.sh --core <module>" >&2; exit 2 ;; esac ;;
+  *) echo "usage: gen-skill-bodies.sh [--check | --list | --list-all | --core <module>]" >&2; exit 2 ;;
 esac
 [ -f "$CORE" ] || { echo "gen-skill-bodies: $CORE not found" >&2; exit 2; }
 [ -f "$MAP" ] || { echo "gen-skill-bodies: $MAP not found" >&2; exit 2; }
@@ -117,7 +110,7 @@ bullet() { awk -v p="$1" 'index($0, p) == 1 { print; exit }' "$CORE"; }
 need() { [ -n "$2" ] || { echo "gen-skill-bodies: docs/core.md has no $1" >&2; exit 1; }; }
 
 ROOT_DECL='AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
-An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target'"'"'s own files) is the target'"'"'s, and `<attempt-dir>/…` is in the record directory `autoflow-records dir` prints. Where this line is absent — a helper, a shell — `autoflow-root` prints the root.'
+An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target'"'"'s own files) is the target'"'"'s, and `<attempt-dir>/…` is in the attempt'"'"'s record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.'
 GEN_NOTE='<!-- Generated from docs/core.md and the documents scripts/skills/role-docs.tsv names by scripts/skills/gen-skill-bodies.sh — edit those homes, then regenerate. -->'
 MARK='<!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->'
 
@@ -323,13 +316,14 @@ body_docs() {
 }
 
 # classify — the core from its first `## ` heading, one line per core line:
-# "<depth>\t<units>\t<line>", depth the heading level less one (0 off a
-# heading), units `all`, the unit names, `b` (a blank line) or `split` (a
+# "<depth>\t<modules>\t<line>", depth the heading level less one (0 off a
+# heading), modules `all`, the module names, `b` (a blank line) or `split` (a
 # split section's heading, kept when any line of its section is). Fails, naming
 # each defect, as the header says.
 classify() {
-  awk '
+  awk -v mods=" $MODULES " '
     function bad(msg) { print "gen-skill-bodies: core-units.tsv: " msg | "cat 1>&2"; err = 1 }
+    function known(u,   a, q, j) { q = split(u, a, " "); for (j = 1; j <= q; j++) if (index(mods, " " a[j] " ") == 0) return 0; return q > 0 }
     function inscope(i, d,   j) {
       if (m[i] > d) return 0
       for (j = 1; j <= m[i]; j++) if (index(cur[j], st[i, j]) != 1) return 0
@@ -347,7 +341,7 @@ classify() {
       n++; sc[n] = $1; px[n] = $2; un[n] = $3
       m[n] = split($1, tmp, " > ")
       for (j = 1; j <= m[n]; j++) st[n, j] = tmp[j]
-      if (un[n] != "all" && un[n] != "split" && un[n] !~ /^U[1-7]( U[1-7])*$/) bad("\"" $0 "\": units \"" un[n] "\"")
+      if (un[n] != "all" && un[n] != "split" && !known(un[n])) bad("\"" $0 "\": modules \"" un[n] "\"")
       if (px[n] != "" && un[n] == "split") bad("\"" $0 "\": a prefix entry is never split")
       next
     }
@@ -395,8 +389,8 @@ classify() {
     }' "$MAP" "$CORE"
 }
 
-# unit_core <Uk> < classify — the core part of unit Uk's body: the lines whose
-# units name Uk or `all`, a split heading when its section keeps a line, runs of
+# unit_core <module> < classify — the core part of a module's body: the lines
+# whose modules name it or `all`, a split heading when its section keeps a line, runs of
 # blank lines left by a dropped part closed to one.
 unit_core() {
   awk -v k="$1" '
@@ -417,9 +411,9 @@ unit_core() {
     }'
 }
 
-# left_out <Uk> — the classification entries unit Uk does not take, named by
-# heading path and prefix and grouped under their parent path ("Parent: a, b");
-# a split section none of whose entries Uk takes is named once.
+# left_out <module> — the classification entries a module does not take, named
+# by heading path and prefix and grouped under their parent path ("Parent: a,
+# b"); a split section none of whose entries it takes is named once.
 left_out() {
   awk -v k="$1" '
     function takes(i) { return un[i] == "all" || index(" " un[i] " ", " " k " ") > 0 }
@@ -441,7 +435,7 @@ left_out() {
       }
       c = px[i]
       gsub(/\*\*|`/, "", c); sub(/^(- |\| |> )/, "", c); sub(/^\[MUST\] /, "", c)
-      sub(/ \|$/, "", c); sub(/ \([^)]*$/, "", c); sub(/[.:]$/, "", c)
+      sub(/ \|$/, "", c); sub(/ \([^)]*$/, "", c); sub(/[.:]$/, "", c); sub(/ +$/, "", c)
       if (c ~ /^[A-Za-z]/) add(path(sc[i]), c)
     }
     BEGIN { FS = "\t" }
@@ -462,114 +456,77 @@ left_out() {
     }' "$MAP"
 }
 
-# unit_field <Uk> <column> — the unit table row of the core: 1 the unit's name,
-# 2 its phases.
-unit_field() {
-  awk -v k="$1" -v c="$2" -F '|' '
-    index($2, " " k " ") == 1 { f = (c == 1) ? $2 : $3; sub(/^ U[1-7] /, "", f); sub(/^ +/, "", f); sub(/ +$/, "", f); print f; exit }' "$CORE"
-}
-
-gen_cycle() {
-  cat <<'EOF'
----
-name: cycle
-description: >-
-  Run an AutoFlow cycle on an issue in one session — PREFLIGHT, with the
-  attempt's criterion review stage, to REVIEW; `new` asks for a new attempt of
-  the issue (one unit alone is /autoflow:cycle-u1 … cycle-u7). Use only when the
-  operator starts or resumes an AutoFlow cycle (/autoflow:cycle <N> [new]).
-argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
----
-
-EOF
-  printf '%s\n\n' "$ROOT_DECL"
-  cat <<'EOF'
-**Scope** (`$ARGUMENTS`): `<N>` alone runs issue #N's cycle, PREFLIGHT to REVIEW; `new` requests a new attempt, and `--base <branch>` / `--commit <commit>` with it name the base and the start commit `autoflow-records new` makes it at. A session that runs one unit alone is started by that unit's command, `/autoflow:cycle-u1` … `/autoflow:cycle-u7`, whose body carries the parts of the core the unit uses; given `unit=Uk` here, report that and stop.
-
-EOF
-  docs_line skills/cycle/SKILL.md
-  core_body | strip_links
-  body_docs skills/cycle/SKILL.md || return 1
-  printf '\n%s\n' "$GEN_NOTE"
-}
-
-gen_criterion_review() {
-  local conv rule spawn ledger hdp wrapper cross conc
-  conv="$(section '## Instruction Conventions')";                         need 'Instruction Conventions section' "$conv"
-  rule="$(section '## Rule Scope — Authority Rules and AI Judgment')";    need 'Rule Scope section' "$rule"
-  spawn="$(section '## Spawn Model — Phase-by-Phase')";                    need 'Spawn Model section' "$spawn"
-  ledger="$(section '## Decision Ledger')";                               need 'Decision Ledger section' "$ledger"
-  hdp="$(bullet '- **[MUST] Human-decision presentation**')";             need 'Human-decision presentation bullet' "$hdp"
-  wrapper="$(bullet '- **[MUST] File every issue through the wrapper**')"; need 'issue-wrapper bullet' "$wrapper"
-  cross="$(bullet '- **[MUST] Check cross-issue consistency')";           need 'cross-issue bullet' "$cross"
-  conc="$(bullet '- **Concurrent spawns**')";                             need 'Concurrent spawns bullet' "$conc"
-  cat <<'EOF'
----
-name: criterion-review
-description: >-
-  Run the criterion review stage of an AutoFlow cycle alone, also the entry of
-  the abbreviated path — an attempt's review of the issue's acceptance criteria
-  against the target's code and policy, ending at its [criterion-ready] entry;
-  the attempt then goes on by /autoflow:cycle <N> or on the abbreviated path.
-  Use only when the operator asks for the criterion review by itself
-  (/autoflow:criterion-review <N> [new]).
-argument-hint: "<issue-number> [new [--base <branch>] [--commit <commit>]]"
----
-
-EOF
-  printf '%s\n\n' "$ROOT_DECL"
-  cat <<'EOF'
-**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`) — U1's criterion review stage of issue #N alone, entered as `/autoflow:cycle` enters it (`<autoflow-root>/docs/units/preparation.md` > *The criterion review stage*): from the facts `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` reports, the attempt is created first on `new` or on the operator's `new` request, and `criterion-review` enters the attempt it names; otherwise the session reports and stops. Follow `<autoflow-root>/docs/criterion-review.md`, carried below; the stage ends at its `[criterion-ready]` entry and writes no state file, and a `READY` attempt then goes on by `/autoflow:cycle <N>` or on the abbreviated path (`<autoflow-root>/docs/abbreviated-path.md`). The rules below, from `<autoflow-root>/docs/core.md`, bind the session while it does.
-
-EOF
-  docs_line skills/criterion-review/SKILL.md
-  {
-    printf '%s\n\n' "$conv" "$rule" "$spawn" "$ledger"
-    printf '## Execution Principles\n\n%s\n%s\n%s\n\n' "$hdp" "$wrapper" "$cross"
-    printf '## Cost Control\n\n%s\n' "$conc"
-  } | strip_links
-  body_docs skills/criterion-review/SKILL.md || return 1
-  printf '\n%s\n' "$GEN_NOTE"
-}
-
 # wrap76 — words onto lines of at most 76 bytes, each indented two spaces (fold
 # breaks differently in BSD and GNU).
 wrap76() {
   awk '{ for (i = 1; i <= NF; i++) { if (l != "" && length(l) + 1 + length($i) > 76) { print "  " l; l = "" } l = (l == "" ? $i : l " " $i) } } END { if (l != "") print "  " l }'
 }
 
-gen_unit() {
-  local k="$1" lk name phases new hint out alone
-  lk="$(printf '%s' "$k" | tr 'U' 'u')"
-  name="$(unit_field "$k" 1)";   need "unit table row for $k" "$name"
-  phases="$(unit_field "$k" 2)"; need "unit table phases for $k" "$phases"
-  out="$(left_out "$k")"
-  new=" <N>"; hint="<issue-number>"
-  [ "$k" = U1 ] && { new=" <N> [new]"; hint="<issue-number> [new [--base <branch>] [--commit <commit>]]"; }
-  alone="of an AutoFlow cycle alone"
-  [ "$k" = U7 ] && { new=" [<N>]"; hint="[<issue-number>]"; alone="of an AutoFlow cycle alone, or the review of an attempt with no state file on the abbreviated path"; }
-  printf -- '---\nname: cycle-%s\ndescription: >-\n' "$lk"
-  printf 'Run unit %s (%s — %s) %s, in a session of its own, with the parts of the core %s uses. Use only when the operator starts a %s session (/autoflow:cycle-%s%s).\n' \
-    "$k" "$name" "$phases" "$alone" "$k" "$k" "$lk" "$new" | wrap76
-  printf 'argument-hint: "%s"\n---\n\n' "$hint"
+# mod_desc <module> — the command's one-line description of what a run yields.
+mod_desc() {
+  case "$1" in
+    criterion-screen)    echo "each acceptance criterion reviewed against the target's code and policy, its cases screened, and every item the review finds disposed of with its grounds." ;;
+    criterion-trace)     echo "how far each confirmed cause reaches and whether each required behavior conflicts with the rules in force." ;;
+    criterion-in-depth)  echo "a verdict on each target case of one criterion, on the code that decides it." ;;
+    criterion-reconcile) echo "the review record reconciled with the trace and the in-depth verdicts, every item disposed of." ;;
+    analysis)            echo "the analysis report, each conclusion with its grounds." ;;
+    criteria-apply)      echo "the applied acceptance criteria, the analysis report's criteria with the standing [ac-decision] entries applied." ;;
+    hypothesis)          echo "the scores of the analysis report (GATE:HYPOTHESIS)." ;;
+    design)              echo "the feature design and the verification design." ;;
+    plan)                echo "the scores of the design (GATE:PLAN)." ;;
+    build)               echo "the design implemented and verified on the branch, with its build report." ;;
+    audit)               echo "the test-first judgment and the scores of the change on the security items (AUDIT)." ;;
+    quality)             echo "the scores of the built change (GATE:QUALITY)." ;;
+    delivery)            echo "the branch pushed, the change shown working, and a draft pull request open with CI green or its not running recorded." ;;
+    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict posted on it." ;;
+  esac
+}
+
+# mod_work <module> — the command's sentence on what does the module's work.
+mod_work() {
+  local sp='bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model' key
+  case "$1" in
+    criterion-screen)    printf 'The session does the work itself, as `<autoflow-root>/docs/criterion-review.md` (below) states it, on the model and effort its *The four modules* names.' ;;
+    criterion-trace)     printf 'The work is one `autoflow-criterion-tracer` spawn on the model `%s criterion-trace` names, given the inputs the invocation names and the output directory (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
+    criterion-in-depth)  printf 'The work is one `autoflow-criterion-analyzer` spawn on the model `%s criterion-in-depth` names, given the criterion'"'"'s target file and the output directory and nothing of the review'"'"'s verdicts or grounds — the target'"'"'s code it reads in the checkout (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
+    criterion-reconcile) printf 'The work is one `autoflow-criterion-reconciler` spawn on the model `%s criterion-reconciliation` names, given the inputs the invocation names and the output directory (`<autoflow-root>/docs/criterion-review.md`, below).' "$sp" ;;
+    analysis|design|build)
+      printf 'The work is one `autoflow-unit-%s` spawn on the model `%s unit-%s` names (`<autoflow-root>/docs/units/%s.md` > Unit spawn, below).' "$1" "$sp" "$1" "$1" ;;
+    hypothesis|plan|audit|quality)
+      key="gate-$1"; [ "$1" = audit ] && key=audit
+      printf 'The work is one fresh `autoflow-evaluator` spawn on the model `%s %s` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below).' "$sp" "$key" ;;
+    delivery)            printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it; a failed CI check is read by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
+    review)              printf 'The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round'"'"'s reviews are aggregated by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
+  esac
+}
+
+# gen_module <module> — a module's command body: the header, the parts of the
+# core the module uses, then its documents.
+gen_module() {
+  local m="$1" out
+  out="$(left_out "$m")"
+  printf -- '---\nname: %s\ndescription: >-\n' "$m"
+  printf 'Run the AutoFlow %s module once on an invocation file — %s Use when the operator runs the %s module (/autoflow:%s <invocation.json>).\n' \
+    "$m" "$(mod_desc "$m")" "$m" "$m" | wrap76
+  printf 'argument-hint: "<invocation.json>"\n---\n\n'
   printf '%s\n\n' "$ROOT_DECL"
-  if [ "$k" = U7 ]; then
-    printf '**Scope** (`$ARGUMENTS`: `<N>`, or nothing) — unit %s, %s (%s), of a cycle alone: read where the cycle stands from the current state — `bash <autoflow-root>/scripts/preflight/cycle-status.sh`, with `--issue <N>` when given — run %s from there to its exit transition, and end the session with the report the invoking prompt asks for. On an attempt with no state file whose pull request is open — the abbreviated path'"'"'s — %s runs as `<autoflow-root>/docs/units/review.md` > *An attempt with no state file* says and ends with the report that section names.\n\n' \
-      "$k" "$name" "$phases" "$k" "$k"
+  if [ "$m" = criteria-apply ]; then
+    printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the criteria-apply module (`<autoflow-root>/docs/contracts/criteria-apply.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/criteria-apply.sh <invocation.json>`, which checks the inputs, writes `<out>/applied-criteria.json` and runs check-out itself; the run ends with the `<out>/result.json` it writes.\n\n'
   else
-    if [ "$k" = U1 ]; then
-      printf '**Scope** (`$ARGUMENTS`: `<N>`, `new` the request for a new attempt, `--base <branch>` / `--commit <commit>` its base and start commit for `autoflow-records new`)'
+    printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the %s module (`<autoflow-root>/docs/contracts/%s.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. %s' \
+      "$m" "$m" "$(mod_work "$m")"
+    if jq -e '.reads_records' "$ROOT/docs/contracts/$m.json" >/dev/null; then
+      printf ' The invocation'"'"'s `records` is the attempt'"'"'s record directory, where earlier runs left their work.'
+      printf ' Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor'"'"'s key is `advisor` (*Spawn Model*, below).\n\n'
     else
-      printf '**Scope** (`$ARGUMENTS`: `<N>`)'
+      printf ' Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` (*Spawn Model*, below).\n\n'
     fi
-    printf ' — unit %s, %s (%s), of issue #N'"'"'s cycle alone: confirm from `bash <autoflow-root>/scripts/preflight/cycle-status.sh --issue <N>` that the cycle stands at %s'"'"'s entry (otherwise report the situation and stop), run %s from its entry to its exit transition, and end the session with the report the invoking prompt asks for.\n\n' \
-      "$k" "$name" "$phases" "$k" "$k"
   fi
-  printf '**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that %s uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: %s.\n\n' \
-    "$k" "${out:-none}"
-  docs_line "skills/cycle-$lk/SKILL.md"
-  unit_core "$k" < "$TMP/core.tagged" | strip_links
-  body_docs "skills/cycle-$lk/SKILL.md" || return 1
+  printf '**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the %s module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: %s.\n\n' \
+    "$m" "${out:-none}"
+  docs_line "skills/$m/SKILL.md"
+  unit_core "$m" < "$TMP/core.tagged" | strip_links
+  body_docs "skills/$m/SKILL.md" || return 1
   printf '\n%s\n' "$GEN_NOTE"
 }
 
@@ -587,10 +544,8 @@ mkdir -p "$TMP/out"
 while IFS= read -r _f; do
   mkdir -p "$TMP/out/$(dirname "$_f")"
   case "$_f" in
-    skills/cycle/SKILL.md)            gen_cycle ;;
-    skills/criterion-review/SKILL.md) gen_criterion_review ;;
-    skills/cycle-u*/SKILL.md)         _k="${_f#skills/cycle-}"; gen_unit "$(printf '%s' "${_k%%/*}" | tr 'u' 'U')" ;;
-    *)                                gen_carrier "$_f" ;;
+    skills/*/SKILL.md) _m="${_f#skills/}"; gen_module "${_m%%/*}" ;;
+    *)                 gen_carrier "$_f" ;;
   esac > "$TMP/out/$_f" || exit 1
 done < "$TMP/carriers"
 

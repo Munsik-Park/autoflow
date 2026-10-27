@@ -1,0 +1,50 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-reconcile",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "The review record reconciled with the trace and the in-depth verdicts: every case where they differ settled in the code, and the record's dispositions brought to match — the review's result, an item and its disposition each.",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "review_record": {
+      "required": true,
+      "from": {
+        "module": "criterion-screen",
+        "output": "review_record"
+      }
+    },
+    "trace": {
+      "required": true,
+      "from": {
+        "module": "criterion-trace",
+        "output": "trace"
+      }
+    },
+    "in_depth": {
+      "required": false,
+      "from": {
+        "module": "criterion-in-depth",
+        "output": "in_depth"
+      }
+    }
+  },
+  "outputs": {
+    "review_record": {
+      "file": "criterion-review.md",
+      "format": "markdown",
+      "note": "the screen's record brought up to date — a new file, the input left as it is (§5.3)",
+      "checks": [],
+      "evaluation": [
+        "every criterion of the issue, and every problem the review finds beyond them, is disposed of, with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
+        "every finding of the trace and every in-depth case is reflected in the dispositions, with its grounds"
+      ]
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "criterion-trace",
+  "kind": "functional",
+  "reads_records": false,
+  "goal": "How far each cause the review confirmed reaches beyond the points the issue reports, and whether each behaviour a criterion requires conflicts with the rules the code already has — assuming no fix.\n",
+  "procedure": "docs/criterion-review.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    }
+  },
+  "inputs": {
+    "review_record": {
+      "required": true,
+      "from": {
+        "module": "criterion-screen",
+        "output": "review_record"
+      },
+      "note": "Only these: the module runs in a context that carries nothing else of the review."
+    }
+  },
+  "outputs": {
+    "trace": {
+      "file": "trace.md",
+      "format": "markdown",
+      "evaluation": [
+        "each finding with its grounds, and whether the review record already has it; \"none\" when there is none"
+      ]
+    }
+  }
+}

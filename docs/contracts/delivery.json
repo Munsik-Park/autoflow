@@ -1,0 +1,110 @@
+{
+  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "delivery",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "The branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
+  "procedure": "docs/units/delivery.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "branch": {
+      "type": "string",
+      "required": true
+    },
+    "base": {
+      "type": "string",
+      "required": false,
+      "note": "the branch the pull request is to merge into; not given, the remote's default branch"
+    }
+  },
+  "inputs": {
+    "commits": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "commits"
+      }
+    },
+    "applied_criteria": {
+      "required": true,
+      "from": {
+        "module": "criteria-apply",
+        "output": "applied_criteria"
+      }
+    },
+    "feature_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
+    "verification_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "verification_design"
+      }
+    },
+    "build_report": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "report"
+      }
+    },
+    "quality_evaluation": {
+      "required": true,
+      "from": {
+        "module": "quality",
+        "output": "evaluation"
+      }
+    },
+    "tool_requests": {
+      "required": false,
+      "from": {
+        "results": "tool_requests"
+      },
+      "note": "Besides the criteria, the PR body owes the operator the tool requests of every run (§5.3) and the recommendations deferred or separated. Each path is one run's tool-requests.json."
+    },
+    "deferred": {
+      "required": false,
+      "from": {
+        "path": "invocation"
+      },
+      "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
+    }
+  },
+  "outputs": {
+    "pull_request": {
+      "format": "pull-request",
+      "checks": [
+        {
+          "type": "pr_open",
+          "branch_param": "branch",
+          "draft": true
+        },
+        {
+          "type": "pr_checks",
+          "not_run_marker": "CI: not run",
+          "note": "the head's checks are all green, or the body records that no CI ran with the marker line"
+        }
+      ]
+    },
+    "integration": {
+      "file": "integration.md",
+      "format": "markdown",
+      "note": "how the change was shown working above its own tests, and what that showed"
+    },
+    "ci_failure": {
+      "file": "ci-failure.md",
+      "format": "markdown",
+      "required": false,
+      "note": "Written when a CI check failed: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment (docs/units/delivery.md > CI failure)."
+    }
+  }
+}
