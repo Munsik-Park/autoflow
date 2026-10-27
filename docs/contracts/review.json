@@ -38,7 +38,7 @@
       "note": "one per configured reviewer; a reviewer unavailable for the round is named with the reason in the findings"
     },
     "findings": {
-      "file": "findings.md",
+      "file": "review-findings.md",
       "format": "markdown",
       "checks": [],
       "evaluation": [

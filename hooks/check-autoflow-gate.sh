@@ -569,7 +569,7 @@ if [ "$TOOL_NAME" = "Agent" ]; then
   AGENT_MODEL=$(echo "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)
   if [ -z "$AGENT_MODEL" ]; then
     echo "BLOCKED: Agent spawn without an explicit 'model' parameter ($(af_path docs/core.md) > Spawn Model)." >&2
-    echo "Declare the phase-policy model on every spawn (e.g. model: \"sonnet\" / \"opus\") — omitting it inherits the host session model and bypasses the per-phase policy." >&2
+    echo "Declare on every spawn the model the spawn-policy readout gives ($(af_path scripts/spawn-policy/spawn-policy.sh) model <phase-key>) — omitting it inherits the host session model and bypasses the per-phase policy." >&2
     exit 2
   fi
 fi

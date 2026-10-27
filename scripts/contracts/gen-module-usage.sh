@@ -42,7 +42,7 @@ section() { # <contract file>
       elif has("module") then "`\(.module)` → `\(.output)`"
       elif has("ledger") then "the ledger: " + (.ledger | map("`[\(.)]`") | join(", ")) + " entries"
       elif has("path") then (if .path == "target" then "a document of the target" else "a file the invocation gives" end)
-      elif has("results") then "the `tool-requests.json` of earlier runs"
+      elif has("results") then "the `tool-requests.json` of every earlier run"
       else "?" end;
     def ptype: if .pattern then "`\(.pattern)`" elif .type then .type else "" end;
     "### `\(.module)`",

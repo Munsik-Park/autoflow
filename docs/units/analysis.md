@@ -142,7 +142,7 @@ The rules below are the ones other documents cite; everything else about the wor
 
 ## Analysis report
 
-`<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
+`<out>/issue-analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
 up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
 the table below lists, for the readers it names; the headings and the form are the module's, and a
 matter with nothing to record is said to have none — except the `## Acceptance criteria` table,

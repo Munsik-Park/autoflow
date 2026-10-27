@@ -112,5 +112,5 @@ carry, never routes the cycle.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged, and its
   fix is made like any other change.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
-  ([`core.md`](../core.md) > Cross-Project Boundary Rules); the build module of that scope makes
-  the same single commit on the same terms.
+  ([`core.md`](../core.md) > Cross-Project Boundary Rules); its fix is the same single commit, on
+  the same terms, in that scope.

@@ -40,7 +40,7 @@ context / AC 를 판단 근거로 삼았는지 `path > section` 형태로 명시
   사유 한 줄 ("ADR not required: ...").
 - linked issue 의 AC 를 PR 에서 도달 가능하게 (이슈 링크 + AC 섹션, 또는 body 에 명시).
 - 기록 폴더(`<attempt-dir>/*`)의 scratch 는 리뷰 입력으로 링크하지 않고, 리뷰어가 봐야 할 근거는
-  linked issue 나 commit 된 문서로 옮긴다.
+  linked issue 나 commit 된 문서, 또는 PR body 로 옮긴다.
 
 정책: Repository documents may be used as review evidence only when the PR links or
 names the relevant document/section, or when the reviewer independently discovers

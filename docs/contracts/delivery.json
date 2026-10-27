@@ -69,7 +69,7 @@
       "from": {
         "results": "tool_requests"
       },
-      "note": "Besides the criteria, the PR body owes the operator the run's tool requests (§5.3) and the recommendations deferred or separated. Each is a run's tool-requests.json."
+      "note": "Besides the criteria, the PR body owes the operator the tool requests of every run (§5.3) and the recommendations deferred or separated. Each path is one run's tool-requests.json."
     },
     "deferred": {
       "required": false,
