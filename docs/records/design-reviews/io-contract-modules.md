@@ -671,6 +671,45 @@ No test today exercises the score thresholds, the planning or implementation spa
   audit's checklist input given by the invocation while the command body says `status` names it;
   the integration check failing on the environment alone (a local `codex` shim) with no rule for it;
   stopping the CI check, by the operator's word here, with no way to record it.
+- **The modules run in sessions that each take several** (Munsik-Park/opensre#28, integration
+  branch at `1a7e943`, 2026-10-27). Five sessions ran eighteen modules, from the criterion review to
+  the review of draft PR Munsik-Park/opensre#29; all accepted. One session running modules one after
+  another met no obstacle. A third of the cost was the criterion review; advisor decision A4 widened
+  AC3 to every schedule computation and every surface naming the zone, and the design and build grew
+  with it. Not exercised: the build's checklist `--base`, delivery's exit 10, a re-score with no prior
+  findings. The sessions' defect candidates were disposed with the operator one by one (PR #516):
+- **`tool-requests.json` written only when something was lacking** (same run). Seven role spawns
+  wrote none and the session wrote `[]`; the one that lacked a tool (criterion-trace: no Sentry or
+  PostHog integration) recorded it. Nothing was lost: not a defect.
+- **A recorded tool request left out of the PR body** (same run). delivery was given all sixteen
+  runs' files and read the last three; criterion-trace's request did not reach the body. The
+  delivery procedure and contract now say every run's file, the criterion review's as much as the
+  last ones.
+- **Claude Code refuses a subagent's Write by file name** (same run). The analysis spawn's Write of
+  `analysis.md` was refused ("Subagents should return findings as text, not write report files")
+  and it wrote through Bash. Claude Code 2.1.311 refuses a subagent a basename matching
+  `^(REPORT|SUMMARY|FINDINGS|ANALYSIS).*\.md$`, case-insensitive; a probe confirmed it. The two
+  outputs that matched are renamed `issue-analysis.md` and `review-findings.md`.
+- **Disposing of recommendations not taken back to a re-run** (same run). The session found no
+  output to hold plan-2's four Lows; the coordinating session wrote the `deferred` file. Which
+  recommendations go to a re-run and which are deferred is the assembler's: a coordination item, not
+  a contract change.
+- **An added criterion's text changed** (same run). The advisor recorded A3 and A4 as `added` with
+  `Supersedes`; `revised` on an added criterion is refused by criteria-apply.sh as a conflict or as an
+  absent criterion. The ledger grammar now says so.
+- **Several files for one input; the issue's repository** (same run). An array of paths for
+  reconcile's `in_depth` and delivery's `tool_requests` passed as `contract.sh` reads every input;
+  the guide and the header now say it. `criterion-ready.sh` and delivery's check-out read GitHub
+  without `--repo`; non-interactive gh takes the `upstream` remote first when no default is set. The
+  guide states that a module runs in the target's checkout and `issue` is an issue of the repository
+  gh resolves there.
+- **Who commits a comment-only fix** (same run). core's Commit Ownership named the build module
+  while *Code comments in a target* says no module owns it (Q11); the core row goes. quality-1's two
+  comment Lows were deferred and stated on the PR. A dedicated module is #515, outside this work.
+- **Smaller ones** (same run): pr-body-guide principle 4 now admits the PR body as a place for the
+  evidence a reviewer needs, as principle 5's records are; the core's spawn-model example ("sonnet"
+  or "opus", where the policy gives the advisor `fable`) and the hook message's go, the value being
+  the readout's; the guide's in-depth `out` example and its `decisions` were read right and stay.
 
 ## Handoff log
 
@@ -686,3 +725,6 @@ No test today exercises the score thresholds, the planning or implementation spa
 | 8 | 2026-10-26 | Q28 and Q29 (§6), on the opensre#1 run's observations: the evaluator writes its own `<out>/evaluation.json`; the contracts keep only the checks a script, an owed id or a fact needs (`mentions` and a count-only `covers` added; the section, table, line, rank and verbatim checks of the analysis, criterion review, design, build, review and delivery outputs go); the procedures state what each output holds instead of its form. Checked on copies of the run's outputs: design-2, plan-2, quality-1 and review-2 accepted (review-2 refused before), a design naming no AC2 and a re-score answering 2 of 7 findings refused. The one-shot validator suite's twelve form cases now pass where they refused, as intended. | The coordination improvements (`coordination/IMPROVEMENTS-opensre-1-2026-10-26.md`), led by the operator; sub-issue 3 filed; push, PRs and review. |
 | 9 | 2026-10-26 | Q30 (§6): one advisor request holds the decisions that depend on each other, each recorded apart. A module usage document for whoever assembles the modules, at the operator's request ("이 부품들을 어떻게 사용할 수 있는지 … 문서를 만드는 것이 좋을 것 같아요"): `docs/autoflow-guide.md` — how a module is run and how one's output becomes another's input, by hand; each module's params, inputs with their sources, outputs and an invocation skeleton, generated from the contracts by `scripts/contracts/gen-module-usage.sh` in place of the guide's hand-kept module table, which `contract.sh lint` checks. Re-running criteria-apply after a run that changed the criteria is the assembler's, recorded in the coordination improvements (C8). | The remaining items: the small contract and document mismatches; whether a test kept in the target's tree is a goal; wording that sends a worker looking for grounds. |
 | 10 | 2026-10-26 | Small mismatches put right (principle 4): no `result.summary` in the contracts (nothing wrote or read it), criteria-apply's note in the present, the design's ledger input by `[ac-decision]` only, the trace given its declared inputs only (`reads_records: false`, as its procedure says). Wording that sent a worker after grounds, by Q29's rule: the evaluator prompt's five-line limit goes (S17 shortened eight paths to fit it), and Reporting Format states its goals — the body in the output directory and pointed at, a confirmable anchor for every claim of done or passing, short — without its line and row counts. The audit's checklist input and re-running criteria-apply after a criteria change are the assembler's (coordination C8, C9); a test kept in the target's tree stays as ADR-0024 left it, for the operator to watch. | Sub-issue 3 filed; push, PRs and review. |
+| 11 | 2026-10-26 | Q31 (§6): no contract finds an owed id in free text; whether an output disposes of every owed item is the evaluations'. Sub-issue 3 filed (#513); the transition branch rebased onto the integration branch and pushed. | PR for sub-issue 3 and its review. |
+| 12 | 2026-10-27 | PR #514 (sub-issue 3) opened, reviewed in four rounds (`eea31ae`, `b916ee4`, `24a251f`, `42d3c65`) and merged (`1a7e943`); #513 and #509 closed. The modules run on Munsik-Park/opensre#28 from the integration branch (§11 *The modules run in sessions that each take several*): eighteen runs, all accepted, draft PR Munsik-Park/opensre#29; the sessions' defect candidates recorded, not fixed. | Dispose of the defect candidates with the operator. |
+| 13 | 2026-10-27 | The twelve defect candidates disposed with the operator (§11, the items after the run's): eight put right in wording or names, four found not to be defects or to be the assembler's; PR #516 reviewed in three rounds and merged (`9f4107f`). The comment-fix module filed outside the epic (#515); a coordination item recorded locally. ADR-0038 accepted. | The integration branch to `main`; release; close #507. |

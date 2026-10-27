@@ -2,9 +2,10 @@
 
 ## Status
 
-Proposed (epic #507, sub-issue 3; the decisions of the design review
-`docs/records/design-reviews/io-contract-modules.md` > Open decisions, Q1–Q27, settled by the
-operator 2026-10-23 – 2026-10-26). Supersedes ADR-0025 D1, D5, D6 and D8, the parts of D2, D3, D4
+Accepted (operator decision 2026-10-27, epic #507, sub-issue 3; the decisions of the design review
+`docs/records/design-reviews/io-contract-modules.md` > Open decisions, Q1–Q31, settled by the
+operator 2026-10-23 – 2026-10-26; accepted after the module test on Munsik-Park/opensre#28 and the
+reviews of PRs #512, #514 and #516). Supersedes ADR-0025 D1, D5, D6 and D8, the parts of D2, D3, D4
 and D7 named in *Relation to other decisions*, and D7's operator override; ADR-0029 D2–D6 and D8;
 ADR-0030 D2, D3, D5–D7 and D9; ADR-0032 D1–D2 and D5; ADR-0033 D1–D2; ADR-0036 D1–D7; ADR-0037 K1's
 base clause, K2–K4, K6, D2's Coordinator — the owner it names for M2–M5 and its definition — and D3;
