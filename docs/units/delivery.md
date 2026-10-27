@@ -53,8 +53,9 @@ The body lets the operator decide on the pull request. It states:
 - each applied acceptance criterion with its outcome and where its evidence is;
 - what the work verified other than by an executable test, and how — the reviewer reads it
   (`<autoflow-root>/docs/review/review.md` > Before Reviewing);
-- what the work could not verify, and why: the tool requests of its runs (`tool_requests`), so the
-  operator decides on them;
+- what the work could not verify, and why: the tool requests in each run's file the invocation
+  gives (`tool_requests`) — the criterion review's runs as much as the last ones —, so the operator
+  decides on them;
 - what the change leaves undone: the problems it separated and the recommendations deferred
   (`deferred`);
 - CI's result, or that CI did not run.

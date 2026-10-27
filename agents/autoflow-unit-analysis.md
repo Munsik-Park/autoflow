@@ -29,7 +29,7 @@ principle 2).
   `<autoflow-root>/docs/units/analysis.md` > *What the analysis owes*; how far and by what
   means you pursue a cause, and how you keep the cautions, are yours, recorded
   under `## Method` and `## Cause`.
-- **Output**: the analysis report `<out>/analysis.md`, with the sections
+- **Output**: the analysis report `<out>/issue-analysis.md`, with the sections
   `<autoflow-root>/docs/units/analysis.md` > *Analysis report* lists — the acceptance-criterion
   table, the referenced materials, the scope judgments, the affected documents and
   the decision points — and the run's tool requests (`<out>/tool-requests.json`).
@@ -221,7 +221,7 @@ The rules below are the ones other documents cite; everything else about the wor
 
 ## Analysis report
 
-`<out>/analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
+`<out>/issue-analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
 up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
 the table below lists, for the readers it names; the headings and the form are the module's, and a
 matter with nothing to record is said to have none — except the `## Acceptance criteria` table,

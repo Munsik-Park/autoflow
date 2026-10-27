@@ -50,6 +50,9 @@ into one BUILD (ADR-0025):
 
 ## Running a module
 
+- A module runs in the target's checkout, the session's working directory; `issue` is an issue of
+  the repository gh resolves there — in a checkout with more than one remote, set it with
+  `gh repo set-default`.
 - A module runs once on an invocation file: `/autoflow:<module> <invocation.json>`. The invocation
   names the module's `params`, its `inputs` by path, its output directory `out`, and, for a module
   given the record directory, `records` — the attempt's record directory, where the ledger
@@ -71,6 +74,7 @@ into one BUILD (ADR-0025):
   (the build's commits as the range `{branch, from, to}` its `result.json` records); ledger entries, given as the ledger
   file; a document of the target; or a file the invocation gives. The review's `pr` is
   `<owner>/<name>#<N>`, the pull request the delivery's `result.json` records.
+- An input given several files takes them as an array of paths.
 - A re-run takes its previous output and the findings it answers, the inputs named `previous_…` and
   `findings`.
 - The acceptance criteria every module after the analysis takes are criteria-apply's output: the
@@ -201,7 +205,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 
 | Output | File |
 |---|---|
-| `report` | `<out>/analysis.md` |
+| `report` | `<out>/issue-analysis.md` |
 
 ```json
 {"contract":1,"module":"analysis","params":{"issue":"<issue-number>"},"inputs":{},"records":"<record directory>","out":"<record directory>/analysis-<n>"}
@@ -453,7 +457,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `reviews` | `<out>/reviews/*.md` |
-| `findings` | `<out>/findings.md` |
+| `findings` | `<out>/review-findings.md` |
 | `comment` | `<out>/comment.md` |
 
 ```json
