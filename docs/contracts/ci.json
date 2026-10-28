@@ -75,9 +75,7 @@
           "type": "ci_verdict",
           "path": ".prs",
           "not_run_marker": "CI: not run",
-          "list_input": "pull_requests",
-          "list_path": ".pull_requests",
-          "note": "each green or not-run, judged again by confirm-ci-green.sh --once on the head the entry names; the entries' {pr, head} exactly the input's"
+          "note": "each green or not-run, judged again by confirm-ci-green.sh --once on the head the entry names"
         }
       ]
     },

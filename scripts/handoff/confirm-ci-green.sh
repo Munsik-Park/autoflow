@@ -28,7 +28,9 @@
 #   --pr <N>            Required. PR number to confirm. Non-numeric/missing -> exit 64.
 #   --once              Read the PR once and give the verdict on that read, with
 #                       no wait: the same exit codes, by the same rules, on one
-#                       read of the mergeable state and one of the checks.
+#                       read of the mergeable state and one of the checks — the
+#                       checks read once whatever CI_POLL_TIMEOUT_SECS or the
+#                       time left to the deadline.
 #   --repo <owner/name> Optional. Forwarded to every `gh pr view` call (cross-repo
 #                       selector, mirrors scripts/review/codex-review-pr.sh).
 #                       Omitted => the current repository (host PR). The
@@ -470,12 +472,13 @@ fi
 
 # ---------------------------------------------------------------------------
 # 2. POLL (reached on a mergeable precheck OR a degraded-precheck fall-through),
-#    deadline-bounded and finite.
+#    deadline-bounded and finite. --once enters it once whatever the deadline,
+#    and every path through it under --once breaks or exits.
 # ---------------------------------------------------------------------------
-while [ "$(date +%s)" -lt "$deadline" ]; do
+while [ "$ONCE" -eq 1 ] || [ "$(date +%s)" -lt "$deadline" ]; do
   now="$(date +%s)"
   remaining=$(( deadline - now ))
-  [ "$remaining" -le 0 ] && break
+  if [ "$ONCE" -eq 0 ] && [ "$remaining" -le 0 ]; then break; fi
 
   # Per-call watchdog sub-bound: min(interval, remaining-to-deadline), >=1.
   sub_bound="$(clamp_to_interval "$remaining")"
@@ -524,7 +527,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
   if [ "$fail" -gt 0 ]; then
-    if [ "$total" -gt 0 ]; then saw_checks=1; fi
+    saw_checks=1
     echo "${fail} of ${total} check(s) concluded and are not green — red CI" >&2
     observed
     exit 12
