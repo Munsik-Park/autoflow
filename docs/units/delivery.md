@@ -111,8 +111,8 @@ These rules hold on every push and every pull request the module makes. Everythi
 name — the title, how the body is composed, when the push happens — is the module's.
 
 - **Pushing and opening a pull request are the module's own commands.** `git push …` and
-  `gh pr create …` are issued as those commands, never through a script or a wrapper, so the hook
-  sees them.
+  `gh pr create …` are issued as those commands, never through a script or a wrapper
+  (`<autoflow-root>/docs/core.md` > Scripts).
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (issue #518). Amends ADR-0038 D1 — the module list, and check-out's result — and the
+Accepted (operator decision 2026-10-28, issue #518). Amends ADR-0038 D1 — the module list, and check-out's result — and the
 delivery's contract. ADR-0038 D2, ADR-0034 D2 and D5, and the authority rules of the core stand.
 
 ## Context
@@ -55,7 +55,7 @@ Each process of the former module is placed as follows.
 
 | Process | Placed in | Grounds |
 |---|---|---|
-| Push of the host branch | `delivery` | A push is a module's own command, which the hook sees (core > Push and PR creation; Rule Scope principle 1); by the operator's default it is one action with opening the pull request. |
+| Push of the host branch | `delivery` | The operator's decision: by default, pushing and opening the pull request are one action. |
 | Integration checks and the deploy/CI-path verification | `integration` | Own inputs (the commits and the design and build documents) and own output (`integration.md`); it runs on the branch before anything is pushed. Kept apart from the push so that whether a pull request follows a failed check is decided outside the module, as the operator decided. |
 | Opening the draft pull request, its body, updating an open one | `delivery` | The operator's default: push and pull request are one action; the draft rule is an authority rule of the module that opens it. |
 | CI confirmation, the conflict read, recording CI as not run, confirming each added test file ran in CI | `ci` | All four are the state of CI on a pull request's head and the body's CI part that states it; one script reads them; run alone, it can be run again on a pull request whose head or draft state changed since it was opened. |

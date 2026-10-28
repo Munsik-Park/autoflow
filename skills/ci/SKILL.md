@@ -46,7 +46,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Tools.** A tool the work needs is used. One the environment lacks — or what using a tool the environment has lacks, or a material an acceptance criterion or the issue body references that cannot be opened — is recorded as a tool request: what is missing, and what the run did instead, including each verification it left unrun for the lack. The run does what it can without it and ends; the requests go in `<out>/tool-requests.json` — which every run writes, `[]` when it lacked nothing — and the run's report, and the delivery module states them in the pull request for the operator (`<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*; ADR-0038 D1).
 
-**Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands, which the hook sees.
+**Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands.
 
 **Push and PR creation**: the delivery module pushes the branch and opens each pull request as a draft with its own `git push` / `gh pr create`; the ci module confirms CI is green, or records on the pull request that CI did not run, never reading that as green. What the PR body carries, the host PR's `Closes #N` included, is the delivery module's, its CI part the ci module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*, *CI*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
 
@@ -342,8 +342,8 @@ These rules hold on every push and every pull request the module makes. Everythi
 name — the title, how the body is composed, when the push happens — is the module's.
 
 - **Pushing and opening a pull request are the module's own commands.** `git push …` and
-  `gh pr create …` are issued as those commands, never through a script or a wrapper, so the hook
-  sees them.
+  `gh pr create …` are issued as those commands, never through a script or a wrapper
+  (`<autoflow-root>/docs/core.md` > Scripts).
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
 - **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
