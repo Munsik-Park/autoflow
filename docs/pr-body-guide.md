@@ -1,6 +1,6 @@
 # PR Body Authoring Guide
 
-PR body 작성 시 참고하는 가이드. delivery module과 수동 PR 작성자 모두 대상.
+PR body 작성 시 참고하는 가이드. delivery module, ci module과 수동 PR 작성자 모두 대상.
 
 ## Principles
 
@@ -71,10 +71,10 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
   그 도구 요청을 *7. 도구 요청*에 적는다 ([`submodule-common-rules.md`](submodule-common-rules.md) >
   Verification and Tools > *The tools the work needs*; [U3 Design](units/design.md) > *Tools*).
 - 변경이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
-  남겨 두는 이유, 그리고 delivery module의 CI 확인에서 확인한, 그 파일을 실제로 실행한 CI job(실행한 job이 없으면 그
-  사실과 처분, target에 CI가 없으면 `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
+  남겨 두는 이유, 그리고 ci module이 확인한, 그 파일을 실제로 실행한 CI job(실행한 job이 없으면 그
+  사실, target에 CI가 없으면 `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a change leaves in the target's tree*;
-  [U6 Delivery](units/delivery.md) > *CI* > *Added test files*).
+  [U6 Delivery](units/delivery.md) > *CI*, *Added test files*).
 
 예:
 
@@ -130,8 +130,5 @@ AutoFlow PR body는 작업의 모든 도구 요청 — invocation이 주는 각 
 ## 적용
 
 본 가이드는 권고. PR 유형에 따라 일부 섹션은 적용되지 않을 수 있다.
-
-- [U6 Delivery](units/delivery.md) > *Push and pull request* 가 본 가이드를 cross-reference (delivery module).
-- 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).

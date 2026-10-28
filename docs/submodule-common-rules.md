@@ -25,9 +25,9 @@ AutoFlow's records of an attempt — the decision ledger, the criterion review, 
 
 ## Sub-repo pointer
 
-While a host pull request is open, its branch may point at the head of the sub-repo pull request
-it depends on ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*). The pointer is
-committed on the host branch by the delivery module ([`core.md`](core.md) > Commit Ownership). Whether a sub-repo's
+The pull requests a change takes, a sub-repo's included, are the delivery module's
+([`units/delivery.md`](units/delivery.md) > *Push and pull request*), and so is the commit of a
+sub-repo's pointer on the host branch ([`core.md`](core.md) > Commit Ownership). Whether a sub-repo's
 source is a fork or the upstream, and its URL, are the project's information.
 
 ---
@@ -148,7 +148,7 @@ git grep -n -i -E 'lint[- ]chain|lint-outcome|lint outcome|ci-deferred|unexecute
 
 - **[MUST]** Fail-closed default: a chain whose reason class cannot be established is `unexecuted`. The permissive class is the one earned by evidence; the absence of evidence yields the blocking one.
 
-A `ci-deferred` deferral is discharged at the delivery module's CI confirmation, which confirms the PR's check rollup is green — at least one check present and every element green (`<autoflow-root>/scripts/handoff/confirm-ci-green.sh`). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format > *Evidence anchor*) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When no CI runs for the pull request (`confirm-ci-green.sh` exit `11` judged not run), the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](units/delivery.md) > *CI*).
+A `ci-deferred` deferral is discharged by the ci module's `green` verdict on the PR ([`units/delivery.md`](units/delivery.md) > *CI*). That verdict is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format > *Evidence anchor*) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When the ci module's verdict is `not-run`, the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](units/delivery.md) > *CI*).
 
 - **[MUST]** A chain that did not execute is reported `not-run`, never `clean`.
 
@@ -210,7 +210,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](units/delivery.md) > *CI* > *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 

@@ -44,7 +44,7 @@ into one BUILD (ADR-0025):
 | STEP 5.7 | AUDIT | audit |
 | STEP 6 | GATE:QUALITY | quality |
 | STEP 7–8 | DELIVER, INTEGRATE | delivery |
-| STEP 9 | HANDOFF, REVIEW | delivery, review |
+| STEP 9 | HANDOFF, REVIEW | ci, review |
 
 ---
 
@@ -60,11 +60,12 @@ into one BUILD (ADR-0025):
   inside it: `<module>-<n>`, or `<module>-<qualifier>-<n>` for a module run once per item
   (`criterion-in-depth-AC2-1`).
 - The run writes its outputs and `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
-  check-out writes `<out>/result.json`: `status` (`accepted` or `refused`), `outputs` (each output's
-  path; the build's commits as `{branch, from, to}`; the delivery's pull request as `{url, number,
-  head}`), `defects`, `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has
-  done no work; a run refused at check-out leaves its outputs, and a later module's check-in reads an
-  input by its form, not by the result of the run that made it.
+  check-out writes `<out>/result.json`: `status` (`accepted`, `refused`, or `failed` when the run
+  wrote its contract's failure output — what it did and why it did not reach its goal),
+  `outputs` (each output's path; the build's commits as `{branch, from, to}`), `defects`,
+  `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has done no work; a run
+  refused or failed at check-out leaves its outputs, and a later module's check-in reads an input by
+  its form, not by the result of the run that made it.
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
   each module's outputs meet: its contract, `<autoflow-root>/docs/contracts/<module>.json`.
 
@@ -73,7 +74,7 @@ into one BUILD (ADR-0025):
 - An input names where it comes from (the tables below): another module's output, given by its path
   (the build's commits as the range `{branch, from, to}` its `result.json` records); ledger entries, given as the ledger
   file; a document of the target; or a file the invocation gives. The review's `pr` is
-  `<owner>/<name>#<N>`, the pull request the delivery's `result.json` records.
+  `<owner>/<name>#<N>`, a pull request's `pr` in the delivery's `delivery.json`.
 - An input given several files takes them as an array of paths.
 - A re-run takes its previous output and the findings it answers, the inputs named `previous_…` and
   `findings`.
@@ -408,34 +409,59 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `delivery`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.
+- Goal: The change the build made, its local tests recorded green in the build report, pushed to the target's remote and — unless the invocation says pull_request none — in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
-| `branch` | yes | string |
 | `base` | no | string |
+| `pull_request` | no | `^(open|none)$` |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
 | `commits` | yes | `build` → `commits` |
 | `applied_criteria` | yes | `criteria-apply` → `applied_criteria` |
-| `feature_design` | yes | `design` → `feature_design` |
 | `verification_design` | yes | `design` → `verification_design` |
 | `build_report` | yes | `build` → `report` |
-| `quality_evaluation` | yes | `quality` → `evaluation` |
+| `feature_design` | no | `design` → `feature_design` |
+| `quality_evaluation` | no | `quality` → `evaluation` |
 | `tool_requests` | no | the `tool-requests.json` of every earlier run |
 | `deferred` | no | a file the invocation gives |
 
 | Output | File |
 |---|---|
-| `pull_request` | pull-request |
-| `integration` | `<out>/integration.md` |
-| `ci_failure` | `<out>/ci-failure.md` |
+| `delivered` | `<out>/delivery.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","quality_evaluation":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+{"contract":1,"module":"delivery","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+```
+
+### `ci`
+
+- Kind: functional; given the record directory (`records`)
+- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — stated in the body's CI part, with, given the build report, the CI job that ran each test file the change added.
+- Procedure: `<autoflow-root>/docs/units/delivery.md`
+
+| Param | Required | Form |
+|---|---|---|
+| `issue` | yes | issue-number |
+| `timeout` | no | integer |
+
+| Input | Required | From |
+|---|---|---|
+| `pull_requests` | yes | `delivery` → `delivered`, or a file the invocation gives |
+| `build_report` | no | `build` → `report` |
+
+| Output | File |
+|---|---|
+| `ci` | `<out>/ci.json` |
+| `failure` | `<out>/failure.md` |
+
+```json
+{"contract":1,"module":"ci","params":{"issue":"<issue-number>"},"inputs":{"pull_requests":"<path>"},"records":"<record directory>","out":"<record directory>/ci-<n>"}
 ```
 
 ### `review`

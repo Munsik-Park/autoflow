@@ -41,12 +41,16 @@
 #             checks, and the run's tool requests are recorded
 #             (<out>/tool-requests.json: a JSON array of {missing, instead},
 #             [] when the run lacked nothing — 5.3, Q10). It writes
-#             <out>/result.json: the module, accepted or refused, each
-#             output's path, each defect found, the tool requests, and the
-#             AutoFlow that ran it — `autoflow`: its version, its root and,
-#             for a root that is a git work tree, its HEAD and whether the
-#             tree is dirty (ADR-0027 D4). A refusal's result carries the
-#             same.
+#             <out>/result.json: the module, accepted, refused or failed,
+#             each output's path, each defect found, the tool requests, and
+#             the AutoFlow that ran it — `autoflow`: its version, its root
+#             and, for a root that is a git work tree, its HEAD and whether
+#             the tree is dirty (ADR-0027 D4). A refusal's result carries the
+#             same. A contract may declare one output its failure output
+#             ("failure": true): a run that wrote it ended short of its
+#             expected output and says what it did and why; check-out then
+#             checks that file is not empty and the tool requests, records
+#             every output present, and writes `failed` (ADR-0039 D3).
 #
 # lint      — the contracts agree with each other and with the documents
 #             they name (no invocation; §8, the contract–document check):
@@ -72,8 +76,8 @@
 # Exit: 0 accepted (check-in: the module may run; lint: every contract
 #       agrees) · 1 refused (result.json names each defect; lint: the
 #       disagreements are printed) · 2 the invocation or the contract cannot
-#       be read.
-# Requires jq; git for a "git" output; gh for a pull-request output.
+#       be read · 3 failed (check-out: the module's failure output stands).
+# Requires jq; git for a "git" output; gh for a pull-request-comment output.
 set -uo pipefail
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -225,11 +229,15 @@ check_in() {
   while IFS=$'\x1f' read -r n req; do
     [ -n "$n" ] || continue
     if ! has_input "$n"; then [ "$req" = true ] && defect "input '$n' is required"; continue; fi
-    # the outputs this input may be: [{module, output, format, file, checks}]
+    # the forms this input may have: [{label, format, checks}] — another
+    # module's output, or the form a file the invocation writes is given
     local prods
-    prods=$(jq -c --arg n "$n" --argjson all "$all" '[[.inputs[$n].from] | flatten[] | select(type == "object" and has("module"))
-              | . as $f | ($all[$f.module].outputs[$f.output] // {}) as $o
-              | {module: $f.module, output: $f.output, format: ($o.format // ""), checks: ($o.checks // [])}]' <<<"$CONTRACT")
+    prods=$(jq -c --argjson all "$all" --arg n "$n" '[[.inputs[$n].from] | flatten[]
+              | select(type == "object" and (has("module") or (has("path") and has("checks"))))
+              | if has("module") then
+                  . as $f | ($all[$f.module].outputs[$f.output] // {}) as $o
+                  | {label: "\($f.module) \($f.output)", format: ($o.format // ""), checks: ($o.checks // [])}
+                else {label: "a file the invocation writes", format: (.format // ""), checks: .checks} end]' <<<"$CONTRACT")
     while IFS= read -r p; do
       [ -n "$p" ] || continue
       if jq -e 'any(.[]; .format == "git")' <<<"$prods" >/dev/null; then check_range "$n" "$p"; continue; fi
@@ -240,7 +248,7 @@ check_in() {
       while IFS= read -r pr; do
         d=$(form_defects "$(jq -r .format <<<"$pr")" "$p" "$(jq -c ".checks | $SELF_CONTAINED" <<<"$pr")")
         if [ "$(jq length <<<"$d")" -eq 0 ]; then why=""; break; fi
-        why="$why; as $(jq -r '"\(.module) \(.output)"' <<<"$pr"): $(jq -r 'map(sub("^form: "; "")) | join(", ")' <<<"$d")"
+        why="$why; as $(jq -r .label <<<"$pr"): $(jq -r 'map(sub("^form: "; "")) | join(", ")' <<<"$d")"
       done < <(jq -c '.[]' <<<"$prods")
       [ -z "$why" ] || defect "input '$n': $p is not of the form the contract asks${why}"
     done < <(input_paths "$n")
@@ -450,34 +458,6 @@ check_git() { # <output name> <check json> <files map>
   record_output "$n" "$(jq -n --arg b "$br" --arg f "$from" --arg t "$to" '{branch: $b, from: $f, to: $t}')"
 }
 
-check_pr() { # <output name> <checks json>
-  local n=$1 checks=$2 c t pr bp br
-  command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull request"; return; }
-  bp=$(jq -r '[.[] | select(.type == "pr_open") | .branch_param][0] // empty' <<<"$checks")
-  br=$(param "$bp")
-  pr=$(gh pr view "$br" --json url,number,isDraft,state,headRefOid,body,statusCheckRollup 2>/dev/null) \
-    || { defect "$n: no pull request for branch '$br'"; return; }
-  record_output "$n" "$(jq -c '{url, number, head: .headRefOid}' <<<"$pr")"
-  while IFS= read -r c; do
-    t=$(jq -r .type <<<"$c")
-    case "$t" in
-      pr_open)
-        jq -e '.state == "OPEN"' <<<"$pr" >/dev/null || defect "$n: the pull request is not open"
-        jq -e --argjson c "$c" '($c.draft // false | not) or .isDraft' <<<"$pr" >/dev/null || defect "$n: the pull request is not a draft" ;;
-      pr_checks)
-        if jq -e '(.statusCheckRollup // []) | length > 0' <<<"$pr" >/dev/null; then
-          jq -e 'all(.statusCheckRollup[]; ((.conclusion // .state // "") | ascii_upcase) as $s
-                   | $s == "SUCCESS" or $s == "NEUTRAL" or $s == "SKIPPED")' <<<"$pr" >/dev/null \
-            || defect "$n: a check on the head is not green (failed or still running)"
-        else
-          jq -e --argjson c "$c" '.body | split("\n") | any(. == $c.not_run_marker)' <<<"$pr" >/dev/null \
-            || defect "$n: no check ran on the head and the body has no '$(jq -r .not_run_marker <<<"$c")' line"
-        fi ;;
-      *) defect "$n: the contract names a check this validator does not know: $t" ;;
-    esac
-  done < <(jq -c '.[]' <<<"$checks")
-}
-
 check_comment() { # <output name> <checks json>
   local n=$1 checks=$2 c pr body repo num
   command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull request"; return; }
@@ -509,6 +489,28 @@ check_out() {
     defect "tool-requests.json is not an array of {missing, instead}"
   fi
 
+  # a run that ended short of its expected output: its failure output stands
+  # in place of the others, which are recorded where present (ADR-0039 D3)
+  local ffile
+  ffile=$(jq -r '[.outputs | to_entries[] | select(.value.failure // false) | .value.file][0] // empty' <<<"$CONTRACT")
+  if [ -n "$ffile" ] && [ -f "$OUT/$ffile" ]; then
+    grep -q '[^[:space:]]' "$OUT/$ffile" || defect "the failure output $ffile is empty"
+    local on of om
+    while IFS=$'\x1f' read -r on of om; do
+      [ -n "$of" ] || continue
+      if [ "$om" = true ]; then
+        local fd; fd=$(cd "$OUT" 2>/dev/null && compgen -G "$of" | sort)
+        [ -n "$fd" ] && record_output "$on" "$(printf '%s\n' "$fd" | jq -R --arg o "$OUT" 'select(. != "") | $o + "/" + .' | jq -sc .)"
+      elif [ -f "$OUT/$of" ]; then
+        record_output "$on" "$(jq -n --arg p "$OUT/$of" '$p')"
+      fi
+    done < <(jq -r '.outputs | to_entries[] | [.key, (.value.file // ""), (.value.many // false | tostring)] | join("\u001f")' <<<"$CONTRACT")
+    finish check-out
+    write_result failed
+    printf 'failed: %s\n' "$OUT/$ffile" >&2
+    exit 3
+  fi
+
   # the files each output names, for checks that read another output
   local files='{}' n fmt file req many
   while IFS=$'\x1f' read -r n file; do
@@ -519,7 +521,6 @@ check_out() {
     local checks; checks=$(jq -c --arg n "$n" '.outputs[$n].checks // []' <<<"$CONTRACT")
     case "$fmt" in
       git) check_git "$n" "$(jq -c '.[] | select(.type == "git_range")' <<<"$checks")" "$files"; continue ;;
-      pull-request) check_pr "$n" "$checks"; continue ;;
       pull-request-comment) check_comment "$n" "$checks"; continue ;;
     esac
     if [ "$many" = true ]; then
@@ -547,7 +548,7 @@ check_out() {
 # The check types each format implements above; lint refuses any other.
 KNOWN_TYPES='{"markdown": ["section", "table"],
   "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
-  "git": ["git_range"], "pull-request": ["pr_open", "pr_checks"],
+  "git": ["git_range"],
   "pull-request-comment": ["pr_comment_posted"]}'
 
 # does "<path> > <heading> > <heading>…" resolve under ROOT?
@@ -632,7 +633,7 @@ lint() {
     done < <(jq -r '.. | objects | .source? // empty | strings | split("; ")[]' <<<"$c")
     # inputs another module produces
     local found
-    found=$(jq -r --argjson all "$all" '
+    found=$(jq -r --argjson all "$all" --argjson known "$KNOWN_TYPES" '
       .inputs // {} | to_entries[] | .key as $k | ([.value.from] | flatten[])
       | . as $f
       | if type != "object" then "input \($k): from is not an object"
@@ -641,7 +642,11 @@ lint() {
           elif ($all[$f.module].outputs | has($f.output) | not) then "input \($k): module \($f.module) has no output \($f.output)"
           else empty end
         elif has("ledger") then empty
-        elif has("path") then (if .path | IN("target", "invocation") then empty else "input \($k): path is not target or invocation" end)
+        elif has("path") then
+          (if .path | IN("target", "invocation") | not then "input \($k): path is not target or invocation"
+           elif has("checks") | not then empty
+           elif ($known | has($f.format // "") | not) or $f.format == "git" then "input \($k): the form of the file the invocation writes has a format the validator does not read"
+           else ($f.checks[] | .type as $t | select(($known[$f.format] | index($t)) == null) | "input \($k): check type \(.type) is not one the validator implements for \($f.format)") end)
         elif has("results") then (if .results == "tool_requests" then empty else "input \($k): results is not tool_requests" end)
         else "input \($k): from names no module, ledger, path or results" end' <<<"$c") || say "inputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
@@ -657,8 +662,12 @@ lint() {
               | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
             ([($ch.covers // [])[].output, $ch.absent_reason.output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared"),
             (if $ch.absent_reason and ($c.outputs[$ch.absent_reason.output].format // "") != "markdown" then "output \($o): absent_reason names an output that is not markdown" else empty end)
-        end' <<<"$c") || say "outputs cannot be read"
+        end,
+        (if $v.failure then
+           (if $v.format != "markdown" or (if $v | has("required") then $v.required else true end) != false or ($v.file // "") == "" then "output \($o): a failure output is a markdown file with required false" else empty end)
+         else empty end)' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
+    jq -e '[.outputs[] | select(.failure // false)] | length <= 1' <<<"$c" >/dev/null || say "more than one failure output"
     # an evaluation's score keys are its rubric's items
     if jq -e '.kind == "evaluation"' <<<"$c" >/dev/null; then
       found=$(rubric_disagreements "$c")

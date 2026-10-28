@@ -78,8 +78,8 @@ These are the rules other documents cite; everything else about the work is the 
   only as the exception: a file the module judges the target should keep — in this repository a
   deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
   under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
-  carries that list into the PR body with the CI job that actually ran each file
-  ([U6 Delivery](delivery.md) > *CI* > *Added test files*). Such a file is wired into the target's
+  carries that list into the PR body, and the ci module the CI job that actually ran each file
+  ([U6 Delivery](delivery.md) > *CI*, *Added test files*). Such a file is wired into the target's
   CI discovery in the same commit.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
   (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
@@ -200,7 +200,7 @@ check-out reads (`build.json`).
 | `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
 | `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
 | `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body; *Added test files*) |
+| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
 | `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
 | `## No commit` | only when the run made no commit: why | check-out (`build.json`) |

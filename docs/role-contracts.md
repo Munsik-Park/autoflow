@@ -15,12 +15,12 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Role (where it occurs) | Spawn mode | Per-call scope |
 |---|---|---|
 | Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
-| Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) and CI-failure reader ([`units/delivery.md`](units/delivery.md) > *CI failure*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, or reads the failing check's output and records where its fix is made with its grounds, and returns |
+| Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, and returns |
 | Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
 | Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer in one line; a fresh advisor is spawned for every request |
 | Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
-The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and review modules are run by their session, which spawns the CI-failure reader and the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
+The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and ci modules are the work of the session that runs them; the review module's session spawns the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
 
 ### Model tier revert
 
@@ -88,7 +88,7 @@ invocation names — the target repository, or in a project with sub-repos one s
 *Secondary (multi-repo):* in a project with sub-repos (see [`core.md`](core.md) > Project
 Information), a changed sub-repo is a target scope of its own: the unit commits there on that
 sub-repo's branch, which the delivery module pushes and opens its pull request for
-([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*).
+([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
 
 ---
 
@@ -179,8 +179,8 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
 and its evaluation ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
-lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
-and criteria-apply is a script.
+lifetime* above; criterion-screen, delivery, ci and review are the work of the session that runs them, and
+criteria-apply is a script.
 
 | Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |
 |---|---|---|

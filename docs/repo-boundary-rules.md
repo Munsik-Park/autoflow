@@ -22,7 +22,7 @@ Every produced artifact belongs to the scope that owns the files it lives in: co
 
 ### Procedures (절차)
 
-Integration verification, the push and PR opening are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push and the host pointer are the delivery module's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
+The push, the PR opening and showing the change working are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push is the delivery module's ([`units/delivery.md`](units/delivery.md) > *Push and pull request*), and so is the host pointer's commit ([`core.md`](core.md) > Commit Ownership); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
 
 ### Backlog (백로그)
 
@@ -62,7 +62,7 @@ When a change in one repo affects the interface used by another:
 
 1. The build unit reports the proposed interface change in its report
 2. Each affected repo's change is made by a build run in that repo's scope, in dependency order
-3. Integration testing validates the change across repos — before the hand-off, by the delivery module ([`units/delivery.md`](units/delivery.md) > Integration)
+3. The change is shown working across repos in the pull requests that deliver it, by the delivery module ([`units/delivery.md`](units/delivery.md) > *Push and pull request*)
 
 ---
 

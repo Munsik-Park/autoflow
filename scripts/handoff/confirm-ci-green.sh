@@ -3,24 +3,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/handoff/confirm-ci-green.sh
 #
-# CI confirmation of the delivery module — deterministic "confirm CI is green"
-# helper.
+# CI confirmation — the ci module's tool for whether a pull request's CI is
+# green on its head (docs/units/delivery.md > CI; issue #518). What each exit
+# means is stated here, in the exit-code contract below.
 #
-# Promotes the CI-confirmation invariant from prose
-# (docs/units/delivery.md > CI) into a single enforceable invocation so the
-# session that runs the delivery module never hand-writes a polling loop
-# (issue #25). It reads
-# `mergeable`/`mergeStateStatus` FIRST and early-exits on CONFLICTING/DIRTY
-# WITHOUT ever entering a poll (the PR #321 infinite-wait class); only when the
-# PR is MERGEABLE/CLEAN does it run a finite, deadline-bounded poll that
-# distinguishes "green" from "0 checks published" (webhook / scan-fallback
-# suspect), "red build", and "still-pending at timeout" (slow CI) via layered
-# exit codes — never reading a clean-but-empty status as green.
+# One bounded invocation: it reads `mergeable`/`mergeStateStatus` FIRST and
+# early-exits on CONFLICTING/DIRTY WITHOUT ever entering a poll (the PR #321
+# infinite-wait class); only when the PR is MERGEABLE/CLEAN does it run a
+# finite, deadline-bounded poll that distinguishes "green" from "0 checks
+# published" (webhook / scan-fallback suspect), "red build", and
+# "still-pending at timeout" (slow CI) via layered exit codes — never reading a
+# clean-but-empty status as green.
 #
 # Observe-only: it performs no merge, no CI re-trigger, and no conflict
-# resolution. Conflict *resolution* lives in the docs (a sub-repo pointer →
-# docs/units/delivery.md > Multi-repo delivery; other conflict → stated in
-# the report). This script owns only the *confirmation*.
+# resolution; it owns only the *confirmation*, and its messages state what it
+# read, not what is done next.
 #
 # Usage:
 #   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
@@ -43,8 +40,11 @@
 #                          min(CI_POLL_INTERVAL_SECS, remaining-to-deadline)).
 #   Both validated as non-negative integers; non-numeric -> exit 64.
 #
-# Exit-code contract (feature §4):
-#   0   CI green         — >=1 check present and every element green.
+# Exit-code contract (feature §4). Green is judged on one representative per
+# check identity (classify_rollup), after a superseded run's CANCELLED rows are
+# dropped (drop_superseded_runs) — not on every element of the raw rollup:
+#   0   CI green         — >=1 check identity present and every representative
+#                          green, on a PR whose mergeable state was confirmed.
 #   10  not mergeable    — a CONFIRMED CONFLICTING/DIRTY value at precheck OR on
 #                          a mid-poll flip. No poll on precheck.
 #                          Only on a JSON-confirmed read; a failed/timed-out/
@@ -55,8 +55,13 @@
 #   that falls through to the bounded poll, never 10. Both fields are read:
 #   an UNKNOWN mergeStateStatus is unsettled and never confirms, even beside
 #   a MERGEABLE value.
-#   11  0 checks         — MERGEABLE but no check ever published within the bound.
-#   12  red build        — a check concluded FAILURE/ERROR/CANCELLED/TIMED_OUT.
+#   11  0 checks         — MERGEABLE, at least one well-formed read of the
+#                          checks, and no check published on any read within the
+#                          bound.
+#   12  red build        — a check concluded and is not green: any COMPLETED
+#                          CheckRun conclusion but SUCCESS/NEUTRAL/SKIPPED (FAILURE,
+#                          CANCELLED, TIMED_OUT, STARTUP_FAILURE, STALE,
+#                          ACTION_REQUIRED, …), a StatusContext FAILURE/ERROR.
 #                          A CANCELLED check of a run superseded by a newer run of
 #                          the same workflow is not counted (drop_superseded_runs).
 #   13  no green verdict  — checks present but the run never reached the exit-0
@@ -71,12 +76,15 @@
 #                          rollup whose superseded-run lookup (issue #274) never
 #                          resolved every candidate run's workflow, which
 #                          withholds exit 0 the same way — a second stderr line
-#                          names this case and points at the token's
-#                          `actions: read` access, not a longer timeout.
-#   14  inconclusive     — could not confirm mergeable within the bound; gh
-#                          transport/auth/parse failure, or a mergeability that
-#                          never settled within the bound, suspected (NOT a
-#                          conflict); bounded. NOT green.
+#                          names this case and the token's `actions: read`
+#                          access the lookup depends on.
+#   14  inconclusive     — could not confirm mergeable within the bound, or no
+#                          read of the checks was well formed (a gh transport,
+#                          auth or parse failure, or a mergeability that never
+#                          settled); NOT a conflict, NOT "no check". NOT green.
+#
+# Every exit but 0 and 64 prints, on its last stderr line, what was read:
+#   observed: reads=<well-formed>/<attempted> checks_seen=<0|1> mergeable=<value> merge_state=<value>
 #
 # Each run reads once; this script counts nothing across runs.
 #   64  usage / bad arg / bad env int.
@@ -170,8 +178,12 @@ gh_bounded() {
 }
 
 # Classify a poll body's statusCheckRollup into "<total> <fail> <green>", one row
-# per check identity. A same-identity group with ANY non-terminal (QUEUED/PENDING/
-# WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
+# per check identity. A CheckRun is non-terminal until its status is COMPLETED and
+# it carries a conclusion: gh exports the conclusion as a string, "" (not null)
+# while the run is QUEUED / IN_PROGRESS / WAITING / PENDING / REQUESTED (cli/cli
+# api/queries_pr.go CheckContext, api/export_pr.go); a row without a status is
+# read by its conclusion alone. A same-identity group with ANY non-terminal entry
+# is pending outright — a stale CANCELLED/FAILURE left by
 # a concurrency-cancelled run must not outvote the live replacement run on timestamp
 # recency (real CheckRun rollup objects carry no createdAt, so a timestamp key cannot
 # rank a null-timestamp replacement above a completed stale entry). Narrowed (c4 §3.3):
@@ -191,15 +203,17 @@ classify_rollup() {
       else
         ["RAW", tojson]
       end;
+    def run_open:
+      (.conclusion // "") == "" or ((.status // "COMPLETED") != "COMPLETED");
+    def non_terminal:
+      (.__typename == "CheckRun" and run_open)
+      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def green_entry:
-      (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
+      (.__typename == "CheckRun" and (run_open | not) and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
       or (.__typename == "StatusContext" and (.state == "SUCCESS"));
     def fail_entry:
-      (.__typename == "CheckRun" and (.conclusion | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT")))
+      (.__typename == "CheckRun" and (run_open | not) and (green_entry | not))
       or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")));
-    def non_terminal:
-      (.__typename == "CheckRun" and (.conclusion == null))
-      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
     def start_key: [ .startedAt // "", .createdAt // "" ];
     def tie_key: ts_key + [ (if green_entry then 0 else 1 end) ];
@@ -403,6 +417,15 @@ sleep_to_deadline() {
 deadline=$(( $(date +%s) + CI_POLL_TIMEOUT_SECS ))
 saw_checks=0
 mergeable_confirmed=0
+reads_ok=0
+reads_tried=0
+last_m=""
+last_s=""
+
+# observed — the last stderr line of every non-green exit: what was read.
+observed() {
+  echo "observed: reads=${reads_ok}/${reads_tried} checks_seen=${saw_checks} mergeable=${last_m:-unread} merge_state=${last_s:-unread}" >&2
+}
 
 now="$(date +%s)"; remaining=$(( deadline - now ))
 pre_bound="$(clamp_to_interval "$remaining")"
@@ -417,6 +440,7 @@ if [ "${GH_TIMED_OUT:-0}" -eq 1 ] || [ "${GH_RC:-0}" -ne 0 ] || [ -z "$pre_body"
 else
   pre_mergeable="$(printf '%s' "$pre_body" | jq -r '.mergeable // empty' 2>/dev/null)"
   pre_state="$(printf '%s' "$pre_body" | jq -r '.mergeStateStatus // empty' 2>/dev/null)"
+  [ -n "$pre_mergeable" ] && { last_m="$pre_mergeable"; last_s="$pre_state"; }
   if [ -z "$pre_mergeable" ]; then
     : # non-empty but non-JSON / field-absent body → jq degraded mergeable to
       # empty: inconclusive, NOT a confirmed conflict; fall through (do NOT set
@@ -424,7 +448,8 @@ else
       # mergeable, so empty unambiguously marks a bad read.
   elif is_not_mergeable "$pre_mergeable" "$pre_state"; then
     mergeable_confirmed=1
-    echo "not mergeable (mergeStateStatus=${pre_state:-unknown}) — do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> state it in the report)" >&2
+    echo "not mergeable (mergeable=${pre_mergeable}, mergeStateStatus=${pre_state:-unknown}) at the precheck — the branch conflicts with the base; CI was not waited on; NOT green" >&2
+    observed
     exit 10
   elif is_mergeable_undetermined "$pre_mergeable" "$pre_state"; then
     : # still-computing UNKNOWN on either field (or an unrecognised value): an uncertain read,
@@ -449,6 +474,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   sub_bound="$(clamp_to_interval "$remaining")"
 
   poll_out="$(mktemp)"
+  reads_tried=$(( reads_tried + 1 ))
   gh_bounded "$sub_bound" "$poll_out" \
     gh pr view "$PR" "${REPO_ARGS[@]}" --json mergeable,mergeStateStatus,statusCheckRollup
   body="$(cat "$poll_out")"; rm -f "$poll_out"
@@ -468,26 +494,35 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # the transient-tolerance path (skip classification, clamped-sleep, retry
   # within the budget) — symmetric with the precheck [ -z "$pre_mergeable" ]
   # arm. Do NOT set mergeable_confirmed, do NOT classify this read. If every
-  # remaining iteration degrades this way through the deadline, the post-loop
-  # classifier lands it on exit 11 (healthy precheck already set
-  # mergeable_confirmed=1 at the precheck) or exit 14 (precheck also degraded,
-  # flag still 0) — never 10.
+  # remaining iteration degrades this way through the deadline, no read of the
+  # checks was well formed (reads_ok=0) and the post-loop classifier lands it on
+  # exit 14 — never 11, which needs a well-formed read that saw no check, and
+  # never 10.
   if [ -z "$m" ]; then sleep_to_deadline; continue; fi
+  last_m="$m"; last_s="$s"
   # Well-formed read: confirm the mergeable state unless it carries no verdict.
   undetermined=0
   if is_mergeable_undetermined "$m" "$s"; then undetermined=1; else mergeable_confirmed=1; fi
   if is_not_mergeable "$m" "$s"; then
-    echo "not mergeable (mergeStateStatus=${s:-unknown}) — PR flipped mid-poll; do NOT wait on CI; branch by cause (sub-repo pointer -> delivery.md Multi-repo delivery; other conflict -> state it in the report)" >&2
+    echo "not mergeable (mergeable=${m}, mergeStateStatus=${s:-unknown}) on a read of the checks — the branch conflicts with the base; NOT green" >&2
+    observed
     exit 10
   fi
 
   resolve_run_workflows "$body"
   stats="$(printf '%s' "$body" | drop_superseded_runs | classify_rollup)"
-  read -r total fail green <<<"${stats:-0 0 0}"
+  # A rollup the classifier could not read (statusCheckRollup not a list of
+  # checks) yields no stats: not a read of the checks, so it is not counted in
+  # reads_ok — only unclassified reads through the deadline land on 14, never 11.
+  if [ -z "$stats" ]; then sleep_to_deadline; continue; fi
+  reads_ok=$(( reads_ok + 1 ))
+  read -r total fail green <<<"$stats"
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
   if [ "$fail" -gt 0 ]; then
-    echo "a check concluded failure/error/cancelled/timed_out — red CI" >&2
+    saw_checks=1
+    echo "${fail} of ${total} check(s) concluded and are not green — red CI" >&2
+    observed
     exit 12
   fi
   # An undetermined read withholds the GREEN verdict only: exit 0 is contracted
@@ -512,17 +547,24 @@ done
 # ---------------------------------------------------------------------------
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
-if [ "$mergeable_confirmed" -eq 0 ]; then
-  echo "could not confirm PR mergeable state within ${CI_POLL_TIMEOUT_SECS}s — gh transport/auth/network failure, or a merge state that never settled (an UNKNOWN mergeable or mergeStateStatus) at the deadline, suspected (not a merge conflict); check gh auth/connectivity and re-run — NOT green" >&2
+if [ "$mergeable_confirmed" -eq 0 ] || [ "$reads_ok" -eq 0 ]; then
+  if [ "$mergeable_confirmed" -eq 0 ]; then
+    echo "the mergeable state was not confirmed within ${CI_POLL_TIMEOUT_SECS}s — every read failed or was malformed (gh transport, auth or parse), or the merge state stayed UNKNOWN; not a merge conflict; NOT green" >&2
+  else
+    echo "no read of the checks was well formed within ${CI_POLL_TIMEOUT_SECS}s (gh transport, auth or parse) — whether a check was published is unknown; NOT green" >&2
+  fi
+  observed
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then
-  echo "MERGEABLE but no check published within ${CI_POLL_TIMEOUT_SECS}s — suspect CI trigger (webhook delivery / workflow trigger conditions) — re-push to force a synchronize event; NOT green" >&2
+  echo "MERGEABLE, and no check was published on the head on any well-formed read within ${CI_POLL_TIMEOUT_SECS}s; NOT green" >&2
+  observed
   exit 11
 else
-  echo "checks present but no green verdict after ${CI_POLL_TIMEOUT_SECS}s (slow CI, or a confirmed-then-undetermined run whose rollup is green but mergeability never re-settled) — inconclusive, re-run with a larger CI_POLL_TIMEOUT_SECS or escalate; NOT green" >&2
+  echo "checks present but no green verdict within ${CI_POLL_TIMEOUT_SECS}s — a check still running, or a rollup already green whose mergeable state did not re-settle; NOT green" >&2
   if [ "$RUN_WF_COMPLETE" -eq 0 ]; then
-    echo "superseded-run workflow lookup unresolved at the deadline (gh api repos/<owner>/<repo>/actions/runs/<run_id> for a run with a CANCELLED check) — exit 0 is withheld until it resolves; check the token's actions: read access to that repository before raising CI_POLL_TIMEOUT_SECS" >&2
+    echo "superseded-run workflow lookup unresolved (gh api repos/<owner>/<repo>/actions/runs/<run_id> for a run with a CANCELLED check) — exit 0 is withheld until it resolves; the token's actions: read access to that repository decides whether it can" >&2
   fi
+  observed
   exit 13
 fi

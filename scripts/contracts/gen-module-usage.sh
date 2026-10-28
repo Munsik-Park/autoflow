@@ -23,7 +23,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOC="$ROOT/docs/autoflow-guide.md"
 BEGIN='<!-- BEGIN generated from docs/contracts/*.json by scripts/contracts/gen-module-usage.sh — edit the contracts, then regenerate. -->'
 END='<!-- END generated -->'
-ORDER="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality delivery review"
+ORDER="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality delivery ci review"
 
 case "${1:-}" in "" | --check) ;; *) echo "usage: gen-module-usage.sh [--check]" >&2; exit 2 ;; esac
 [ -f "$DOC" ] || { echo "gen-module-usage: $DOC not found" >&2; exit 2; }
