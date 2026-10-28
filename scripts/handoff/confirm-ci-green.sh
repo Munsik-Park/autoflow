@@ -501,7 +501,6 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   # exit 14 — never 11, which needs a well-formed read that saw no check, and
   # never 10.
   if [ -z "$m" ]; then sleep_to_deadline; continue; fi
-  reads_ok=$(( reads_ok + 1 ))
   last_m="$m"; last_s="$s"
   # Well-formed read: confirm the mergeable state unless it carries no verdict.
   undetermined=0
@@ -514,7 +513,12 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
 
   resolve_run_workflows "$body"
   stats="$(printf '%s' "$body" | drop_superseded_runs | classify_rollup)"
-  read -r total fail green <<<"${stats:-0 0 0}"
+  # A rollup the classifier could not read (statusCheckRollup not a list of
+  # checks) yields no stats: not a read of the checks, so it is not counted in
+  # reads_ok — only unclassified reads through the deadline land on 14, never 11.
+  if [ -z "$stats" ]; then sleep_to_deadline; continue; fi
+  reads_ok=$(( reads_ok + 1 ))
+  read -r total fail green <<<"$stats"
   total="${total:-0}"; fail="${fail:-0}"; green="${green:-0}"
 
   if [ "$fail" -gt 0 ]; then

@@ -25,9 +25,9 @@ AutoFlow's records of an attempt — the decision ledger, the criterion review, 
 
 ## Sub-repo pointer
 
-While a host pull request is open, its branch may point at the head of the sub-repo pull request
-it depends on ([`units/delivery.md`](units/delivery.md) > *Push and pull request*). The pointer is
-committed on the host branch by the delivery module ([`core.md`](core.md) > Commit Ownership). Whether a sub-repo's
+The pull requests a change takes, a sub-repo's included, are the delivery module's
+([`units/delivery.md`](units/delivery.md) > *Push and pull request*), and so is the commit of a
+sub-repo's pointer on the host branch ([`core.md`](core.md) > Commit Ownership). Whether a sub-repo's
 source is a fork or the upstream, and its URL, are the project's information.
 
 ---

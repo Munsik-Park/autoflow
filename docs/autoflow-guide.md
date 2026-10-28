@@ -415,7 +415,6 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
-| `branch` | yes | string |
 | `base` | no | string |
 | `pull_request` | no | `^(open|none)$` |
 | `timeout` | no | integer |
@@ -437,7 +436,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+{"contract":1,"module":"delivery","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
 ```
 
 ### `ci`
