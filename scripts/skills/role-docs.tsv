@@ -38,7 +38,6 @@ agents/autoflow-advisor.md	docs/decision-ledger.md
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Review aggregation
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 agents/autoflow-analyzer.md	docs/units/review.md	## Review triage > ### A repeated complaint
-agents/autoflow-analyzer.md	docs/units/delivery.md	## CI > ### CI failure
 agents/autoflow-analyzer.md	docs/review/review.md	## Severity
 agents/autoflow-analyzer.md	docs/role-contracts.md	## Advisor
 
@@ -122,14 +121,12 @@ skills/quality/SKILL.md	docs/units/completion-evaluation.md
 skills/quality/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/quality/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/quality/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/integration/SKILL.md	docs/units/delivery.md
 skills/delivery/SKILL.md	docs/units/delivery.md
 skills/delivery/SKILL.md	docs/pr-body-guide.md
 skills/delivery/SKILL.md	docs/title-guide.md
 skills/delivery/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/ci/SKILL.md	docs/units/delivery.md
 skills/ci/SKILL.md	docs/pr-body-guide.md
-skills/ci-failure/SKILL.md	docs/units/delivery.md
 skills/review/SKILL.md	docs/units/review.md
 skills/review/SKILL.md	docs/reviewer-backend.md
 skills/review/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
@@ -147,10 +144,8 @@ skills/criterion-reconcile/SKILL.md	docs/role-contracts.md	## Advisor
 skills/analysis/SKILL.md	docs/role-contracts.md	## Advisor
 skills/design/SKILL.md	docs/role-contracts.md	## Advisor
 skills/build/SKILL.md	docs/role-contracts.md	## Advisor
-skills/integration/SKILL.md	docs/role-contracts.md	## Advisor
 skills/delivery/SKILL.md	docs/role-contracts.md	## Advisor
 skills/ci/SKILL.md	docs/role-contracts.md	## Advisor
-skills/ci-failure/SKILL.md	docs/role-contracts.md	## Advisor
 skills/review/SKILL.md	docs/role-contracts.md	## Advisor
 skills/hypothesis/SKILL.md	docs/role-contracts.md	## Evaluation AI
 skills/plan/SKILL.md	docs/role-contracts.md	## Evaluation AI

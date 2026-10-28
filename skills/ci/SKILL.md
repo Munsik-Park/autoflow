@@ -1,10 +1,9 @@
 ---
 name: ci
 description: >-
-  Run the AutoFlow ci module once on an invocation file — CI green on each
-  pull request's head, or its not running recorded on it, with the body's CI
-  part. Use when the operator runs the ci module (/autoflow:ci
-  <invocation.json>).
+  Run the AutoFlow ci module once on an invocation file — CI's verdict on
+  each pull request's head, with its ground, in the body's CI part. Use when
+  the operator runs the ci module (/autoflow:ci <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
@@ -13,7 +12,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 
 **Scope** (`$ARGUMENTS`: the invocation file) — one run of the ci module (`<autoflow-root>/docs/contracts/ci.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it; a script reads and reports CI. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
-**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the ci module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, integration, delivery, ci-failure, review, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, integration, delivery, ci-failure, review; Project Information: In a project whose information names sub-repos; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
+**The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the ci module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, review, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, review; Project Information: In a project whose information names sub-repos; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
 
 **The documents in this body** — after the core, the documents this session follows, by the classification `<autoflow-root>/scripts/skills/role-docs.tsv`: `<autoflow-root>/docs/units/delivery.md`; `<autoflow-root>/docs/pr-body-guide.md`; `<autoflow-root>/docs/decision-ledger.md`; `<autoflow-root>/docs/issue-proposal.md`; `<autoflow-root>/docs/role-contracts.md` > Advisor; `<autoflow-root>/docs/role-common-rules.md` > Communication > Result delivery path by spawn mode; `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format; `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
@@ -36,9 +35,9 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ## Development Lifecycle — AutoFlow
 
-**AutoFlow is a set of modules.** A module is an input, the work it does, and an output; its contract, `<autoflow-root>/docs/contracts/<module>.json`, declares its parameters, its inputs and where each comes from, and its outputs with the form each must meet (`ADR-0038` D1). The modules are functional — the criterion review's four, analysis, design, build, the delivery's four (integration, delivery, ci, ci-failure), review —, evaluation — hypothesis, plan, audit, quality — and deterministic — criteria-apply. AutoFlow defines the modules: each one's contract, its procedure and the checks of its inputs and outputs (ADR-0038 D2). A module takes everything it works on from its invocation, the branch and the attempt's record directory included (D4).
+**AutoFlow is a set of modules.** A module is an input, the work it does, and an output; its contract, `<autoflow-root>/docs/contracts/<module>.json`, declares its parameters, its inputs and where each comes from, and its outputs with the form each must meet (`ADR-0038` D1). The modules are functional — the criterion review's four, analysis, design, build, delivery, ci, review —, evaluation — hypothesis, plan, audit, quality — and deterministic — criteria-apply. AutoFlow defines the modules: each one's contract, its procedure and the checks of its inputs and outputs (ADR-0038 D2). A module takes everything it works on from its invocation, the branch and the attempt's record directory included (D4).
 
-**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory and, for a functional module, the attempt's record directory (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares because it could not reach its expected output (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root).
+**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory and, for a functional module, the attempt's record directory (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares because it did not reach its goal (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root).
 
 **A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge; the contract checks the inputs and the facts of the output (ADR-0038 D1). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
 
@@ -68,16 +67,14 @@ The rules that apply these principles to running and confirming tests and to sec
 | `build` | `/autoflow:build` | `<autoflow-root>/docs/units/build.md` | an `autoflow-unit-build` spawn (`unit-build`) |
 | `audit` | `/autoflow:audit` | `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > AUDIT | an `autoflow-evaluator` spawn (`audit`) |
 | `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
-| `integration` | `/autoflow:integration` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
 | `ci` | `/autoflow:ci` | `<autoflow-root>/docs/units/delivery.md` | the session itself; a script reads and reports CI |
-| `ci-failure` | `/autoflow:ci-failure` | `<autoflow-root>/docs/units/delivery.md` | an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 | `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
 
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-ci                    — CI green on each pull request's head, or recorded as not run, and the body's CI part; a script reads and reports CI, and check-out judges by the same script
+ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run — in the body's CI part; a script reads and reports CI
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -110,7 +107,7 @@ A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md` in the rec
 - **[MUST] Human-decision presentation**: in every advisor request and advisor answer record (`<autoflow-root>/docs/role-contracts.md` > Advisor), and in a run's record of a harness-level block or a tool or referenced-material request, the presentation is **situation-first**, in this order: ① the situation in domain / behavior terms — what is wrong or being decided, and for whom (e.g. "auth state is not retained across pages from the user's entry point", **not** "module A's anchor-format constraint at the A↔B↔C consistency boundary"); ② the decision, plus each option and what it changes; ③ anchors demoted to supporting evidence for drill-down, never the lead — a commit SHA with `path:line` for a fact of this tree, or the document, section heading and quoted sentence for a provision of a long-lived document. This register is distinct from the machine **Reporting Format** (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format), which is anchor-first. The body a person reads is written in this same situation-first order — *Context discipline*'s "anchor + one-line summary" governs what a spawn **returns**, not how a decision is **framed**.
 - **Verify role-spawn claims before acting on them**: every role-spawn report's Evidence anchor (see `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format > *Evidence anchor*) is verified before the report is accepted — `git show <SHA>` for a commit anchor, the summary line read in the cited log for a test-pass anchor (the command is re-run only when the log is absent or does not carry that line, and the run is then `not-run` and run in place — `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *A run's evidence is the log it left*), `git show <SHA>:<file>` at the report's commit for a file-state anchor (a `path:line` is read only at the commit the report names), the result line read in the cited observation record for an observation anchor (`<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*). **An anchor-less report is rejected, not interpreted.** Do not act on a single AI's unverified claim.
 - **Safety first**: accurate execution beats fast response. Accuracy over speed.
-- **The route is the AI's judgment; the independent checks are not** (Rule Scope, principles 1–3): how far the work goes — the analysis, the design, the build's execution, the integration bundle — is the working AI's judgment, recorded with its grounds in the output its run produces. What no module does is judge its own output: each evaluation is a module of its own, scored by a fresh Evaluation AI that never saw the work done, and CI (its result as it is: green, or, where the target's CI does not run for the pull request, that recorded on it — never read as green) and the aggregated review stand outside the work as well.
+- **The route is the AI's judgment; the independent checks are not** (Rule Scope, principles 1–3): how far the work goes — the analysis, the design, the build's execution, how the delivery shows the change working — is the working AI's judgment, recorded with its grounds in the output its run produces. What no module does is judge its own output: each evaluation is a module of its own, scored by a fresh Evaluation AI that never saw the work done, and CI (its result as it is: green, or, where the target's CI does not run for the pull request, that recorded on it — never read as green) and the aggregated review stand outside the work as well.
 - **Role-spawn idle handling**: a task notification signals only that a spawn finished; it does not require a response, and it is not itself the report. Continue work when (a) a spawn returns an actionable report — its return value — (b) a Bash result you initiated returns, or (c) the user types a new prompt. When a **Done** direct-spawn produces no report, do not wait for a follow-up: verify its artifact by shell and proceed (see "Incomplete output is never ground truth").
 - **Background execution is the main session's only**: the `run_in_background` + wait-for-completion-notification pattern is available **only** to the session that runs the module (the main loop), and every role spawn's Bash runs foreground-only; the binding rule lives in `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode.
 - **[MUST] Wait discipline (main session)**: the session waits for a subagent, a `Workflow`, or a backgrounded Bash task by **ending its turn** — the harness re-invokes the session with a task notification when the task completes, and other tasks' notifications and the user's prompts are delivered in between. A **blocking wait** — a foreground `sleep` loop polling for a result — is not used. A polling wait is reserved for external state the harness cannot notify about (a CI run, a remote queue), and even then a bounded one; a task the harness tracks is never polled. One timer is admitted beside that wait, the **cache keep-alive wake**: a running task keeps its own prompt cache warm through its own requests, while the session sends none, so a wait longer than the prompt-cache TTL expires the session's cached context and its first turn after the notification re-writes all of it. While a tracked task runs, the session therefore may arm one backgrounded `sleep` shorter than that TTL (`run_in_background`; 50 minutes at the 1-hour TTL) and end its turn. The turn the timer wakes is not a poll: it reads no transcript or output file of the task — only a cheap anchor-check (a log's modification time, `git log -1`) — re-arms the timer and ends the turn, and the timer is stopped once the task's notification arrives. What the wake observes about the task's progress, and any decision drawn from it, is the session's judgment, recorded with its grounds in the output its run produces. The "no turn ends before the work is done" instruction is satisfied by the re-entry — the turn that ends on a pending notification is not an abandonment, the harness resumes it.
@@ -168,7 +165,7 @@ value is its report**.
 - **[MUST]** All AIs: modifications outside the assigned scope are not allowed. *Secondary (multi-repo):* in a project with sub-repos, all AIs additionally have read access to the other sub-repositories.
 - The main session's "own scope" is the host repository — typically `docker-compose.*`, `platform.sh` (or its analogue), `scripts/`, `.env.*`, `docs/`, `CLAUDE.md`.
 - A role spawn's "own scope" is the **target scope** it is assigned (the target repo/directory that owns the source). *Secondary (multi-repo):* in a project with sub-repos, that target scope is the sub-repo's directory.
-- A cross-service change is made by each scope's module run, and what crosses the scopes is the delivery module's (`<autoflow-root>/docs/units/delivery.md` > *Multi-repo delivery*).
+- A cross-service change is made by each scope's module run, and the pull requests it takes across the scopes are the delivery module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*).
 
 For details, see `<autoflow-root>/docs/repo-boundary-rules.md`.
 
@@ -229,288 +226,118 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 
 <!-- From <autoflow-root>/docs/units/delivery.md -->
 
-# U6 Delivery — INTEGRATE, DELIVER and HANDOFF
+# U6 Delivery — DELIVER, INTEGRATE and HANDOFF
 
-> The procedure of the four delivery modules. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes to
-> this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
+> The procedure of the delivery and ci modules. [`core.md`](<autoflow-root>/docs/core.md) > Module procedures routes
+> to this file; the other modules are listed in [`autoflow-guide.md`](<autoflow-root>/docs/autoflow-guide.md) >
 > Modules.
 
 AutoFlow's mission ends by handing off an open pull request — opened, with CI read, by the modules below, and reviewed by [U7 Review](<autoflow-root>/docs/units/review.md). Merging, issue close, and deployment are outside AutoFlow's authority, performed entirely by an external review process that AutoFlow does not define or perform.
 
-## The four modules
+## The two modules
 
-U6 Delivery is four modules, each with its contract under `<autoflow-root>/docs/contracts/` and
-this file as its procedure ([`ADR-0039`](<autoflow-root>/docs/records/adr/0039-delivery-as-four-modules.md)). Each
-runs alone on its invocation; whether a module runs, in which order, on which pull request, and what
-follows its result — a failed integration check, a red CI, a sub-repo's pull request — are not this
-document's ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D2).
+U6 Delivery is two modules, each with its contract under `<autoflow-root>/docs/contracts/` and this
+file as its procedure ([`ADR-0039`](<autoflow-root>/docs/records/adr/0039-delivery-and-ci-modules.md)). Each runs
+alone on its invocation. A module is given the kinds of its inputs, the kind and form of its output,
+its tools and the authority rules below; how many of a thing it makes, which steps it takes in which
+order and what it checks are the AI's, judged from the inputs it is given.
 
-| Module | Expected output | The work is done by | `timeout` not given |
-|---|---|---|---|
-| `integration` | `<out>/integration.md`: the change shown working above its own tests, every check passed or a stated no-op (*Integration*) | the session itself | 3600 s |
-| `delivery` | `<out>/delivery.json`: the branches pushed at their heads and, unless `pull_request` is `none`, each one's draft pull request open (*Push and pull request*) | the session itself | 900 s |
-| `ci` | `<out>/ci.json`: CI green on each pull request's head, or its not running recorded on it, and the body's CI part stating it (*CI*) | the session itself; a script reads and reports CI | 900 s |
-| `ci-failure` | `<out>/ci-failure.md`: what each failed check shows and where its fix is made (*CI failure*) | an `autoflow-analyzer` spawn (`handoff-review-triage`) | 900 s |
+| Module | Output | `timeout` not given |
+|---|---|---|
+| `delivery` | the change on the target's remote in draft pull requests — `<out>/delivery.json` (*Push and pull request*) | 900 s |
+| `ci` | CI's verdict on each pull request, with its ground — `<out>/ci.json` (*CI*) | 900 s |
 
-## What every delivery module owes
+## What both modules owe
 
 - **Inputs.** A module works from its params and the inputs its invocation gives. The record
   directory (`records`) is where earlier runs left their working files and where the ledger is; it
   does not stand in for an input. An input the work needs and was not given is named as such in the
-  failure output, and the run does not go on from a guess.
-- **The end of a run.** A run ends when its expected output is reached, or when it judges it cannot
-  be reached or its `timeout` (seconds) runs out. A run that cannot reach it writes
-  `<out>/failure.md` instead — what it did, what it observed, and why it did not reach the expected
-  output — and check-out writes its result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`,
-  header). A failure output is a result, not a defect: its reader learns from it alone what
-  happened.
-- **Inside a run** the steps are the AI's: it designs them from what it finds, repeats what it needs
-  within the run, and checks before ending whether the expected output stands. A repetition inside
-  one run is not a re-run.
-- **Checks.** Each module's check-out confirms the facts its output names, by the judgment the
-  module itself uses — a branch at its head, a pull request open at its head, CI green on the head
-  by the same script (*CI*); what the PR body states for the operator is the review's to judge. The
-  integration checks and CI stand outside the module's own claim; a CI that did not run is
-  recorded as not run, never read as green.
+  failure output.
+- **Failure output.** A run that does not reach its goal, or reaches its `timeout` (seconds), writes
+  `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
+  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
+- **Check-out** checks the output's form: the file is there and reads in the form its contract
+  gives. It does not read again on GitHub or in git what the output states.
 
-## Integration
+## Authority rules
 
-INTEGRATE looks at the change as the system runs it, beyond what the build verified per item — on
-the branch, before anything is pushed.
+These hold on every push, every pull request and every pull-request body either module makes.
 
-- **Expected output**: the delivered change is shown to work at the level above its own tests — the
-  project's integration suite, a smoke test, or the built system across its sub-repos. Which checks
-  that takes, and how they are run, is the module's, the way the target runs them
-  ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools).
-  `<out>/integration.md` has one line per check — its command and the summary line read from its
-  log, the log kept under `<out>/local/` — or the no-op line below. A check that was not run is
-  `not-run`, never `passed`.
-- **Failure output**: a check that fails is recorded in `<out>/integration.md` with its output, and
-  `<out>/failure.md` names it — the change is not shown working. A fix of what failed is the build's.
-
-Cautions:
-
-- A project with no integration layer records `INTEGRATE: no-op (no integration suite)`. That is
-  a stated no-op, not a skipped check.
-- In a project with sub-repos the system is built in the dev environment and what crosses sub-repos
-  is what is verified: each affected sub-repo builds (for example
-  `docker compose -f docker-compose.dev.yml up -d --build <services>`), each service's health check
-  passes, the functional integration tests pass, and the cross-cutting concerns the change touches
-  (auth, network ingress) are looked at.
-
-### Deploy/CI-path conditional verification
-
-A **diff-path-conditional** requirement keyed on the class of surface being integrated. It applies to every project; a class the project does not ship resolves to a defined no-op.
-
-**Trigger predicate (deterministic).** Let the diff be `git diff --name-only <base>...HEAD` (base = `git merge-base HEAD origin/<base>`, `<base>` the invocation's `base`). The condition **fires** iff any changed path matches the trigger glob set:
-
-| Class | Glob(s) |
-|---|---|
-| Submodule layout | `.gitmodules` |
-| CI config | `.github/workflows/**`, `**/Jenkinsfile`, `Jenkinsfile` |
-| Deploy scripts | `deploy-*.sh`, `**/deploy-*.sh` |
-| Env / build-arg | `.env`, `.env.*`, `**/.env`, `**/.env.*` |
-
-Stated as one command (the frozen predicate):
-
-```
-git diff --name-only <base>...HEAD \
-  | grep -E '(^|/)\.gitmodules$|(^|/)\.github/workflows/|(^|/)Jenkinsfile$|(^|/)deploy-[^/]*\.sh$|(^|/)\.env(\.[^/]*)?$'
-```
-
-Non-empty ⇒ the verification bundle below is owed, each item PASS or FAIL. Empty ⇒ record `INTEGRATE deploy/CI-path: no-op (diff touched no deploy/CI-path surface)` — a defined no-op, not a discretionary skip.
-
-**Verification bundle** (owed only when the predicate's output is non-empty; each item is itself a defined no-op when the target ships no such surface):
-
-- **(a) Deploy-script dry-run, incl. recursive submodule init** — the target's `deploy-*.sh` in dry-run (`--dry-run` / read-only) with `git submodule update --init --recursive`, confirming the deploy path resolves the current submodule pointers. *No-op* when the target ships no deploy script.
-- **(b) CI-config static validation** — a lint / schema check of the changed CI file itself (`.github/workflows/*` via `actionlint` / YAML-schema; `Jenkinsfile` via the target's `jenkins declarative-linter` or equivalent). *No-op* when no CI file changed.
-- **(c) Landing/host routing smoke check** — a smoke request against the built host / landing route (health / routing reachability). *No-op* when the target exposes no host / landing route.
-
-A bundle item that misses a real breakage on the target where it runs is filed back as an issue. A bundle item that fails is a failing integration check (*Integration* above).
+- Pushing, opening a pull request and editing its body are the module's own commands, never run
+  through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
+- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
+  them. Merging is owned entirely by the external review process.
+- Every pull request a module opens is a draft.
 
 ## Push and pull request
 
-**DELIVER.** One run pushes and opens the pull requests: the branch the invocation names
-(`params.branch`) is on the remote with the build's change — its head the last commit of the
-build's range (`commits`), or a commit past it that also carries the sub-repo pointers the run
-moves (*Multi-repo delivery*) —, and each pushed branch has its draft pull request — or, when it
-already has an open one, the push updates it and its body is brought up to the inputs the run was
-given. With `pull_request: none` the run pushes and opens or updates no pull request. The change it
-delivers is the one whose local tests the build report records green; a build report that does not
-is a failure output, and nothing is pushed. Which remote, which flags and when are the module's.
+**DELIVER, INTEGRATE.** The delivery module puts the change the build made on the target's remote,
+in draft pull requests that show the change working and let the operator decide on them.
 
-These rules hold on every push and every pull request the module makes. Everything they do not
-name — the title, how the body is composed, when the push happens — is the module's.
-
-- **Pushing and opening a pull request are the module's own commands.** `git push …` and
-  `gh pr create …` are issued as those commands, never through a script or a wrapper
-  (`<autoflow-root>/docs/core.md` > Scripts).
-- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
-  them. Merging is owned entirely by the external review process.
-- **Every pull request the module opens is a draft** (`gh pr create --draft …`), on the base the
-  invocation names (`params.base`), or the remote's default branch when it names none.
-
-The body lets the operator decide on the pull request. It states:
-
-- each applied acceptance criterion with its outcome and where its evidence is;
-- what the work verified other than by an executable test, and how — the reviewer reads it
-  (`<autoflow-root>/docs/review/review.md` > Before Reviewing) —, and, given the integration
-  record, how the change was shown working above its own tests;
-- what the work could not verify, and why: the tool requests in each run's file the invocation
-  gives (`tool_requests`) — the criterion review's runs as much as the last ones —, so the operator
-  decides on them;
-- what the change leaves undone: the problems it separated and the recommendations deferred
-  (`deferred`);
-- CI's result, in the body's CI part, which is the ci module's (*CI*): a pull request this run
-  opens says CI is not yet confirmed, and a body this run updates keeps the CI part as it stands.
-
-The host PR closes the issue (`Closes #N`); a sub-repo PR references it and closes nothing
-(*Multi-repo delivery* below). The title and the body's form are the module's, with
-[`title-guide.md`](<autoflow-root>/docs/title-guide.md) and [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) to draw on.
-
-**Expected output**: `<out>/delivery.json` —
-`{pushed: [{repo, branch, head, path}], pull_requests: [{pr, url, head, path, opened}], pointers: [{path, commit}], not_delivered: [{path, why}]}`:
-each pushed branch with its repository (`<owner>/<name>`) and head, `path` the host's `.` or the
-sub-repo's directory; each pull request as `<owner>/<name>#<N>` — the form the review takes as its
-`pr` — with its head and `opened: true` when this run opened it; each pointer the run moves on the
-host's branch, with the sub-repo commit it names; and what the run does not deliver, with why —
-each changed sub-repo the invocation does not name, which is not pushed. Check-out reads each
-branch and pull request on GitHub at the head the file names.
-
-**Failure output**: a push refused, a pull request that cannot be opened, a pointer that cannot be
-set (*Multi-repo delivery*), local tests the build report does not record green, or the `timeout`
-reached — `<out>/failure.md` states what was pushed and opened before it, and why the rest was not.
-
-## Multi-repo delivery
-
-Where the project's information names sub-repos — a directory whose source is its own repository,
-tracked by the host as a submodule pointer (gitlink) — the sub-repos the invocation names
-(`sub_repos`) are delivered on their own pull requests and the host follows each by its pointer.
-AutoFlow does not classify the project; what the sub-repos are, where each one's pull request goes
-(a fork, the upstream) and where issues are filed are read from the project's own information
-([`core.md`](<autoflow-root>/docs/core.md) > Project Information).
-
-What follows a sub-repo pull request's merge is outside AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) >
-Post-Merge Cleanup).
-
-**Expected output**, for each sub-repo the invocation names:
-
-- its branch is on its repository's remote and, unless `pull_request` is `none`, has its draft pull
-  request open, on the host's terms (*Push and pull request*);
-- unless its entry says `pointer: false`, the host branch's pointer names the sub-repo commit the
-  change delivers;
-- `<out>/delivery.json` names its branch and head (`pushed`), its pull request (`pull_requests`)
-  and the pointer moved (`pointers`); a changed sub-repo the invocation does not name is in
-  `not_delivered`, with why.
-
-The host branch's head carries the build's change, and past it the pointer moves the run makes
-(*Push and pull request*). How a pointer move is made and placed on the host branch, which pull
-request is opened first, and how a conflict is settled and confirmed are the module's.
-
-Cautions:
-
-- The host pull request's pointer names the sub-repo commit that sub-repo's pull request delivers,
-  so the host review reads the pointer and the sub-repo review reads the code behind it, each its
-  own repository's ([U7 Review](<autoflow-root>/docs/units/review.md) > *Review triage*).
-- Another change may have moved the base's pointer forward since this branch forked. A pointer is
-  not moved behind it or onto another history: when the delivered sub-repo commit does not contain
-  the base's pointer — the base is ahead of it, or the two have diverged — the host is not pushed,
-  and the failure output states it, situation-first.
-- A sub-repo pull request references the host issue (`Part of <host-owner>/<host-name>#N`) and
-  carries no close keyword; the host pull request is the one that closes the issue
-  ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Issue Auto-Close).
-- The reviews run apart: a sub-repo pull request that changes under review leaves the host's
-  pointer behind its head, and every pointer move is a host commit the host review reads again — a
-  host re-review per move.
-- A sub-repo nested inside a sub-repo is that sub-repo's own delivery.
+- **Inputs**: what the build produced and worked from — its commits (`commits`), its report
+  (`build_report`), the applied criteria and the verification design —, and the records the
+  pull-request body carries: the quality evaluation, the feature design, the tool requests of every
+  run (`tool_requests`) and the recommendations deferred or separated (`deferred`).
+- **Params**: `base`, the branch the pull requests merge into (not given, the remote's default
+  branch); `pull_request: none`, on which the branches are pushed and no pull request is opened;
+  `timeout`.
+- **What the AI judges**: how many pull requests the change takes, in which repositories and on which
+  branches — a sub-repo's included, read from the project's own information
+  ([`core.md`](<autoflow-root>/docs/core.md) > Project Information) —, and how the pull requests show the change
+  working.
+- **The change pushed** is one whose local tests the build report records green.
+- **The body** states each applied acceptance criterion with its outcome and where its evidence is;
+  what the work verified other than by an executable test, and how the change was shown working; what
+  the work could not verify, and why — the tool requests, so the operator decides on them; and what
+  the change leaves undone — the problems it separated and the recommendations deferred. Its CI part
+  is the ci module's (*CI*). The pull request in the repository the issue is filed in closes it
+  (`Closes #N`); any other references it and closes nothing
+  ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Issue Auto-Close). The title and the body's form are the
+  module's, with [`title-guide.md`](<autoflow-root>/docs/title-guide.md) and [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md)
+  to draw on.
+- **Tools**: `git` and `gh`, as the module's own commands.
+- **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
+  pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
+  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` under
+  `pull_request: none`.
+- **Failure output**: `<out>/failure.md` (*What both modules owe*) — among what the run did, what it
+  pushed and opened.
 
 ## CI
 
-The ci module confirms CI on each pull request it is given (`pull_requests`, each with the head it
-is to be confirmed on: the delivery's output, or a file the invocation writes,
-`{pull_requests: [{pr, head}]}`) with one script, called once for each pull request:
+**HANDOFF.** The ci module reads CI on each pull request it is given and states the verdict in the
+pull request's body.
 
-```
-CI_POLL_TIMEOUT_SECS=<seconds> bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <N> --repo <owner/name>
-```
-
-The module's `timeout` bounds the whole run, not one call: with several pull requests no call is
-given all of it, and each call's `CI_POLL_TIMEOUT_SECS` is the module's choice from the time that
-remains.
-
-The script reads the PR's mergeable state first and then runs one finite, deadline-bounded poll over
-the checks the CI publishes on the PR head — any check, by count and conclusion, never by name.
-Green is what the script judges green (its header): one representative per check identity, a
-superseded run's cancelled rows not counted, at least one present and every one green, on a PR whose
-mergeable state was confirmed. Check-out judges by the same script, read once (`--once`), on the
-head the output names. Every exit but `0` ends with a stderr line of what it read
-(`observed: reads=… checks_seen=… mergeable=… merge_state=…`), which the output carries.
-
-| Exit | What was read | `verdict` |
-|---|---|---|
-| `0` | green | `green` |
-| `10` | not mergeable — a confirmed `CONFLICTING` / `DIRTY` read; CI was not waited on | `conflict` |
-| `11` | mergeable, and no check published on the head on any well-formed read within the bound | `not-run`, or the run's failure (below) |
-| `12` | a check concluded and is not green | `failed` |
-| `13` | checks present, no green verdict at the deadline — still pending, mergeability not re-settled, or a superseded run's workflow unresolved (named on its own stderr line) | `pending` |
-| `14` | the mergeable state, or any read of the checks, could not be confirmed — a `gh` transport, auth or parse failure, or a merge state that never settled | `unread` |
-| `64` | usage | — |
-
-**Expected output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, exit, observed, failing}]}`, every
-pull request `green` or `not-run` — and each pull request's body carrying its CI part:
-
-- the CI result, and the head it was read on; a later result on a head replaces an earlier one, and
-  a `green` body carries no `CI: not run` line;
-- **CI not run.** On exit `11`, whether the target's CI does not run for this pull request — no
-  workflow, or a trigger, path filter or condition that excludes it — or is late is the module's
-  judgment, recorded with its ground (ADR-0034 D5). Not running: the body carries the line
-  `CI: not run`, alone on its line, with the ground below it, and what CI was to run for it (a
-  `ci-deferred` lint chain, an added test file) is listed as not run; the verdict is `not-run`;
-- **Added test files.** On `green`, each test file the change added to the target's tree (the build
-  report's `## Test files kept`) is confirmed to have actually run in the PR head's CI. The criterion
-  is execution visible in a job's log: a workflow that only registers the file, or a job that only
-  prints its path, did not run it, and a log that could not be read shows neither. Beside each file
-  the PR body's `## Verification dispositions` records the job that ran it, or that no job ran it,
-  listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI. How
-  it is confirmed is the module's judgment. A change that added no test file has nothing to confirm.
-
-The output is judged on the pull request as it stands once the body is written: a check the body's
-edit itself starts is read like any other.
-
-**Failure output**: a pull request that is `conflict`, `failed`, `pending` or `unread`, or `11` judged
-late — `<out>/ci.json` carries every pull request's verdict, `failing` names each failed check and
-its URL, the body's CI part states the result, and `<out>/failure.md` says which pull request did not
-reach green and what the script observed.
-
-Cautions:
-
-- The module does not write its own poll loop, and does not read an empty status as green. A
-  `CONFLICTING` PR may receive no check at all; that is exit `10`, not a missed webhook.
-
-### CI failure
-
-The ci-failure module reads what each failed check shows (`ci`: the pull requests whose verdict is
-`failed`, with their failing checks). The session does not read the failure log itself (Cost
-Control): an anonymous direct subagent — `subagent_type: autoflow-analyzer`, the model
-`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — reads
-the failing check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
-`<out>/ci-failure.md` with the failing check, the first failing assertion or error, where the fix
-that clears it is made — the implementation, a test asset, a document, or the design when clearing
-it would discard or change a decision the design settled — and the grounds for that judgment, and
-returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
-to the advisor and records the advisor's decision with its ledger entry
-([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) >
-Development Lifecycle > *Decisions within a module*).
-
-**Failure output**: a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
-Development Lifecycle > *Tools*); a check whose output could not be read is named in
-`<out>/failure.md`, with what was tried.
+- **Inputs**: the pull requests (`pull_requests`), each with the head CI is read on — the delivery's
+  output, or a file the invocation writes, `{pull_requests: [{pr, head}]}`; and, optionally, the
+  build report (`build_report`): the test files the change added (`## Test files kept`) and the
+  `ci-deferred` lint chains.
+- **Params**: `timeout`, which bounds the whole run.
+- **What the AI judges**: how it reads CI, how long it waits within the `timeout`, and whether it
+  reads a failing check's log.
+- **Tool**: `<autoflow-root>/scripts/handoff/confirm-ci-green.sh` — what it reads and what each of its
+  exits means are stated in its header. CI is not read as green on an empty status.
+- **Output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, ground}]}`: each pull request's verdict
+  on the head it was read on — `green`, `not-run`, or what CI showed instead — and the ground it rests
+  on; and each pull request's body carrying its CI part:
+  - the verdict and the head it was read on; a later verdict on a head replaces an earlier one;
+  - **CI not run.** Where the target's CI does not run for the pull request — no workflow, or a
+    trigger, path filter or condition that excludes it — the body carries the line `CI: not run`,
+    alone on its line, with the ground below it (ADR-0034 D5), and what CI was to run for it (a
+    `ci-deferred` lint chain, an added test file) is listed as not run. A `green` body carries no such
+    line;
+  - **Added test files.** Beside each test file the change added to the target's tree, the PR body's
+    `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
+    listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
+- **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
+  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` and the body's CI part state the
+  verdict all the same.
 
 <!-- From <autoflow-root>/docs/pr-body-guide.md -->
 
 # PR Body Authoring Guide
 
-PR body 작성 시 참고하는 가이드. delivery module과 수동 PR 작성자 모두 대상.
+PR body 작성 시 참고하는 가이드. delivery module, ci module과 수동 PR 작성자 모두 대상.
 
 ## Principles
 

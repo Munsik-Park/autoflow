@@ -13,8 +13,8 @@ ADR-0024 D1's `standing` declaration and D4's class-routed re-entry; ADR-0034's 
 ADR-0029 D1, D7 and D9, ADR-0027, ADR-0035 and ADR-0037 K5, K7, K8 and D2's M1–M5, without the owner
 it names for M2–M5, stand.
 
-D1's list of modules — delivery split into integration, delivery, ci and ci-failure — and check-out's
-result, which gains `failed`, are amended by ADR-0039 (issue #518).
+D1's list of modules — delivery split into delivery and ci — and check-out's result, which gains
+`failed`, are amended by ADR-0039 (issue #518).
 
 ## Context
 

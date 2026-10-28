@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/handoff/confirm-ci-green.sh
 #
-# CI confirmation — the one judgment of whether a pull request's CI is green,
-# used by the ci module and by that module's check-out (`--once`), so the two
-# judge by the same criterion (docs/units/delivery.md > CI; issue #518).
+# CI confirmation — the ci module's tool for whether a pull request's CI is
+# green on its head (docs/units/delivery.md > CI; issue #518). What each exit
+# means is stated here, in the exit-code contract below.
 #
 # Promotes the CI-confirmation invariant from prose into a single enforceable
 # invocation so the session that runs the ci module never hand-writes a
@@ -22,15 +22,10 @@
 # read, not what is done next.
 #
 # Usage:
-#   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>] [--once]
+#   scripts/handoff/confirm-ci-green.sh --pr <N> [--repo <owner/name>]
 #
 # Options:
 #   --pr <N>            Required. PR number to confirm. Non-numeric/missing -> exit 64.
-#   --once              Read the PR once and give the verdict on that read, with
-#                       no wait: the same exit codes, by the same rules, on one
-#                       read of the mergeable state and one of the checks — the
-#                       checks read once whatever CI_POLL_TIMEOUT_SECS or the
-#                       time left to the deadline.
 #   --repo <owner/name> Optional. Forwarded to every `gh pr view` call (cross-repo
 #                       selector, mirrors scripts/review/codex-review-pr.sh).
 #                       Omitted => the current repository (host PR). The
@@ -103,12 +98,11 @@
 set -uo pipefail
 
 usage() {
-  echo "usage: $0 --pr <N> [--repo <owner/name>] [--once]" >&2
+  echo "usage: $0 --pr <N> [--repo <owner/name>]" >&2
 }
 
 PR=""
 REPO=""
-ONCE=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -118,8 +112,7 @@ while [ "$#" -gt 0 ]; do
     --repo)
       [ "$#" -ge 2 ] || { echo "missing value for --repo" >&2; usage; exit 64; }
       REPO="$2"; shift 2 ;;
-    --once) ONCE=1; shift ;;
-    -h|--help) echo "usage: $0 --pr <N> [--repo <owner/name>] [--once]"; exit 0 ;;
+    -h|--help) echo "usage: $0 --pr <N> [--repo <owner/name>]"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; usage; exit 64 ;;
   esac
 done
@@ -272,13 +265,12 @@ classify_rollup() {
 # The lookup is narrowed to the candidate runs — every run of a workflowName that
 # carries a CANCELLED row of a non-newest run, since two runs of one workflow share
 # its display name on one head SHA — so a rollup with no such row issues no call.
-# Each lookup is one read-only, bounded `gh api` GET inside the poll deadline
-# (under --once, inside the one read whatever the deadline), and a resolved run
-# is cached for the script's lifetime (a run's workflow never changes). While
-# any candidate is unresolved (failed / timed-out lookup), the drop falls back to
-# the display-name rule for the red count only and the exit-0 verdict is withheld
-# (RUN_WF_COMPLETE=0): an unresolved lookup can delay green, never grant it, and
-# never turn a lookup failure into a false red.
+# Each lookup is one read-only, bounded `gh api` GET inside the poll deadline, and
+# a resolved run is cached for the script's lifetime (a run's workflow never
+# changes). While any candidate is unresolved (failed / timed-out lookup), the
+# drop falls back to the display-name rule for the red count only and the exit-0
+# verdict is withheld (RUN_WF_COMPLETE=0): an unresolved lookup can delay green,
+# never grant it, and never turn a lookup failure into a false red.
 RUN_REF_JQ='
   def run_ref:
     if .__typename == "CheckRun" and ((.workflowName // "") != "") then
@@ -315,9 +307,8 @@ RUN_WF_CACHE='{}'
 RUN_WF_COMPLETE=1
 
 # resolve_run_workflows <body> — resolves the workflow of every candidate run not
-# yet in RUN_WF_CACHE, one bounded `gh api` GET per run within the deadline (under
-# --once whatever the deadline, as the read it belongs to); sets RUN_WF_COMPLETE=1
-# when every candidate is resolved, 0 otherwise.
+# yet in RUN_WF_CACHE, one bounded `gh api` GET per run within the deadline; sets
+# RUN_WF_COMPLETE=1 when every candidate is resolved, 0 otherwise.
 resolve_run_workflows() {
   local cands c host repo id wid out now remaining
   RUN_WF_COMPLETE=1
@@ -328,7 +319,7 @@ resolve_run_workflows() {
       continue
     fi
     now="$(date +%s)"; remaining=$(( deadline - now ))
-    if [ "$ONCE" -eq 0 ] && [ "$remaining" -le 0 ]; then RUN_WF_COMPLETE=0; break; fi
+    if [ "$remaining" -le 0 ]; then RUN_WF_COMPLETE=0; break; fi
     out="$(mktemp)"
     gh_bounded "$(clamp_to_interval "$remaining")" "$out" \
       gh api --hostname "$host" "repos/$repo/actions/runs/$id" --jq '.workflow_id'
@@ -474,13 +465,12 @@ fi
 
 # ---------------------------------------------------------------------------
 # 2. POLL (reached on a mergeable precheck OR a degraded-precheck fall-through),
-#    deadline-bounded and finite. --once enters it once whatever the deadline,
-#    and every path through it under --once breaks or exits.
+#    deadline-bounded and finite.
 # ---------------------------------------------------------------------------
-while [ "$ONCE" -eq 1 ] || [ "$(date +%s)" -lt "$deadline" ]; do
+while [ "$(date +%s)" -lt "$deadline" ]; do
   now="$(date +%s)"
   remaining=$(( deadline - now ))
-  if [ "$ONCE" -eq 0 ] && [ "$remaining" -le 0 ]; then break; fi
+  [ "$remaining" -le 0 ] && break
 
   # Per-call watchdog sub-bound: min(interval, remaining-to-deadline), >=1.
   sub_bound="$(clamp_to_interval "$remaining")"
@@ -494,7 +484,6 @@ while [ "$ONCE" -eq 1 ] || [ "$(date +%s)" -lt "$deadline" ]; do
   # A hung call was killed, or a transient non-zero / empty read: tolerate,
   # re-test the deadline at the loop head, and continue within the budget.
   if [ "${GH_TIMED_OUT:-0}" -eq 1 ] || [ "${GH_RC:-0}" -ne 0 ] || [ -z "$body" ]; then
-    [ "$ONCE" -eq 1 ] && break
     sleep_to_deadline
     continue
   fi
@@ -511,7 +500,7 @@ while [ "$ONCE" -eq 1 ] || [ "$(date +%s)" -lt "$deadline" ]; do
   # checks was well formed (reads_ok=0) and the post-loop classifier lands it on
   # exit 14 — never 11, which needs a well-formed read that saw no check, and
   # never 10.
-  if [ -z "$m" ]; then [ "$ONCE" -eq 1 ] && break; sleep_to_deadline; continue; fi
+  if [ -z "$m" ]; then sleep_to_deadline; continue; fi
   reads_ok=$(( reads_ok + 1 ))
   last_m="$m"; last_s="$s"
   # Well-formed read: confirm the mergeable state unless it carries no verdict.
@@ -548,7 +537,6 @@ while [ "$ONCE" -eq 1 ] || [ "$(date +%s)" -lt "$deadline" ]; do
     saw_checks=1
   fi
 
-  [ "$ONCE" -eq 1 ] && break
   # clamped-sleep: min(interval, remaining) so the loop cannot overshoot the
   # deadline by a full interval.
   sleep_to_deadline
@@ -557,22 +545,21 @@ done
 # ---------------------------------------------------------------------------
 # 3. TIMEOUT — deadline reached without a terminal classification.
 # ---------------------------------------------------------------------------
-if [ "$ONCE" -eq 1 ]; then bound="one read"; else bound="${CI_POLL_TIMEOUT_SECS}s"; fi
 if [ "$mergeable_confirmed" -eq 0 ] || [ "$reads_ok" -eq 0 ]; then
   if [ "$mergeable_confirmed" -eq 0 ]; then
-    echo "the mergeable state was not confirmed within ${bound} — every read failed or was malformed (gh transport, auth or parse), or the merge state stayed UNKNOWN; not a merge conflict; NOT green" >&2
+    echo "the mergeable state was not confirmed within ${CI_POLL_TIMEOUT_SECS}s — every read failed or was malformed (gh transport, auth or parse), or the merge state stayed UNKNOWN; not a merge conflict; NOT green" >&2
   else
-    echo "no read of the checks was well formed within ${bound} (gh transport, auth or parse) — whether a check was published is unknown; NOT green" >&2
+    echo "no read of the checks was well formed within ${CI_POLL_TIMEOUT_SECS}s (gh transport, auth or parse) — whether a check was published is unknown; NOT green" >&2
   fi
   observed
   exit 14
 fi
 if [ "$saw_checks" -eq 0 ]; then
-  echo "MERGEABLE, and no check was published on the head on any well-formed read within ${bound}; NOT green" >&2
+  echo "MERGEABLE, and no check was published on the head on any well-formed read within ${CI_POLL_TIMEOUT_SECS}s; NOT green" >&2
   observed
   exit 11
 else
-  echo "checks present but no green verdict within ${bound} — a check still running, or a rollup already green whose mergeable state did not re-settle; NOT green" >&2
+  echo "checks present but no green verdict within ${CI_POLL_TIMEOUT_SECS}s — a check still running, or a rollup already green whose mergeable state did not re-settle; NOT green" >&2
   if [ "$RUN_WF_COMPLETE" -eq 0 ]; then
     echo "superseded-run workflow lookup unresolved (gh api repos/<owner>/<repo>/actions/runs/<run_id> for a run with a CANCELLED check) — exit 0 is withheld until it resolves; the token's actions: read access to that repository decides whether it can" >&2
   fi

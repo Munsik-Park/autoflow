@@ -2,7 +2,7 @@
 
 A reusable framework for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), delivered as a Claude Code plugin.
 
-AutoFlow is a set of modules — the criterion review, analysis, design, build, the delivery's four and review,
+AutoFlow is a set of modules — the criterion review, analysis, design, build, delivery, ci and review,
 and the evaluations that score their work — each with a contract, built on multi-agent role
 separation, independent analysis, and quantified evaluation. AutoFlow writes no file into the
 project's tree (see [Quick Start](#quick-start)). Three properties set its scope:
@@ -28,10 +28,8 @@ analysis          current structure, gap, necessity, conclusion with its grounds
 design            feature design + verification design                             → scored by plan
 build             test-first implementation and verification: the commits and the build report → scored by audit (test-first and the security audit)
 quality           the completion evaluation of the whole change
-integration       the change shown working above its own tests, before the push
-delivery          the push and the draft PRs (each sub-repo the invocation names too)
-ci                CI green on each PR's head, or recorded as not run — the same judgment its check-out makes
-ci-failure        what a failed CI check shows and where its fix is made
+delivery          the push and the draft PRs that show the change working (as many, and in the repositories, as the change takes)
+ci                CI's verdict on each PR's head with its ground — green, or recorded as not run
 review            the configured reviewers, each run by its own script, and the target's own review bots → one aggregated comment and its findings file
 ```
 
@@ -200,9 +198,9 @@ AutoFlow does not classify a project's repository structure. The AI reads the
 project's own information and rule files where they exist — a `README.md`, a
 `CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
 (see `docs/core.md` > Project Information), and records a fact no file states,
-and the repository does not show, as a tool request. A project with sub-repos delivers each changed sub-repo on its own
-PR, and the host PR's pointer names the commit it delivers
-(`docs/units/delivery.md` > *Multi-repo delivery*); what follows a merge is
+and the repository does not show, as a tool request. In a project with sub-repos, which PRs a
+change takes, a sub-repo's included, is the delivery module's judgment
+(`docs/units/delivery.md` > *Push and pull request*); what follows a merge is
 outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 
 ### Evaluation Tuning

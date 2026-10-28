@@ -319,8 +319,8 @@ the change since that evaluation is the sections of the analysis report a later 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
 and its evaluation ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
-lifetime* above; criterion-screen, integration, delivery, ci and review are the work of the session that runs them, ci-failure is the CI-failure reader's,
-and criteria-apply is a script.
+lifetime* above; criterion-screen, delivery, ci and review are the work of the session that runs them, and
+criteria-apply is a script.
 
 | Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |
 |---|---|---|
@@ -463,7 +463,7 @@ AutoFlow's records of an attempt — the decision ledger, the criterion review, 
 ## Sub-repo pointer
 
 While a host pull request is open, its branch may point at the head of the sub-repo pull request
-it depends on ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Multi-repo delivery*). The pointer is
+it depends on ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*). The pointer is
 committed on the host branch by the delivery module ([`core.md`](<autoflow-root>/docs/core.md) > Commit Ownership). Whether a sub-repo's
 source is a fork or the upstream, and its URL, are the project's information.
 
@@ -585,7 +585,7 @@ git grep -n -i -E 'lint[- ]chain|lint-outcome|lint outcome|ci-deferred|unexecute
 
 - **[MUST]** Fail-closed default: a chain whose reason class cannot be established is `unexecuted`. The permissive class is the one earned by evidence; the absence of evidence yields the blocking one.
 
-A `ci-deferred` deferral is discharged when the PR's CI is confirmed green — green as `<autoflow-root>/scripts/handoff/confirm-ci-green.sh` judges it, the judgment the ci module and its check-out share ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*). That confirmation is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format > *Evidence anchor*) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When no CI runs for the pull request (the ci module's `not-run`), the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*).
+A `ci-deferred` deferral is discharged by the ci module's `green` verdict on the PR ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*). That verdict is over the rollup, not a per-job execution guarantee: nothing in it re-checks that the named covering job appears in the rollup, so the producer's covering-job citation and trigger evidence (Reporting Format > *Evidence anchor*) are what tie the deferral to a job that actually runs, and the evaluators re-derive them from the report. When the ci module's verdict is `not-run`, the deferral is not discharged: the chain is listed on the pull request as not run ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*).
 
 - **[MUST]** A chain that did not execute is reported `not-run`, never `clean`.
 

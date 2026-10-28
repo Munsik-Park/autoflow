@@ -70,7 +70,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORE="$ROOT/docs/core.md"
 MAP="$ROOT/scripts/skills/core-units.tsv"
 DOCS="$ROOT/scripts/skills/role-docs.tsv"
-MODULES="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality integration delivery ci ci-failure review"
+MODULES="criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis criteria-apply hypothesis design plan build audit quality delivery ci review"
 BODIES="$MODULES"
 
 MODE=write
@@ -477,10 +477,8 @@ mod_desc() {
     build)               echo "the design implemented and verified on the branch, with its build report." ;;
     audit)               echo "the test-first judgment and the scores of the change on the security items (AUDIT)." ;;
     quality)             echo "the scores of the built change (GATE:QUALITY)." ;;
-    integration)         echo "the change shown working above its own tests, on the branch before a push." ;;
-    delivery)            echo "the branch pushed and, unless the invocation says otherwise, a draft pull request open for it." ;;
-    ci)                  echo "CI green on each pull request's head, or its not running recorded on it, with the body's CI part." ;;
-    ci-failure)          echo "what each failed CI check shows and where its fix is made." ;;
+    delivery)            echo "the change pushed and, unless the invocation says otherwise, in draft pull requests that show it working." ;;
+    ci)                  echo "CI's verdict on each pull request's head, with its ground, in the body's CI part." ;;
     review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict posted on it." ;;
   esac
 }
@@ -498,9 +496,8 @@ mod_work() {
     hypothesis|plan|audit|quality)
       key="gate-$1"; [ "$1" = audit ] && key=audit
       printf 'The work is one fresh `autoflow-evaluator` spawn on the model `%s %s` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below).' "$sp" "$key" ;;
-    integration|delivery) printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it.' ;;
+    delivery)            printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it.' ;;
     ci)                  printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it; a script reads and reports CI.' ;;
-    ci-failure)          printf 'The work is one `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names, given the failed checks the invocation names and the output directory (`<autoflow-root>/docs/units/delivery.md` > CI failure, below).' "$sp" ;;
     review)              printf 'The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round'"'"'s reviews are aggregated by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
   esac
 }

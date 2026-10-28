@@ -185,18 +185,15 @@ A `covers` source is an input's JSON at a jq path (`{input, ids}`), or the first
 in an input or another output (`{input | output, table}`). A `when` limits a check to runs given a
 named input, or to a key's value.
 
-*Revised by issue #518 (ADR-0039, 2026-10-28)*: the `pull-request` format and its `pr_open` and
-`pr_checks` checks are removed. A pull request is an entry of a `json` output,
-`{pr: <owner>/<name>#<N>, head, …}`, and three `json` checks read GitHub at check-out: `pushed`
-(each entry's branch on its repository at its head), `pr_open` (each entry open at its head, and a
-draft when `opened` is true; the list is empty only when the param `none_param` names is `none`)
-and `ci_verdict` (each entry `green` or `not-run` as `scripts/handoff/confirm-ci-green.sh --once`
-reads it on the head the entry names, the body's `not_run_marker` line agreeing). check-in does not
-apply these three to an input: what holds on GitHub now is the reading module's to judge. An output
-may be the contract's failure output (`"failure": true`; one per contract, a `markdown` file with
-`required: false`): a run that writes it ends `failed` (check-out exit 3), beside `accepted` and
-`refused` (§5.3). A `{path: invocation}` source of an input may carry the `format` and `checks` of
-the file the invocation writes, which check-in applies as it applies a producing module's.
+*Revised by issue #518 (ADR-0039; operator decisions 2026-10-28 and 2026-10-29)*: the
+`pull-request` format and its `pr_open` and `pr_checks` checks are removed. A pull request is an
+entry of a `json` output's list, `{pr: <owner>/<name>#<N>, head, …}`, and check-out checks that
+output's form only — `keys`, with `items_keys` naming the keys each entry carries; it reads nothing
+on GitHub or in git for it. An output may be the contract's failure output (`"failure": true`; one
+per contract, a `markdown` file with `required: false`): a run that writes it ends `failed`
+(check-out exit 3), beside `accepted` and `refused` (§5.3). A `{path: invocation}` source of an
+input may carry the `format` and `checks` of the file the invocation writes, which check-in applies
+as it applies a producing module's.
 
 **Every check says who makes it**, by the list it is in: `checks` (the validator) or `evaluation`
 (the evaluation module that scores the output). The split exists today: the orchestrator checks

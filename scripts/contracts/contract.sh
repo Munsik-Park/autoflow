@@ -77,8 +77,7 @@
 #       agrees) · 1 refused (result.json names each defect; lint: the
 #       disagreements are printed) · 2 the invocation or the contract cannot
 #       be read · 3 failed (check-out: the module's failure output stands).
-# Requires jq; git for a "git" output; gh for the pushed, pr_open and
-# ci_verdict checks.
+# Requires jq; git for a "git" output; gh for a pull-request-comment output.
 set -uo pipefail
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -153,11 +152,8 @@ all_contracts() { for f in "$ROOT"/docs/contracts/*.json; do jq -c . "$f" 2>/dev
 
 # The checks of an output that need nothing but its file: a "covers" compares
 # it with the producer's own inputs or outputs, and a "when" on an input reads
-# the producer's invocation — both were the producer's check-out's (Q19); a
-# check of a fact on GitHub (pushed, pr_open, ci_verdict) was true at the
-# producer's check-out, and what holds now is the reading module's to judge.
-SELF_CONTAINED='map(select(.type != "covers" and (.type | IN("pushed", "pr_open", "ci_verdict") | not)
-  and ((.when // {}) | has("input") | not))
+# the producer's invocation — both were the producer's check-out's (Q19).
+SELF_CONTAINED='map(select(.type != "covers" and ((.when // {}) | has("input") | not))
   | if .type == "table" then del(.covers) else . end
   | if .type == "keys" then .spec |= map_values(if (.required_when // {}) | has("input") then del(.required_when) else . end) else . end)'
 
@@ -398,9 +394,6 @@ check_json() { # <output name> <file> <checks json>
         jq -e "(($of // {}) | keys | sort) as \$all | (($a // []) + ($b // [])) as \$p
                | (\$p | sort) == \$all and (\$p | unique | length) == (\$p | length)" "$f" >/dev/null 2>&1 \
           || defect "$n: every key of $of must be in exactly one of $a and $b" ;;
-      pushed) check_pushed "$n" "$f" "$c" ;;
-      pr_open) check_pr_open "$n" "$f" "$c" ;;
-      ci_verdict) check_ci_verdict "$n" "$f" "$c" ;;
       covers)
         when_holds "$c" "$f" || continue
         local by dby src name p
@@ -463,90 +456,6 @@ check_git() { # <output name> <check json> <files map>
   fi
   git merge-base --is-ancestor "$from" "$to" 2>/dev/null || defect "$n: '$br' no longer contains its head at check-in ($from)"
   record_output "$n" "$(jq -n --arg b "$br" --arg f "$from" --arg t "$to" '{branch: $b, from: $f, to: $t}')"
-}
-
-# --- facts on GitHub (ADR-0039) -----------------------------------------------
-# An entry names a pull request as "<owner>/<name>#<N>" (the review's `pr`) and
-# a pushed branch by its repository, its name and its head.
-
-# pushed: every entry of the list at .path is on its repository at its head.
-check_pushed() { # <output name> <file> <check json>
-  local n=$1 f=$2 c=$3 e repo br head now
-  command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pushed branches"; return; }
-  while IFS= read -r e; do
-    [ -n "$e" ] || continue
-    repo=$(jq -r '.repo // empty' <<<"$e"); br=$(jq -r '.branch // empty' <<<"$e"); head=$(jq -r '.head // empty' <<<"$e")
-    [ -n "$repo" ] && [ -n "$br" ] && [ -n "$head" ] || { defect "$n: a pushed entry is {repo, branch, head}: $e"; continue; }
-    now=$(gh api "repos/$repo/git/ref/heads/$br" --jq '.object.sha' 2>/dev/null) \
-      || { defect "$n: branch '$br' is not on $repo"; continue; }
-    [ "$now" = "$head" ] || defect "$n: branch '$br' on $repo is at $now, not at $head"
-  done < <(jq -c "$(jq -r .path <<<"$c") // [] | .[]" "$f" 2>/dev/null)
-}
-
-# pr_open: every entry of the list at .path is an open pull request at its
-# head, and a draft when the entry says this run opened it ("opened": true);
-# the list is empty only when the param "none_param" names is "none".
-check_pr_open() { # <output name> <file> <check json>
-  local n=$1 f=$2 c=$3 e pr repo num head pv np count
-  command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull requests"; return; }
-  count=$(jq "$(jq -r .path <<<"$c") // [] | length" "$f" 2>/dev/null || echo 0)
-  np=$(jq -r '.none_param // empty' <<<"$c")
-  if [ "$count" -eq 0 ] && { [ -z "$np" ] || [ "$(param "$np")" != none ]; }; then
-    defect "$n: names no pull request"
-  fi
-  while IFS= read -r e; do
-    [ -n "$e" ] || continue
-    pr=$(jq -r '.pr // empty' <<<"$e"); head=$(jq -r '.head // empty' <<<"$e")
-    [[ "$pr" =~ ^[^/]+/[^#]+#[0-9]+$ ]] && [ -n "$head" ] || { defect "$n: a pull-request entry is {pr: <owner>/<name>#<N>, head, …}: $e"; continue; }
-    repo=${pr%#*}; num=${pr##*#}
-    pv=$(gh pr view "$num" --repo "$repo" --json state,isDraft,headRefOid 2>/dev/null) \
-      || { defect "$n: $pr could not be read"; continue; }
-    jq -e '.state == "OPEN"' <<<"$pv" >/dev/null || defect "$n: $pr is not open"
-    jq -e --arg h "$head" '.headRefOid == $h' <<<"$pv" >/dev/null \
-      || defect "$n: $pr is at $(jq -r .headRefOid <<<"$pv"), not at the head the output names ($head)"
-    if jq -e '.opened == true' <<<"$e" >/dev/null; then
-      jq -e '.isDraft' <<<"$pv" >/dev/null || defect "$n: $pr, opened by this run, is not a draft"
-    fi
-  done < <(jq -c "$(jq -r .path <<<"$c") // [] | .[]" "$f" 2>/dev/null)
-}
-
-# ci_verdict: every entry of the list at .path says "green" or "not-run", and
-# the same judgment the module made — confirm-ci-green.sh, read once — reads
-# the same on the pull request at the head the entry names: green is exit 0 and
-# a body without the marker line; not-run is exit 11 (no check on the head) and
-# a body with it. The read is called with CI_POLL_TIMEOUT_SECS and
-# CI_POLL_INTERVAL_SECS empty — the script's defaults — so the environment the
-# check-out runs in does not change its verdict.
-check_ci_verdict() { # <output name> <file> <check json>
-  local n=$1 f=$2 c=$3 e pr repo num head verdict pv rc why marker want
-  command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull requests"; return; }
-  marker=$(jq -r '.not_run_marker' <<<"$c")
-  [ "$(jq "$(jq -r .path <<<"$c") // [] | length" "$f" 2>/dev/null || echo 0)" -gt 0 ] || defect "$n: names no pull request"
-  while IFS= read -r e; do
-    [ -n "$e" ] || continue
-    pr=$(jq -r '.pr // empty' <<<"$e"); head=$(jq -r '.head // empty' <<<"$e"); verdict=$(jq -r '.verdict // empty' <<<"$e")
-    [[ "$pr" =~ ^[^/]+/[^#]+#[0-9]+$ ]] && [ -n "$head" ] || { defect "$n: an entry is {pr: <owner>/<name>#<N>, head, verdict, …}: $e"; continue; }
-    case "$verdict" in
-      green) want=0 ;;
-      not-run) want=11 ;;
-      *) defect "$n: $pr is '$verdict', not green or not-run"; continue ;;
-    esac
-    repo=${pr%#*}; num=${pr##*#}
-    pv=$(gh pr view "$num" --repo "$repo" --json headRefOid,body 2>/dev/null) \
-      || { defect "$n: $pr could not be read"; continue; }
-    jq -e --arg h "$head" '.headRefOid == $h' <<<"$pv" >/dev/null \
-      || { defect "$n: $pr is at $(jq -r .headRefOid <<<"$pv"), not at the head the output judged ($head)"; continue; }
-    why=$(CI_POLL_TIMEOUT_SECS='' CI_POLL_INTERVAL_SECS='' bash "$ROOT/scripts/handoff/confirm-ci-green.sh" --pr "$num" --repo "$repo" --once 2>&1 >/dev/null); rc=$?
-    [ "$rc" -eq "$want" ] \
-      || defect "$n: $pr is '$verdict' in the output; confirm-ci-green.sh --once reads exit $rc: $(printf '%s' "$why" | tr '\n' ' ' | sed 's/ *$//')"
-    if [ "$verdict" = green ]; then
-      jq -e --arg m "$marker" '.body | split("\n") | any(. == $m) | not' <<<"$pv" >/dev/null \
-        || defect "$n: $pr is green and its body still has the '$marker' line"
-    else
-      jq -e --arg m "$marker" '.body | split("\n") | any(. == $m)' <<<"$pv" >/dev/null \
-        || defect "$n: $pr is not-run and its body has no '$marker' line"
-    fi
-  done < <(jq -c "$(jq -r .path <<<"$c") // [] | .[]" "$f" 2>/dev/null)
 }
 
 check_comment() { # <output name> <checks json>
@@ -638,7 +547,7 @@ check_out() {
 # --- lint ---------------------------------------------------------------------
 # The check types each format implements above; lint refuses any other.
 KNOWN_TYPES='{"markdown": ["section", "table"],
-  "json": ["keys", "forbidden_keys", "unique", "partition", "covers", "pushed", "pr_open", "ci_verdict"],
+  "json": ["keys", "forbidden_keys", "unique", "partition", "covers"],
   "git": ["git_range"],
   "pull-request-comment": ["pr_comment_posted"]}'
 
@@ -748,7 +657,7 @@ lint() {
         else
           ($v.checks // [])[] as $ch
           | (if ($known[$v.format] | index($ch.type)) == null then "output \($o): check type \($ch.type) is not one the validator implements for \($v.format)" else empty end),
-            ([$ch.branch_param, $ch.pr_param, $ch.none_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
+            ([$ch.branch_param, $ch.pr_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
             ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input][] | select(. != null)
               | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
             ([($ch.covers // [])[].output, $ch.absent_reason.output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared"),

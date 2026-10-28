@@ -1,6 +1,6 @@
 # PR Body Authoring Guide
 
-PR body 작성 시 참고하는 가이드. delivery module과 수동 PR 작성자 모두 대상.
+PR body 작성 시 참고하는 가이드. delivery module, ci module과 수동 PR 작성자 모두 대상.
 
 ## Principles
 

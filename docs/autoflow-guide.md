@@ -43,8 +43,8 @@ into one BUILD (ADR-0025):
 | STEP 4, 5a–5d, 5.5 | BUILD | build |
 | STEP 5.7 | AUDIT | audit |
 | STEP 6 | GATE:QUALITY | quality |
-| STEP 7–8 | DELIVER, INTEGRATE | integration, delivery |
-| STEP 9 | HANDOFF, REVIEW | ci, ci-failure, review |
+| STEP 7–8 | DELIVER, INTEGRATE | delivery |
+| STEP 9 | HANDOFF, REVIEW | ci, review |
 
 ---
 
@@ -61,11 +61,11 @@ into one BUILD (ADR-0025):
   (`criterion-in-depth-AC2-1`).
 - The run writes its outputs and `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
   check-out writes `<out>/result.json`: `status` (`accepted`, `refused`, or `failed` when the run
-  wrote its contract's failure output — what it did and why it did not reach its expected output),
+  wrote its contract's failure output — what it did and why it did not reach its goal),
   `outputs` (each output's path; the build's commits as `{branch, from, to}`), `defects`,
-  `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has
-  done no work; a run refused or failed at check-out leaves its outputs, and a later module's check-in reads an
-  input by its form, not by the result of the run that made it.
+  `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has done no work; a run
+  refused or failed at check-out leaves its outputs, and a later module's check-in reads an input by
+  its form, not by the result of the run that made it.
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
   each module's outputs meet: its contract, `<autoflow-root>/docs/contracts/<module>.json`.
 
@@ -406,39 +406,10 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 {"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
 ```
 
-### `integration`
-
-- Kind: functional; given the record directory (`records`)
-- Goal: The change on the branch shown working at the level above its own tests — the project's integration suite, a smoke test, or the system built across its sub-repos, and the deploy/CI-path verification when the diff touches that surface — each check with its result and its log.
-- Procedure: `<autoflow-root>/docs/units/delivery.md`
-
-| Param | Required | Form |
-|---|---|---|
-| `issue` | yes | issue-number |
-| `branch` | yes | string |
-| `base` | no | string |
-| `timeout` | no | integer |
-
-| Input | Required | From |
-|---|---|---|
-| `commits` | yes | `build` → `commits` |
-| `feature_design` | yes | `design` → `feature_design` |
-| `verification_design` | yes | `design` → `verification_design` |
-| `build_report` | yes | `build` → `report` |
-
-| Output | File |
-|---|---|
-| `integration` | `<out>/integration.md` |
-| `failure` | `<out>/failure.md` |
-
-```json
-{"contract":1,"module":"integration","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"feature_design":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/integration-<n>"}
-```
-
 ### `delivery`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The branch on the remote with the change the build made — at the last commit of its range, or past it with the sub-repo pointers the run moves —, each sub-repo the invocation names pushed and, unless its entry says pointer false, named by the host's pointer at the commit it delivers, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it; the output names each branch's head, each pull request, each pointer moved, and what is not delivered, with why.
+- Goal: The change the build made, its local tests recorded green in the build report, pushed to the target's remote and — unless the invocation says pull_request none — in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
@@ -457,10 +428,8 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `build_report` | yes | `build` → `report` |
 | `feature_design` | no | `design` → `feature_design` |
 | `quality_evaluation` | no | `quality` → `evaluation` |
-| `integration` | no | `integration` → `integration` |
 | `tool_requests` | no | the `tool-requests.json` of every earlier run |
 | `deferred` | no | a file the invocation gives |
-| `sub_repos` | no | a file the invocation gives |
 
 | Output | File |
 |---|---|
@@ -474,7 +443,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `ci`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: For each pull request it is given, CI green on the head — or, where no CI runs for it, that fact and its ground recorded on it — with the body's CI part stating that result and the CI job that ran each test file the change added.
+- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — stated in the body's CI part, with, given the build report, the CI job that ran each test file the change added.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
@@ -485,7 +454,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Input | Required | From |
 |---|---|---|
 | `pull_requests` | yes | `delivery` → `delivered`, or a file the invocation gives |
-| `build_report` | yes | `build` → `report` |
+| `build_report` | no | `build` → `report` |
 
 | Output | File |
 |---|---|
@@ -493,31 +462,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"ci","params":{"issue":"<issue-number>"},"inputs":{"pull_requests":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/ci-<n>"}
-```
-
-### `ci-failure`
-
-- Kind: functional; given the record directory (`records`)
-- Goal: What each failed CI check shows: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment.
-- Procedure: `<autoflow-root>/docs/units/delivery.md`
-
-| Param | Required | Form |
-|---|---|---|
-| `issue` | yes | issue-number |
-| `timeout` | no | integer |
-
-| Input | Required | From |
-|---|---|---|
-| `ci` | yes | `ci` → `ci`, or a file the invocation gives |
-
-| Output | File |
-|---|---|
-| `ci_failure` | `<out>/ci-failure.md` |
-| `failure` | `<out>/failure.md` |
-
-```json
-{"contract":1,"module":"ci-failure","params":{"issue":"<issue-number>"},"inputs":{"ci":"<path>"},"records":"<record directory>","out":"<record directory>/ci-failure-<n>"}
+{"contract":1,"module":"ci","params":{"issue":"<issue-number>"},"inputs":{"pull_requests":"<path>"},"records":"<record directory>","out":"<record directory>/ci-<n>"}
 ```
 
 ### `review`

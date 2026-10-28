@@ -99,7 +99,7 @@ Merging, and what follows a merge or a close, are outside AutoFlow.
 
 A change that touches no sub-repo is delivered on one PR, and that PR carries `Closes #N`.
 
-*Secondary (multi-repo):* for each sub-repo its invocation names, the delivery module opens a PR there too — the host PR carries the close keyword, each sub-repo PR references only:
+*Secondary (multi-repo):* when the delivery module opens a PR in a sub-repo too, the host PR carries the close keyword, each sub-repo PR references only:
 
 ```
 # Host PR (closes the issue)

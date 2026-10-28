@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; split by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "delivery",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The branch on the remote with the change the build made — at the last commit of its range, or past it with the sub-repo pointers the run moves —, each sub-repo the invocation names pushed and, unless its entry says pointer false, named by the host's pointer at the commit it delivers, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it; the output names each branch's head, each pull request, each pointer moved, and what is not delivered, with why.\n",
+  "goal": "The change the build made, its local tests recorded green in the build report, pushed to the target's remote and — unless the invocation says pull_request none — in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -24,7 +24,7 @@
       "type": "string",
       "required": false,
       "pattern": "^(open|none)$",
-      "note": "none: the branches are pushed and no pull request is opened or updated; not given, open"
+      "note": "none: the branches are pushed and no pull request is opened; not given, open"
     },
     "timeout": {
       "type": "integer",
@@ -75,14 +75,6 @@
         "output": "evaluation"
       }
     },
-    "integration": {
-      "required": false,
-      "from": {
-        "module": "integration",
-        "output": "integration"
-      },
-      "note": "given, the body states how the change was shown working above its own tests"
-    },
     "tool_requests": {
       "required": false,
       "from": {
@@ -96,43 +88,27 @@
         "path": "invocation"
       },
       "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
-    },
-    "sub_repos": {
-      "required": false,
-      "from": {
-        "path": "invocation"
-      },
-      "note": "a JSON array of the sub-repos to deliver, each {path, pointer}: path the sub-repo's directory in the host; each is pushed and, unless pull_request is none, gets its pull request; pointer false leaves the host's pointer where it is (not given, true). A changed sub-repo not named is not pushed, and the output names it"
     }
   },
   "outputs": {
     "delivered": {
       "file": "delivery.json",
       "format": "json",
-      "note": "{pushed: [{repo, branch, head, path}], pull_requests: [{pr: <owner>/<name>#<N>, url, head, path, opened}], pointers: [{path, commit}], not_delivered: [{path, why}]} — opened true for a pull request this run opened; the review's pr is an entry's pr",
+      "note": "{pull_requests: [{repo: <owner>/<name>, branch, head, pr: <owner>/<name>#<N>}]} — each branch pushed, its head and its pull request; pr null under pull_request none. The review's pr and the ci module's input are an entry's pr",
       "checks": [
         {
           "type": "keys",
           "spec": {
-            "pushed": {
-              "type": "array",
-              "required": true
-            },
             "pull_requests": {
               "type": "array",
-              "required": true
+              "required": true,
+              "items_keys": [
+                "repo",
+                "branch",
+                "head"
+              ]
             }
           }
-        },
-        {
-          "type": "pushed",
-          "path": ".pushed"
-        },
-        {
-          "type": "pr_open",
-          "path": ".pull_requests",
-          "none_param": "pull_request",
-          "note": "each open at the head the entry names, and a draft when this run opened it"
         }
       ]
     },
@@ -141,7 +117,7 @@
       "format": "markdown",
       "required": false,
       "failure": true,
-      "note": "Written instead of the expected output when the run cannot reach it, or reaches its timeout: what the run did, what it observed, and why it did not reach the expected output — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What every delivery module owes)."
+      "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What both modules owe)."
     }
   }
 }
