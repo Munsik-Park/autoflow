@@ -443,7 +443,7 @@ AutoFlow PR body는 작업의 모든 도구 요청 — invocation이 주는 각 
 
 본 가이드는 권고. PR 유형에 따라 일부 섹션은 적용되지 않을 수 있다.
 
-- [U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*, *CI* 가 본 가이드를 cross-reference (delivery module, ci module).
+- [U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request* 가 본 가이드를 참조한다 (delivery module). *CI* 는 본 가이드를 링크하지 않으며, ci module의 command body에는 본 가이드 중 *5. Verification dispositions* 만 실린다.
 - 수동 PR 작성 시도 동일하게 참조.
 
 새 principle 추가 시 형식 유지 (이름 + 본문 + 예시 1-2건).
