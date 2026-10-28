@@ -438,7 +438,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `delivery`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The branch on the remote at the last commit of the range the build made, with each sub-repo the invocation names pushed and its pointer set, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it.
+- Goal: The branch on the remote with the change the build made — at the last commit of its range, or past it with the sub-repo pointers the run moves —, each sub-repo the invocation names pushed and, unless its entry says pointer false, named by the host's pointer at the commit it delivers, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it; the output names each branch's head, each pull request, each pointer moved, and what is not delivered, with why.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |

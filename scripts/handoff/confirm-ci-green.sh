@@ -272,12 +272,13 @@ classify_rollup() {
 # The lookup is narrowed to the candidate runs — every run of a workflowName that
 # carries a CANCELLED row of a non-newest run, since two runs of one workflow share
 # its display name on one head SHA — so a rollup with no such row issues no call.
-# Each lookup is one read-only, bounded `gh api` GET inside the poll deadline, and
-# a resolved run is cached for the script's lifetime (a run's workflow never
-# changes). While any candidate is unresolved (failed / timed-out lookup), the
-# drop falls back to the display-name rule for the red count only and the exit-0
-# verdict is withheld (RUN_WF_COMPLETE=0): an unresolved lookup can delay green,
-# never grant it, and never turn a lookup failure into a false red.
+# Each lookup is one read-only, bounded `gh api` GET inside the poll deadline
+# (under --once, inside the one read whatever the deadline), and a resolved run
+# is cached for the script's lifetime (a run's workflow never changes). While
+# any candidate is unresolved (failed / timed-out lookup), the drop falls back to
+# the display-name rule for the red count only and the exit-0 verdict is withheld
+# (RUN_WF_COMPLETE=0): an unresolved lookup can delay green, never grant it, and
+# never turn a lookup failure into a false red.
 RUN_REF_JQ='
   def run_ref:
     if .__typename == "CheckRun" and ((.workflowName // "") != "") then
@@ -314,8 +315,9 @@ RUN_WF_CACHE='{}'
 RUN_WF_COMPLETE=1
 
 # resolve_run_workflows <body> — resolves the workflow of every candidate run not
-# yet in RUN_WF_CACHE, one bounded `gh api` GET per run within the deadline; sets
-# RUN_WF_COMPLETE=1 when every candidate is resolved, 0 otherwise.
+# yet in RUN_WF_CACHE, one bounded `gh api` GET per run within the deadline (under
+# --once whatever the deadline, as the read it belongs to); sets RUN_WF_COMPLETE=1
+# when every candidate is resolved, 0 otherwise.
 resolve_run_workflows() {
   local cands c host repo id wid out now remaining
   RUN_WF_COMPLETE=1
@@ -326,7 +328,7 @@ resolve_run_workflows() {
       continue
     fi
     now="$(date +%s)"; remaining=$(( deadline - now ))
-    if [ "$remaining" -le 0 ]; then RUN_WF_COMPLETE=0; break; fi
+    if [ "$ONCE" -eq 0 ] && [ "$remaining" -le 0 ]; then RUN_WF_COMPLETE=0; break; fi
     out="$(mktemp)"
     gh_bounded "$(clamp_to_interval "$remaining")" "$out" \
       gh api --hostname "$host" "repos/$repo/actions/runs/$id" --jq '.workflow_id'

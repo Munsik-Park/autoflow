@@ -514,7 +514,9 @@ check_pr_open() { # <output name> <file> <check json>
 # the same judgment the module made — confirm-ci-green.sh, read once — reads
 # the same on the pull request at the head the entry names: green is exit 0 and
 # a body without the marker line; not-run is exit 11 (no check on the head) and
-# a body with it.
+# a body with it. The read is called with CI_POLL_TIMEOUT_SECS and
+# CI_POLL_INTERVAL_SECS empty — the script's defaults — so the environment the
+# check-out runs in does not change its verdict.
 check_ci_verdict() { # <output name> <file> <check json>
   local n=$1 f=$2 c=$3 e pr repo num head verdict pv rc why marker want
   command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull requests"; return; }
@@ -534,7 +536,7 @@ check_ci_verdict() { # <output name> <file> <check json>
       || { defect "$n: $pr could not be read"; continue; }
     jq -e --arg h "$head" '.headRefOid == $h' <<<"$pv" >/dev/null \
       || { defect "$n: $pr is at $(jq -r .headRefOid <<<"$pv"), not at the head the output judged ($head)"; continue; }
-    why=$(bash "$ROOT/scripts/handoff/confirm-ci-green.sh" --pr "$num" --repo "$repo" --once 2>&1 >/dev/null); rc=$?
+    why=$(CI_POLL_TIMEOUT_SECS='' CI_POLL_INTERVAL_SECS='' bash "$ROOT/scripts/handoff/confirm-ci-green.sh" --pr "$num" --repo "$repo" --once 2>&1 >/dev/null); rc=$?
     [ "$rc" -eq "$want" ] \
       || defect "$n: $pr is '$verdict' in the output; confirm-ci-green.sh --once reads exit $rc: $(printf '%s' "$why" | tr '\n' ' ' | sed 's/ *$//')"
     if [ "$verdict" = green ]; then

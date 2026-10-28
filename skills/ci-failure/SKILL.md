@@ -328,9 +328,11 @@ A bundle item that misses a real breakage on the target where it runs is filed b
 ## Push and pull request
 
 **DELIVER.** One run pushes and opens the pull requests: the branch the invocation names
-(`params.branch`) goes to the remote at the last commit of the build's range (`commits`), and each
-pushed branch gets its draft pull request — or, when it already has an open one, the push updates
-it and its body is brought up to the inputs the run was given. With `pull_request: none` the run
+(`params.branch`) is on the remote with the build's change — its head the last commit of the
+build's range (`commits`), or a commit past it that also carries the sub-repo pointers the run
+moves (*Multi-repo delivery*) —, and each pushed branch has its draft pull request — or, when it
+already has an open one, the push updates it and its body is brought up to the inputs the run was
+given. With `pull_request: none` the run
 pushes and opens or updates no pull request. The change it delivers is the one whose local tests the
 build report records green; a build report that does not is a failure output, and nothing is
 pushed. Which remote, which flags and when are the module's.
@@ -368,9 +370,10 @@ The host PR closes the issue (`Closes #N`); a sub-repo PR references it and clos
 `{pushed: [{repo, branch, head, path}], pull_requests: [{pr, url, head, path, opened}], pointers: [{path, commit}], not_delivered: [{path, why}]}`:
 each pushed branch with its repository (`<owner>/<name>`) and head, `path` the host's `.` or the
 sub-repo's directory; each pull request as `<owner>/<name>#<N>` — the form the review takes as its
-`pr` — with its head and `opened: true` when this run opened it; each pointer the host's branch
-sets; and each changed sub-repo the invocation does not name, which is not pushed. Check-out reads
-each branch and pull request on GitHub at the head the file names.
+`pr` — with its head and `opened: true` when this run opened it; each pointer the run moves on the host's branch, with the
+sub-repo commit it names; and what the run does not deliver, with why — each changed sub-repo the
+invocation does not name, which is not pushed. Check-out reads each branch and pull request on
+GitHub at the head the file names.
 
 **Failure output**: a push refused, a pull request that cannot be opened, a pointer that cannot be
 set (*Multi-repo delivery*), local tests the build report does not record green, or the `timeout`
@@ -388,28 +391,35 @@ AutoFlow does not classify the project; what the sub-repos are, where each one's
 What follows a sub-repo pull request's merge is outside AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) >
 Post-Merge Cleanup).
 
-For each sub-repo the invocation names:
+**Expected output**, for each sub-repo the invocation names:
 
-- its branch is pushed and, unless `pull_request` is `none`, its pull request opened by the module's
-  own commands — `git -C <sub-repo> push …`, `gh pr create --repo <owner/name> …` —, as a draft, on
-  the host's terms (*Push and pull request*). A sub-repo pull request references the host issue
-  (`Part of <host-owner>/<host-name>#N`) and carries no close keyword; the host pull request is the
-  one that closes the issue;
-- unless its entry says `pointer: false`, the host's pointer is set to the sub-repo commit the
-  change delivers, in a host commit pushed with the host branch, so the host review reads the
-  pointer and the sub-repo review reads the code behind it ([U7 Review](<autoflow-root>/docs/units/review.md) > *Review
-  triage*).
+- its branch is on its repository's remote and, unless `pull_request` is `none`, has its draft pull
+  request open, on the host's terms (*Push and pull request*);
+- unless its entry says `pointer: false`, the host branch's pointer names the sub-repo commit the
+  change delivers;
+- `<out>/delivery.json` names its branch and head (`pushed`), its pull request (`pull_requests`)
+  and the pointer moved (`pointers`); a changed sub-repo the invocation does not name is in
+  `not_delivered`, with why.
+
+The host branch's head carries the build's change, and past it the pointer moves the run makes
+(*Push and pull request*). How a pointer move is made and placed on the host branch, which pull
+request is opened first, and how a conflict is settled and confirmed are the module's.
 
 Cautions:
 
-- A conflict on the pointer is settled by setting it to the delivered commit, read back
-  (`git ls-tree HEAD <sub-repo>`) before the push.
-- Another change may have moved the base's pointer since this branch forked. When the delivered
-  sub-repo commit does not contain that pointer — the base is ahead of it, or the two have
-  diverged — setting it would move the host's pointer backwards or across histories: the
-  module does not push the host, and its failure output states it, situation-first.
-- Every pointer move is a host commit the host review reads again; a pointer moved while the
-  sub-repo pull request is still changing under review costs a host re-review per move.
+- The host pull request's pointer names the sub-repo commit that sub-repo's pull request delivers,
+  so the host review reads the pointer and the sub-repo review reads the code behind it, each its
+  own repository's ([U7 Review](<autoflow-root>/docs/units/review.md) > *Review triage*).
+- Another change may have moved the base's pointer forward since this branch forked. A pointer is
+  not moved behind it or onto another history: when the delivered sub-repo commit does not contain
+  the base's pointer — the base is ahead of it, or the two have diverged — the host is not pushed,
+  and the failure output states it, situation-first.
+- A sub-repo pull request references the host issue (`Part of <host-owner>/<host-name>#N`) and
+  carries no close keyword; the host pull request is the one that closes the issue
+  ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Issue Auto-Close).
+- The reviews run apart: a sub-repo pull request that changes under review leaves the host's
+  pointer behind its head, and every pointer move is a host commit the host review reads again — a
+  host re-review per move.
 - A sub-repo nested inside a sub-repo is that sub-repo's own delivery.
 
 ## CI
