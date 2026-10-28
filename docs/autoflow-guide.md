@@ -43,8 +43,8 @@ into one BUILD (ADR-0025):
 | STEP 4, 5a–5d, 5.5 | BUILD | build |
 | STEP 5.7 | AUDIT | audit |
 | STEP 6 | GATE:QUALITY | quality |
-| STEP 7–8 | DELIVER, INTEGRATE | delivery |
-| STEP 9 | HANDOFF, REVIEW | delivery, review |
+| STEP 7–8 | DELIVER, INTEGRATE | integration, delivery |
+| STEP 9 | HANDOFF, REVIEW | ci, ci-failure, review |
 
 ---
 
@@ -60,10 +60,11 @@ into one BUILD (ADR-0025):
   inside it: `<module>-<n>`, or `<module>-<qualifier>-<n>` for a module run once per item
   (`criterion-in-depth-AC2-1`).
 - The run writes its outputs and `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
-  check-out writes `<out>/result.json`: `status` (`accepted` or `refused`), `outputs` (each output's
-  path; the build's commits as `{branch, from, to}`; the delivery's pull request as `{url, number,
-  head}`), `defects`, `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has
-  done no work; a run refused at check-out leaves its outputs, and a later module's check-in reads an
+  check-out writes `<out>/result.json`: `status` (`accepted`, `refused`, or `failed` when the run
+  wrote its contract's failure output — what it did and why it did not reach its expected output),
+  `outputs` (each output's path; the build's commits as `{branch, from, to}`), `defects`,
+  `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has
+  done no work; a run refused or failed at check-out leaves its outputs, and a later module's check-in reads an
   input by its form, not by the result of the run that made it.
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
   each module's outputs meet: its contract, `<autoflow-root>/docs/contracts/<module>.json`.
@@ -73,7 +74,7 @@ into one BUILD (ADR-0025):
 - An input names where it comes from (the tables below): another module's output, given by its path
   (the build's commits as the range `{branch, from, to}` its `result.json` records); ledger entries, given as the ledger
   file; a document of the target; or a file the invocation gives. The review's `pr` is
-  `<owner>/<name>#<N>`, the pull request the delivery's `result.json` records.
+  `<owner>/<name>#<N>`, a pull request's `pr` in the delivery's `delivery.json`.
 - An input given several files takes them as an array of paths.
 - A re-run takes its previous output and the findings it answers, the inputs named `previous_…` and
   `findings`.
@@ -405,10 +406,10 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 {"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
 ```
 
-### `delivery`
+### `integration`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.
+- Goal: The change on the branch shown working at the level above its own tests — the project's integration suite, a smoke test, or the system built across its sub-repos, and the deploy/CI-path verification when the diff touches that surface — each check with its result and its log.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
@@ -416,26 +417,107 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `issue` | yes | issue-number |
 | `branch` | yes | string |
 | `base` | no | string |
+| `timeout` | no | integer |
+
+| Input | Required | From |
+|---|---|---|
+| `commits` | yes | `build` → `commits` |
+| `feature_design` | yes | `design` → `feature_design` |
+| `verification_design` | yes | `design` → `verification_design` |
+| `build_report` | yes | `build` → `report` |
+
+| Output | File |
+|---|---|
+| `integration` | `<out>/integration.md` |
+| `failure` | `<out>/failure.md` |
+
+```json
+{"contract":1,"module":"integration","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"feature_design":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/integration-<n>"}
+```
+
+### `delivery`
+
+- Kind: functional; given the record directory (`records`)
+- Goal: The branch on the remote at the last commit of the range the build made, with each sub-repo the invocation names pushed and its pointer set, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it.
+- Procedure: `<autoflow-root>/docs/units/delivery.md`
+
+| Param | Required | Form |
+|---|---|---|
+| `issue` | yes | issue-number |
+| `branch` | yes | string |
+| `base` | no | string |
+| `pull_request` | no | `^(open|none)$` |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
 | `commits` | yes | `build` → `commits` |
 | `applied_criteria` | yes | `criteria-apply` → `applied_criteria` |
-| `feature_design` | yes | `design` → `feature_design` |
 | `verification_design` | yes | `design` → `verification_design` |
 | `build_report` | yes | `build` → `report` |
-| `quality_evaluation` | yes | `quality` → `evaluation` |
+| `feature_design` | no | `design` → `feature_design` |
+| `quality_evaluation` | no | `quality` → `evaluation` |
+| `integration` | no | `integration` → `integration` |
 | `tool_requests` | no | the `tool-requests.json` of every earlier run |
 | `deferred` | no | a file the invocation gives |
+| `sub_repos` | no | a file the invocation gives |
 
 | Output | File |
 |---|---|
-| `pull_request` | pull-request |
-| `integration` | `<out>/integration.md` |
-| `ci_failure` | `<out>/ci-failure.md` |
+| `delivered` | `<out>/delivery.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","quality_evaluation":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+{"contract":1,"module":"delivery","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+```
+
+### `ci`
+
+- Kind: functional; given the record directory (`records`)
+- Goal: For each pull request it is given, CI green on the head — or, where no CI runs for it, that fact and its ground recorded on it — with the body's CI part stating that result and the CI job that ran each test file the change added.
+- Procedure: `<autoflow-root>/docs/units/delivery.md`
+
+| Param | Required | Form |
+|---|---|---|
+| `issue` | yes | issue-number |
+| `timeout` | no | integer |
+
+| Input | Required | From |
+|---|---|---|
+| `pull_requests` | yes | `delivery` → `delivered`, or a file the invocation gives |
+| `build_report` | yes | `build` → `report` |
+
+| Output | File |
+|---|---|
+| `ci` | `<out>/ci.json` |
+| `failure` | `<out>/failure.md` |
+
+```json
+{"contract":1,"module":"ci","params":{"issue":"<issue-number>"},"inputs":{"pull_requests":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/ci-<n>"}
+```
+
+### `ci-failure`
+
+- Kind: functional; given the record directory (`records`)
+- Goal: What each failed CI check shows: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment.
+- Procedure: `<autoflow-root>/docs/units/delivery.md`
+
+| Param | Required | Form |
+|---|---|---|
+| `issue` | yes | issue-number |
+| `timeout` | no | integer |
+
+| Input | Required | From |
+|---|---|---|
+| `ci` | yes | `ci` → `ci`, or a file the invocation gives |
+
+| Output | File |
+|---|---|
+| `ci_failure` | `<out>/ci-failure.md` |
+| `failure` | `<out>/failure.md` |
+
+```json
+{"contract":1,"module":"ci-failure","params":{"issue":"<issue-number>"},"inputs":{"ci":"<path>"},"records":"<record directory>","out":"<record directory>/ci-failure-<n>"}
 ```
 
 ### `review`

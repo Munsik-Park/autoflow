@@ -62,7 +62,7 @@ When a change in one repo affects the interface used by another:
 
 1. The build unit reports the proposed interface change in its report
 2. Each affected repo's change is made by a build run in that repo's scope, in dependency order
-3. Integration testing validates the change across repos — before the hand-off, by the delivery module ([`units/delivery.md`](units/delivery.md) > Integration)
+3. Integration testing validates the change across repos — before the hand-off, by the integration module ([`units/delivery.md`](units/delivery.md) > Integration)
 
 ---
 

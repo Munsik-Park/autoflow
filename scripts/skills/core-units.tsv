@@ -27,10 +27,10 @@
 ## Development Lifecycle	**AutoFlow is a set of modules.**	all
 ## Development Lifecycle	**A module runs once, on its invocation.**	all
 ## Development Lifecycle	**A module's procedure states the goal of its work.**	all
-## Development Lifecycle	**Decisions within a module.**	criterion-screen criterion-reconcile analysis design build delivery review
+## Development Lifecycle	**Decisions within a module.**	criterion-screen criterion-reconcile analysis design build integration delivery ci ci-failure review
 ## Development Lifecycle	**Tools.**	all
 ## Development Lifecycle	**Scripts**	all
-## Development Lifecycle	**Push and PR creation**	delivery review
+## Development Lifecycle	**Push and PR creation**	delivery ci review
 ## Development Lifecycle > ### Module procedures		split
 ## Development Lifecycle > ### Module procedures	**[MUST]** A module's run follows	all
 ## Development Lifecycle > ### Module procedures	|	all
@@ -49,7 +49,10 @@
 ## Development Lifecycle > ### Module procedures	build 	build
 ## Development Lifecycle > ### Module procedures	audit 	audit
 ## Development Lifecycle > ### Module procedures	quality 	quality
+## Development Lifecycle > ### Module procedures	integration 	integration
 ## Development Lifecycle > ### Module procedures	delivery 	delivery
+## Development Lifecycle > ### Module procedures	ci 	ci
+## Development Lifecycle > ### Module procedures	ci-failure 	ci-failure
 ## Development Lifecycle > ### Module procedures	review 	review
 ## Development Lifecycle > ### Module procedures	Each module's procedure	all
 ## Development Lifecycle > ### Module procedures	The rubric of every evaluation	analysis hypothesis design plan build audit quality
@@ -69,7 +72,10 @@
 ## Development Lifecycle > ### Module references	| build |	build
 ## Development Lifecycle > ### Module references	| audit |	audit
 ## Development Lifecycle > ### Module references	| quality |	quality
+## Development Lifecycle > ### Module references	| integration |	integration
 ## Development Lifecycle > ### Module references	| delivery |	delivery
+## Development Lifecycle > ### Module references	| ci |	ci
+## Development Lifecycle > ### Module references	| ci-failure |	ci-failure
 ## Development Lifecycle > ### Module references	| review |	review
 ## Cost Control		all
 ## Decision Ledger		all
@@ -92,7 +98,7 @@
 ## Cross-Project Boundary Rules		all
 ## Project Information		split
 ## Project Information	AutoFlow does not classify	all
-## Project Information	A project whose information names sub-repos	delivery review
+## Project Information	In a project whose information names sub-repos	integration delivery review
 ## Team Structure		split
 ## Team Structure	각 역할의 상세 계약은	all
 ## Team Structure > ### Evaluation AI		analysis hypothesis design plan build audit quality
@@ -103,6 +109,6 @@
 ## Evaluation System		analysis hypothesis design plan build audit quality
 ## Git Workflow — Rules		split
 ## Git Workflow — Rules	> **Procedural details	all
-## Git Workflow — Rules > ### Commit Rules		criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis hypothesis design plan build audit quality delivery review
-## Git Workflow — Rules > ### Commit Ownership		analysis hypothesis design plan build audit quality delivery review
+## Git Workflow — Rules > ### Commit Rules		criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis hypothesis design plan build audit quality integration delivery ci ci-failure review
+## Git Workflow — Rules > ### Commit Ownership		analysis hypothesis design plan build audit quality integration delivery ci ci-failure review
 ## Reference Documents		all

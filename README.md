@@ -2,7 +2,7 @@
 
 A reusable framework for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), delivered as a Claude Code plugin.
 
-AutoFlow is a set of modules — the criterion review, analysis, design, build, delivery and review,
+AutoFlow is a set of modules — the criterion review, analysis, design, build, the delivery's four and review,
 and the evaluations that score their work — each with a contract, built on multi-agent role
 separation, independent analysis, and quantified evaluation. AutoFlow writes no file into the
 project's tree (see [Quick Start](#quick-start)). Three properties set its scope:
@@ -28,7 +28,10 @@ analysis          current structure, gap, necessity, conclusion with its grounds
 design            feature design + verification design                             → scored by plan
 build             test-first implementation and verification: the commits and the build report → scored by audit (test-first and the security audit)
 quality           the completion evaluation of the whole change
-delivery          the push, the change shown working above its own tests, draft PRs → CI green, or recorded as not run
+integration       the change shown working above its own tests, before the push
+delivery          the push and the draft PRs (each sub-repo the invocation names too)
+ci                CI green on each PR's head, or recorded as not run — the same judgment its check-out makes
+ci-failure        what a failed CI check shows and where its fix is made
 review            the configured reviewers, each run by its own script, and the target's own review bots → one aggregated comment and its findings file
 ```
 

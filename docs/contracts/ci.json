@@ -1,0 +1,74 @@
+{
+  "status": "draft — issue #509, epic #507; split by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "ci",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "For each pull request it is given, CI green on the head — or, where no CI runs for it, that fact and its ground recorded on it — with the body's CI part stating that result and the CI job that ran each test file the change added.\n",
+  "procedure": "docs/units/delivery.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, 900. Reaching it ends the run with its failure output"
+    }
+  },
+  "inputs": {
+    "pull_requests": {
+      "required": true,
+      "from": [
+        {
+          "module": "delivery",
+          "output": "delivered"
+        },
+        {
+          "path": "invocation"
+        }
+      ],
+      "note": "the pull requests to confirm: the list at .pull_requests, each {pr: <owner>/<name>#<N>, head}"
+    },
+    "build_report": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "report"
+      },
+      "note": "the test files the change added (## Test files kept) and the ci-deferred lint chains"
+    }
+  },
+  "outputs": {
+    "ci": {
+      "file": "ci.json",
+      "format": "json",
+      "note": "{prs: [{pr, head, verdict, exit, observed, failing: [{name, url}]}]} — verdict green, not-run, failed, conflict, pending or unread, by confirm-ci-green.sh's exit (0, 11, 12, 10, 13, 14); observed its last stderr line",
+      "checks": [
+        {
+          "type": "keys",
+          "spec": {
+            "prs": {
+              "type": "array",
+              "required": true
+            }
+          }
+        },
+        {
+          "type": "ci_verdict",
+          "path": ".prs",
+          "not_run_marker": "CI: not run",
+          "note": "each green or not-run, judged again by confirm-ci-green.sh --once on the head the entry names"
+        }
+      ]
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run cannot reach it, or reaches its timeout: what the run did, what it observed, and why it did not reach the expected output — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What every delivery module owes)."
+    }
+  }
+}

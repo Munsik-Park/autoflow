@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; split by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "delivery",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The branch on the remote at the commit the quality evaluation scored, the change shown working above its own tests, and a draft pull request open with CI green on its head — or CI's not running recorded on it — whose body lets the operator decide on it.\n",
+  "goal": "The branch on the remote at the last commit of the range the build made, with each sub-repo the invocation names pushed and its pointer set, and — unless the invocation says pull_request none — a draft pull request open for each, on the base, whose body lets the operator decide on it.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -19,6 +19,17 @@
       "type": "string",
       "required": false,
       "note": "the branch the pull request is to merge into; not given, the remote's default branch"
+    },
+    "pull_request": {
+      "type": "string",
+      "required": false,
+      "pattern": "^(open|none)$",
+      "note": "none: the branches are pushed and no pull request is opened or updated; not given, open"
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, 900. Reaching it ends the run with its failure output"
     }
   },
   "inputs": {
@@ -36,13 +47,6 @@
         "output": "applied_criteria"
       }
     },
-    "feature_design": {
-      "required": true,
-      "from": {
-        "module": "design",
-        "output": "feature_design"
-      }
-    },
     "verification_design": {
       "required": true,
       "from": {
@@ -57,12 +61,27 @@
         "output": "report"
       }
     },
+    "feature_design": {
+      "required": false,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
     "quality_evaluation": {
-      "required": true,
+      "required": false,
       "from": {
         "module": "quality",
         "output": "evaluation"
       }
+    },
+    "integration": {
+      "required": false,
+      "from": {
+        "module": "integration",
+        "output": "integration"
+      },
+      "note": "given, the body states how the change was shown working above its own tests"
     },
     "tool_requests": {
       "required": false,
@@ -77,34 +96,52 @@
         "path": "invocation"
       },
       "note": "a JSON array of the recommendations deferred or separated, each {subject, finding, disposition}: the disposition is the issue that takes it (#<n>, or <owner>/<repo>#<n>) or the gap stated in one line"
+    },
+    "sub_repos": {
+      "required": false,
+      "from": {
+        "path": "invocation"
+      },
+      "note": "a JSON array of the sub-repos to deliver, each {path, pointer}: path the sub-repo's directory in the host; each is pushed and, unless pull_request is none, gets its pull request; pointer false leaves the host's pointer where it is (not given, true). A changed sub-repo not named is not pushed, and the output names it"
     }
   },
   "outputs": {
-    "pull_request": {
-      "format": "pull-request",
+    "delivered": {
+      "file": "delivery.json",
+      "format": "json",
+      "note": "{pushed: [{repo, branch, head, path}], pull_requests: [{pr: <owner>/<name>#<N>, url, head, path, opened}], pointers: [{path, commit}], not_delivered: [{path, why}]} — opened true for a pull request this run opened; the review's pr is an entry's pr",
       "checks": [
         {
-          "type": "pr_open",
-          "branch_param": "branch",
-          "draft": true
+          "type": "keys",
+          "spec": {
+            "pushed": {
+              "type": "array",
+              "required": true
+            },
+            "pull_requests": {
+              "type": "array",
+              "required": true
+            }
+          }
         },
         {
-          "type": "pr_checks",
-          "not_run_marker": "CI: not run",
-          "note": "the head's checks are all green, or the body records that no CI ran with the marker line"
+          "type": "pushed",
+          "path": ".pushed"
+        },
+        {
+          "type": "pr_open",
+          "path": ".pull_requests",
+          "none_param": "pull_request",
+          "note": "each open at the head the entry names, and a draft when this run opened it"
         }
       ]
     },
-    "integration": {
-      "file": "integration.md",
-      "format": "markdown",
-      "note": "how the change was shown working above its own tests, and what that showed"
-    },
-    "ci_failure": {
-      "file": "ci-failure.md",
+    "failure": {
+      "file": "failure.md",
       "format": "markdown",
       "required": false,
-      "note": "Written when a CI check failed: the failing check, the first failing assertion or error, where the fix that clears it is made, and the grounds for that judgment (docs/units/delivery.md > CI failure)."
+      "failure": true,
+      "note": "Written instead of the expected output when the run cannot reach it, or reaches its timeout: what the run did, what it observed, and why it did not reach the expected output — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What every delivery module owes)."
     }
   }
 }

@@ -20,7 +20,7 @@ Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — 
 | Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer in one line; a fresh advisor is spawned for every request |
 | Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
-The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and review modules are run by their session, which spawns the CI-failure reader and the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
+The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the integration, delivery and ci modules are the work of the session that runs them; the ci-failure module's work is the CI-failure reader, and the review module's session spawns the review aggregator, both on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
 
 ### Model tier revert
 
@@ -179,7 +179,7 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
 and its evaluation ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D1); the
 evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
-lifetime* above; criterion-screen, delivery and review are the work of the session that runs them,
+lifetime* above; criterion-screen, integration, delivery, ci and review are the work of the session that runs them, ci-failure is the CI-failure reader's,
 and criteria-apply is a script.
 
 | Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |

@@ -1,6 +1,6 @@
 ---
 name: autoflow-analyzer
-description: AutoFlow analysis spawn of the review and delivery modules. Use for the review aggregation (the reviews of a pull request into one comment and its findings file) and the reading of a failed CI check. Spawn it as this type, not as general-purpose, so it carries its guidance.
+description: AutoFlow analysis spawn of the review and ci-failure modules. Use for the review aggregation (the reviews of a pull request into one comment and its findings file) and the reading of a failed CI check. Spawn it as this type, not as general-purpose, so it carries its guidance.
 effort: high
 ---
 
@@ -13,7 +13,7 @@ the invocation names (`records`, `out`) or your spawn prompt gives. `[MUST]` mar
 constraint enforced by a gate, hook or role contract, and `[DENY]` a prohibited action
 (`<autoflow-root>/docs/core.md` > Instruction Conventions).
 
-You are an AutoFlow **analysis** agent for the review and delivery modules. Your contract is
+You are an AutoFlow **analysis** agent for the review and ci-failure modules. Your contract is
 `<autoflow-root>/docs/units/review.md` > *Review aggregation* for the reviews of a pull request, or
 `<autoflow-root>/docs/units/delivery.md` > *CI failure* for a failing check, as your prompt names.
 
@@ -148,8 +148,9 @@ that did not take — is not this case.
 
 ### CI failure
 
-A CI failure (exit `12`) is read, not routed. The session does not read the failure log itself
-(Cost Control): an anonymous direct subagent — `subagent_type: autoflow-analyzer`, the model
+The ci-failure module reads what each failed check shows (`ci`: the pull requests whose verdict is
+`failed`, with their failing checks). The session does not read the failure log itself (Cost
+Control): an anonymous direct subagent — `subagent_type: autoflow-analyzer`, the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — reads
 the failing check's output (`gh run view <run-id> --log-failed`, or the check's own log), writes
 `<out>/ci-failure.md` with the failing check, the first failing assertion or error, where the fix
@@ -158,8 +159,11 @@ it would discard or change a decision the design settled — and the grounds for
 returns the path and a one-line summary. Where it cannot judge with confidence, it puts the judgment
 to the advisor and records the advisor's decision with its ledger entry
 ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) >
-Development Lifecycle > *Decisions within a module*); a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
-Development Lifecycle > *Tools*). The run ends with the record.
+Development Lifecycle > *Decisions within a module*).
+
+**Failure output**: a failure output it cannot obtain is a tool request ([`core.md`](<autoflow-root>/docs/core.md) >
+Development Lifecycle > *Tools*); a check whose output could not be read is named in
+`<out>/failure.md`, with what was tried.
 
 <!-- From <autoflow-root>/docs/review/review.md > Severity -->
 
@@ -351,7 +355,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI* > *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 

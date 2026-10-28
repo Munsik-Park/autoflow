@@ -1,0 +1,73 @@
+{
+  "status": "draft — issue #509, epic #507; split by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "contract": 1,
+  "module": "integration",
+  "kind": "functional",
+  "reads_records": true,
+  "goal": "The change on the branch shown working at the level above its own tests — the project's integration suite, a smoke test, or the system built across its sub-repos, and the deploy/CI-path verification when the diff touches that surface — each check with its result and its log.\n",
+  "procedure": "docs/units/delivery.md",
+  "params": {
+    "issue": {
+      "type": "issue-number",
+      "required": true
+    },
+    "branch": {
+      "type": "string",
+      "required": true
+    },
+    "base": {
+      "type": "string",
+      "required": false,
+      "note": "the branch the pull request is to merge into; not given, the remote's default branch"
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, 3600. Reaching it ends the run with its failure output"
+    }
+  },
+  "inputs": {
+    "commits": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "commits"
+      }
+    },
+    "feature_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "feature_design"
+      }
+    },
+    "verification_design": {
+      "required": true,
+      "from": {
+        "module": "design",
+        "output": "verification_design"
+      }
+    },
+    "build_report": {
+      "required": true,
+      "from": {
+        "module": "build",
+        "output": "report"
+      }
+    }
+  },
+  "outputs": {
+    "integration": {
+      "file": "integration.md",
+      "format": "markdown",
+      "note": "each check run — its command, the summary line read from its log, the log under <out>/local/ — or the stated no-op; every check passed or a stated no-op"
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run cannot reach it, or reaches its timeout: what the run did, what it observed, and why it did not reach the expected output — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What every delivery module owes)."
+    }
+  }
+}
