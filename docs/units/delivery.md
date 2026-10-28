@@ -104,10 +104,9 @@ A bundle item that misses a real breakage on the target where it runs is filed b
 build's range (`commits`), or a commit past it that also carries the sub-repo pointers the run
 moves (*Multi-repo delivery*) —, and each pushed branch has its draft pull request — or, when it
 already has an open one, the push updates it and its body is brought up to the inputs the run was
-given. With `pull_request: none` the run
-pushes and opens or updates no pull request. The change it delivers is the one whose local tests the
-build report records green; a build report that does not is a failure output, and nothing is
-pushed. Which remote, which flags and when are the module's.
+given. With `pull_request: none` the run pushes and opens or updates no pull request. The change it
+delivers is the one whose local tests the build report records green; a build report that does not
+is a failure output, and nothing is pushed. Which remote, which flags and when are the module's.
 
 These rules hold on every push and every pull request the module makes. Everything they do not
 name — the title, how the body is composed, when the push happens — is the module's.
@@ -142,10 +141,10 @@ The host PR closes the issue (`Closes #N`); a sub-repo PR references it and clos
 `{pushed: [{repo, branch, head, path}], pull_requests: [{pr, url, head, path, opened}], pointers: [{path, commit}], not_delivered: [{path, why}]}`:
 each pushed branch with its repository (`<owner>/<name>`) and head, `path` the host's `.` or the
 sub-repo's directory; each pull request as `<owner>/<name>#<N>` — the form the review takes as its
-`pr` — with its head and `opened: true` when this run opened it; each pointer the run moves on the host's branch, with the
-sub-repo commit it names; and what the run does not deliver, with why — each changed sub-repo the
-invocation does not name, which is not pushed. Check-out reads each branch and pull request on
-GitHub at the head the file names.
+`pr` — with its head and `opened: true` when this run opened it; each pointer the run moves on the
+host's branch, with the sub-repo commit it names; and what the run does not deliver, with why —
+each changed sub-repo the invocation does not name, which is not pushed. Check-out reads each
+branch and pull request on GitHub at the head the file names.
 
 **Failure output**: a push refused, a pull request that cannot be opened, a pointer that cannot be
 set (*Multi-repo delivery*), local tests the build report does not record green, or the `timeout`
