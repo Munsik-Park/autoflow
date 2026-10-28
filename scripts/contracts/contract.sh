@@ -233,11 +233,15 @@ check_in() {
   while IFS=$'\x1f' read -r n req; do
     [ -n "$n" ] || continue
     if ! has_input "$n"; then [ "$req" = true ] && defect "input '$n' is required"; continue; fi
-    # the outputs this input may be: [{module, output, format, file, checks}]
+    # the forms this input may have: [{label, format, checks}] — another
+    # module's output, or the form a file the invocation writes is given
     local prods
-    prods=$(jq -c --arg n "$n" --argjson all "$all" '[[.inputs[$n].from] | flatten[] | select(type == "object" and has("module"))
-              | . as $f | ($all[$f.module].outputs[$f.output] // {}) as $o
-              | {module: $f.module, output: $f.output, format: ($o.format // ""), checks: ($o.checks // [])}]' <<<"$CONTRACT")
+    prods=$(jq -c --argjson all "$all" --arg n "$n" '[[.inputs[$n].from] | flatten[]
+              | select(type == "object" and (has("module") or (has("path") and has("checks"))))
+              | if has("module") then
+                  . as $f | ($all[$f.module].outputs[$f.output] // {}) as $o
+                  | {label: "\($f.module) \($f.output)", format: ($o.format // ""), checks: ($o.checks // [])}
+                else {label: "a file the invocation writes", format: (.format // ""), checks: .checks} end]' <<<"$CONTRACT")
     while IFS= read -r p; do
       [ -n "$p" ] || continue
       if jq -e 'any(.[]; .format == "git")' <<<"$prods" >/dev/null; then check_range "$n" "$p"; continue; fi
@@ -248,7 +252,7 @@ check_in() {
       while IFS= read -r pr; do
         d=$(form_defects "$(jq -r .format <<<"$pr")" "$p" "$(jq -c ".checks | $SELF_CONTAINED" <<<"$pr")")
         if [ "$(jq length <<<"$d")" -eq 0 ]; then why=""; break; fi
-        why="$why; as $(jq -r '"\(.module) \(.output)"' <<<"$pr"): $(jq -r 'map(sub("^form: "; "")) | join(", ")' <<<"$d")"
+        why="$why; as $(jq -r .label <<<"$pr"): $(jq -r 'map(sub("^form: "; "")) | join(", ")' <<<"$d")"
       done < <(jq -c '.[]' <<<"$prods")
       [ -z "$why" ] || defect "input '$n': $p is not of the form the contract asks${why}"
     done < <(input_paths "$n")
@@ -466,8 +470,49 @@ check_git() { # <output name> <check json> <files map>
 # a pushed branch by its repository, its name and its head.
 
 # pushed: every entry of the list at .path is on its repository at its head.
+# With "branch_param", one entry is the host's (path ".") on the branch that
+# param names, at the last commit of the range input "range_input" — or past
+# it when the list at "moved_by" is not empty (the host's pointer commits) and
+# the range's last commit is an ancestor of that head. With "names_input",
+# every path that input's file names is in one of the lists "named_in" names.
 check_pushed() { # <output name> <file> <check json>
-  local n=$1 f=$2 c=$3 e repo br head now
+  local n=$1 f=$2 c=$3 e repo br head now lp
+  lp=$(jq -r .path <<<"$c")
+  local bp hb hh ri to full mb
+  bp=$(jq -r '.branch_param // empty' <<<"$c")
+  if [ -n "$bp" ]; then
+    hb=$(param "$bp")
+    hh=$(jq -r --arg b "$hb" "[$lp // [] | .[] | select(.path == \".\" and .branch == \$b)] | first | .head // empty" "$f" 2>/dev/null)
+    ri=$(jq -r '.range_input // empty' <<<"$c")
+    if [ -z "$hh" ]; then
+      defect "$n: pushes no host branch '$hb' (an entry with path \".\" on the branch param '$bp' names)"
+    elif [ -n "$ri" ]; then
+      to=$(jq -r --arg i "$ri" '.inputs[$i].to // empty' "$INV")
+      if [ -z "$to" ]; then
+        defect "$n: the invocation gives no commit range '$ri' to compare the host head with"
+      else
+        full=$(git rev-parse --verify --quiet "$to^{commit}" 2>/dev/null) || full=$to
+        mb=$(jq -r '.moved_by // empty' <<<"$c")
+        if [ "$hh" != "$full" ] && ! { [ -n "$mb" ] && [ "$(jq "$mb // [] | length" "$f" 2>/dev/null || echo 0)" -gt 0 ] \
+                                      && git merge-base --is-ancestor "$full" "$hh" 2>/dev/null; }; then
+          defect "$n: the host branch '$hb' is pushed at $hh, not the last commit of $ri ($to)"
+        fi
+      fi
+    fi
+  fi
+  local ni sp p inl
+  ni=$(jq -r '.names_input // empty' <<<"$c")
+  if [ -n "$ni" ]; then
+    inl=$(jq -r '[.named_in[] | "(\(.) // [])[]"] | join(", ")' <<<"$c")
+    while IFS= read -r p; do
+      [ -f "$p" ] || continue
+      while IFS= read -r sp; do
+        [ -n "$sp" ] || continue
+        jq -e --arg s "$sp" "[$inl] | any(.path == \$s)" "$f" >/dev/null 2>&1 \
+          || defect "$n: sub-repo '$sp', which $ni names, is in none of $(jq -r '.named_in | join(", ")' <<<"$c")"
+      done < <(jq -r '.[]? | .path // empty' "$p" 2>/dev/null)
+    done < <(input_paths "$ni")
+  fi
   command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pushed branches"; return; }
   while IFS= read -r e; do
     [ -n "$e" ] || continue
@@ -476,7 +521,7 @@ check_pushed() { # <output name> <file> <check json>
     now=$(gh api "repos/$repo/git/ref/heads/$br" --jq '.object.sha' 2>/dev/null) \
       || { defect "$n: branch '$br' is not on $repo"; continue; }
     [ "$now" = "$head" ] || defect "$n: branch '$br' on $repo is at $now, not at $head"
-  done < <(jq -c "$(jq -r .path <<<"$c") // [] | .[]" "$f" 2>/dev/null)
+  done < <(jq -c "$lp // [] | .[]" "$f" 2>/dev/null)
 }
 
 # pr_open: every entry of the list at .path is an open pull request at its
@@ -510,9 +555,25 @@ check_pr_open() { # <output name> <file> <check json>
 # the same judgment the module made — confirm-ci-green.sh, read once — reads
 # the same on the pull request at the head the entry names: green is exit 0 and
 # a body without the marker line; not-run is exit 11 (no check on the head) and
-# a body with it.
+# a body with it. With "list_input", the entries' {pr, head} are exactly those
+# of the list at "list_path" in that input: none left out, none added.
 check_ci_verdict() { # <output name> <file> <check json>
   local n=$1 f=$2 c=$3 e pr repo num head verdict pv rc why marker want
+  local li given judged p
+  li=$(jq -r '.list_input // empty' <<<"$c")
+  if [ -n "$li" ]; then
+    if ! has_input "$li"; then
+      defect "$n: the invocation gives no $li to compare the entries with"
+    else
+      given=$(while IFS= read -r p; do jq -c "[$(jq -r .list_path <<<"$c") // [] | .[] | {pr, head}]" "$p" 2>/dev/null; done \
+                < <(input_paths "$li") | jq -sc 'add // [] | unique')
+      judged=$(jq -c "[$(jq -r .path <<<"$c") // [] | .[] | {pr, head}] | unique" "$f" 2>/dev/null || echo '[]')
+      while IFS= read -r e; do [ -n "$e" ] && defect "$n: $e, which $li gives, has no entry"; done \
+        < <(jq -rn --argjson a "$given" --argjson b "$judged" '$a - $b | .[] | "\(.pr) at \(.head)"')
+      while IFS= read -r e; do [ -n "$e" ] && defect "$n: $e is not one $li gives"; done \
+        < <(jq -rn --argjson a "$judged" --argjson b "$given" '$a - $b | .[] | "\(.pr) at \(.head)"')
+    fi
+  fi
   command -v gh >/dev/null 2>&1 || { defect "$n: gh is required to read the pull requests"; return; }
   marker=$(jq -r '.not_run_marker' <<<"$c")
   [ "$(jq "$(jq -r .path <<<"$c") // [] | length" "$f" 2>/dev/null || echo 0)" -gt 0 ] || defect "$n: names no pull request"
@@ -718,7 +779,7 @@ lint() {
     done < <(jq -r '.. | objects | .source? // empty | strings | split("; ")[]' <<<"$c")
     # inputs another module produces
     local found
-    found=$(jq -r --argjson all "$all" '
+    found=$(jq -r --argjson all "$all" --argjson known "$KNOWN_TYPES" '
       .inputs // {} | to_entries[] | .key as $k | ([.value.from] | flatten[])
       | . as $f
       | if type != "object" then "input \($k): from is not an object"
@@ -727,7 +788,11 @@ lint() {
           elif ($all[$f.module].outputs | has($f.output) | not) then "input \($k): module \($f.module) has no output \($f.output)"
           else empty end
         elif has("ledger") then empty
-        elif has("path") then (if .path | IN("target", "invocation") then empty else "input \($k): path is not target or invocation" end)
+        elif has("path") then
+          (if .path | IN("target", "invocation") | not then "input \($k): path is not target or invocation"
+           elif has("checks") | not then empty
+           elif ($known | has($f.format // "") | not) or $f.format == "git" then "input \($k): the form of the file the invocation writes has a format the validator does not read"
+           else ($f.checks[] | .type as $t | select(($known[$f.format] | index($t)) == null) | "input \($k): check type \(.type) is not one the validator implements for \($f.format)") end)
         elif has("results") then (if .results == "tool_requests" then empty else "input \($k): results is not tool_requests" end)
         else "input \($k): from names no module, ledger, path or results" end' <<<"$c") || say "inputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
@@ -739,7 +804,7 @@ lint() {
           ($v.checks // [])[] as $ch
           | (if ($known[$v.format] | index($ch.type)) == null then "output \($o): check type \($ch.type) is not one the validator implements for \($v.format)" else empty end),
             ([$ch.branch_param, $ch.pr_param, $ch.none_param][] | select(. != null) | . as $p | select(($c.params // {}) | has($p) | not) | "output \($o): param \(.) is not declared"),
-            ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input][] | select(. != null)
+            ([$ch.when.input, $ch.source.input, ($ch.covers // [])[].input, $ch.range_input, $ch.names_input, $ch.list_input][] | select(. != null)
               | . as $i | select(($c.inputs // {}) | has($i) | not) | "output \($o): input \(.) is not declared"),
             ([($ch.covers // [])[].output, $ch.absent_reason.output][] | select(. != null) | . as $x | select(($c.outputs // {}) | has($x) | not) | "output \($o): output \(.) is not declared"),
             (if $ch.absent_reason and ($c.outputs[$ch.absent_reason.output].format // "") != "markdown" then "output \($o): absent_reason names an output that is not markdown" else empty end)

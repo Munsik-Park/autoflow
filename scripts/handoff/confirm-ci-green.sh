@@ -5,7 +5,7 @@
 #
 # CI confirmation — the one judgment of whether a pull request's CI is green,
 # used by the ci module and by that module's check-out (`--once`), so the two
-# judge by the same criterion (docs/units/delivery.md > The ci module; issue #518).
+# judge by the same criterion (docs/units/delivery.md > CI; issue #518).
 #
 # Promotes the CI-confirmation invariant from prose into a single enforceable
 # invocation so the session that runs the ci module never hand-writes a
@@ -63,8 +63,8 @@
 #   11  0 checks         — MERGEABLE, at least one well-formed read of the
 #                          checks, and no check published on any read within the
 #                          bound.
-#   12  red build        — a check concluded and is not green: any CheckRun
-#                          conclusion but SUCCESS/NEUTRAL/SKIPPED (FAILURE,
+#   12  red build        — a check concluded and is not green: any COMPLETED
+#                          CheckRun conclusion but SUCCESS/NEUTRAL/SKIPPED (FAILURE,
 #                          CANCELLED, TIMED_OUT, STARTUP_FAILURE, STALE,
 #                          ACTION_REQUIRED, …), a StatusContext FAILURE/ERROR.
 #                          A CANCELLED check of a run superseded by a newer run of
@@ -185,8 +185,12 @@ gh_bounded() {
 }
 
 # Classify a poll body's statusCheckRollup into "<total> <fail> <green>", one row
-# per check identity. A same-identity group with ANY non-terminal (QUEUED/PENDING/
-# WAITING/in-progress) entry is pending outright — a stale CANCELLED/FAILURE left by
+# per check identity. A CheckRun is non-terminal until its status is COMPLETED and
+# it carries a conclusion: gh exports the conclusion as a string, "" (not null)
+# while the run is QUEUED / IN_PROGRESS / WAITING / PENDING / REQUESTED (cli/cli
+# api/queries_pr.go CheckContext, api/export_pr.go); a row without a status is
+# read by its conclusion alone. A same-identity group with ANY non-terminal entry
+# is pending outright — a stale CANCELLED/FAILURE left by
 # a concurrency-cancelled run must not outvote the live replacement run on timestamp
 # recency (real CheckRun rollup objects carry no createdAt, so a timestamp key cannot
 # rank a null-timestamp replacement above a completed stale entry). Narrowed (c4 §3.3):
@@ -206,15 +210,17 @@ classify_rollup() {
       else
         ["RAW", tojson]
       end;
+    def run_open:
+      (.conclusion // "") == "" or ((.status // "COMPLETED") != "COMPLETED");
+    def non_terminal:
+      (.__typename == "CheckRun" and run_open)
+      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def green_entry:
-      (.__typename == "CheckRun" and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
+      (.__typename == "CheckRun" and (run_open | not) and (.conclusion | IN("SUCCESS","NEUTRAL","SKIPPED")))
       or (.__typename == "StatusContext" and (.state == "SUCCESS"));
     def fail_entry:
-      (.__typename == "CheckRun" and .conclusion != null and (green_entry | not))
+      (.__typename == "CheckRun" and (run_open | not) and (green_entry | not))
       or (.__typename == "StatusContext" and (.state | IN("FAILURE","ERROR")));
-    def non_terminal:
-      (.__typename == "CheckRun" and (.conclusion == null))
-      or (.__typename == "StatusContext" and (.state | IN("PENDING","EXPECTED")));
     def ts_key: [ .startedAt // "", .completedAt // "", .createdAt // "" ];
     def start_key: [ .startedAt // "", .createdAt // "" ];
     def tie_key: ts_key + [ (if green_entry then 0 else 1 end) ];

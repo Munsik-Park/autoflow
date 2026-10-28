@@ -26,7 +26,23 @@
           "output": "delivered"
         },
         {
-          "path": "invocation"
+          "path": "invocation",
+          "format": "json",
+          "checks": [
+            {
+              "type": "keys",
+              "spec": {
+                "pull_requests": {
+                  "type": "array",
+                  "required": true,
+                  "items_keys": [
+                    "pr",
+                    "head"
+                  ]
+                }
+              }
+            }
+          ]
         }
       ],
       "note": "the pull requests to confirm: the list at .pull_requests, each {pr: <owner>/<name>#<N>, head}"
@@ -59,7 +75,9 @@
           "type": "ci_verdict",
           "path": ".prs",
           "not_run_marker": "CI: not run",
-          "note": "each green or not-run, judged again by confirm-ci-green.sh --once on the head the entry names"
+          "list_input": "pull_requests",
+          "list_path": ".pull_requests",
+          "note": "each green or not-run, judged again by confirm-ci-green.sh --once on the head the entry names; the entries' {pr, head} exactly the input's"
         }
       ]
     },

@@ -370,7 +370,10 @@ each pushed branch with its repository (`<owner>/<name>`) and head, `path` the h
 sub-repo's directory; each pull request as `<owner>/<name>#<N>` — the form the review takes as its
 `pr` — with its head and `opened: true` when this run opened it; each pointer the host's branch
 sets; and each changed sub-repo the invocation does not name, which is not pushed. Check-out reads
-each branch and pull request on GitHub at the head the file names.
+each branch and pull request on GitHub at the head the file names, and holds the file to the
+invocation: one `pushed` entry is the host's (`path` `.`) on `params.branch`, at the last commit of
+`commits` — past it only by the pointer commits `pointers` names —, and every sub-repo `sub_repos`
+names is in `pushed` or in `not_delivered`.
 
 **Failure output**: a push refused, a pull request that cannot be opened, a pointer that cannot be
 set (*Multi-repo delivery*), local tests the build report does not record green, or the `timeout`
@@ -415,7 +418,8 @@ Cautions:
 ## CI
 
 The ci module confirms CI on each pull request it is given (`pull_requests`, each with the head it
-is to be confirmed on) with one script, its `timeout` as the script's bound:
+is to be confirmed on: the delivery's output, or a file the invocation writes,
+`{pull_requests: [{pr, head}]}`) with one script, its `timeout` as the script's bound:
 
 ```
 CI_POLL_TIMEOUT_SECS=<timeout> bash <autoflow-root>/scripts/handoff/confirm-ci-green.sh --pr <N> --repo <owner/name>
@@ -439,8 +443,9 @@ head the output names. Every exit but `0` ends with a stderr line of what it rea
 | `14` | the mergeable state, or any read of the checks, could not be confirmed — a `gh` transport, auth or parse failure, or a merge state that never settled | `unread` |
 | `64` | usage | — |
 
-**Expected output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, exit, observed, failing}]}`, every
-pull request `green` or `not-run` — and each pull request's body carrying its CI part:
+**Expected output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, exit, observed, failing}]}`, one
+entry for each pull request it is given, at the head given, none added, every one `green` or
+`not-run` — and each pull request's body carrying its CI part:
 
 - the CI result, and the head it was read on; a later result on a head replaces an earlier one, and
   a `green` body carries no `CI: not run` line;

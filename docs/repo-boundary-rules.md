@@ -22,7 +22,7 @@ Every produced artifact belongs to the scope that owns the files it lives in: co
 
 ### Procedures (절차)
 
-Integration verification, the push and PR opening are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push and the host pointer are the delivery module's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
+Integration verification is the integration module's, and the push and PR opening are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push and the host pointer are the delivery module's ([`units/delivery.md`](units/delivery.md) > *Multi-repo delivery*); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
 
 ### Backlog (백로그)
 

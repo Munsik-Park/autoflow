@@ -126,7 +126,16 @@
         },
         {
           "type": "pushed",
-          "path": ".pushed"
+          "path": ".pushed",
+          "branch_param": "branch",
+          "range_input": "commits",
+          "moved_by": ".pointers",
+          "names_input": "sub_repos",
+          "named_in": [
+            ".pushed",
+            ".not_delivered"
+          ],
+          "note": "each on its repository at its head; one the host's (path \".\") on params.branch at the last commit of commits — past it only by the pointer commits the output names; every sub-repo sub_repos names pushed or in not_delivered"
         },
         {
           "type": "pr_open",
