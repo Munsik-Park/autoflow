@@ -75,7 +75,7 @@ build                 — the design implemented and verified (test-first, run r
 audit                 — an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)
 quality               — one Evaluation AI (10 items × 10 points)
 delivery              — the change pushed with the module's own `git push` and, unless told otherwise, in draft pull requests opened by the module's own commands — as many, in the repositories and on the branches, as the change takes — that show it working
-ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run — in the body's CI part; a script reads and reports CI
+ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run — in the body's CI part
 review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
 ```
 
