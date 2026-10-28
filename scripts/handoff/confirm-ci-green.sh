@@ -7,15 +7,13 @@
 # green on its head (docs/units/delivery.md > CI; issue #518). What each exit
 # means is stated here, in the exit-code contract below.
 #
-# Promotes the CI-confirmation invariant from prose into a single enforceable
-# invocation so the session that runs the ci module never hand-writes a
-# polling loop (issue #25). It reads
-# `mergeable`/`mergeStateStatus` FIRST and early-exits on CONFLICTING/DIRTY
-# WITHOUT ever entering a poll (the PR #321 infinite-wait class); only when the
-# PR is MERGEABLE/CLEAN does it run a finite, deadline-bounded poll that
-# distinguishes "green" from "0 checks published" (webhook / scan-fallback
-# suspect), "red build", and "still-pending at timeout" (slow CI) via layered
-# exit codes — never reading a clean-but-empty status as green.
+# One bounded invocation: it reads `mergeable`/`mergeStateStatus` FIRST and
+# early-exits on CONFLICTING/DIRTY WITHOUT ever entering a poll (the PR #321
+# infinite-wait class); only when the PR is MERGEABLE/CLEAN does it run a
+# finite, deadline-bounded poll that distinguishes "green" from "0 checks
+# published" (webhook / scan-fallback suspect), "red build", and
+# "still-pending at timeout" (slow CI) via layered exit codes — never reading a
+# clean-but-empty status as green.
 #
 # Observe-only: it performs no merge, no CI re-trigger, and no conflict
 # resolution; it owns only the *confirmation*, and its messages state what it
@@ -78,8 +76,8 @@
 #                          rollup whose superseded-run lookup (issue #274) never
 #                          resolved every candidate run's workflow, which
 #                          withholds exit 0 the same way — a second stderr line
-#                          names this case and points at the token's
-#                          `actions: read` access, not a longer timeout.
+#                          names this case and the token's `actions: read`
+#                          access the lookup depends on.
 #   14  inconclusive     — could not confirm mergeable within the bound, or no
 #                          read of the checks was well formed (a gh transport,
 #                          auth or parse failure, or a mergeability that never

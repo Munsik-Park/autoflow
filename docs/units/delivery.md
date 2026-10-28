@@ -88,7 +88,7 @@ pull request's body.
 - **What the AI judges**: how it reads CI, how long it waits within the `timeout`, and whether it
   reads a failing check's log.
 - **Tool**: `<autoflow-root>/scripts/handoff/confirm-ci-green.sh` — what it reads and what each of its
-  exits means are stated in its header. CI is not read as green on an empty status.
+  exits means are stated in its header.
 - **Output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, ground}]}`: each pull request's verdict
   on the head it was read on — `green`, `not-run`, or what CI showed instead — and the ground it rests
   on; and each pull request's body carrying its CI part:

@@ -121,12 +121,20 @@ skills/quality/SKILL.md	docs/units/completion-evaluation.md
 skills/quality/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
 skills/quality/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/quality/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
-skills/delivery/SKILL.md	docs/units/delivery.md
+skills/delivery/SKILL.md	docs/units/delivery.md	# U6 Delivery	AutoFlow's mission ends
+skills/delivery/SKILL.md	docs/units/delivery.md	## The two modules
+skills/delivery/SKILL.md	docs/units/delivery.md	## What both modules owe
+skills/delivery/SKILL.md	docs/units/delivery.md	## Authority rules
+skills/delivery/SKILL.md	docs/units/delivery.md	## Push and pull request
 skills/delivery/SKILL.md	docs/pr-body-guide.md
 skills/delivery/SKILL.md	docs/title-guide.md
 skills/delivery/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/ci/SKILL.md	docs/units/delivery.md
-skills/ci/SKILL.md	docs/pr-body-guide.md
+skills/ci/SKILL.md	docs/units/delivery.md	# U6 Delivery	AutoFlow's mission ends
+skills/ci/SKILL.md	docs/units/delivery.md	## The two modules
+skills/ci/SKILL.md	docs/units/delivery.md	## What both modules owe
+skills/ci/SKILL.md	docs/units/delivery.md	## Authority rules
+skills/ci/SKILL.md	docs/units/delivery.md	## CI
+skills/ci/SKILL.md	docs/pr-body-guide.md	## Principles > ### 5. Verification dispositions
 skills/review/SKILL.md	docs/units/review.md
 skills/review/SKILL.md	docs/reviewer-backend.md
 skills/review/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
