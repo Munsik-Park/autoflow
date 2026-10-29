@@ -25,7 +25,8 @@
 # The module's contract is <autoflow-root>/docs/contracts/<module>.json. This
 # script applies only the checks the contract lists under an output's "checks"
 # — the form of a file, read from that file alone (ADR-0040 D2); an output's
-# "evaluation" lines are not read here.
+# "evaluation" lines are the evaluation modules' — the disposition of every
+# item the work owes among them — and are not read here.
 #
 # check-in  — the params and inputs the contract declares are given and well
 #             formed (Q19): an input file exists and, when another module
@@ -48,8 +49,7 @@
 #             ("failure": true): a run that wrote it ended short of its
 #             expected output and says what it did and why; check-out then
 #             checks that file is not empty and the tool requests, records
-#             every output present, and writes `failed` (ADR-0039 D3; every
-#             contract a module's AI runs declares one, ADR-0040 D1).
+#             every output present, and writes `failed` (ADR-0039 D3).
 #
 # lint      — the contracts agree with each other and with the documents
 #             they name (no invocation; §8, the contract–document check):
@@ -63,14 +63,13 @@
 #             every output's format and check types are ones this script
 #             implements; every param, input and output a check names is
 #             declared, and no check names an input; reads_records is true or
-#             false; a functional or evaluation contract declares a failure
-#             output; an evaluation
-#             contract's score keys are its rubric's items — the Items cell
-#             of its row (by the Contract column) in the procedure document's
-#             "Evaluation | Gate | Contract | Items" table, and the first
-#             column of the "Item" table in its procedure section, when that
-#             section has one; and, run on every contract, that the per-module
-#             part of docs/autoflow-guide.md is the contracts'
+#             false; an evaluation contract's score keys are its rubric's
+#             items — the Items cell of its row (by the Contract column) in
+#             the procedure document's "Evaluation | Gate | Contract | Items"
+#             table, and the first column of the "Item" table in its
+#             procedure section, when that section has one; and, run on
+#             every contract, that the per-module part of
+#             docs/autoflow-guide.md is the contracts'
 #             (scripts/contracts/gen-module-usage.sh). It prints each
 #             disagreement.
 #
@@ -509,7 +508,6 @@ lint() {
          else empty end)' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
     jq -e '[.outputs[] | select(.failure // false)] | length <= 1' <<<"$c" >/dev/null || say "more than one failure output"
-    jq -e '.kind == "deterministic" or any(.outputs[]; .failure // false)' <<<"$c" >/dev/null || say "no failure output"
     # an evaluation's score keys are its rubric's items
     if jq -e '.kind == "evaluation"' <<<"$c" >/dev/null; then
       found=$(rubric_disagreements "$c")

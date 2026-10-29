@@ -90,8 +90,8 @@ A reviewer that is unavailable for a round — its CLI absent (`check-review-bac
 its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
 on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
 no review at all — no configured reviewer left a record, and the target's side left none — is a
-review-infrastructure failure: the run does not reach its goal and writes its failure output,
-situation-first ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
+review-infrastructure failure: the run does not reach its goal, and its output is the failure
+output, situation-first ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
 
 Cautions:
 
@@ -169,7 +169,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends when it reaches its goal, or with its failure output when it does not ([`core.md`](../core.md) > Development Lifecycle). Its report names the pull request's URL and head
+The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](../core.md) > Development Lifecycle). Its report names the pull request's URL and head
 commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
 findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
 pull request whose pointer names a sub-repo pull request's commit, that dependency.

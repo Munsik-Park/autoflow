@@ -3,10 +3,12 @@
 ## Status
 
 Accepted (operator decision 2026-10-29, issue #523). Extends ADR-0039 D3 and D4 from the delivery
-and ci modules to every module. Amends ADR-0038 D1 — what the contract checks, and the output's
-disposal of every item the work owes — and D4 — the commits as a range the invocation names —, and
-ADR-0039 D1 — the delivery's `pull_request` param and the ci module's goal. ADR-0038 D2, ADR-0039 D2
-and the authority rules of the core stand.
+and ci modules to every module. Amends ADR-0038 D1 — what the contract checks — and D4 — the
+commits as a range the invocation names —, and ADR-0039 D1 — the delivery's `pull_request` param
+and the ci module's goal. ADR-0038 D2, ADR-0039 D2 and the authority rules of the core stand. The
+operator's answers of 2026-10-29 to the first draft's open points are applied: the re-score's
+rubric and the goal of every item the work owes stand, and the failure output is one shape of the
+output, required of no contract by a check.
 
 ## Context
 
@@ -35,26 +37,30 @@ Issue #523 records where the other contracts still departed from it:
   enumeration of two values.
 
 The operator's decision of 2026-10-29: a module is a part. It takes its inputs, makes the output its
-goal asks for and ends; whether it reached the goal is judged by the AI that did the work, and a run
-that does not reach it writes what it did and why. Check-in sees that an input is there and of its
-form, check-out that an output is there in the form asked; the facts an output states, and its fit
-to the inputs, are the receiving side's to check with the same tools — it reads the result anyway,
-and runs the module again when it is wrong. No device counts the items of a goal one by one:
-counting fixed items is a script's work, and the AI is given the goal. An output has a default and
-the invocation's instructions change it; the contract states the default only. Kept: an input's
-producing module (`from`), which names the input's form — check-in reads the form, not where the
-file came from, so an input the running side wrote in the same form passes —; the dispositions the
-criterion-screen and criterion-reconcile goals list; and the form checks of an output (keys,
-sections, tables, duplicates, forbidden keys) and the failure output.
+goal asks for and ends; whether it reached the goal is judged by the AI that did the work. The
+output a run makes of its inputs is one of two: what reaches the goal, or what does not — what it
+did and why it did not reach the goal. Check-in sees that an input is there and of its form,
+check-out that an output is there in the form asked; the facts an output states, and its fit to the
+inputs, are the receiving side's to check with the same tools — it reads the result anyway, and runs
+the module again when it is wrong. No device counts the items of a goal one by one: counting fixed
+items is a script's work, and the AI is given the goal — the output disposes of every item the work
+owes, each applied acceptance criterion among them, and the re-score's rubric stands as one of the
+goals. An output has a default and the invocation's instructions change it; the contract states the
+default only. Kept: an input's producing module (`from`), which names the input's form — check-in
+reads the form, not where the file came from, so an input the running side wrote in the same form
+passes —; the dispositions the criterion-screen and criterion-reconcile goals list; and the form
+checks of an output (keys, sections, tables, duplicates, forbidden keys) and the failure output in
+the form ADR-0039 D3 set.
 
 ## Decision
 
 **D1 — A run ends at its goal.** The AI that does the work judges when its output reaches the
-module's goal, and the run ends there. A run that does not reach it writes its contract's failure
-output, `<out>/failure.md` — what it did, and why it did not reach the goal —, in place of its
-expected output, and check-out writes `failed` (ADR-0039 D3). Every contract whose work an AI does —
-functional and evaluation — declares the failure output; criteria-apply, a script, refuses its run
-as before. `contract.sh lint` refuses a functional or evaluation contract with no failure output.
+module's goal, and the run ends there. A failure is not a device of its own but one shape of the
+output: the output a run makes of its inputs is either what reaches the goal or what does not — what
+the run did and why it did not reach the goal —, written in the form ADR-0039 D3 set, the contract's
+failure output `<out>/failure.md`, on which check-out writes `failed`. The contracts whose work an AI
+does — functional and evaluation — declare it; criteria-apply, a script, refuses its run as before.
+No check requires a contract to declare it.
 
 **D2 — The checks see form, each file read alone.** Check-in checks that each param and input the
 contract declares is given and that an input file is of the form its producer's output, or the
@@ -73,11 +79,14 @@ The `## No commit` section goes; the report still says why a run made no commit.
 
 **D4 — A re-score states what it scored afresh and what it inherited.** The goal of each evaluation
 module states it: given the previous evaluation, the evaluation names which items it scored afresh
-(`rescore.rescored`) and which it inherited (`rescore.inherited`), and what became of the previous
-evaluation's findings (`rescore.prior_findings`, `cleared` or `remains` with the ground). Which items
-it scores afresh is the evaluator's judgment from the previous evaluation and the change since it.
-`rescore` stays in the output's form as an object, required by no check; the two `[MUST]` bullets of
-`docs/evaluation-system.md` > *Re-score* that the counting checks enforced become that goal.
+(`rescore.rescored`) and which it inherited (`rescore.inherited`). The re-score's rubric stands as
+one of the goals the evaluator works to: `docs/evaluation-system.md` > *Re-score* keeps its two
+`[MUST]` bullets, the Evaluation AI's role contract — the items scored afresh (each scored below 7
+or with a finding in the previous evaluation, and each whose anchors the change since touched) and
+the rest inherited, every rubric item in one of the two lists; every finding of the previous
+evaluation `cleared` or `remains` with its ground, a finding on an inherited item `remains`. The
+counting checks that compared the output with the previous evaluation go (`partition`, `covers`,
+`rescore` required when an input is given); `rescore` stays in the output's form as an object.
 
 **D5 — An output has a default, and the invocation's instructions change it.** An invocation may
 carry `instructions`, a text; check-in checks that it is a non-empty string. Each output's default
@@ -110,23 +119,26 @@ instruction (`docs/core.md` > Development Lifecycle > *Where an output goes*). A
 - A module can run where git or GitHub is not what it writes to — a review kept as a file, a push
   with no pull request — and still be `accepted`.
 - The contracts and the checker read files only; the checker needs `jq` alone.
-- A run that falls short says so in one place, the same for every module.
+- A run that falls short says so in its output, in the one form ADR-0039 D3 set, the same for every
+  module.
 
 ### Negative
 
 - Check-out accepts a `commits.json` whose commits are not on the branch, a comment that was never
   posted and a re-score that leaves out an item or a previous finding, as long as each file's form
-  holds; nothing AutoFlow ships checks those facts.
+  holds; nothing AutoFlow ships checks those facts. The re-score's rubric binds the evaluator as its
+  role contract, and the receiving side reads whether it was met.
 - What an instruction may change is not enumerated; an instruction the authority rules forbid is
   denied by the hook where it reaches one, and otherwise by the module's reading of the rules.
 
 ## Relation to other decisions
 
 - **ADR-0038** — D1's "the contract checks the inputs and the facts of the output" becomes the form
-  of the inputs and outputs (D2), and "the output disposes of every item the work owes" leaves the
-  core's text, which states the goal and the run's end (D1). D4's "the commits as a range" is the
-  build's `commits.json` (D3). D2 stands and is applied.
-- **ADR-0039** — D3 and D4 extend to every module (D1, D2). D1's `pull_request` param goes, its
+  of the inputs and outputs (D2); "the output disposes of every item the work owes" stands as the
+  goal, which the evaluations judge, and the core adds the run's end (D1). D4's "the commits as a
+  range" is the build's `commits.json` (D3). D2 stands and is applied.
+- **ADR-0039** — D3's form of the failure output is the one every module uses, and D4 extends to
+  every module (D1, D2). D1's `pull_request` param goes, its
   default kept (D5); the ci module's goal no longer includes the body's CI part, which stays its
   default output.
 - **ADR-0026** — one aggregated comment per round stands; where it goes is the review's default.

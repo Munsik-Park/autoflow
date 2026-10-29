@@ -292,13 +292,19 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLA
 A run given the previous evaluation of the same gate (`previous_evaluation`) is a re-score. Its
 spawn is fresh like any other; its input is narrowed, not its independence.
 
-- Its goal adds one thing: the evaluation states which items it scored afresh, in
-  `rescore.rescored`, and which it inherited with the previous evaluation's score, in
-  `rescore.inherited`, and what became of the previous evaluation's findings, in
-  `rescore.prior_findings` — each by the finding's own text, `cleared` or `remains`, with its ground
-  (*Re-score form* above). Which items it scores afresh is its judgment from the previous evaluation
-  and the change since it (each gate's *Re-entry re-score* below names what that change is), stated
-  with its grounds ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D4).
+- **[MUST]** Score afresh the items listed in `rescore.rescored` — each item the previous evaluation
+  scored below 7 or recorded a finding under, and each item whose anchors the change since that
+  evaluation touched (each gate's *Re-entry re-score* below names what that change is) — and list
+  every other item in `rescore.inherited`, its score copied from the previous evaluation. Every
+  rubric item is in exactly one of the two lists.
+- **[MUST]** Give every finding of the previous evaluation's `recommendations` its entry in
+  `rescore.prior_findings`, by the finding's own text, with its disposition — `cleared` or `remains`
+  — and its ground (*Re-score form* above). A finding on an inherited item `remains`, its ground the
+  inheritance.
+
+The evaluation contract's goal states that a re-score names which items it scored afresh and which
+it inherited; no check of the output compares `rescore` with the previous evaluation
+([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D4).
 
 ### Build observations (GATE:QUALITY input)
 
@@ -708,8 +714,8 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 ```
 
 The output carries the scores and their grounds; the reference values they are read against are
-*PASS Criteria* above. An evaluation that does not reach its goal — it cannot score what it is
-given — writes `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
+*PASS Criteria* above. The output of a run that does not reach its goal — it cannot score what it
+is given — is `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
 the goal ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 
 `scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
@@ -721,7 +727,7 @@ when `test_first.confirmed` is true (*Gate rubrics* > AUDIT > *Test-first* above
 
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
-| `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. `prior_findings` — what became of the previous evaluation's `recommendations`: an entry's `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
+| `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding in the previous evaluation's `recommendations`, its `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
 
 `refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every entry in
 the build report's `## Out-of-scope observations — guard / boundary logic touched` section (`[]`

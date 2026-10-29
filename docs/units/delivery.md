@@ -27,8 +27,7 @@ order and what it checks are the AI's, judged from the inputs it is given.
   failure output.
 - **Failure output.** A run that does not reach its goal, or reaches its `timeout` (seconds), writes
   `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
-  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header; every module's
-  contract declares one, [`core.md`](../core.md) > Development Lifecycle).
+  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
   gives. It does not read again on GitHub or in git what the output states.
 
