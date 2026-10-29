@@ -61,9 +61,8 @@
 #             a file and, after each " > ", to a heading in it; every input
 #             another module produces names a contract and an output it has;
 #             every output's format and check types are ones this script
-#             implements; every param, input and output a check names is
-#             declared, and no check names an input; reads_records is true or
-#             false; an evaluation contract's score keys are its rubric's
+#             implements, and no check names an input; reads_records is true
+#             or false; an evaluation contract's score keys are its rubric's
 #             items — the Items cell of its row (by the Contract column) in
 #             the procedure document's "Evaluation | Gate | Contract | Items"
 #             table, and the first column of the "Item" table in its
