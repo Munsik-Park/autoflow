@@ -82,8 +82,8 @@ git grep -n -i -E 'recommendation triage|recommendations triaged|deferred or sep
 
 A quality run given the previous evaluation re-scores as
 [`evaluation-system.md`](../evaluation-system.md) > *Evaluator conduct* > *Re-score* and
-*Gate rubrics* > GATE:QUALITY > *Re-entry re-score* set: every item scored afresh or inherited, and
-every previous finding dispositioned.
+*Gate rubrics* > GATE:QUALITY > *Re-entry re-score* set: it states which items it scored afresh and
+which it inherited, and what became of the previous evaluation's findings.
 
 ## Code comments in a target
 

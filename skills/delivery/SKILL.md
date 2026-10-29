@@ -2,16 +2,16 @@
 name: delivery
 description: >-
   Run the AutoFlow delivery module once on an invocation file — the change
-  pushed and, unless the invocation says otherwise, in draft pull requests
-  that show it working. Use when the operator runs the delivery module
-  (/autoflow:delivery <invocation.json>).
+  pushed and, by default, in draft pull requests that show it working. Use
+  when the operator runs the delivery module (/autoflow:delivery
+  <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: the invocation file) — one run of the delivery module (`<autoflow-root>/docs/contracts/delivery.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the delivery module (`<autoflow-root>/docs/contracts/delivery.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which ends when its outputs reach the module's goal and writes them and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below) — a run that does not reach the goal writes `<out>/failure.md` in place of its outputs —, then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the delivery module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, ci, review, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, ci, review; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
 
@@ -38,9 +38,11 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **AutoFlow is a set of modules.** A module is an input, the work it does, and an output; its contract, `<autoflow-root>/docs/contracts/<module>.json`, declares its parameters, its inputs and where each comes from, and its outputs with the form each must meet (`ADR-0038` D1). The modules are functional — the criterion review's four, analysis, design, build, delivery, ci, review —, evaluation — hypothesis, plan, audit, quality — and deterministic — criteria-apply. AutoFlow defines the modules: each one's contract, its procedure and the checks of its inputs and outputs (ADR-0038 D2). A module takes everything it works on from its invocation, the branch and the attempt's record directory included (D4).
 
-**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory and, for a functional module, the attempt's record directory (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares because it did not reach its goal (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root).
+**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory, for a functional module the attempt's record directory and, when it has any, its `instructions` (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root). Check-in and check-out see the form of an input or an output only, each file read alone: nothing in git, on GitHub or in another input is read to check it (`ADR-0040` D2).
 
-**A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge; the contract checks the inputs and the facts of the output (ADR-0038 D1). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
+**A module's procedure states the goal of its work.** It says what the work must achieve; the AI judges how to meet it, and when the output it has made reaches the goal, the run ends. A run that does not reach its goal writes, in place of its expected output, its contract's failure output — what it did and why it did not reach the goal — and ends (ADR-0040 D1). Whether the output is right, and what is done with it, are for the side that runs the module (ADR-0038 D2). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
+
+**Where an output goes.** Each output has a default — what its contract and its procedure state: a file in the output directory, and for some modules beyond it, a push, a pull request, a comment, a pull request's body. The invocation's `instructions` change where an output goes or its form, and the module follows them; the authority rules hold under any instruction (ADR-0040 D5).
 
 **Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 2). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
@@ -256,7 +258,8 @@ order and what it checks are the AI's, judged from the inputs it is given.
   failure output.
 - **Failure output.** A run that does not reach its goal, or reaches its `timeout` (seconds), writes
   `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
-  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
+  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header; every module's
+  contract declares one, [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
   gives. It does not read again on GitHub or in git what the output states.
 
@@ -284,8 +287,9 @@ in draft pull requests that show the change working and let the operator decide 
   pull-request body carries: the quality evaluation, the feature design, the tool requests of every
   run (`tool_requests`) and the recommendations deferred or separated (`deferred`).
 - **Params**: `base`, the branch the pull requests merge into (not given, the remote's default
-  branch); `pull_request: none`, on which the branches are pushed and no pull request is opened;
-  `timeout`.
+  branch); `timeout`. The branches pushed and the draft pull requests opened are the default, which
+  the invocation's `instructions` can change ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Where an output goes*).
 - **What the AI judges**: how many pull requests the change takes, in which repositories and on which
   branches — a sub-repo's included, read from the project's own information
   ([`core.md`](<autoflow-root>/docs/core.md) > Project Information) —, and how the pull requests show the change
@@ -303,8 +307,8 @@ in draft pull requests that show the change working and let the operator decide 
 - **Tools**: `git` and `gh`, as the module's own commands.
 - **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
-  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` under
-  `pull_request: none`.
+  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` for a branch pushed
+  with no pull request.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — among what the run did, what it
   pushed and opened.
 

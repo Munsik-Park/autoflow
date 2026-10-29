@@ -12,17 +12,19 @@ review. It has no unit agent: the session that runs it runs the reviewers, and t
 round's reviews into one verdict is made by a spawned role. A script only reads and reports.
 
 - **Goal**: the pull request reviewed by every configured reviewer, and one aggregated verdict over
-  their reviews posted on it: each finding once, with its severity and whether it holds.
+  their reviews: each finding once, with its severity and whether it holds.
 - **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
   previous round's findings file; the attempt's record directory, where the earlier rounds' records
   and the work's records are.
 - **Output**: each reviewer's review record (*Reviewer review*), the findings file and the round's
-  comment, posted on the pull request (*Review aggregation*).
+  comment, `<out>/comment.md` (*Review aggregation*). By default the comment is posted on the pull
+  request; the invocation's `instructions` can say otherwise ([`core.md`](../core.md) > Development
+  Lifecycle > *Where an output goes*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms that the comment is posted on the pull request (`review.json`);
-  what the findings file holds is the aggregation's goal (*Review aggregation*), and the reviews and
-  their aggregation stand outside the work they review.
+- **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
+  the aggregation's goal (*Review aggregation*), and the reviews and their aggregation stand outside
+  the work they review.
 - **Result owed**: the report of *End* below.
 
 ## Reviewer review
@@ -31,7 +33,7 @@ A run reviews the one pull request its invocation names (`params.pr`, `<owner>/<
 own diff; each pull request of a change — the host PR and each sub-repo PR alike — is reviewed by a
 run of its own, and a sub-repo PR's review is required, not optional. A run is one round of that
 PR's review (`params.round`, from `1`): it runs every reviewer, and their records go to one
-aggregation (*Review aggregation* below), which posts the round's comment
+aggregation (*Review aggregation* below), which writes the round's comment
 ([ADR-0026](../records/adr/0026-aggregated-review.md)).
 
 The reviewers are the ones the `reviewers:` line of `bash <autoflow-root>/scripts/preflight/check-review-backend.sh`
@@ -88,8 +90,8 @@ A reviewer that is unavailable for a round — its CLI absent (`check-review-bac
 its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
 on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
 no review at all — no configured reviewer left a record, and the target's side left none — is a
-review-infrastructure failure, a harness-level block the run records in its result, situation-first
-([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
+review-infrastructure failure: the run does not reach its goal and writes its failure output,
+situation-first ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
 
 Cautions:
 
@@ -125,8 +127,9 @@ it leaves behind:
 - each finding's severity and whether it holds, a finding that does not hold with the grounds it
   does not;
 - the highest severity among the findings that hold;
-- the same, posted on the pull request as one comment in Korean, its body kept as `<out>/comment.md`,
-  and kept as `<out>/review-findings.md`, which names the reviewed pull request.
+- the same as one comment in Korean, `<out>/comment.md`, posted on the pull request unless the
+  invocation's `instructions` say otherwise, and kept as `<out>/review-findings.md`, which names the
+  reviewed pull request.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding
@@ -166,7 +169,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends when its round's comment is posted. Its report names the pull request's URL and head
+The run ends when it reaches its goal, or with its failure output when it does not ([`core.md`](../core.md) > Development Lifecycle). Its report names the pull request's URL and head
 commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
 findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
 pull request whose pointer names a sub-repo pull request's commit, that dependency.

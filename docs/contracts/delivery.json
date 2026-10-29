@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; revised by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issues #518 (ADR-0039) and #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "delivery",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The change the build made, its local tests recorded green in the build report, pushed to the target's remote and — unless the invocation says pull_request none — in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.\n",
+  "goal": "The change the build made, its local tests recorded green in the build report, pushed to the target's remote in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -15,12 +15,6 @@
       "type": "string",
       "required": false,
       "note": "the branch the pull request is to merge into; not given, the remote's default branch"
-    },
-    "pull_request": {
-      "type": "string",
-      "required": false,
-      "pattern": "^(open|none)$",
-      "note": "none: the branches are pushed and no pull request is opened; not given, open"
     },
     "timeout": {
       "type": "integer",
@@ -90,7 +84,7 @@
     "delivered": {
       "file": "delivery.json",
       "format": "json",
-      "note": "{pull_requests: [{repo: <owner>/<name>, branch, head, pr: <owner>/<name>#<N>}]} — each branch pushed, its head and its pull request; pr null under pull_request none. The review's pr and the ci module's input are an entry's pr",
+      "note": "{pull_requests: [{repo: <owner>/<name>, branch, head, pr: <owner>/<name>#<N>}]} — each branch pushed, its head and its pull request; pr null for a branch pushed with no pull request. The review's pr and the ci module's input are an entry's pr",
       "checks": [
         {
           "type": "keys",

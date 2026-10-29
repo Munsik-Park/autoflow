@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; revised by issue #518 (ADR-0039); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issues #518 (ADR-0039) and #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "ci",
   "kind": "functional",
   "reads_records": true,
-  "goal": "For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — stated in the body's CI part, with, given the build report, the CI job that ran each test file the change added.\n",
+  "goal": "For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — with, given the build report, the CI job that ran each test file the change added.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -60,7 +60,7 @@
     "ci": {
       "file": "ci.json",
       "format": "json",
-      "note": "{prs: [{pr: <owner>/<name>#<N>, head, verdict, ground}]} — verdict green, not-run, or what CI showed instead; ground what the verdict rests on",
+      "note": "{prs: [{pr: <owner>/<name>#<N>, head, verdict, ground}]} — verdict green, not-run, or what CI showed instead; ground what the verdict rests on. Each pull request's body carries the verdict in its CI part (docs/units/delivery.md > CI)",
       "checks": [
         {
           "type": "keys",

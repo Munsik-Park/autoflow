@@ -194,6 +194,10 @@ criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](core.md) > Context Injection).
+- **The run ends at its goal.** The unit judges when its output reaches the goal, and ends there; a
+  unit that does not reach it writes `<out>/failure.md` in place of its expected output — what it
+  did and why it did not reach the goal ([`core.md`](core.md) > Development Lifecycle;
+  [ADR-0040](records/adr/0040-a-module-ends-at-its-goal.md) D1).
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
   pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
   it puts to the advisor and follows (*Advisor* above).

@@ -27,7 +27,8 @@ order and what it checks are the AI's, judged from the inputs it is given.
   failure output.
 - **Failure output.** A run that does not reach its goal, or reaches its `timeout` (seconds), writes
   `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
-  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
+  result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header; every module's
+  contract declares one, [`core.md`](../core.md) > Development Lifecycle).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
   gives. It does not read again on GitHub or in git what the output states.
 
@@ -51,8 +52,9 @@ in draft pull requests that show the change working and let the operator decide 
   pull-request body carries: the quality evaluation, the feature design, the tool requests of every
   run (`tool_requests`) and the recommendations deferred or separated (`deferred`).
 - **Params**: `base`, the branch the pull requests merge into (not given, the remote's default
-  branch); `pull_request: none`, on which the branches are pushed and no pull request is opened;
-  `timeout`.
+  branch); `timeout`. The branches pushed and the draft pull requests opened are the default, which
+  the invocation's `instructions` can change ([`core.md`](../core.md) > Development Lifecycle >
+  *Where an output goes*).
 - **What the AI judges**: how many pull requests the change takes, in which repositories and on which
   branches — a sub-repo's included, read from the project's own information
   ([`core.md`](../core.md) > Project Information) —, and how the pull requests show the change
@@ -70,15 +72,16 @@ in draft pull requests that show the change working and let the operator decide 
 - **Tools**: `git` and `gh`, as the module's own commands.
 - **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
-  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` under
-  `pull_request: none`.
+  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` for a branch pushed
+  with no pull request.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — among what the run did, what it
   pushed and opened.
 
 ## CI
 
-**HANDOFF.** The ci module reads CI on each pull request it is given and states the verdict in the
-pull request's body.
+**HANDOFF.** The ci module reads CI on each pull request it is given and states the verdict — by
+default in `<out>/ci.json` and in the pull request's body, which the invocation's `instructions` can
+change ([`core.md`](../core.md) > Development Lifecycle > *Where an output goes*).
 
 - **Inputs**: the pull requests (`pull_requests`), each with the head CI is read on — the delivery's
   output, or a file the invocation writes, `{pull_requests: [{pr, head}]}`; and, optionally, the

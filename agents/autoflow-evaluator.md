@@ -292,15 +292,13 @@ This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLA
 A run given the previous evaluation of the same gate (`previous_evaluation`) is a re-score. Its
 spawn is fresh like any other; its input is narrowed, not its independence.
 
-- **[MUST]** Score afresh the items listed in `rescore.rescored` — each item the previous evaluation
-  scored below 7 or recorded a finding under, and each item whose anchors the change since that
-  evaluation touched (each gate's *Re-entry re-score* below names what that change is) — and list
-  every other item in `rescore.inherited`, its score copied from the previous evaluation. Every
-  rubric item is in exactly one of the two lists.
-- **[MUST]** Give every finding of the previous evaluation's `recommendations` its entry in
-  `rescore.prior_findings`, by the finding's own text, with its disposition — `cleared` or `remains`
-  — and its ground (*Re-score form* above). A finding on an inherited item `remains`, its ground the
-  inheritance.
+- Its goal adds one thing: the evaluation states which items it scored afresh, in
+  `rescore.rescored`, and which it inherited with the previous evaluation's score, in
+  `rescore.inherited`, and what became of the previous evaluation's findings, in
+  `rescore.prior_findings` — each by the finding's own text, `cleared` or `remains`, with its ground
+  (*Re-score form* above). Which items it scores afresh is its judgment from the previous evaluation
+  and the change since it (each gate's *Re-entry re-score* below names what that change is), stated
+  with its grounds ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D4).
 
 ### Build observations (GATE:QUALITY input)
 
@@ -710,7 +708,9 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 ```
 
 The output carries the scores and their grounds; the reference values they are read against are
-*PASS Criteria* above.
+*PASS Criteria* above. An evaluation that does not reach its goal — it cannot score what it is
+given — writes `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
+the goal ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 
 `scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object
@@ -721,7 +721,7 @@ when `test_first.confirmed` is true (*Gate rubrics* > AUDIT > *Test-first* above
 
 | Key | Type | Required | Meaning |
 |-----|------|----------|---------|
-| `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding in the previous evaluation's `recommendations`, its `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
+| `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. `prior_findings` — what became of the previous evaluation's `recommendations`: an entry's `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
 
 `refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every entry in
 the build report's `## Out-of-scope observations — guard / boundary logic touched` section (`[]`
@@ -1042,7 +1042,7 @@ These are the rules other documents cite; everything else about the work is the 
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
   The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  `## No commit`.
+  its report, and its `commits.json` has `from` equal to `to`.
 
 <!-- From <autoflow-root>/docs/units/build.md > Build report -->
 
@@ -1051,8 +1051,7 @@ These are the rules other documents cite; everything else about the work is the 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
 it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
 for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none. A run that made no commit says why in a `## No commit` section, which
-check-out reads (`build.json`).
+record is said to have none.
 
 | Section | Holds | Read by |
 |---|---|---|
@@ -1067,7 +1066,6 @@ check-out reads (`build.json`).
 | `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
 | `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
-| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.

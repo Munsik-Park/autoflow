@@ -1,10 +1,10 @@
 {
-  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "hypothesis",
   "kind": "evaluation",
   "reads_records": false,
-  "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached.\n",
+  "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS",
   "evaluator": {
     "agent": "autoflow-evaluator",
@@ -70,9 +70,7 @@
             },
             "rescore": {
               "type": "object",
-              "required_when": {
-                "input": "previous_evaluation"
-              }
+              "note": "on a re-score: the items scored afresh (rescored) and the items inherited (inherited), and what became of the previous evaluation's findings (prior_findings) — docs/evaluation-system.md > Evaluation Output Format"
             },
             "summary": {
               "type": "string",
@@ -95,34 +93,15 @@
             "verdict"
           ],
           "note": "Q2: the evaluation outputs scores and their grounds; the pass values travel in reference"
-        },
-        {
-          "type": "partition",
-          "when": {
-            "input": "previous_evaluation"
-          },
-          "of_keys": ".scores",
-          "into": [
-            ".rescore.rescored",
-            ".rescore.inherited"
-          ],
-          "note": "every rubric item is scored afresh or inherited"
-        },
-        {
-          "type": "covers",
-          "when": {
-            "input": "previous_evaluation"
-          },
-          "source": {
-            "input": "previous_evaluation",
-            "ids": ".recommendations[].finding"
-          },
-          "by": ".rescore.prior_findings[].finding",
-          "disposed_by": ".rescore.prior_findings[].disposition",
-          "note": "every finding of the previous evaluation has its disposition; which entry answers which finding the evaluation states in its own words",
-          "count_only": true
         }
       ]
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
   "reference": {

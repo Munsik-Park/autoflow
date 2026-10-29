@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "criterion-screen",
   "kind": "functional",
@@ -39,6 +39,13 @@
       "evaluation": [
         "a target holds only the issue body, the criterion's text, the target cases, each case's code locations (path:line) and the commit read — no verdict, ground or conclusion of this review, since the in-depth module judges the cases in a context that never saw them (docs/criterion-review.md > In-depth analysis and reconciliation)"
       ]
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   }
 }

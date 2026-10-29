@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "criterion-reconcile",
   "kind": "functional",
@@ -45,6 +45,13 @@
         "every criterion of the issue, and every problem the review finds beyond them, is disposed of, with its disposition decided and its grounds: a criterion kept, revised, split or excluded; one established or added where the issue states none or lacks it; a problem found included in this issue or separated from it. An item the module cannot decide with confidence it puts to the advisor and decides as the advisor decided, its row naming the ledger entry (Q18, Q27).",
         "every finding of the trace and every in-depth case is reflected in the dispositions, with its grounds"
       ]
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   }
 }

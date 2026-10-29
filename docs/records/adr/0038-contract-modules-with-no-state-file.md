@@ -14,7 +14,9 @@ ADR-0029 D1, D7 and D9, ADR-0027, ADR-0035 and ADR-0037 K5, K7, K8 and D2's M1�
 it names for M2–M5, stand.
 
 D1's list of modules — delivery split into delivery and ci — and check-out's result, which gains
-`failed`, are amended by ADR-0039 (issue #518).
+`failed`, are amended by ADR-0039 (issue #518). D1's contract checks — the form of the inputs and
+outputs only — and its output that disposes of every item, and D4's commits as a range, are amended
+by ADR-0040 (issue #523).
 
 ## Context
 

@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
   "contract": 1,
   "module": "criterion-trace",
   "kind": "functional",
@@ -29,6 +29,13 @@
       "evaluation": [
         "each finding with its grounds, and whether the review record already has it; \"none\" when there is none"
       ]
+    },
+    "failure": {
+      "file": "failure.md",
+      "format": "markdown",
+      "required": false,
+      "failure": true,
+      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   }
 }
