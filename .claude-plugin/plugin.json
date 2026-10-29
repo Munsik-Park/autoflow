@@ -1,7 +1,7 @@
 {
   "name": "autoflow",
   "description": "AutoFlow methodology engine for Claude Code: contract modules, each run once on its invocation by its command (/autoflow:<module>), the role subagents, the policy-deny hook, and the core (docs/core.md), usage documents and scripts they cite. Records are kept under the record root outside the target's tree (record_root in ~/.autoflow/config.json, default ~/.autoflow).",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "Munsik-Park"
   },
