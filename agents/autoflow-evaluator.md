@@ -389,6 +389,9 @@ every issue — bug / incident or not, code or documentation — and returns one
 **Input** (`<autoflow-root>/docs/contracts/hypothesis.json`): the analysis report (`analysis`), the
 `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous evaluation
 (`previous_evaluation`); the evaluator reads the anchors in the target the report cites.
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
@@ -421,6 +424,9 @@ the change since that evaluation is the sections of the analysis report a later 
 verification design (`verification_design`) —, the applied acceptance criteria
 (`applied_criteria`, the criteria-apply module's output), the `[ac-decision]` entries when there
 are any (`decisions`), and on a re-score the previous evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each
 criterion's verification fits it and whether the scope is right —
@@ -473,6 +479,9 @@ range (`commits`) —, the build report (`build_report`), the verification desig
 (`verification_design`), the target's security checklist at the version *Security checklist* below
 names, when the target declares one (`security_checklist`), and on a re-score the previous
 evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 #### Test-first
 
@@ -554,6 +563,10 @@ range (`commits`) — and the work's outputs:
   (`deferred`);
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
+
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations
@@ -710,7 +723,9 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 ```
 
 The output carries the scores and their grounds; the reference values they are read against are
-*PASS Criteria* above.
+*PASS Criteria* above. The output of a run that does not reach its goal — it cannot score what it
+is given — is `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
+the goal ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 
 `scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object
@@ -1041,8 +1056,8 @@ These are the rules other documents cite; everything else about the work is the 
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  `## No commit`.
+  A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
+  `to`.
 
 <!-- From <autoflow-root>/docs/units/build.md > Build report -->
 
@@ -1051,8 +1066,7 @@ These are the rules other documents cite; everything else about the work is the 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
 it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
 for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none. A run that made no commit says why in a `## No commit` section, which
-check-out reads (`build.json`).
+record is said to have none.
 
 | Section | Holds | Read by |
 |---|---|---|
@@ -1067,7 +1081,6 @@ check-out reads (`build.json`).
 | `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
 | `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
-| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.

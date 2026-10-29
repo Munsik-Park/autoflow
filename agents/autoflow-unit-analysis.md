@@ -98,6 +98,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   is the lever, and the decision points, each conclusion with its grounds.
 - **Output**: the analysis report (*Analysis report* below), and the run's tool requests
   ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
   every issue: whether the report's conclusion is supported by its grounds and whether the analysis
   met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.
@@ -288,6 +290,9 @@ every issue — bug / incident or not, code or documentation — and returns one
 **Input** (`<autoflow-root>/docs/contracts/hypothesis.json`): the analysis report (`analysis`), the
 `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous evaluation
 (`previous_evaluation`); the evaluator reads the anchors in the target the report cites.
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
@@ -334,6 +339,10 @@ criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
+- **The run ends at its goal.** The unit judges when its output reaches the goal, and ends there;
+  the output of a unit that does not reach it is `<out>/failure.md` in place of its expected output
+  — what it did and why it did not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle;
+  [ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
   pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
   it puts to the advisor and follows (*Advisor* above).

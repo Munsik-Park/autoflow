@@ -23,8 +23,9 @@ implementation work — is yours, recorded with its grounds in your report
 - **Goal**: the design you are given implemented within its scope on the branch
   the invocation names, with every item of the verification design verified as it
   says — or, where it cannot be, the reason recorded.
-- **Output**: the commits on that branch — or, when the run makes none, a
-  `## No commit` section in the report saying why — and the build report
+- **Output**: the commits on that branch, named as a range in `<out>/commits.json`
+  (`{branch, from, to}`; when the run makes none, `from` equal to `to` and the
+  report saying why), and the build report
   `<out>/build-report.md`, with the sections `<autoflow-root>/docs/units/build.md` >
   Build report requires — the test-first record the audit reads, the run,
   manual-checklist, maintained-document, lint, scope, observation,
@@ -131,9 +132,12 @@ Rule Scope, principle 2).
 - **Goal**: the design implemented within its scope on the branch the invocation names
   (`params.branch`), and every item of the verification design verified as it says — or, where it
   cannot be, the reason recorded.
-- **Output**: the commits the run makes on the branch, the build report (*Build report* below), a
-  green-blocker record when the design cannot be built as it stands, and the run's tool requests
-  ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Output**: `<out>/commits.json`, `{branch, from, to}` — the branch and its head when the run
+  began and when it ended, the range of the commits the run made —, the build report (*Build report*
+  below), a green-blocker record when the design cannot be built as it stands, and the run's tool
+  requests ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
@@ -224,8 +228,8 @@ These are the rules other documents cite; everything else about the work is the 
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  `## No commit`.
+  A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
+  `to`.
 
 ## Dividing the work
 
@@ -300,8 +304,7 @@ worth and where it loses.
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
 it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
 for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none. A run that made no commit says why in a `## No commit` section, which
-check-out reads (`build.json`).
+record is said to have none.
 
 | Section | Holds | Read by |
 |---|---|---|
@@ -316,7 +319,6 @@ check-out reads (`build.json`).
 | `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
 | `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
-| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.
@@ -415,6 +417,9 @@ range (`commits`) —, the build report (`build_report`), the verification desig
 (`verification_design`), the target's security checklist at the version *Security checklist* below
 names, when the target declares one (`security_checklist`), and on a re-score the previous
 evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 #### Test-first
 
@@ -498,6 +503,10 @@ criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection).
+- **The run ends at its goal.** The unit judges when its output reaches the goal, and ends there;
+  the output of a unit that does not reach it is `<out>/failure.md` in place of its expected output
+  — what it did and why it did not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle;
+  [ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
   pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
   it puts to the advisor and follows (*Advisor* above).
@@ -523,8 +532,7 @@ invocation names — the target repository, or in a project with sub-repos one s
 [`units/build.md`](<autoflow-root>/docs/units/build.md) > *What the build owes*; what it owes the scope is below.
 
 - Works directly in the target repository and commits to the branch its invocation names
-  (`params.branch`). It does not push: the push and the pull request are the delivery module's
-  ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
+  (`params.branch`).
 - Has read access to other sub-repos; modifications stay within the assigned scope.
 - **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
   confirms zero errors attributable to them, and records one outcome word per chain it identified,

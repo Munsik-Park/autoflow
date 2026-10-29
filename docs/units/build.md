@@ -18,9 +18,12 @@ Rule Scope, principle 2).
 - **Goal**: the design implemented within its scope on the branch the invocation names
   (`params.branch`), and every item of the verification design verified as it says — or, where it
   cannot be, the reason recorded.
-- **Output**: the commits the run makes on the branch, the build report (*Build report* below), a
-  green-blocker record when the design cannot be built as it stands, and the run's tool requests
-  ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Output**: `<out>/commits.json`, `{branch, from, to}` — the branch and its head when the run
+  began and when it ended, the range of the commits the run made —, the build report (*Build report*
+  below), a green-blocker record when the design cannot be built as it stands, and the run's tool
+  requests ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](../core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
@@ -111,8 +114,8 @@ These are the rules other documents cite; everything else about the work is the 
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  `## No commit`.
+  A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
+  `to`.
 
 ## Dividing the work
 
@@ -187,8 +190,7 @@ worth and where it loses.
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
 it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
 for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none. A run that made no commit says why in a `## No commit` section, which
-check-out reads (`build.json`).
+record is said to have none.
 
 | Section | Holds | Read by |
 |---|---|---|
@@ -203,7 +205,6 @@ check-out reads (`build.json`).
 | `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
 | `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
 | `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
-| `## No commit` | only when the run made no commit: why | check-out (`build.json`) |
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.

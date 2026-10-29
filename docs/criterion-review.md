@@ -47,7 +47,11 @@ The review makes that premise hold more often; it does not change it.
   ([`core.md`](core.md) > Spawn Model), the effort the one each agent definition carries. The
   record's `## Inputs` names the model and effort each module ran on.
 - **What a review module writes.** Its record, and criterion-screen its target files; a decision a
-  module puts to the advisor is the advisor's ledger entry (*Authority* below).
+  module puts to the advisor is the advisor's ledger entry (*Authority* below). The output of a run
+  that does not reach its goal is `<out>/failure.md` in their place — what it did and why it did not
+  reach the goal ([`core.md`](core.md) > Development Lifecycle).
+- **Default**: nothing beyond a module's outputs, for each of the four ([`core.md`](core.md) >
+  Development Lifecycle > *Inputs, outputs and default*).
 - **Result owed**: the record's path and a one-line summary naming each decision the module put to
   the advisor, by its ledger identifier.
 

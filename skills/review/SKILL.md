@@ -3,15 +3,15 @@ name: review
 description: >-
   Run the AutoFlow review module once on an invocation file — the pull
   request reviewed by every configured reviewer, and one aggregated verdict
-  posted on it. Use when the operator runs the review module (/autoflow:review
-  <invocation.json>).
+  over their reviews. Use when the operator runs the review module
+  (/autoflow:review <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: the invocation file) — one run of the review module (`<autoflow-root>/docs/contracts/review.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round's reviews are aggregated by an `autoflow-analyzer` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the review module (`<autoflow-root>/docs/contracts/review.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes its outputs — what the module's goal asks for, or, when the run does not reach the goal, `<out>/failure.md`: what it did and why — and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round's reviews are aggregated by an `autoflow-analyzer` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the review module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, ci, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, ci; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
 
@@ -38,9 +38,11 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **AutoFlow is a set of modules.** A module is an input, the work it does, and an output; its contract, `<autoflow-root>/docs/contracts/<module>.json`, declares its parameters, its inputs and where each comes from, and its outputs with the form each must meet (`ADR-0038` D1). The modules are functional — the criterion review's four, analysis, design, build, delivery, ci, review —, evaluation — hypothesis, plan, audit, quality — and deterministic — criteria-apply. AutoFlow defines the modules: each one's contract, its procedure and the checks of its inputs and outputs (ADR-0038 D2). A module takes everything it works on from its invocation, the branch and the attempt's record directory included (D4).
 
-**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory and, for a functional module, the attempt's record directory (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares because it did not reach its goal (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root).
+**A module runs once, on its invocation.** An invocation file names the module's parameters, its inputs, its output directory, for a functional module the attempt's record directory and, when it has any, its `instructions` (the invocation's form: `<autoflow-root>/scripts/contracts/contract.sh`, header). The module checks its inputs' form first (`bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>`) and does not run when one fails; where an input came from is not checked. It does its work once, writes its outputs into its output directory, and ends with `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json` — `accepted`, `refused`, or `failed` when the module wrote the failure output its contract declares (`ADR-0039` D3) —, the outputs, the defects, the tool requests and the AutoFlow that ran the module (its version and root). Check-in and check-out see the form of an input or an output only, each file read alone (`ADR-0040` D2).
 
-**A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge; the contract checks the inputs and the facts of the output (ADR-0038 D1). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
+**A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge (ADR-0038 D1). The output a run makes of its inputs is one of two: what the goal asks for, when the AI that did the work judges it has reached the goal, or what it did and why it did not reach the goal, in the failure output its contract declares; either ends the run (ADR-0040 D1). Whether the output is right, and what is done with it, are for the side that runs the module (ADR-0038 D2). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
+
+**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states. The invocation's `instructions` override the default and never the outputs. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them; the authority rules hold under any instruction (ADR-0040 D5).
 
 **Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 2). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
@@ -48,7 +50,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands.
 
-**Push and PR creation**: the delivery module pushes the branch and opens each pull request as a draft with its own `git push` / `gh pr create`; the ci module's goal is CI's verdict on each pull request's head with its ground — where the target's CI does not run for it, that fact, a verdict apart from green. What the PR body carries, the host PR's `Closes #N` included, is the delivery module's, its CI part the ci module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*, *CI*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
+**Push and PR creation**: the delivery module's goal is the change the build made delivered for the operator to see and decide on; its default commits a sub-repo's pointer where the change takes one, pushes the branch and opens each pull request as a draft, with its own `git push` / `gh pr create`; the ci module's goal is CI's verdict on each pull request's head with its ground — where the target's CI does not run for it, that fact, a verdict apart from green. What the PR body carries, the host PR's `Closes #N` included, is the delivery module's, its CI part the ci module's default (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*, *CI*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
 
 ### Module procedures
 
@@ -75,7 +77,7 @@ The rules that apply these principles to running and confirming tests and to sec
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
+review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -243,17 +245,20 @@ review. It has no unit agent: the session that runs it runs the reviewers, and t
 round's reviews into one verdict is made by a spawned role. A script only reads and reports.
 
 - **Goal**: the pull request reviewed by every configured reviewer, and one aggregated verdict over
-  their reviews posted on it: each finding once, with its severity and whether it holds.
+  their reviews: each finding once, with its severity and whether it holds.
 - **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
   previous round's findings file; the attempt's record directory, where the earlier rounds' records
   and the work's records are.
-- **Output**: each reviewer's review record (*Reviewer review*), the findings file and the round's
-  comment, posted on the pull request (*Review aggregation*).
+- **Output**: each reviewer's review record, `<out>/reviews/` (*Reviewer review*), the findings
+  file, `<out>/review-findings.md`, and the round's comment, `<out>/comment.md` (*Review
+  aggregation*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms that the comment is posted on the pull request (`review.json`);
-  what the findings file holds is the aggregation's goal (*Review aggregation*), and the reviews and
-  their aggregation stand outside the work they review.
+- **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
+  the aggregation's goal (*Review aggregation*), and the reviews and their aggregation stand outside
+  the work they review.
 - **Result owed**: the report of *End* below.
 
 ## Reviewer review
@@ -262,7 +267,7 @@ A run reviews the one pull request its invocation names (`params.pr`, `<owner>/<
 own diff; each pull request of a change — the host PR and each sub-repo PR alike — is reviewed by a
 run of its own, and a sub-repo PR's review is required, not optional. A run is one round of that
 PR's review (`params.round`, from `1`): it runs every reviewer, and their records go to one
-aggregation (*Review aggregation* below), which posts the round's comment
+aggregation (*Review aggregation* below), which writes the round's comment
 ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)).
 
 The reviewers are the ones the `reviewers:` line of `bash <autoflow-root>/scripts/preflight/check-review-backend.sh`
@@ -319,8 +324,8 @@ A reviewer that is unavailable for a round — its CLI absent (`check-review-bac
 its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
 on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
 no review at all — no configured reviewer left a record, and the target's side left none — is a
-review-infrastructure failure, a harness-level block the run records in its result, situation-first
-([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*).
+review-infrastructure failure: the run does not reach its goal, and its output is the failure
+output, situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*).
 
 Cautions:
 
@@ -356,8 +361,8 @@ it leaves behind:
 - each finding's severity and whether it holds, a finding that does not hold with the grounds it
   does not;
 - the highest severity among the findings that hold;
-- the same, posted on the pull request as one comment in Korean, its body kept as `<out>/comment.md`,
-  and kept as `<out>/review-findings.md`, which names the reviewed pull request.
+- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
+  comment in Korean, `<out>/comment.md`.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding
@@ -397,7 +402,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends when its round's comment is posted. Its report names the pull request's URL and head
+The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle). Its report names the pull request's URL and head
 commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
 findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
 pull request whose pointer names a sub-repo pull request's commit, that dependency.

@@ -11,7 +11,7 @@
 # This wrapper supplies the target PR number, the optional sub-repo selector,
 # the record file, and the fixed sandbox / approval flags. The review is written
 # to the record file only: it posts no PR comment and changes no label — the
-# aggregation of every review of the PR posts the one comment.
+# aggregation of every review of the PR writes the one comment.
 #
 # The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's

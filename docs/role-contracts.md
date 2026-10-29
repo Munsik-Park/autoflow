@@ -66,8 +66,7 @@ invocation names — the target repository, or in a project with sub-repos one s
 [`units/build.md`](units/build.md) > *What the build owes*; what it owes the scope is below.
 
 - Works directly in the target repository and commits to the branch its invocation names
-  (`params.branch`). It does not push: the push and the pull request are the delivery module's
-  ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
+  (`params.branch`).
 - Has read access to other sub-repos; modifications stay within the assigned scope.
 - **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
   confirms zero errors attributable to them, and records one outcome word per chain it identified,
@@ -194,6 +193,10 @@ criteria-apply is a script.
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](core.md) > Context Injection).
+- **The run ends at its goal.** The unit judges when its output reaches the goal, and ends there;
+  the output of a unit that does not reach it is `<out>/failure.md` in place of its expected output
+  — what it did and why it did not reach the goal ([`core.md`](core.md) > Development Lifecycle;
+  [ADR-0040](records/adr/0040-a-module-ends-at-its-goal.md) D1).
 - **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
   pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
   it puts to the advisor and follows (*Advisor* above).
@@ -212,5 +215,6 @@ criteria-apply is a script.
 ## Evaluation System
 
 The 10-point scale, the reference pass values (PASS Criteria), the evaluation types and the output format have one home —
-[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report in any other shape
-than its *Evaluation Output Format* fails the evaluation module's check-out.
+[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report whose form is not
+the one its contract states (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`)
+fails the evaluation module's check-out.

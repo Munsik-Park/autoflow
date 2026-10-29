@@ -7,6 +7,8 @@ revises the 2026-10-28 one: two modules in place of four, each given only the ki
 the kind and form of its output, its tools and its authority rules, and check-out checking the
 output's form only. Amends ADR-0038 D1 — the module list, and check-out's result — and the
 delivery's contract. ADR-0038 D2, ADR-0034 D2 and D5, and the authority rules of the core stand.
+D3 and D4 extended to every module, D1's `pull_request` param, the delivery's goal and the ci
+module's goal amended, by ADR-0040 (issue #523).
 
 ## Context
 

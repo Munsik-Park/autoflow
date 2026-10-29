@@ -477,9 +477,9 @@ mod_desc() {
     build)               echo "the design implemented and verified on the branch, with its build report." ;;
     audit)               echo "the test-first judgment and the scores of the change on the security items (AUDIT)." ;;
     quality)             echo "the scores of the built change (GATE:QUALITY)." ;;
-    delivery)            echo "the change pushed and, unless the invocation says otherwise, in draft pull requests that show it working." ;;
-    ci)                  echo "CI's verdict on each pull request's head, with its ground, in the body's CI part." ;;
-    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict posted on it." ;;
+    delivery)            echo "the change the build made delivered for the operator to decide on: each criterion's outcome and evidence, how it was shown working, what was not verified and what is left." ;;
+    ci)                  echo "CI's verdict on each pull request's head, with its ground." ;;
+    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews." ;;
   esac
 }
 
@@ -515,7 +515,7 @@ gen_module() {
   if [ "$m" = criteria-apply ]; then
     printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the criteria-apply module (`<autoflow-root>/docs/contracts/criteria-apply.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/criteria-apply.sh <invocation.json>`, which checks the inputs, writes `<out>/applied-criteria.json` and runs check-out itself; the run ends with the `<out>/result.json` it writes.\n\n'
   else
-    printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the %s module (`<autoflow-root>/docs/contracts/%s.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes the outputs and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. %s' \
+    printf '**Scope** (`$ARGUMENTS`: the invocation file) — one run of the %s module (`<autoflow-root>/docs/contracts/%s.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes its outputs — what the module'"'"'s goal asks for, or, when the run does not reach the goal, `<out>/failure.md`: what it did and why — and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. %s' \
       "$m" "$m" "$(mod_work "$m")"
     if jq -e '.reads_records' "$ROOT/docs/contracts/$m.json" >/dev/null; then
       printf ' The invocation'"'"'s `records` is the attempt'"'"'s record directory, where earlier runs left their work.'

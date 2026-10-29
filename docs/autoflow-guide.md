@@ -2,9 +2,9 @@
 
 > AutoFlow is a set of modules for AI-assisted software engineering with Claude Code, each with a
 > contract ([`ADR-0038`](records/adr/0038-contract-modules-with-no-state-file.md)).
-> This guide is the **index of the modules**: each module's goal, what its work owes, its output
-> and its cautions live in its procedure document (*Modules* below), and its inputs and outputs in
-> its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
+> This guide is the **index of the modules**: each module's goal, what its work owes, its output,
+> its default and its cautions live in its procedure document (*Modules* below), and its inputs, its
+> outputs and its default in its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
 > authority rules, how a module runs, the Execution Principles, the records and the hook — lives in
 > [`core.md`](core.md).
 
@@ -12,8 +12,8 @@
 
 ## Overview
 
-A module is an input, the work it does, and an output. It runs once, on its invocation: it checks
-its inputs' form, does its work, writes its outputs, and checks them against its contract
+A module is defined by its inputs, its outputs and its default. It runs once, on its invocation: it
+checks its inputs' form, does its work, writes its outputs, and checks them against its contract
 ([`core.md`](core.md) > Development Lifecycle). The terminal output of the modules is an open,
 reviewed pull request; an external review process merges it.
 
@@ -58,21 +58,28 @@ into one BUILD (ADR-0025):
   given the record directory, `records` — the attempt's record directory, where the ledger
   `issue-<N>-ledger.md` and every earlier run's output directory are. Each run has its own `out`
   inside it: `<module>-<n>`, or `<module>-<qualifier>-<n>` for a module run once per item
-  (`criterion-in-depth-AC2-1`).
-- The run writes its outputs and `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
+  (`criterion-in-depth-AC2-1`). Its `instructions`, when given, reach the AI that does the work.
+- A module's outputs are the files it writes in `out`, by the names and forms its contract gives.
+  Its default is what it does with its result unless the invocation says otherwise, stated in its
+  contract (`default`) and its procedure. The invocation's `instructions` override the default and
+  never the outputs ([`core.md`](core.md) > Development Lifecycle > *Inputs, outputs and default*).
+- A run's output is what the module's goal asks for or, when the run does not reach the goal, its
+  contract's failure output, `<out>/failure.md`. The run writes its outputs and
+  `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
   check-out writes `<out>/result.json`: `status` (`accepted`, `refused`, or `failed` when the run
   wrote its contract's failure output — what it did and why it did not reach its goal),
-  `outputs` (each output's path; the build's commits as `{branch, from, to}`), `defects`,
+  `outputs` (each output's path), `defects`,
   `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has done no work; a run
   refused or failed at check-out leaves its outputs, and a later module's check-in reads an input by
   its form, not by the result of the run that made it.
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
-  each module's outputs meet: its contract, `<autoflow-root>/docs/contracts/<module>.json`.
+  each module's outputs meet — their form, each file read alone: its contract,
+  `<autoflow-root>/docs/contracts/<module>.json`.
 
 ## Connecting modules
 
 - An input names where it comes from (the tables below): another module's output, given by its path
-  (the build's commits as the range `{branch, from, to}` its `result.json` records); ledger entries, given as the ledger
+  (the build's commits as its `commits.json`, the range `{branch, from, to}`); ledger entries, given as the ledger
   file; a document of the target; or a file the invocation gives. The review's `pr` is
   `<owner>/<name>#<N>`, a pull request's `pr` in the delivery's `delivery.json`.
 - An input given several files takes them as an array of paths.
@@ -111,6 +118,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 |---|---|
 | `review_record` | `<out>/criterion-review.md` |
 | `targets` | `<out>/targets/*.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"criterion-screen","params":{"issue":"<issue-number>"},"inputs":{},"records":"<record directory>","out":"<record directory>/criterion-screen-<n>"}
@@ -133,6 +141,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `trace` | `<out>/trace.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"criterion-trace","params":{"issue":"<issue-number>"},"inputs":{"review_record":"<path>"},"out":"<record directory>/criterion-trace-<n>"}
@@ -156,6 +165,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `in_depth` | `<out>/in-depth.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"criterion-in-depth","params":{"issue":"<issue-number>","criterion":"<string>"},"inputs":{"target":"<path>"},"out":"<record directory>/criterion-in-depth-<n>"}
@@ -180,6 +190,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `review_record` | `<out>/criterion-review.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"criterion-reconcile","params":{"issue":"<issue-number>"},"inputs":{"review_record":"<path>","trace":"<path>"},"records":"<record directory>","out":"<record directory>/criterion-reconcile-<n>"}
@@ -207,6 +218,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `report` | `<out>/issue-analysis.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"analysis","params":{"issue":"<issue-number>"},"inputs":{},"records":"<record directory>","out":"<record directory>/analysis-<n>"}
@@ -238,7 +250,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `hypothesis`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached.
+- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS`
 
 | Param | Required | Form |
@@ -254,6 +266,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `evaluation` | `<out>/evaluation.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"hypothesis","params":{"issue":"<issue-number>"},"inputs":{"analysis":"<path>"},"out":"<record directory>/hypothesis-<n>"}
@@ -286,6 +299,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 |---|---|
 | `feature_design` | `<out>/feature-design.md` |
 | `verification_design` | `<out>/verification-design.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"design","params":{"issue":"<issue-number>"},"inputs":{"applied_criteria":"<path>","analysis":"<path>","hypothesis_evaluation":"<path>"},"records":"<record directory>","out":"<record directory>/design-<n>"}
@@ -294,7 +308,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `plan`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached.
+- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN`
 
 | Param | Required | Form |
@@ -312,6 +326,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `evaluation` | `<out>/evaluation.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"plan","params":{"issue":"<issue-number>"},"inputs":{"feature_design":"<path>","verification_design":"<path>","applied_criteria":"<path>"},"out":"<record directory>/plan-<n>"}
@@ -320,7 +335,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `build`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The design implemented within the cycle's scope on the cycle's branch, and every item of the verification design verified as it says — or, where it cannot be, the reason recorded.
+- Goal: The design implemented within the cycle's scope on the cycle's branch, and every item of the verification design verified as it says — or, where it cannot be, the reason recorded. The output names the commits the run made, as a range on the branch.
 - Procedure: `<autoflow-root>/docs/units/build.md`
 
 | Param | Required | Form |
@@ -341,9 +356,10 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 
 | Output | File |
 |---|---|
-| `commits` | git |
+| `commits` | `<out>/commits.json` |
 | `report` | `<out>/build-report.md` |
 | `green_blocker` | `<out>/green-blocker.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"build","params":{"issue":"<issue-number>","branch":"<string>"},"inputs":{"applied_criteria":"<path>","feature_design":"<path>","verification_design":"<path>"},"records":"<record directory>","out":"<record directory>/build-<n>"}
@@ -352,7 +368,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `audit`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: A judgment of whether the build's tests meant to fail failed on the code without the implementation and passed on the code with it, and scores of the change on the project's security items.
+- Goal: A judgment of whether the build's tests meant to fail failed on the code without the implementation and passed on the code with it, and scores of the change on the project's security items. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > AUDIT`
 
 | Param | Required | Form |
@@ -370,15 +386,16 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `evaluation` | `<out>/evaluation.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"audit","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"build_report":"<path>","verification_design":"<path>"},"out":"<record directory>/audit-<n>"}
+{"contract":1,"module":"audit","params":{"issue":"<issue-number>"},"inputs":{"commits":"<path>","build_report":"<path>","verification_design":"<path>"},"out":"<record directory>/audit-<n>"}
 ```
 
 ### `quality`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of the built change against the acceptance criteria, the design and the build's own records — complete, correct, verified, within the cycle's scope, committed and documented.
+- Goal: Scores of the built change against the acceptance criteria, the design and the build's own records — complete, correct, verified, within the cycle's scope, committed and documented. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:QUALITY`
 
 | Param | Required | Form |
@@ -401,22 +418,22 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Output | File |
 |---|---|
 | `evaluation` | `<out>/evaluation.json` |
+| `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
+{"contract":1,"module":"quality","params":{"issue":"<issue-number>"},"inputs":{"commits":"<path>","applied_criteria":"<path>","analysis":"<path>","feature_design":"<path>","verification_design":"<path>","build_report":"<path>","audit_evaluation":"<path>"},"out":"<record directory>/quality-<n>"}
 ```
 
 ### `delivery`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The change the build made, its local tests recorded green in the build report, pushed to the target's remote and — unless the invocation says pull_request none — in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.
+- Goal: The change the build made, its local tests recorded green in the build report, delivered for the operator to see and decide on: each applied acceptance criterion with its outcome and its evidence, how the change was shown working, what the work could not verify and why, and what the change leaves undone.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
 | `base` | no | string |
-| `pull_request` | no | `^(open|none)$` |
 | `timeout` | no | integer |
 
 | Input | Required | From |
@@ -436,13 +453,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"delivery","params":{"issue":"<issue-number>"},"inputs":{"commits":{"branch":"<branch>","from":"<commit>","to":"<commit>"},"applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
+{"contract":1,"module":"delivery","params":{"issue":"<issue-number>"},"inputs":{"commits":"<path>","applied_criteria":"<path>","verification_design":"<path>","build_report":"<path>"},"records":"<record directory>","out":"<record directory>/delivery-<n>"}
 ```
 
 ### `ci`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — stated in the body's CI part, with, given the build report, the CI job that ran each test file the change added.
+- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — with, given the build report, the CI job that ran each test file the change added.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
@@ -467,7 +484,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `review`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews posted on it: each finding once, with its severity and whether it holds.
+- Goal: The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews: each finding once, with its severity and whether it holds.
 - Procedure: `<autoflow-root>/docs/units/review.md`
 
 | Param | Required | Form |
@@ -485,6 +502,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `reviews` | `<out>/reviews/*.md` |
 | `findings` | `<out>/review-findings.md` |
 | `comment` | `<out>/comment.md` |
+| `failure` | `<out>/failure.md` |
 
 ```json
 {"contract":1,"module":"review","params":{"issue":"<issue-number>","pr":"<string>","round":"<integer>"},"inputs":{},"records":"<record directory>","out":"<record directory>/review-<n>"}

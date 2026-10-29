@@ -14,10 +14,10 @@ alone on its invocation. A module is given the kinds of its inputs, the kind and
 its tools and the authority rules below; how many of a thing it makes, which steps it takes in which
 order and what it checks are the AI's, judged from the inputs it is given.
 
-| Module | Output | `timeout` not given |
-|---|---|---|
-| `delivery` | the change on the target's remote in draft pull requests — `<out>/delivery.json` (*Push and pull request*) | 900 s |
-| `ci` | CI's verdict on each pull request, with its ground — `<out>/ci.json` (*CI*) | 900 s |
+| Module | Output | Default | `timeout` not given |
+|---|---|---|---|
+| `delivery` | `<out>/delivery.json` (*Push and pull request*) | a sub-repo's pointer commit, the push and the draft pull requests with their bodies | 900 s |
+| `ci` | `<out>/ci.json` (*CI*) | the verdict in each pull request's body, its CI part | 900 s |
 
 ## What both modules owe
 
@@ -29,7 +29,7 @@ order and what it checks are the AI's, judged from the inputs it is given.
   `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
   result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
-  gives. It does not read again on GitHub or in git what the output states.
+  gives.
 
 ## Authority rules
 
@@ -43,42 +43,45 @@ These hold on every push, every pull request and every pull-request body either 
 
 ## Push and pull request
 
-**DELIVER, INTEGRATE.** The delivery module puts the change the build made on the target's remote,
-in draft pull requests that show the change working and let the operator decide on them.
+**DELIVER, INTEGRATE.** The delivery module delivers the change the build made for the operator to
+see and decide on: each applied acceptance criterion with its outcome and its evidence, how the
+change was shown working, what the work could not verify and why, and what the change leaves
+undone.
 
 - **Inputs**: what the build produced and worked from — its commits (`commits`), its report
   (`build_report`), the applied criteria and the verification design —, and the records the
   pull-request body carries: the quality evaluation, the feature design, the tool requests of every
   run (`tool_requests`) and the recommendations deferred or separated (`deferred`).
 - **Params**: `base`, the branch the pull requests merge into (not given, the remote's default
-  branch); `pull_request: none`, on which the branches are pushed and no pull request is opened;
-  `timeout`.
+  branch); `timeout`.
 - **What the AI judges**: how many pull requests the change takes, in which repositories and on which
   branches — a sub-repo's included, read from the project's own information
   ([`core.md`](../core.md) > Project Information) —, and how the pull requests show the change
   working.
-- **The change pushed** is one whose local tests the build report records green.
+- **The change delivered** is one whose local tests the build report records green.
 - **The body** states each applied acceptance criterion with its outcome and where its evidence is;
   what the work verified other than by an executable test, and how the change was shown working; what
   the work could not verify, and why — the tool requests, so the operator decides on them; and what
-  the change leaves undone — the problems it separated and the recommendations deferred. Its CI part
-  is the ci module's (*CI*). The pull request in the repository the issue is filed in closes it
-  (`Closes #N`); any other references it and closes nothing
-  ([`git-workflow.md`](../git-workflow.md) > Issue Auto-Close). The title and the body's form are the
-  module's, with [`title-guide.md`](../title-guide.md) and [`pr-body-guide.md`](../pr-body-guide.md)
-  to draw on.
+  the change leaves undone — the problems it separated and the recommendations deferred. The pull
+  request in the repository the issue is filed in closes it (`Closes #N`); any other references it
+  and closes nothing ([`git-workflow.md`](../git-workflow.md) > Issue Auto-Close). The title and the
+  body's form are the module's, with [`title-guide.md`](../title-guide.md) and
+  [`pr-body-guide.md`](../pr-body-guide.md) to draw on.
 - **Tools**: `git` and `gh`, as the module's own commands.
 - **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
-  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` under
-  `pull_request: none`.
+  `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` for a branch pushed
+  with no pull request.
+- **Default**: a sub-repo's pointer commit where the change takes one, the branches pushed and the
+  draft pull requests opened on the base, with the bodies above; the invocation's `instructions`
+  override it ([`core.md`](../core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — among what the run did, what it
   pushed and opened.
 
 ## CI
 
-**HANDOFF.** The ci module reads CI on each pull request it is given and states the verdict in the
-pull request's body.
+**HANDOFF.** The ci module reads CI on each pull request it is given and states the verdict in
+`<out>/ci.json`.
 
 - **Inputs**: the pull requests (`pull_requests`), each with the head CI is read on — the delivery's
   output, or a file the invocation writes, `{pull_requests: [{pr, head}]}`; and, optionally, the
@@ -92,7 +95,10 @@ pull request's body.
   means are stated in its header.
 - **Output**: `<out>/ci.json` — `{prs: [{pr, head, verdict, ground}]}`: each pull request's verdict
   on the head it was read on — `green`, `not-run`, or what CI showed instead — and the ground it rests
-  on; and each pull request's body carrying its CI part:
+  on.
+- **Default**: each pull request's body carrying its CI part; the invocation's `instructions`
+  override it ([`core.md`](../core.md) > Development Lifecycle > *Inputs, outputs and default*).
+  The CI part:
   - the verdict and the head it was read on; a later verdict on a head replaces an earlier one;
   - **CI not run.** Where the target's CI does not run for the pull request — no workflow, or a
     trigger, path filter or condition that excludes it — the body carries the line `CI: not run`,
@@ -103,5 +109,4 @@ pull request's body.
     `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
-  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` and the body's CI part state the
-  verdict all the same.
+  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.
