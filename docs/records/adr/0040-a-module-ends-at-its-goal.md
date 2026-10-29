@@ -45,8 +45,9 @@ inputs, are the receiving side's to check with the same tools — it reads the r
 the module again when it is wrong. No device counts the items of a goal one by one: counting fixed
 items is a script's work, and the AI is given the goal — the output disposes of every item the work
 owes, each applied acceptance criterion among them, and the re-score's rubric stands as one of the
-goals. An output has a default and the invocation's instructions change it; the contract states the
-default only. Kept: an input's producing module (`from`), which names the input's form — check-in
+goals. What a module does beyond its output directory has a default and the invocation's
+instructions change it; the contract states the default only, and the files in the output directory
+keep the names and forms the contract gives. Kept: an input's producing module (`from`), which names the input's form — check-in
 reads the form, not where the file came from, so an input the running side wrote in the same form
 passes —; the dispositions the criterion-screen and criterion-reconcile goals list; and the form
 checks of an output (keys, sections, tables, duplicates, forbidden keys) and the failure output in
@@ -89,18 +90,21 @@ counting checks that compared the output with the previous evaluation go (`parti
 `rescore` required when an input is given); `rescore` stays in the output's form as an object.
 
 **D5 — An output has a default, and the invocation's instructions change it.** An invocation may
-carry `instructions`, a text; check-in checks that it is a non-empty string. Each output's default
-is what its contract and its procedure state — a file in the output directory and, for some modules
-beyond it, a push, a pull request, a comment, a pull request's body —; the instructions change where
-an output goes or its form, and the module follows them, the authority rules holding under any
-instruction (`docs/core.md` > Development Lifecycle > *Where an output goes*). Applied:
+carry `instructions`, a text; check-in checks that it is a non-empty string. A module writes its
+outputs in its output directory by the names and in the forms its contract gives, whatever the
+instructions, and check-out checks that form as before. What its procedure does beyond that
+directory — a push, a pull request, a comment, a pull request's body — is a default, and the
+instructions change it: a review kept as `<out>/comment.md` and posted nowhere is one. The AI that
+does the module's work — the session, or the spawn the work is given to — receives the instructions
+with the inputs and follows them, the authority rules holding under any instruction
+(`docs/core.md` > Development Lifecycle > *Where an output goes*). Applied:
 
 | Module | Default | Before |
 |---|---|---|
 | `review` | `<out>/comment.md`, a markdown file, posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
 | `ci` | `<out>/ci.json`, and each pull request's body carrying its CI part | the goal included the body's CI part |
 | `delivery` | the branches pushed and draft pull requests opened, `<out>/delivery.json` | `pull_request: open\|none` |
-| every module | its outputs in `<out>` as its contract names them | no way to change them |
+| every module | its outputs in `<out>` by the names and forms its contract gives, which the instructions do not change | — |
 
 ## Alternatives Considered
 
@@ -128,6 +132,8 @@ instruction (`docs/core.md` > Development Lifecycle > *Where an output goes*). A
   posted and a re-score that leaves out an item or a previous finding, as long as each file's form
   holds; nothing AutoFlow ships checks those facts. The re-score's rubric binds the evaluator as its
   role contract, and the receiving side reads whether it was met.
+- An instruction to write an output under another name or in another form is not followed in the
+  output directory: check-out reads the contract's names and forms only.
 - What an instruction may change is not enumerated; an instruction the authority rules forbid is
   denied by the hook where it reaches one, and otherwise by the module's reading of the rules.
 

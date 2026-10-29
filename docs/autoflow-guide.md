@@ -58,9 +58,10 @@ into one BUILD (ADR-0025):
   given the record directory, `records` — the attempt's record directory, where the ledger
   `issue-<N>-ledger.md` and every earlier run's output directory are. Each run has its own `out`
   inside it: `<module>-<n>`, or `<module>-<qualifier>-<n>` for a module run once per item
-  (`criterion-in-depth-AC2-1`). Its `instructions`, when given, change where an output goes or its
-  form from the default its contract states ([`core.md`](core.md) > Development Lifecycle >
-  *Where an output goes*).
+  (`criterion-in-depth-AC2-1`). Its `instructions`, when given, reach the AI that does the work and
+  change what the module does beyond `out` — a push, a pull request, a comment, a pull request's
+  body — from the default its procedure states; the files in `out` keep the names and forms the
+  contract gives ([`core.md`](core.md) > Development Lifecycle > *Where an output goes*).
 - A run's output is what the module's goal asks for or, when the run does not reach the goal, its
   contract's failure output, `<out>/failure.md`. The run writes its outputs and
   `<out>/tool-requests.json` (`[]` when it lacked nothing), and its

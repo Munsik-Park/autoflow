@@ -1,5 +1,5 @@
 {
-  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: docs/records/design-reviews/io-contract-modules.md > 5.",
+  "status": "draft — issue #509, epic #507; revised by issue #523 (ADR-0040); read by scripts/contracts/contract.sh and the module's command. Format: scripts/contracts/contract.sh, header.",
   "contract": 1,
   "module": "analysis",
   "kind": "functional",
