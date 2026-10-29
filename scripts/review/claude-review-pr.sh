@@ -15,7 +15,7 @@
 # CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
 # not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
-# and changes no label — the aggregation of every review of the PR posts the
+# and changes no label — the aggregation of every review of the PR writes the
 # one comment.
 #
 # The review module launches this wrapper once per pull request and round when

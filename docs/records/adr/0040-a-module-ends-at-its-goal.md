@@ -15,7 +15,8 @@ default and never the outputs. The operator's decision of 2026-10-30 is applied 
 role is its goal, and its default holds only what it does with its result by default — the build's
 commits are its goal, its default nothing beyond its outputs; the delivery's goal is the change
 delivered for the operator to decide on, its default the pointer commit, the push and the draft pull
-requests with their bodies.
+requests with their bodies. The operator's decision of 2026-10-30 on the pull request's fourth review
+round is applied to D5: the review's outputs are its result, its default nothing beyond them.
 
 ## Context
 
@@ -105,15 +106,15 @@ default is what it does with its result unless the invocation says otherwise; ea
 it as `default` and the module's procedure states it apart from the outputs. A module's role is its
 goal, and its default holds only what it does with the result: the delivery's goal is the change the
 build made delivered for the operator to see and decide on, and pushing it and opening the draft
-pull requests is its default; the build's commits are its goal. The instructions override the
-default: a review whose comment is posted nowhere, kept as `<out>/comment.md`, is one. The AI that
-does the module's work — the session, or the spawn the work is given to — receives the instructions
-with the inputs and follows them, the authority rules holding under any instruction
-(`docs/core.md` > Development Lifecycle > *Inputs, outputs and default*). Applied:
+pull requests is its default; the build's commits are its goal; the review's goal is the pull
+request's reviews aggregated into one verdict, its default nothing beyond its outputs. The
+instructions override the default. The AI that does the module's work — the session, or the spawn
+the work is given to — receives the instructions with the inputs and follows them, the authority
+rules holding under any instruction (`docs/core.md` > Development Lifecycle > *Inputs, outputs and
+default*). Applied:
 
 | Module | Outputs | Default | Before |
 |---|---|---|---|
-| `review` | `<out>/reviews/*.md`, `<out>/review-findings.md`, `<out>/comment.md` | the comment posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
 | `ci` | `<out>/ci.json` | each pull request's body carrying the verdict in its CI part | the goal included the body's CI part |
 | `delivery` | `<out>/delivery.json` | a sub-repo's pointer commit, the change pushed, each branch in a draft pull request with its body | the goal included the push and the draft pull requests; `pull_request: open\|none` |
 | every other module | its contract's | nothing beyond its outputs | — |
@@ -140,10 +141,10 @@ with the inputs and follows them, the authority rules holding under any instruct
 
 ### Negative
 
-- Check-out accepts a `commits.json` whose commits are not on the branch, a comment that was never
-  posted and a re-score that leaves out an item or a previous finding, as long as each file's form
-  holds; nothing AutoFlow ships checks those facts. The re-score's rubric binds the evaluator as its
-  role contract, and the receiving side reads whether it was met.
+- Check-out accepts a `commits.json` whose commits are not on the branch and a re-score that leaves
+  out an item or a previous finding, as long as each file's form holds; nothing AutoFlow ships checks
+  those facts. The re-score's rubric binds the evaluator as its role contract, and the receiving side
+  reads whether it was met.
 - An instruction to write an output under another name or in another form is not followed in the
   output directory: check-out reads the contract's names and forms only.
 - What an instruction may change is not enumerated; an instruction the authority rules forbid is
@@ -160,8 +161,8 @@ with the inputs and follows them, the authority rules holding under any instruct
   default kept (D5); the delivery's goal is the change delivered for the operator to decide on, the
   push and the draft pull requests its default, and the ci module's goal the verdict, the body's CI
   part its default.
-- **ADR-0026** — one aggregated comment per round stands; posting it on the pull request is the
-  review's default.
+- **ADR-0026** — D3's one aggregated comment per round stands, as the review's output
+  `<out>/comment.md`.
 
 ## Related Issues / PRs
 

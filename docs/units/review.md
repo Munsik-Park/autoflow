@@ -19,8 +19,8 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
 - **Output**: each reviewer's review record, `<out>/reviews/` (*Reviewer review*), the findings
   file, `<out>/review-findings.md`, and the round's comment, `<out>/comment.md` (*Review
   aggregation*).
-- **Default**: the comment posted on the pull request; the invocation's `instructions` override it
-  ([`core.md`](../core.md) > Development Lifecycle > *Inputs, outputs and default*).
+- **Default**: nothing beyond its outputs ([`core.md`](../core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
 - **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
