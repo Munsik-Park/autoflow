@@ -215,5 +215,6 @@ criteria-apply is a script.
 ## Evaluation System
 
 The 10-point scale, the reference pass values (PASS Criteria), the evaluation types and the output format have one home —
-[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report in any other shape
-than its *Evaluation Output Format* fails the evaluation module's check-out.
+[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report whose form is not
+the one its contract states (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`)
+fails the evaluation module's check-out.
