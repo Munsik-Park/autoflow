@@ -201,10 +201,6 @@ spawn is fresh like any other; its input is narrowed, not its independence.
   — and its ground (*Re-score form* above). A finding on an inherited item `remains`, its ground the
   inheritance.
 
-The evaluation contract's goal states that a re-score names which items it scored afresh and which
-it inherited; no check of the output compares `rescore` with the previous evaluation
-([ADR-0040](records/adr/0040-a-module-ends-at-its-goal.md) D4).
-
 ### Build observations (GATE:QUALITY input)
 
 Binds the GATE:QUALITY form only.
