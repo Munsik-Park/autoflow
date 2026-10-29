@@ -3,15 +3,19 @@
 ## Status
 
 Accepted (operator decision 2026-10-29, issue #523). Extends ADR-0039 D3 and D4 from the delivery
-and ci modules to every module. Amends ADR-0038 D1 — what the contract checks — and D4 — the
-commits as a range the invocation names —, and ADR-0039 D1 — the delivery's `pull_request` param
-and the ci module's goal. ADR-0038 D2, ADR-0039 D2 and the authority rules of the core stand. The
-operator's answers of 2026-10-29 to the first draft's open points are applied: the re-score's
-rubric and the goal of every item the work owes stand, and the failure output is one shape of the
-output, required of no contract by a check. The operator's decision of 2026-10-29 on the pull
-request's third review round is applied to D5: a module is defined by its inputs, its outputs and
-its default, each contract states its `default`, and the instructions override the default and never
-the outputs.
+and ci modules to every module. Amends ADR-0038 D1 — what the contract checks — and D4 — the commits
+as a range the invocation names —, and ADR-0039 D1 — the delivery's `pull_request` param, the
+delivery's goal and the ci module's goal. ADR-0038 D2, ADR-0039 D2 and the authority rules of the
+core stand. The operator's answers of 2026-10-29 to the first draft's open points are applied: the
+re-score's rubric and the goal of every item the work owes stand, and the failure output is one
+shape of the output, required of no contract by a check. The operator's decision of 2026-10-29 on
+the pull request's third review round is applied to D5: a module is defined by its inputs, its
+outputs and its default, each contract states its `default`, and the instructions override the
+default and never the outputs. The operator's decision of 2026-10-30 is applied to D5: a module's
+role is its goal, and its default holds only what it does with its result by default — the build's
+commits are its goal, its default nothing beyond its outputs; the delivery's goal is the change
+delivered for the operator to decide on, its default the pointer commit, the push and the draft pull
+requests with their bodies.
 
 ## Context
 
@@ -93,25 +97,26 @@ evaluation `cleared` or `remains` with its ground, a finding on an inherited ite
 counting checks that compared the output with the previous evaluation go (`partition`, `covers`,
 `rescore` required when an input is given); `rescore` stays in the output's form as an object.
 
-**D5 — A module is its inputs, its outputs and its default; the instructions override the
-default.** An invocation may carry `instructions`, a text; check-in checks that it is a non-empty
-string. A module's outputs are the files it writes in its output directory, by the names and in the
-forms its contract gives; the instructions do not change them, and check-out checks that form as
-before. Its default is what it does with its result unless the invocation says otherwise — for some
-modules a push, a pull request, a comment or a pull request's body, for others nothing beyond its
-outputs —; each contract states it as `default` and the module's procedure states it apart from the
-outputs. The instructions override the default: a review whose comment is posted nowhere, kept as
-`<out>/comment.md`, is one. The AI that does the module's work — the session, or the spawn the work
-is given to — receives the instructions with the inputs and follows them, the authority rules
-holding under any instruction (`docs/core.md` > Development Lifecycle > *Inputs, outputs and
-default*). Applied:
+**D5 — A module is its inputs, its outputs and its default; the instructions override the default.**
+An invocation may carry `instructions`, a text; check-in checks that it is a non-empty string. A
+module's outputs are the files it writes in its output directory, by the names and in the forms its
+contract gives; the instructions do not change them, and check-out checks that form as before. Its
+default is what it does with its result unless the invocation says otherwise; each contract states
+it as `default` and the module's procedure states it apart from the outputs. A module's role is its
+goal, and its default holds only what it does with the result: the delivery's goal is the change the
+build made delivered for the operator to see and decide on, and pushing it and opening the draft
+pull requests is its default; the build's commits are its goal. The instructions override the
+default: a review whose comment is posted nowhere, kept as `<out>/comment.md`, is one. The AI that
+does the module's work — the session, or the spawn the work is given to — receives the instructions
+with the inputs and follows them, the authority rules holding under any instruction
+(`docs/core.md` > Development Lifecycle > *Inputs, outputs and default*). Applied:
 
 | Module | Outputs | Default | Before |
 |---|---|---|---|
 | `review` | `<out>/reviews/*.md`, `<out>/review-findings.md`, `<out>/comment.md` | the comment posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
 | `ci` | `<out>/ci.json` | each pull request's body carrying the verdict in its CI part | the goal included the body's CI part |
-| `delivery` | `<out>/delivery.json` | the change pushed, each branch in a draft pull request | `pull_request: open\|none` |
-| `build` | `<out>/commits.json`, `<out>/build-report.md` | its commits on the branch, in the target's checkout | — |
+| `delivery` | `<out>/delivery.json` | a sub-repo's pointer commit, the change pushed, each branch in a draft pull request with its body | the goal included the push and the draft pull requests; `pull_request: open\|none` |
+| `build` | `<out>/commits.json`, `<out>/build-report.md` | nothing beyond its outputs | — |
 | every other module | its contract's | nothing beyond its outputs | — |
 
 ## Alternatives Considered
@@ -153,8 +158,9 @@ default*). Applied:
   range" is the build's `commits.json` (D3). D2 stands and is applied.
 - **ADR-0039** — D3's form of the failure output is the one every module uses, and D4 extends to
   every module (D1, D2). D1's `pull_request` param goes, its
-  default kept (D5); the ci module's goal no longer includes the body's CI part, which is its
-  default.
+  default kept (D5); the delivery's goal is the change delivered for the operator to decide on, the
+  push and the draft pull requests its default, and the ci module's goal the verdict, the body's CI
+  part its default.
 - **ADR-0026** — one aggregated comment per round stands; posting it on the pull request is the
   review's default.
 

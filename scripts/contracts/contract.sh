@@ -24,11 +24,10 @@
 #
 # The module's contract is <autoflow-root>/docs/contracts/<module>.json. This
 # script applies only the checks the contract lists under an output's "checks"
-# — the form of a file, read from that file alone (ADR-0040 D2); an output's
+# — the form of a file, read from that file alone (ADR-0040 D2). An output's
 # "evaluation" lines are the evaluation modules' — the disposition of every
-# item the work owes among them — and are not read here, nor is the
-# contract's "default", what the module does with its result unless the
-# invocation says otherwise.
+# item the work owes among them —, and the contract's "default" is what the
+# module does with its result unless the invocation says otherwise.
 #
 # check-in  — the params and inputs the contract declares are given and well
 #             formed (Q19): an input file exists and, when another module

@@ -1056,8 +1056,8 @@ These are the rules other documents cite; everything else about the work is the 
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  its report, and its `commits.json` has `from` equal to `to`.
+  A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
+  `to`.
 
 <!-- From <autoflow-root>/docs/units/build.md > Build report -->
 

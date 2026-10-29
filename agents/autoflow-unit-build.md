@@ -136,9 +136,8 @@ Rule Scope, principle 2).
   began and when it ended, the range of the commits the run made —, the build report (*Build report*
   below), a green-blocker record when the design cannot be built as it stands, and the run's tool
   requests ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
-- **Default**: the run's commits on the branch, in the target's checkout, pushed nowhere (*Commits*
-  below); the invocation's `instructions` override it ([`core.md`](<autoflow-root>/docs/core.md) > Development
-  Lifecycle > *Inputs, outputs and default*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
@@ -229,8 +228,8 @@ These are the rules other documents cite; everything else about the work is the 
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
   pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
-  The module does not push; pushing is the delivery module's. A run that makes no commit says why in
-  its report, and its `commits.json` has `from` equal to `to`.
+  A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
+  `to`.
 
 ## Dividing the work
 

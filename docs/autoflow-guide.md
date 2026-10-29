@@ -427,7 +427,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `delivery`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The change the build made, its local tests recorded green in the build report, pushed to the target's remote in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.
+- Goal: The change the build made, its local tests recorded green in the build report, delivered for the operator to see and decide on: each applied acceptance criterion with its outcome and its evidence, how the change was shown working, what the work could not verify and why, and what the change leaves undone.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |

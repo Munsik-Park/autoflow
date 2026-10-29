@@ -16,7 +16,7 @@ order and what it checks are the AI's, judged from the inputs it is given.
 
 | Module | Output | Default | `timeout` not given |
 |---|---|---|---|
-| `delivery` | `<out>/delivery.json` (*Push and pull request*) | the change pushed to the target's remote in draft pull requests | 900 s |
+| `delivery` | `<out>/delivery.json` (*Push and pull request*) | a sub-repo's pointer commit, the push and the draft pull requests with their bodies | 900 s |
 | `ci` | `<out>/ci.json` (*CI*) | the verdict in each pull request's body, its CI part | 900 s |
 
 ## What both modules owe
@@ -29,7 +29,7 @@ order and what it checks are the AI's, judged from the inputs it is given.
   `<out>/failure.md`: what it did, and why it did not reach the goal. Check-out then writes its
   result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
-  gives. It does not read again on GitHub or in git what the output states.
+  gives.
 
 ## Authority rules
 
@@ -43,8 +43,10 @@ These hold on every push, every pull request and every pull-request body either 
 
 ## Push and pull request
 
-**DELIVER, INTEGRATE.** The delivery module puts the change the build made on the target's remote,
-in draft pull requests that show the change working and let the operator decide on them.
+**DELIVER, INTEGRATE.** The delivery module delivers the change the build made for the operator to
+see and decide on: each applied acceptance criterion with its outcome and its evidence, how the
+change was shown working, what the work could not verify and why, and what the change leaves
+undone.
 
 - **Inputs**: what the build produced and worked from — its commits (`commits`), its report
   (`build_report`), the applied criteria and the verification design —, and the records the
@@ -56,7 +58,7 @@ in draft pull requests that show the change working and let the operator decide 
   branches — a sub-repo's included, read from the project's own information
   ([`core.md`](../core.md) > Project Information) —, and how the pull requests show the change
   working.
-- **The change pushed** is one whose local tests the build report records green.
+- **The change delivered** is one whose local tests the build report records green.
 - **The body** states each applied acceptance criterion with its outcome and where its evidence is;
   what the work verified other than by an executable test, and how the change was shown working; what
   the work could not verify, and why — the tool requests, so the operator decides on them; and what
@@ -71,9 +73,9 @@ in draft pull requests that show the change working and let the operator decide 
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
   `<owner>/<name>#<N>` — the form the review and the ci module take —, `null` for a branch pushed
   with no pull request.
-- **Default**: the branches pushed and the draft pull requests opened, with the bodies above; the
-  invocation's `instructions` override it ([`core.md`](../core.md) > Development Lifecycle >
-  *Inputs, outputs and default*).
+- **Default**: a sub-repo's pointer commit where the change takes one, the branches pushed and the
+  draft pull requests opened on the base, with the bodies above; the invocation's `instructions`
+  override it ([`core.md`](../core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — among what the run did, what it
   pushed and opened.
 

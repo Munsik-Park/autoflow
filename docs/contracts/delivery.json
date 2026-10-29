@@ -4,7 +4,7 @@
   "module": "delivery",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The change the build made, its local tests recorded green in the build report, pushed to the target's remote in draft pull requests on the base whose bodies show the change working and let the operator decide on them: as many pull requests as the change takes, in the repositories and on the branches it takes, sub-repos included. The output names each branch pushed, its head and its pull request.\n",
+  "goal": "The change the build made, its local tests recorded green in the build report, delivered for the operator to see and decide on: each applied acceptance criterion with its outcome and its evidence, how the change was shown working, what the work could not verify and why, and what the change leaves undone.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
@@ -110,5 +110,5 @@
       "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What both modules owe)."
     }
   },
-  "default": "The change pushed to the target's remote, each branch in a draft pull request on the base whose body docs/units/delivery.md > Push and pull request states."
+  "default": "A sub-repo's pointer commit where the change takes one, the branches pushed to the target's remote, and a draft pull request on the base for each — as many as the change takes, in the repositories and on the branches it takes, sub-repos included —, with the body docs/units/delivery.md > Push and pull request states."
 }
