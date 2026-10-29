@@ -62,12 +62,11 @@ undone.
 - **The body** states each applied acceptance criterion with its outcome and where its evidence is;
   what the work verified other than by an executable test, and how the change was shown working; what
   the work could not verify, and why — the tool requests, so the operator decides on them; and what
-  the change leaves undone — the problems it separated and the recommendations deferred. Its CI part
-  is the ci module's default (*CI*). The pull request in the repository the issue is filed in closes it
-  (`Closes #N`); any other references it and closes nothing
-  ([`git-workflow.md`](../git-workflow.md) > Issue Auto-Close). The title and the body's form are the
-  module's, with [`title-guide.md`](../title-guide.md) and [`pr-body-guide.md`](../pr-body-guide.md)
-  to draw on.
+  the change leaves undone — the problems it separated and the recommendations deferred. The pull
+  request in the repository the issue is filed in closes it (`Closes #N`); any other references it
+  and closes nothing ([`git-workflow.md`](../git-workflow.md) > Issue Auto-Close). The title and the
+  body's form are the module's, with [`title-guide.md`](../title-guide.md) and
+  [`pr-body-guide.md`](../pr-body-guide.md) to draw on.
 - **Tools**: `git` and `gh`, as the module's own commands.
 - **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as
@@ -110,5 +109,4 @@ undone.
     `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
-  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same,
-  and so does the body's CI part the default writes.
+  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.

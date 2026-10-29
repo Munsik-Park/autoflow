@@ -4,9 +4,8 @@ description: >-
   Run the AutoFlow delivery module once on an invocation file — the change
   the build made delivered for the operator to decide on: each criterion's
   outcome and evidence, how it was shown working, what was not verified and
-  what is left; by default, pushed in draft pull requests that carry it. Use
-  when the operator runs the delivery module (/autoflow:delivery
-  <invocation.json>).
+  what is left. Use when the operator runs the delivery module
+  (/autoflow:delivery <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
@@ -79,7 +78,7 @@ The rules that apply these principles to running and confirming tests and to sec
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-delivery              — the change the build made delivered for the operator to decide on: each applied criterion's outcome and evidence, how the change was shown working, what was not verified and why, what is left undone; by default pushed with the module's own `git push` in draft pull requests opened by its own commands — as many, in the repositories and on the branches, as the change takes
+delivery              — the change the build made delivered for the operator to decide on: each applied criterion's outcome and evidence, how the change was shown working, what was not verified and why, what is left undone
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -299,12 +298,11 @@ undone.
 - **The body** states each applied acceptance criterion with its outcome and where its evidence is;
   what the work verified other than by an executable test, and how the change was shown working; what
   the work could not verify, and why — the tool requests, so the operator decides on them; and what
-  the change leaves undone — the problems it separated and the recommendations deferred. Its CI part
-  is the ci module's default (*CI*). The pull request in the repository the issue is filed in closes it
-  (`Closes #N`); any other references it and closes nothing
-  ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Issue Auto-Close). The title and the body's form are the
-  module's, with [`title-guide.md`](<autoflow-root>/docs/title-guide.md) and [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md)
-  to draw on.
+  the change leaves undone — the problems it separated and the recommendations deferred. The pull
+  request in the repository the issue is filed in closes it (`Closes #N`); any other references it
+  and closes nothing ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Issue Auto-Close). The title and the
+  body's form are the module's, with [`title-guide.md`](<autoflow-root>/docs/title-guide.md) and
+  [`pr-body-guide.md`](<autoflow-root>/docs/pr-body-guide.md) to draw on.
 - **Tools**: `git` and `gh`, as the module's own commands.
 - **Output**: `<out>/delivery.json` — `{pull_requests: [{repo, branch, head, pr}]}`: each branch
   pushed, with its repository (`<owner>/<name>`), its head commit and its pull request as

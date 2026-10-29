@@ -250,7 +250,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `hypothesis`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
+- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS`
 
 | Param | Required | Form |
@@ -308,7 +308,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `plan`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
+- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN`
 
 | Param | Required | Form |
@@ -459,7 +459,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `ci`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — with, given the build report, the CI job that ran each test file the change added.
+- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, a verdict apart from green — with, given the build report, the CI job that ran each test file the change added.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |

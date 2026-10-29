@@ -2,10 +2,9 @@
 name: review
 description: >-
   Run the AutoFlow review module once on an invocation file — the pull
-  request reviewed by every configured reviewer, and one aggregated verdict in
-  its comment file; by default, the comment posted on the pull request. Use
-  when the operator runs the review module (/autoflow:review
-  <invocation.json>).
+  request reviewed by every configured reviewer, and one aggregated verdict
+  over their reviews. Use when the operator runs the review module
+  (/autoflow:review <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
@@ -78,7 +77,7 @@ The rules that apply these principles to running and confirming tests and to sec
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
+review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -363,7 +362,7 @@ it leaves behind:
   does not;
 - the highest severity among the findings that hold;
 - the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
-  comment in Korean, `<out>/comment.md`, which the module's default posts on the pull request.
+  comment in Korean, `<out>/comment.md`.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding

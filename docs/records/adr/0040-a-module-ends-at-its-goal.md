@@ -116,7 +116,6 @@ with the inputs and follows them, the authority rules holding under any instruct
 | `review` | `<out>/reviews/*.md`, `<out>/review-findings.md`, `<out>/comment.md` | the comment posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
 | `ci` | `<out>/ci.json` | each pull request's body carrying the verdict in its CI part | the goal included the body's CI part |
 | `delivery` | `<out>/delivery.json` | a sub-repo's pointer commit, the change pushed, each branch in a draft pull request with its body | the goal included the push and the draft pull requests; `pull_request: open\|none` |
-| `build` | `<out>/commits.json`, `<out>/build-report.md` | nothing beyond its outputs | — |
 | every other module | its contract's | nothing beyond its outputs | — |
 
 ## Alternatives Considered

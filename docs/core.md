@@ -71,14 +71,14 @@ criterion-reconcile   — the record settled against the trace and the in-depth 
 analysis              — the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
 criteria-apply        — the applied acceptance criteria: the analysis report's table with the standing `[ac-decision]` entries applied
 hypothesis            — one Evaluation AI, one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
-design                — the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
+design                — the architecture decision layer + verification design, its method its own
 plan                  — one Evaluation AI (4 items × 10 points)
 build                 — the design implemented and verified (test-first, run records, manual checklist, maintained docs, lint), its method its own
 audit                 — an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)
 quality               — one Evaluation AI (10 items × 10 points)
-delivery              — the change the build made delivered for the operator to decide on: each applied criterion's outcome and evidence, how the change was shown working, what was not verified and why, what is left undone; by default pushed with the module's own `git push` in draft pull requests opened by its own commands — as many, in the repositories and on the branches, as the change takes
-ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run — in the body's CI part
-review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds — posted as the round's comment; external review merges out of band
+delivery              — the change the build made delivered for the operator to decide on: each applied criterion's outcome and evidence, how the change was shown working, what was not verified and why, what is left undone
+ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run
+review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification [`<autoflow-root>/scripts/skills/core-units.tsv`](../scripts/skills/core-units.tsv), and the documents the module uses with them (*Module references* below, *Context Injection*).

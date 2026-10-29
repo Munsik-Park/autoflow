@@ -2,9 +2,8 @@
 name: ci
 description: >-
   Run the AutoFlow ci module once on an invocation file — CI's verdict on
-  each pull request's head, with its ground; by default, each body's CI part
-  states it. Use when the operator runs the ci module (/autoflow:ci
-  <invocation.json>).
+  each pull request's head, with its ground. Use when the operator runs the ci
+  module (/autoflow:ci <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
@@ -77,7 +76,7 @@ The rules that apply these principles to running and confirming tests and to sec
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run — in the body's CI part
+ci                    — CI's verdict on each pull request's head, with its ground — green, or recorded as not run
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -305,8 +304,7 @@ These hold on every push, every pull request and every pull-request body either 
     `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
-  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same,
-  and so does the body's CI part the default writes.
+  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.
 
 <!-- From <autoflow-root>/docs/pr-body-guide.md > Principles > 5. Verification dispositions -->
 

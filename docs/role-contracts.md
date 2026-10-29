@@ -66,8 +66,7 @@ invocation names — the target repository, or in a project with sub-repos one s
 [`units/build.md`](units/build.md) > *What the build owes*; what it owes the scope is below.
 
 - Works directly in the target repository and commits to the branch its invocation names
-  (`params.branch`). It does not push: the push and the pull request are the delivery module's
-  ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
+  (`params.branch`).
 - Has read access to other sub-repos; modifications stay within the assigned scope.
 - **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
   confirms zero errors attributable to them, and records one outcome word per chain it identified,
