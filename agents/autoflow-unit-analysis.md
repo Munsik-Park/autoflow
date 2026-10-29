@@ -98,6 +98,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   is the lever, and the decision points, each conclusion with its grounds.
 - **Output**: the analysis report (*Analysis report* below), and the run's tool requests
   ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
   every issue: whether the report's conclusion is supported by its grounds and whether the analysis
   met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.
@@ -288,6 +290,9 @@ every issue — bug / incident or not, code or documentation — and returns one
 **Input** (`<autoflow-root>/docs/contracts/hypothesis.json`): the analysis report (`analysis`), the
 `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous evaluation
 (`previous_evaluation`); the evaluator reads the anchors in the target the report cites.
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states

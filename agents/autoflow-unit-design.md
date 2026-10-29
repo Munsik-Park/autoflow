@@ -96,6 +96,8 @@ principle 2).
   says how each acceptance criterion is verified and which failure each verification catches.
 - **Output**: the two documents under *Output artifacts* below, and the run's tool requests
   ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the plan module — a fresh Evaluation AI scores the two documents on the rubric of
   [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the module never
   scores its own documents (*Evaluation — GATE:PLAN* below).
@@ -306,6 +308,9 @@ documents and the material it answers.
 verification design (`verification_design`) —, the applied acceptance criteria
 (`applied_criteria`, the criteria-apply module's output), the `[ac-decision]` entries when there
 are any (`decisions`), and on a re-score the previous evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each
 criterion's verification fits it and whether the scope is right —

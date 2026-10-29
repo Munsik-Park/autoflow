@@ -50,7 +50,7 @@
     "comment": {
       "file": "comment.md",
       "format": "markdown",
-      "note": "the round's aggregated comment, in Korean; posted on the pull request",
+      "note": "the round's aggregated comment, in Korean",
       "checks": []
     },
     "failure": {
@@ -60,5 +60,6 @@
       "failure": true,
       "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
-  }
+  },
+  "default": "The comment posted on the pull request (docs/units/review.md > Review aggregation)."
 }

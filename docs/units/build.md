@@ -18,10 +18,13 @@ Rule Scope, principle 2).
 - **Goal**: the design implemented within its scope on the branch the invocation names
   (`params.branch`), and every item of the verification design verified as it says — or, where it
   cannot be, the reason recorded.
-- **Output**: the commits the run makes on the branch, named as a range in `<out>/commits.json` —
-  `{branch, from, to}`, the branch's head when the run began and when it ended —, the build report
-  (*Build report* below), a green-blocker record when the design cannot be built as it stands, and
-  the run's tool requests ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Output**: `<out>/commits.json`, `{branch, from, to}` — the branch and its head when the run
+  began and when it ended, the range of the commits the run made —, the build report (*Build report*
+  below), a green-blocker record when the design cannot be built as it stands, and the run's tool
+  requests ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Default**: the run's commits on the branch, in the target's checkout, pushed nowhere (*Commits*
+  below); the invocation's `instructions` override it ([`core.md`](../core.md) > Development
+  Lifecycle > *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT; the module never

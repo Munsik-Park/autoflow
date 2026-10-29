@@ -2,9 +2,10 @@
 name: review
 description: >-
   Run the AutoFlow review module once on an invocation file — the pull
-  request reviewed by every configured reviewer, and one aggregated verdict,
-  by default posted on it. Use when the operator runs the review module
-  (/autoflow:review <invocation.json>).
+  request reviewed by every configured reviewer, and one aggregated verdict in
+  its comment file; by default, the comment posted on the pull request. Use
+  when the operator runs the review module (/autoflow:review
+  <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
 
@@ -42,7 +43,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge (ADR-0038 D1). The output a run makes of its inputs is one of two: what the goal asks for, when the AI that did the work judges it has reached the goal, or what it did and why it did not reach the goal, in the failure output its contract declares; either ends the run (ADR-0040 D1). Whether the output is right, and what is done with it, are for the side that runs the module (ADR-0038 D2). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
 
-**Where an output goes.** A module writes its outputs in its output directory by the names and in the forms its contract gives, whatever the invocation's instructions, and check-out checks that form. What its procedure does beyond that directory — a push, a pull request, a comment, a pull request's body — is a default, which the invocation's `instructions` change. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them; the authority rules hold under any instruction (ADR-0040 D5).
+**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states: for some modules a push, a pull request, a comment or a pull request's body, for others nothing beyond its outputs. The invocation's `instructions` override the default and never the outputs. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them; the authority rules hold under any instruction (ADR-0040 D5).
 
 **Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 2). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
@@ -50,7 +51,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **Scripts**: a script AutoFlow ships reads and reports, or writes the files its own contract names (`contract.sh`, `criteria-apply.sh`); it changes nothing in git or on GitHub. A push, a pull request and a comment are a module's own commands.
 
-**Push and PR creation**: the delivery module pushes the branch and opens each pull request as a draft with its own `git push` / `gh pr create`; the ci module's goal is CI's verdict on each pull request's head with its ground — where the target's CI does not run for it, that fact, a verdict apart from green. What the PR body carries, the host PR's `Closes #N` included, is the delivery module's, its CI part the ci module's (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*, *CI*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
+**Push and PR creation**: the delivery module's default pushes the branch and opens each pull request as a draft, with its own `git push` / `gh pr create`; the ci module's goal is CI's verdict on each pull request's head with its ground — where the target's CI does not run for it, that fact, a verdict apart from green. What the PR body carries, the host PR's `Closes #N` included, is the delivery module's, its CI part the ci module's default (`<autoflow-root>/docs/units/delivery.md` > *Push and pull request*, *CI*). Merging is external; AutoFlow does not merge, and the hook denies `gh pr merge` and a push to the default branch (*Records and the hook* below).
 
 ### Module procedures
 
@@ -249,10 +250,11 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
 - **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
   previous round's findings file; the attempt's record directory, where the earlier rounds' records
   and the work's records are.
-- **Output**: each reviewer's review record (*Reviewer review*), the findings file and the round's
-  comment, `<out>/comment.md` (*Review aggregation*). By default the comment is posted on the pull
-  request; the invocation's `instructions` can say otherwise ([`core.md`](<autoflow-root>/docs/core.md) > Development
-  Lifecycle > *Where an output goes*).
+- **Output**: each reviewer's review record, `<out>/reviews/` (*Reviewer review*), the findings
+  file, `<out>/review-findings.md`, and the round's comment, `<out>/comment.md` (*Review
+  aggregation*).
+- **Default**: the comment posted on the pull request; the invocation's `instructions` override it
+  ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
 - **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
@@ -360,9 +362,8 @@ it leaves behind:
 - each finding's severity and whether it holds, a finding that does not hold with the grounds it
   does not;
 - the highest severity among the findings that hold;
-- the same as one comment in Korean, `<out>/comment.md`, posted on the pull request unless the
-  invocation's `instructions` say otherwise, and kept as `<out>/review-findings.md`, which names the
-  reviewed pull request.
+- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
+  comment in Korean, `<out>/comment.md`, which the module's default posts on the pull request.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding

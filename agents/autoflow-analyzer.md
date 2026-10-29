@@ -92,9 +92,8 @@ it leaves behind:
 - each finding's severity and whether it holds, a finding that does not hold with the grounds it
   does not;
 - the highest severity among the findings that hold;
-- the same as one comment in Korean, `<out>/comment.md`, posted on the pull request unless the
-  invocation's `instructions` say otherwise, and kept as `<out>/review-findings.md`, which names the
-  reviewed pull request.
+- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
+  comment in Korean, `<out>/comment.md`, which the module's default posts on the pull request.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding

@@ -389,6 +389,9 @@ every issue — bug / incident or not, code or documentation — and returns one
 **Input** (`<autoflow-root>/docs/contracts/hypothesis.json`): the analysis report (`analysis`), the
 `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous evaluation
 (`previous_evaluation`); the evaluator reads the anchors in the target the report cites.
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The form answers one question: **is the report's conclusion supported by its grounds, and did the
 analysis reach its goal?** The request and the as-is are the ones the report states
@@ -421,6 +424,9 @@ the change since that evaluation is the sections of the analysis report a later 
 verification design (`verification_design`) —, the applied acceptance criteria
 (`applied_criteria`, the criteria-apply module's output), the `[ac-decision]` entries when there
 are any (`decisions`), and on a re-score the previous evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The gate scores the design's **intent** — whether each decision is grounded, whether each
 criterion's verification fits it and whether the scope is right —
@@ -473,6 +479,9 @@ range (`commits`) —, the build report (`build_report`), the verification desig
 (`verification_design`), the target's security checklist at the version *Security checklist* below
 names, when the target declares one (`security_checklist`), and on a re-score the previous
 evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 #### Test-first
 
@@ -554,6 +563,10 @@ range (`commits`) — and the work's outputs:
   (`deferred`);
 - the `[ac-decision]` entries when there are any (`decisions`), and on a re-score the previous
   evaluation (`previous_evaluation`).
+
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations

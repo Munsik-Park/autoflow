@@ -85,5 +85,6 @@
       ],
       "note": "criteria: the criteria as applied, in order; applied: the identifiers of the entries applied, in order"
     }
-  }
+  },
+  "default": "Nothing beyond its outputs: they are its result."
 }

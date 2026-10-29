@@ -27,7 +27,7 @@
 ## Development Lifecycle	**AutoFlow is a set of modules.**	all
 ## Development Lifecycle	**A module runs once, on its invocation.**	all
 ## Development Lifecycle	**A module's procedure states the goal of its work.**	all
-## Development Lifecycle	**Where an output goes.**	criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis hypothesis design plan build audit quality delivery ci review
+## Development Lifecycle	**Inputs, outputs and default.**	criterion-screen criterion-trace criterion-in-depth criterion-reconcile analysis hypothesis design plan build audit quality delivery ci review
 ## Development Lifecycle	**Decisions within a module.**	criterion-screen criterion-reconcile analysis design build delivery ci review
 ## Development Lifecycle	**Tools.**	all
 ## Development Lifecycle	**Scripts**	all

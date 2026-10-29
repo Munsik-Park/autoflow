@@ -477,9 +477,9 @@ mod_desc() {
     build)               echo "the design implemented and verified on the branch, with its build report." ;;
     audit)               echo "the test-first judgment and the scores of the change on the security items (AUDIT)." ;;
     quality)             echo "the scores of the built change (GATE:QUALITY)." ;;
-    delivery)            echo "the change pushed and, by default, in draft pull requests that show it working." ;;
-    ci)                  echo "CI's verdict on each pull request's head, with its ground, by default also in the body's CI part." ;;
-    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict, by default posted on it." ;;
+    delivery)            echo "each branch pushed and its pull request, named in its output; by default, the change pushed in draft pull requests that show it working." ;;
+    ci)                  echo "CI's verdict on each pull request's head, with its ground; by default, each body's CI part states it." ;;
+    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict in its comment file; by default, the comment posted on the pull request." ;;
   esac
 }
 

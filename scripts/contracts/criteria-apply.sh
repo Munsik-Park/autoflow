@@ -18,7 +18,8 @@
 # "analysis" (the report) and, when there are decisions, "decisions" (the
 # ledger). The script runs contract.sh check-in, applies, writes
 # <out>/applied-criteria.json and <out>/tool-requests.json, and runs
-# contract.sh check-out.
+# contract.sh check-out. Its default is nothing beyond that output (its
+# contract's "default").
 #
 # An [ac-decision] entry (docs/decision-ledger.md > Decision-point entries) is
 # a level-2 heading ending in "[ac-decision]" and its "- Key: value" lines:

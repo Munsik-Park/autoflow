@@ -16,10 +16,11 @@ round's reviews into one verdict is made by a spawned role. A script only reads 
 - **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
   previous round's findings file; the attempt's record directory, where the earlier rounds' records
   and the work's records are.
-- **Output**: each reviewer's review record (*Reviewer review*), the findings file and the round's
-  comment, `<out>/comment.md` (*Review aggregation*). By default the comment is posted on the pull
-  request; the invocation's `instructions` can say otherwise ([`core.md`](../core.md) > Development
-  Lifecycle > *Where an output goes*).
+- **Output**: each reviewer's review record, `<out>/reviews/` (*Reviewer review*), the findings
+  file, `<out>/review-findings.md`, and the round's comment, `<out>/comment.md` (*Review
+  aggregation*).
+- **Default**: the comment posted on the pull request; the invocation's `instructions` override it
+  ([`core.md`](../core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
   itself is the reviewer's wrapper), by exit code.
 - **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
@@ -127,9 +128,8 @@ it leaves behind:
 - each finding's severity and whether it holds, a finding that does not hold with the grounds it
   does not;
 - the highest severity among the findings that hold;
-- the same as one comment in Korean, `<out>/comment.md`, posted on the pull request unless the
-  invocation's `instructions` say otherwise, and kept as `<out>/review-findings.md`, which names the
-  reviewed pull request.
+- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
+  comment in Korean, `<out>/comment.md`, which the module's default posts on the pull request.
 
 A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
 is made is not the aggregator's to state: it is the judgment of the AI acting on the finding

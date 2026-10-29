@@ -60,7 +60,7 @@
     "ci": {
       "file": "ci.json",
       "format": "json",
-      "note": "{prs: [{pr: <owner>/<name>#<N>, head, verdict, ground}]} — verdict green, not-run, or what CI showed instead; ground what the verdict rests on. Each pull request's body carries the verdict in its CI part (docs/units/delivery.md > CI)",
+      "note": "{prs: [{pr: <owner>/<name>#<N>, head, verdict, ground}]} — verdict green, not-run, or what CI showed instead; ground what the verdict rests on.",
       "checks": [
         {
           "type": "keys",
@@ -86,5 +86,6 @@
       "failure": true,
       "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What both modules owe)."
     }
-  }
+  },
+  "default": "Each pull request's body carries the verdict in its CI part (docs/units/delivery.md > CI)."
 }

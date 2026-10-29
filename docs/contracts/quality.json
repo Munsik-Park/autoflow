@@ -170,6 +170,7 @@
       "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
+  "default": "Nothing beyond its outputs: they are its result.",
   "reference": {
     "pass": {
       "average_at_least": 7.5,

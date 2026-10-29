@@ -14,8 +14,8 @@
 # The invocation names the module, its params, its inputs — a file by its
 # path, several files as an array of paths — the attempt's record directory
 # when the module reads it, the run's output directory inside it and, when
-# the invocation has any, its instructions — what the module does beyond its
-# output directory, in place of its default (ADR-0040 D5):
+# the invocation has any, its instructions, which override the module's
+# default and never its outputs (ADR-0040 D5):
 #
 #   { "contract": 1, "module": "design", "params": { "issue": 507 },
 #     "inputs": { "applied_criteria": "<path>", ... },
@@ -26,7 +26,9 @@
 # script applies only the checks the contract lists under an output's "checks"
 # — the form of a file, read from that file alone (ADR-0040 D2); an output's
 # "evaluation" lines are the evaluation modules' — the disposition of every
-# item the work owes among them — and are not read here.
+# item the work owes among them — and are not read here, nor is the
+# contract's "default", what the module does with its result unless the
+# invocation says otherwise.
 #
 # check-in  — the params and inputs the contract declares are given and well
 #             formed (Q19): an input file exists and, when another module
@@ -169,7 +171,7 @@ check_in() {
   v=$(jq -r '.contract // empty' "$INV")
   [ "$v" = "$(jq -r .contract <<<"$CONTRACT")" ] || defect "the invocation's contract version is '$v', the contract's $(jq -r .contract <<<"$CONTRACT")"
 
-  # instructions: what the module does beyond its output directory (ADR-0040 D5)
+  # instructions: they override the module's default, never its outputs (ADR-0040 D5)
   if jq -e 'has("instructions")' "$INV" >/dev/null; then
     jq -e '.instructions | type == "string" and test("\\S")' "$INV" >/dev/null || defect "instructions is not a non-empty string"
   fi

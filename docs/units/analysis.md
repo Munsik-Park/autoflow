@@ -19,6 +19,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   is the lever, and the decision points, each conclusion with its grounds.
 - **Output**: the analysis report (*Analysis report* below), and the run's tool requests
   ([`core.md`](../core.md) > Development Lifecycle > *Tools*).
+- **Default**: nothing beyond its outputs ([`core.md`](../core.md) > Development Lifecycle >
+  *Inputs, outputs and default*).
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
   every issue: whether the report's conclusion is supported by its grounds and whether the analysis
   met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.

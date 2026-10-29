@@ -132,10 +132,13 @@ Rule Scope, principle 2).
 - **Goal**: the design implemented within its scope on the branch the invocation names
   (`params.branch`), and every item of the verification design verified as it says — or, where it
   cannot be, the reason recorded.
-- **Output**: the commits the run makes on the branch, named as a range in `<out>/commits.json` —
-  `{branch, from, to}`, the branch's head when the run began and when it ended —, the build report
-  (*Build report* below), a green-blocker record when the design cannot be built as it stands, and
-  the run's tool requests ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Output**: `<out>/commits.json`, `{branch, from, to}` — the branch and its head when the run
+  began and when it ended, the range of the commits the run made —, the build report (*Build report*
+  below), a green-blocker record when the design cannot be built as it stands, and the run's tool
+  requests ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*).
+- **Default**: the run's commits on the branch, in the target's checkout, pushed nowhere (*Commits*
+  below); the invocation's `instructions` override it ([`core.md`](<autoflow-root>/docs/core.md) > Development
+  Lifecycle > *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
@@ -415,6 +418,9 @@ range (`commits`) —, the build report (`build_report`), the verification desig
 (`verification_design`), the target's security checklist at the version *Security checklist* below
 names, when the target declares one (`security_checklist`), and on a re-score the previous
 evaluation (`previous_evaluation`).
+**Output**: `<out>/evaluation.json` (*Evaluation Output Format* below).
+**Default**: nothing beyond its output ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Inputs,
+outputs and default*).
 
 #### Test-first
 

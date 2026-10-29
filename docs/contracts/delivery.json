@@ -109,5 +109,6 @@
       "failure": true,
       "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/units/delivery.md > What both modules owe)."
     }
-  }
+  },
+  "default": "The change pushed to the target's remote, each branch in a draft pull request on the base whose body docs/units/delivery.md > Push and pull request states."
 }

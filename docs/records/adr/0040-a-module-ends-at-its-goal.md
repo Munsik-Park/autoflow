@@ -1,4 +1,4 @@
-# ADR-0040: A module ends at its goal — its checks see form, its outputs have defaults
+# ADR-0040: A module ends at its goal — its checks see form, the instructions override its default
 
 ## Status
 
@@ -8,7 +8,10 @@ commits as a range the invocation names —, and ADR-0039 D1 — the delivery's 
 and the ci module's goal. ADR-0038 D2, ADR-0039 D2 and the authority rules of the core stand. The
 operator's answers of 2026-10-29 to the first draft's open points are applied: the re-score's
 rubric and the goal of every item the work owes stand, and the failure output is one shape of the
-output, required of no contract by a check.
+output, required of no contract by a check. The operator's decision of 2026-10-29 on the pull
+request's third review round is applied to D5: a module is defined by its inputs, its outputs and
+its default, each contract states its `default`, and the instructions override the default and never
+the outputs.
 
 ## Context
 
@@ -45,9 +48,10 @@ inputs, are the receiving side's to check with the same tools — it reads the r
 the module again when it is wrong. No device counts the items of a goal one by one: counting fixed
 items is a script's work, and the AI is given the goal — the output disposes of every item the work
 owes, each applied acceptance criterion among them, and the re-score's rubric stands as one of the
-goals. What a module does beyond its output directory has a default and the invocation's
-instructions change it; the contract states the default only, and the files in the output directory
-keep the names and forms the contract gives. Kept: an input's producing module (`from`), which names the input's form — check-in
+goals. A module is defined by its inputs, its outputs and its default: its outputs are the files it
+writes in its output directory, by the names and forms its contract gives; its default is what it
+does with its result unless the invocation says otherwise; the invocation's instructions override the
+default and never the outputs. Kept: an input's producing module (`from`), which names the input's form — check-in
 reads the form, not where the file came from, so an input the running side wrote in the same form
 passes —; the dispositions the criterion-screen and criterion-reconcile goals list; and the form
 checks of an output (keys, sections, tables, duplicates, forbidden keys) and the failure output in
@@ -89,26 +93,30 @@ evaluation `cleared` or `remains` with its ground, a finding on an inherited ite
 counting checks that compared the output with the previous evaluation go (`partition`, `covers`,
 `rescore` required when an input is given); `rescore` stays in the output's form as an object.
 
-**D5 — An output has a default, and the invocation's instructions change it.** An invocation may
-carry `instructions`, a text; check-in checks that it is a non-empty string. A module writes its
-outputs in its output directory by the names and in the forms its contract gives, whatever the
-instructions, and check-out checks that form as before. What its procedure does beyond that
-directory — a push, a pull request, a comment, a pull request's body — is a default, and the
-instructions change it: a review kept as `<out>/comment.md` and posted nowhere is one. The AI that
-does the module's work — the session, or the spawn the work is given to — receives the instructions
-with the inputs and follows them, the authority rules holding under any instruction
-(`docs/core.md` > Development Lifecycle > *Where an output goes*). Applied:
+**D5 — A module is its inputs, its outputs and its default; the instructions override the
+default.** An invocation may carry `instructions`, a text; check-in checks that it is a non-empty
+string. A module's outputs are the files it writes in its output directory, by the names and in the
+forms its contract gives; the instructions do not change them, and check-out checks that form as
+before. Its default is what it does with its result unless the invocation says otherwise — for some
+modules a push, a pull request, a comment or a pull request's body, for others nothing beyond its
+outputs —; each contract states it as `default` and the module's procedure states it apart from the
+outputs. The instructions override the default: a review whose comment is posted nowhere, kept as
+`<out>/comment.md`, is one. The AI that does the module's work — the session, or the spawn the work
+is given to — receives the instructions with the inputs and follows them, the authority rules
+holding under any instruction (`docs/core.md` > Development Lifecycle > *Inputs, outputs and
+default*). Applied:
 
-| Module | Default | Before |
-|---|---|---|
-| `review` | `<out>/comment.md`, a markdown file, posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
-| `ci` | `<out>/ci.json`, and each pull request's body carrying its CI part | the goal included the body's CI part |
-| `delivery` | the branches pushed and draft pull requests opened, `<out>/delivery.json` | `pull_request: open\|none` |
-| every module | its outputs in `<out>` by the names and forms its contract gives, which the instructions do not change | — |
+| Module | Outputs | Default | Before |
+|---|---|---|---|
+| `review` | `<out>/reviews/*.md`, `<out>/review-findings.md`, `<out>/comment.md` | the comment posted on the pull request | the goal posted it; the format `pull-request-comment`, checked on GitHub |
+| `ci` | `<out>/ci.json` | each pull request's body carrying the verdict in its CI part | the goal included the body's CI part |
+| `delivery` | `<out>/delivery.json` | the change pushed, each branch in a draft pull request | `pull_request: open\|none` |
+| `build` | `<out>/commits.json`, `<out>/build-report.md` | its commits on the branch, in the target's checkout | — |
+| every other module | its contract's | nothing beyond its outputs | — |
 
 ## Alternatives Considered
 
-- **A per-contract param for each changeable output** (`pull_request` widened to every module).
+- **A per-contract param for each changeable default** (`pull_request` widened to every module).
   Rejected: every contract would enumerate the alternatives to its default, where the decision is
   that a contract states the default only.
 - **Keeping the re-score's counting checks as a warning.** Rejected: a counted item list is the
@@ -145,9 +153,10 @@ with the inputs and follows them, the authority rules holding under any instruct
   range" is the build's `commits.json` (D3). D2 stands and is applied.
 - **ADR-0039** — D3's form of the failure output is the one every module uses, and D4 extends to
   every module (D1, D2). D1's `pull_request` param goes, its
-  default kept (D5); the ci module's goal no longer includes the body's CI part, which stays its
-  default output.
-- **ADR-0026** — one aggregated comment per round stands; where it goes is the review's default.
+  default kept (D5); the ci module's goal no longer includes the body's CI part, which is its
+  default.
+- **ADR-0026** — one aggregated comment per round stands; posting it on the pull request is the
+  review's default.
 
 ## Related Issues / PRs
 

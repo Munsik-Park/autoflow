@@ -2,9 +2,9 @@
 
 > AutoFlow is a set of modules for AI-assisted software engineering with Claude Code, each with a
 > contract ([`ADR-0038`](records/adr/0038-contract-modules-with-no-state-file.md)).
-> This guide is the **index of the modules**: each module's goal, what its work owes, its output
-> and its cautions live in its procedure document (*Modules* below), and its inputs and outputs in
-> its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
+> This guide is the **index of the modules**: each module's goal, what its work owes, its output,
+> its default and its cautions live in its procedure document (*Modules* below), and its inputs, its
+> outputs and its default in its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
 > authority rules, how a module runs, the Execution Principles, the records and the hook — lives in
 > [`core.md`](core.md).
 
@@ -12,8 +12,8 @@
 
 ## Overview
 
-A module is an input, the work it does, and an output. It runs once, on its invocation: it checks
-its inputs' form, does its work, writes its outputs, and checks them against its contract
+A module is defined by its inputs, its outputs and its default. It runs once, on its invocation: it
+checks its inputs' form, does its work, writes its outputs, and checks them against its contract
 ([`core.md`](core.md) > Development Lifecycle). The terminal output of the modules is an open,
 reviewed pull request; an external review process merges it.
 
@@ -58,10 +58,11 @@ into one BUILD (ADR-0025):
   given the record directory, `records` — the attempt's record directory, where the ledger
   `issue-<N>-ledger.md` and every earlier run's output directory are. Each run has its own `out`
   inside it: `<module>-<n>`, or `<module>-<qualifier>-<n>` for a module run once per item
-  (`criterion-in-depth-AC2-1`). Its `instructions`, when given, reach the AI that does the work and
-  change what the module does beyond `out` — a push, a pull request, a comment, a pull request's
-  body — from the default its procedure states; the files in `out` keep the names and forms the
-  contract gives ([`core.md`](core.md) > Development Lifecycle > *Where an output goes*).
+  (`criterion-in-depth-AC2-1`). Its `instructions`, when given, reach the AI that does the work.
+- A module's outputs are the files it writes in `out`, by the names and forms its contract gives.
+  Its default is what it does with its result unless the invocation says otherwise, stated in its
+  contract (`default`) and its procedure. The invocation's `instructions` override the default and
+  never the outputs ([`core.md`](core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - A run's output is what the module's goal asks for or, when the run does not reach the goal, its
   contract's failure output, `<out>/failure.md`. The run writes its outputs and
   `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
