@@ -4,8 +4,9 @@
 
 Accepted (operator decision 2026-10-29, issue #523). Extends ADR-0039 D3 and D4 from the delivery
 and ci modules to every module. Amends ADR-0038 D1 — what the contract checks — and D4 — the commits
-as a range the invocation names —, and ADR-0039 D1 — the delivery's `pull_request` param, the
-delivery's goal and the ci module's goal. ADR-0038 D2, ADR-0039 D2 and the authority rules of the
+as a range the invocation names —, ADR-0039 D1 — the delivery's `pull_request` param, the
+delivery's goal and the ci module's goal —, and ADR-0026 D3 — the posting of the one comment on the
+pull request. ADR-0038 D2, ADR-0039 D2 and the authority rules of the
 core stand. The operator's answers of 2026-10-29 to the first draft's open points are applied: the
 re-score's rubric and the goal of every item the work owes stand, and the failure output is one
 shape of the output, required of no contract by a check. The operator's decision of 2026-10-29 on
@@ -161,8 +162,8 @@ default*). Applied:
   default kept (D5); the delivery's goal is the change delivered for the operator to decide on, the
   push and the draft pull requests its default, and the ci module's goal the verdict, the body's CI
   part its default.
-- **ADR-0026** — D3's one aggregated comment per round stands, as the review's output
-  `<out>/comment.md`.
+- **ADR-0026** — D3's posting of the one comment on the pull request is amended: the one comment is
+  the review's output `<out>/comment.md` (D5).
 
 ## Related Issues / PRs
 
