@@ -71,7 +71,7 @@ criterion-reconcile   — the record settled against the trace and the in-depth 
 analysis              — the analysis report: current structure, the gap to the request, whether a change is owed and code is the lever (the conclusion), the cause where a defect is reported, acceptance-criterion table, scope judgments, affected docs, decision points — each conclusion with its grounds, its method (how far and by what means a cause is pursued included) its own
 criteria-apply        — the applied acceptance criteria: the analysis report's table with the standing `[ac-decision]` entries applied
 hypothesis            — one Evaluation AI, one form for every issue (2 items × 10 points — the conclusion's grounds and the goal's coverage)
-design                — the architecture decision layer + verification design, its method its own
+design                — the architecture decision layer + verification design, its method its own (file rows / suite dispositions / oracle clauses are derived at BUILD, not written here)
 plan                  — one Evaluation AI (4 items × 10 points)
 build                 — the design implemented and verified (test-first, run records, manual checklist, maintained docs, lint), its method its own
 audit                 — an independent Evaluation AI judges test-first from the build report and git, then scores 5 items × 10 points, against the target's own security checklist at the version its input gives (none declared → the rubric alone)

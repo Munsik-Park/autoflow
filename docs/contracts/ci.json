@@ -4,7 +4,7 @@
   "module": "ci",
   "kind": "functional",
   "reads_records": true,
-  "goal": "For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, a verdict apart from green — with, given the build report, the CI job that ran each test file the change added.\n",
+  "goal": "For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — with, given the build report, the CI job that ran each test file the change added.\n",
   "procedure": "docs/units/delivery.md",
   "params": {
     "issue": {
