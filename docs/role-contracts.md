@@ -6,27 +6,21 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment filled by spawning — by a module, through the session or the unit agent that runs it — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one anonymous direct `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Spawn mode by role lifetime* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment filled by spawning — by a module, through the session or the unit agent that runs it — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Per-call scope by role* below).
 
-### Spawn mode by role lifetime
+### Per-call scope by role
 
-Every role is an anonymous direct spawn ([`core.md`](core.md) > Spawn Model — Phase-by-Phase); each role's mode and per-call scope:
+Each role's `subagent_type` and per-call scope ([`core.md`](core.md) > Spawn Model — Phase-by-Phase):
 
-| Role (where it occurs) | Spawn mode | Per-call scope |
+| Role (where it occurs) | `subagent_type` | Per-call scope |
 |---|---|---|
-| Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | anonymous direct | single-shot — scores once and returns; a fresh agent is spawned every call |
-| Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) | anonymous direct (`subagent_type: autoflow-analyzer`) | single-shot — aggregates a pull request's reviews into one comment and its findings file, and returns |
-| Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | anonymous direct (`subagent_type: autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`) | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
-| Advisor (a decision a module puts to it — *Advisor* below) | anonymous direct (`subagent_type: autoflow-advisor`), spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer in one line; a fresh advisor is spawned for every request |
-| Functional-unit agents (*Functional-unit agents* below) | anonymous direct (`subagent_type: autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`) | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
+| Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY) | `autoflow-evaluator` | single-shot — scores once and returns; a fresh agent is spawned every call |
+| Review aggregator ([`units/review.md`](units/review.md) > *Review aggregation*) | `autoflow-analyzer` | single-shot — aggregates a pull request's reviews into one comment and its findings file, and returns |
+| Criterion-review tracer, in-depth analyzer and reconciler (the criterion-trace, criterion-in-depth and criterion-reconcile modules — [`criterion-review.md`](criterion-review.md) > *Cause reach and rule conflict (stage 2)*, *In-depth analysis and reconciliation*) | `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler` | single-shot — the tracer judges stage 2 from the issue body and the stage 1 record and writes its trace; the analyzer examines one criterion's screened cases from its target file and writes its in-depth file; the reconciler settles the review record against the trace and every in-depth file; each is spawned fresh for its module's run |
+| Advisor (a decision a module puts to it — *Advisor* below) | `autoflow-advisor`, spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer; a fresh advisor is spawned for every request |
+| Functional-unit agents (*Functional-unit agents* below) | `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
 The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and ci modules are the work of the session that runs them; the review module's session spawns the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
-
-### Model tier revert
-
-A phase whose lower-tier result is materially contradicted on the same attempt runs on the higher tier, `.claude/autoflow/spawn-policy.json` updated in the same commit. The result is an evaluation's PASS — its scores read against the reference values — or a lower-tier **role spawn**'s claim that its outputs are done; the contradicting signal is a later finding on the same surface that the result's rubric or claim covers: an audit's test-first finding or a `Security` score at 3 or below, a quality evaluation's finding, or a review `Medium`+ finding. These signals persist in the GitHub PR/issue thread, which serves as the evidence anchor for the revert.
-
-A change to the per-phase assignment follows the same grounds.
 
 ---
 
@@ -38,12 +32,12 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
-- Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`; revert conditions: *Model tier revert* above.
-- Spawn mode: **anonymous direct** — `Agent(subagent_type: "autoflow-evaluator", model: "…")` — never a named team spawn. The Evaluation AI writes its evaluation into the output directory the prompt names and returns the file's path (*Recording the result* below). Contract: *Spawn mode by role lifetime* above.
+- Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`.
+- Spawn: `Agent(subagent_type: "autoflow-evaluator", model: "…")`. The Evaluation AI writes its evaluation into the output directory the prompt names and returns the file's path (*Recording the result* below). Contract: *Per-call scope by role* above.
 
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, the output directory (`out`), and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md#cost-control) > Cost Control.
+2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md) > Context Injection.
 3. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
 4. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
 
@@ -51,7 +45,7 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 The Evaluation AI writes one JSON object to `<out>/evaluation.json` — its scores, their grounds and
 its recommendations, and no verdict —, keeps what it builds to check a finding under `<out>/local/`,
-and returns the file's path with a one-line summary ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
+and returns the file's path with a summary ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
 against ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D6).
@@ -118,8 +112,7 @@ meets the decision spawns it and follows its decision. This section is the proce
     [`decision-ledger.md`](decision-ledger.md) > *Security-checklist decisions*);
   - any other point the module doubts ([`core.md`](core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial). The run records it in its output situation-first ([`core.md`](core.md) > Execution
-  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  denial). The run records it in its output and goes on with the work that does not depend on it. A
   tool, credential, installation or material the environment does not provide — for a tool it has,
   what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
   request: the run does what it can without it and ends ([`core.md`](core.md) > Development
@@ -128,7 +121,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 ### Procedure
 
 1. **Request.** The module writes `<out>/advisor-request-<k>.md` for a fresh `autoflow-advisor`
-   (anonymous; model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
+   (model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
    the situation, the decisions it asks for, its own reading and the point where that reading stops.
    Decisions that depend on each other's answers go in one request; a decision that stands apart
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
@@ -177,8 +170,7 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 
 Three functional modules run their work as a unit agent, prescribed by the module's goal, its output
 and its evaluation ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D1); the
-evaluation of each is a module of its own. The criterion review's agents are *Spawn mode by role
-lifetime* above; criterion-screen, delivery, ci and review are the work of the session that runs them, and
+evaluation of each is a module of its own. The criterion review's agents are *Per-call scope by role* above; criterion-screen, delivery, ci and review are the work of the session that runs them, and
 criteria-apply is a script.
 
 | Unit agent (`subagent_type`) | Module (unit) | Its evaluation module |

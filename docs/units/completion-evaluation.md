@@ -25,7 +25,7 @@ a target's code is treated.
   run, never the author of what it scores, read-only
   ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); check-out confirms the output's
   form. Beyond it, CI and the review verify the delivered change.
-- **Result owed**: the evaluation file and a one-line summary.
+- **Result owed**: the evaluation file and a summary.
 
 **Evaluator**: a fresh-spawned Evaluation AI scores the change on the rubric of
 [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:QUALITY. Its agent

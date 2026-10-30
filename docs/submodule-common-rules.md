@@ -113,7 +113,7 @@ The build checks the change's diff against this rule (`<autoflow-root>/docs/unit
 
 - **[MUST]** A chain that did not execute is never reported as having passed.
 
-**Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format > *Evidence anchor*, whose single-anchor requirement it satisfies as a per-chain enumeration followed by the grounds of the identification (form and cardinality there).
+**Evidence anchor** — the committing role's report carries the lint outcome (Reporting Format > *Evidence anchor*): each chain it identified, followed by the grounds of the identification.
 
 ### Refactor scope
 A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**.
@@ -145,14 +145,14 @@ The evaluator records each such finding in the item's `reason` and in `recommend
 When a role spawn reports to the session that spawned it, the report is the spawn's return value:
 
 1. **The body goes to the run's output directory.** The report points at it — record files, source files and commits by path and hash — and does not carry it.
-2. **Evidence anchor**: a claim that something is done, passes or is fixed carries an anchor its reader can confirm — whichever fits:
-   - code change → full 40-char commit SHA
-   - test pass  → the run's **log** — the file its output was written to, cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
-   - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](core.md) > Decision Ledger)
+2. **Evidence anchor**: a claim that something is done, passes or is fixed carries what its reader needs to confirm it by reading. Forms that serve, for reference:
+   - code change → commit SHA
+   - test pass → the run's log, cited by path under the run's `<out>/local/`, with the command that produced it and the summary line read from that log (Verification and Tools > *A run's evidence is the log it left*)
+   - file state → `path:line` at the commit SHA the report is keyed to, with the content of that line
    - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → each chain the committing role identified, followed by the grounds of the identification — where it looked and each CI lint step it did not count as a chain, with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. For a chain that ran: the command, its source and what it reported. For one that did not: which chain and why, and where a pull-request CI job runs it instead, that job and the evidence that it runs for this pull request.
 
-   Anchors must be deterministically confirmable by their reader — the session that spawned the role, an evaluator — against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
+   A line number is read at the commit it names; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
 3. **Short**: the report holds what its reader needs to act and to confirm, and no more.
 
 ---

@@ -255,7 +255,7 @@ makes a call.
 A shell write to a ledger and text that only imitates an entry are outside the
 matched surface: the threat is routine overstepping, not a determined evasion.
 
-The hook does not enforce spawn mode: [`core.md`](core.md) > Spawn Model — Phase-by-Phase names the anonymous direct spawn as every role's only mode. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
+The hook does not enforce how a role is spawned. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
 
 ## Verification Requirement
 

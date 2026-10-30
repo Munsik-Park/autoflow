@@ -86,8 +86,7 @@
 ## Spawn Model	**[MUST]** Every `Agent` spawn declares the `model` parameter	all
 ## Spawn Model	**[MUST]** The value a spawn declares	all
 ## Spawn Model	**Spawn role declaration**	all
-## Spawn Model	**[MUST]** Every role is an **anonymous direct spawn**	all
-## Spawn Model	A lower-tier evaluation's PASS	all
+## Spawn Model	No role holds a lifetime spanning runs	all
 ## Context Injection		split
 ## Context Injection	**[MUST]** Subagent document injection	all
 ## Context Injection	A spawn prompt names the run's inputs	all

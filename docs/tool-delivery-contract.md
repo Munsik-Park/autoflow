@@ -149,5 +149,4 @@ policy governs no row for (`policy_unmapped_agent_types`).
 | `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook, the review resolver and the record root, and the default record root `$HOME/.autoflow`; with `HOME` unset or empty there is no such file, and the record root is undetermined |
 
 **Runtime prerequisite**: Claude Code **v2.1.277+** — the release that removed the
-blocking `TaskOutput` tool, whose removal *Wait discipline* relies on in place of
-a hook deny (`<autoflow-root>/docs/records/design-rationale.md` > Decision 34).
+blocking `TaskOutput` tool (`<autoflow-root>/docs/records/design-rationale.md` > Decision 34).
