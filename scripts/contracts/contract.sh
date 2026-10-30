@@ -416,9 +416,9 @@ section_items() { # <reference>
 
 # an evaluation contract's default items against its rubric's items (§8)
 rubric_disagreements() { # <contract json>
-  local c=$1 keys path items
-  keys=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.default_items // empty] | first // empty' <<<"$c")
-  [ -n "$keys" ] || { echo "no scores default_items to check against the rubric"; return; }
+  local c=$1 defaults path items
+  defaults=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.default_items // empty] | first // empty' <<<"$c")
+  [ -n "$defaults" ] || { echo "no scores default_items to check against the rubric"; return; }
   path=$(jq -r '.procedure // "" | sub(" > .*$"; "")' <<<"$c")
   [ -f "$ROOT/$path" ] || return 0
   items=$(md_model "$ROOT/$path" | jq -c --arg m "$(jq -r .module <<<"$c")" "$MD_JQ"'
@@ -429,11 +429,11 @@ rubric_disagreements() { # <contract json>
   elif [ "$items" = null ]; then
     echo "no row for $(jq -r .module <<<"$c") in the Evaluation | Gate | Contract | Items table of $path"
   else
-    jq -r --argjson k "$keys" --argjson i "$items" --arg w "$path > Evaluation Types" '
+    jq -r --argjson k "$defaults" --argjson i "$items" --arg w "$path > Evaluation Types" '
       ($k - $i) | map("default item \(.) is not a rubric item (\($w))")[]' <<<'null'
   fi
   items=$(section_items "$(jq -r '.procedure // ""' <<<"$c")")
-  [ -n "$items" ] && jq -r --argjson k "$keys" --argjson i "$items" --arg w "$(jq -r .procedure <<<"$c")" '
+  [ -n "$items" ] && jq -r --argjson k "$defaults" --argjson i "$items" --arg w "$(jq -r .procedure <<<"$c")" '
     ($k - $i) | map("default item \(.) is not a rubric item (\($w))")[]' <<<'null'
   return 0
 }
@@ -490,7 +490,7 @@ lint() {
          else empty end)' <<<"$c") || say "outputs cannot be read"
     while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"
     jq -e '[.outputs[] | select(.failure // false)] | length <= 1' <<<"$c" >/dev/null || say "more than one failure output"
-    # an evaluation's score keys are its rubric's items
+    # an evaluation's default items are items of its rubric
     if jq -e '.kind == "evaluation"' <<<"$c" >/dev/null; then
       found=$(rubric_disagreements "$c")
       while IFS= read -r line; do [ -n "$line" ] && say "$line"; done <<<"$found"

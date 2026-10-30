@@ -11,7 +11,7 @@ Hook gates MUST NOT anchor command detection with a bare line-start `^`.
 P1's named primitives are the shared `CMD_BOUNDARY` prefix and the `SCAN`
 buffer defined below, the `GIT_PUSH` token-interposition fragment, and the
 global-scope normalisation function `_fold_continuations` (logical-line
-folding, shared with the segment fold), specified in its own refinement subsection below.
+folding).
 
 Use a shared command-boundary prefix plus a word boundary on the command
 token:

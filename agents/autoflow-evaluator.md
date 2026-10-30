@@ -255,8 +255,8 @@ evaluation outputs them with its scores
 ## Evaluation Types
 
 The items each evaluation scores by default, one `scores` key per item. An invocation's `instructions`
-may disable an item or add one; the rules below that name every rubric item then apply to the items
-the run scores. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that a contract's default
+may disable an item or add one; the rules of this document that name every rubric item then apply to
+the items the run scores. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that a contract's default
 items are items of this table.
 
 | Evaluation | Gate | Contract | Items |
