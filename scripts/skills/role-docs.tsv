@@ -31,7 +31,6 @@ agents/*.md	docs/core.md	## Instruction Conventions
 agents/*.md	docs/core.md	## Rule Scope
 
 agents/autoflow-advisor.md	docs/core.md	## Decision Ledger
-agents/autoflow-advisor.md	docs/core.md	## Execution Principles	- **[MUST] Human-decision presentation**
 agents/autoflow-advisor.md	docs/role-contracts.md	## Advisor
 agents/autoflow-advisor.md	docs/decision-ledger.md
 

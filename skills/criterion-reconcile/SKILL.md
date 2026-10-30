@@ -88,10 +88,9 @@ Each module's procedure — what its work owes, its output, its cautions and its
 
 ## Cost Control
 
-These rules apply to every run.
+This rule applies to every run.
 
-- **[MUST] Context discipline**: two rows are fixed (Rule Scope, principle 1): (1) **the work never scores itself** — the full read-and-score of a module's output is an evaluation module's fresh Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY), and a read of that output by the session that produced it informs a spot-check, never a score; (2) **a spawn returns an anchor and a one-line summary, not its body** — the analysis, design and build spawns return only their artifact paths and a one-line summary. A cheap anchor-check — a `git show <SHA>`, the summary line read in a cited log, a targeted `git show HEAD:<file>` of the specific lines (see Execution Principles > Verify role-spawn claims) — needs no recorded ground; a completed artifact — a single report, a design document — may be read in full when the session judges the read necessary, and its report names what was read and why. The Reporting Format (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format) applies to every direct/ad-hoc `Agent` spawn — the spawn writes its body to the run's output directory and returns only an anchor + one-line summary (e.g. the analysis spawn writes `<out>/issue-analysis.md` and returns a summary, not the body), and a multi-step investigation is delegated to a role spawn or research subagent on the same terms; the session's judgment is over what it then reads of that body, not over what a spawn sends back. The "anchor + one-line summary" rule bounds what a spawn **returns**; how a **decision** is framed for its reader — an advisor request or answer, a harness-level block — follows *Execution Principles > Human-decision presentation* (situation-first), and the body a person reads is written in that order.
-- **Concurrent spawns**: keep ≤ 5 `Agent` spawns in flight at once.
+- **[MUST] Context discipline**: **the work never scores itself** (Rule Scope, principle 1) — the full read-and-score of a module's output is an evaluation module's fresh Evaluation AI (GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY), and a read of that output by the session that produced it informs a spot-check, never a score.
 
 ## Decision Ledger
 
@@ -105,19 +104,12 @@ A per-attempt append-only record, `<attempt-dir>/issue-{N}-ledger.md` in the rec
 
 ## Execution Principles
 
-- **[MUST] Human-decision presentation**: in every advisor request and advisor answer record (`<autoflow-root>/docs/role-contracts.md` > Advisor), and in a run's record of a harness-level block or a tool or referenced-material request, the presentation is **situation-first**, in this order: ① the situation in domain / behavior terms — what is wrong or being decided, and for whom (e.g. "auth state is not retained across pages from the user's entry point", **not** "module A's anchor-format constraint at the A↔B↔C consistency boundary"); ② the decision, plus each option and what it changes; ③ anchors demoted to supporting evidence for drill-down, never the lead — a commit SHA with `path:line` for a fact of this tree, or the document, section heading and quoted sentence for a provision of a long-lived document. This register is distinct from the machine **Reporting Format** (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format), which is anchor-first. The body a person reads is written in this same situation-first order — *Context discipline*'s "anchor + one-line summary" governs what a spawn **returns**, not how a decision is **framed**.
-- **Verify role-spawn claims before acting on them**: every role-spawn report's Evidence anchor (see `<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format > *Evidence anchor*) is verified before the report is accepted — `git show <SHA>` for a commit anchor, the summary line read in the cited log for a test-pass anchor (the command is re-run only when the log is absent or does not carry that line, and the run is then `not-run` and run in place — `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *A run's evidence is the log it left*), `git show <SHA>:<file>` at the report's commit for a file-state anchor (a `path:line` is read only at the commit the report names), the result line read in the cited observation record for an observation anchor (`<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools > *The tools the work needs*). **An anchor-less report is rejected, not interpreted.** Do not act on a single AI's unverified claim.
+- **Verify role-spawn claims before acting on them**: a role spawn's claim is confirmed by reading what it points at (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format > *Evidence anchor*). Do not act on a single AI's unverified claim.
 - **Safety first**: accurate execution beats fast response. Accuracy over speed.
 - **The route is the AI's judgment; the independent checks are not** (Rule Scope, principles 1–3): how far the work goes — the analysis, the design, the build's execution, how the delivery shows the change working — is the working AI's judgment, recorded with its grounds in the output its run produces. What no module does is judge its own output: each evaluation is a module of its own, scored by a fresh Evaluation AI that never saw the work done, and CI (its verdict on the pull request's head — where the target's CI does not run for it, that fact, a verdict apart from green) and the aggregated review stand outside the work as well.
-- **Role-spawn idle handling**: a task notification signals only that a spawn finished; it does not require a response, and it is not itself the report. Continue work when (a) a spawn returns an actionable report — its return value — (b) a Bash result you initiated returns, or (c) the user types a new prompt. When a **Done** direct-spawn produces no report, do not wait for a follow-up: verify its artifact by shell and proceed (see "Incomplete output is never ground truth").
-- **Background execution is the main session's only**: the `run_in_background` + wait-for-completion-notification pattern is available **only** to the session that runs the module (the main loop), and every role spawn's Bash runs foreground-only; the binding rule lives in `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode.
-- **[MUST] Wait discipline (main session)**: the session waits for a subagent, a `Workflow`, or a backgrounded Bash task by **ending its turn** — the harness re-invokes the session with a task notification when the task completes, and other tasks' notifications and the user's prompts are delivered in between. A **blocking wait** — a foreground `sleep` loop polling for a result — is not used. A polling wait is reserved for external state the harness cannot notify about (a CI run, a remote queue), and even then a bounded one; a task the harness tracks is never polled. One timer is admitted beside that wait, the **cache keep-alive wake**: a running task keeps its own prompt cache warm through its own requests, while the session sends none, so a wait longer than the prompt-cache TTL expires the session's cached context and its first turn after the notification re-writes all of it. While a tracked task runs, the session therefore may arm one backgrounded `sleep` shorter than that TTL (`run_in_background`; 50 minutes at the 1-hour TTL) and end its turn. The turn the timer wakes is not a poll: it reads no transcript or output file of the task — only a cheap anchor-check (a log's modification time, `git log -1`) — re-arms the timer and ends the turn, and the timer is stopped once the task's notification arrives. What the wake observes about the task's progress, and any decision drawn from it, is the session's judgment, recorded with its grounds in the output its run produces. The "no turn ends before the work is done" instruction is satisfied by the re-entry — the turn that ends on a pending notification is not an abandonment, the harness resumes it.
-- **[DENY]** **mailbox-delivery instruction in a spawn prompt**: a prompt must never instruct a spawn to deliver its result by message to its spawner. A spawn prompt states the delivery action as "return … as your report", naming no carrier: the harness picks the carrier by permission mode, and in auto mode a spawn's final plain text is not delivered. There is one delivery path, and it is the return value; what carries a spawn's report is `<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode.
 - **Incomplete output is never ground truth**: a 1-line tool result such as a Read-dedup stub (`file unchanged … refer to that earlier tool_result`) is a harness artifact, not data. Never conclude "absent / empty / stub" or escalate a blocker from one; re-read via shell (`sed -n`/`grep`/`wc -l`) and reproduce the finding before acting. Address another directory with `git -C <path>` + absolute paths rather than a `cd`-prefixed compound, which can raise a permission prompt. The `Read` PostToolUse hook (`<autoflow-root>/hooks/check-read-dedup.sh`) flags the dedup case at runtime; the U2 unit document (`<autoflow-root>/docs/units/analysis.md` > Spot-check & escalation discipline) carries the full procedure.
 - **Stop on error**: do not act on errors or omissions until the situation is fully understood.
-- **[MUST] Ground every proposal**: present each proposal — especially a post-completion follow-up (new issue, follow-on work, improvement) — together with the sufficient grounds that support it (a verified fact, a reproducible observation, or a stated design judgment).
 - **[MUST] File every issue through the wrapper**: `gh issue create` (and its REST form) is denied at the tool boundary. An issue is filed by writing a draft to `<drafts>/<name>.md` (`<drafts>` is what `autoflow-records drafts` prints) per `<autoflow-root>/docs/issue-proposal.md` and running `<autoflow-root>/scripts/issue/create-issue.sh --draft <drafts>/<name>.md`, which re-runs the duplicate search from the draft's own title. A report of having searched neither substitutes for the search nor narrows it. Keep the wrapper off every permission allow-list.
-- **[MUST] Check cross-issue consistency before an added proposal**: before raising an additional follow-up, confirm whether it duplicates or conflicts with the other issues that already exist (open and closed, plus the work's tracking hub), and carry that confirmation into the proposal's grounds.
 
 ## Spawn Model — Phase-by-Phase
 
@@ -138,11 +130,9 @@ bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh check                #
 
 **[MUST]** The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior run: `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
 
-**Spawn role declaration**: an AutoFlow role is spawned as its dedicated `subagent_type` — `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor`, the criterion-review agents `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`, and the functional-unit agents `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`, defined in `<autoflow-root>/agents/` —, so that it carries its guidance from the start (*Context Injection*); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) are used as they are. `subagent_type` is the one declaration channel. The spawn prompt is never used to infer the spawn's role. Every role's spawn mode is fixed by the `[MUST]` below.
+**Spawn role declaration**: an AutoFlow role is spawned as its dedicated `subagent_type` — `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor`, the criterion-review agents `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`, and the functional-unit agents `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`, defined in `<autoflow-root>/agents/` —, so that it carries its guidance from the start (*Context Injection*); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) are used as they are. `subagent_type` is the one declaration channel. The spawn prompt is never used to infer the spawn's role.
 
-**[MUST]** Every role is an **anonymous direct spawn**. No role holds a lifetime spanning runs: each run spawns its role fresh, hands it the paths of its inputs and of its output directory, and takes its result as the spawn's return value. Each role's mode and per-call scope are `<autoflow-root>/docs/role-contracts.md` > Spawn mode by role lifetime.
-
-A lower-tier evaluation's PASS, or a lower-tier role spawn's claim, materially contradicted by a later run reverts that phase to the higher tier, updating `.claude/autoflow/spawn-policy.json` in the same commit; the contradicting signals and their evidence anchor are `<autoflow-root>/docs/role-contracts.md` > Model tier revert, which a change to the per-phase assignment also follows.
+No role holds a lifetime spanning runs: each run spawns its role fresh, hands it the paths of its inputs and of its output directory, and takes its result as the spawn's return value. Each role's per-call scope is `<autoflow-root>/docs/role-contracts.md` > Per-call scope by role.
 
 ## Context Injection — Role-Scoped Document Routing
 
@@ -157,9 +147,8 @@ the session that runs a module spawns each role with a `subagent_type`, and the 
 value is its report**.
 
 - The session spawns each role via `Agent` with `subagent_type: autoflow-<role>` and an explicit `model`.
-- A spawn writes any body to the run's output directory and returns an anchor and a short summary (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format).
-- No team is created and no spawn carries `team_name` or `name` — a functional-unit agent's own helper spawns excepted, which are its method (ADR-0025 D2; `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents). `SendMessage` is not a channel between a session and its role spawns — the session resumes no role by its agent ID (a functional-unit agent's use of it with its own helpers is its method), and it is never a report channel (a spawn's carrier: `<autoflow-root>/docs/role-common-rules.md` > Result delivery path by spawn mode). A project with sub-repos that needs another cross-service coordination takes it up through a new ADR, not through `SendMessage`.
-- MCP coord is auxiliary, used for asynchronous logging and handoff.
+- A spawn writes any body to the run's output directory and returns where it is and what its reader needs to act on (`<autoflow-root>/docs/submodule-common-rules.md` > Reporting Format).
+- A project with sub-repos that needs another cross-service coordination takes it up through a new ADR, not through `SendMessage`.
 
 ## Cross-Project Boundary Rules
 
@@ -268,7 +257,7 @@ The review makes that premise hold more often; it does not change it.
   reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle).
 - **Default**: nothing beyond a module's outputs, for each of the four ([`core.md`](<autoflow-root>/docs/core.md) >
   Development Lifecycle > *Inputs, outputs and default*).
-- **Result owed**: the record's path and a one-line summary naming each decision the module put to
+- **Result owed**: the record's path and a summary naming each decision the module put to
   the advisor, by its ledger identifier.
 
 ## Inputs
@@ -387,7 +376,7 @@ it judges two questions:
 
 How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
+later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a
 summary.
 
 ## In-depth analysis and reconciliation
@@ -402,7 +391,7 @@ and the condition applied there, never on the point where it shows alone. Where 
 only under a condition, the analysis checks whether a situation that does not meet the condition
 actually arises — from which input, state or usage flow; where one does, the behavior does not hold
 in that situation. It writes `<out>/in-depth.md` — per case the verdict, the deciding code and
-condition, and the grounds — and returns that path and a one-line summary.
+condition, and the grounds — and returns that path and a summary.
 
 **Reconciliation.** The criterion-reconcile module, an `autoflow-criterion-reconciler` agent —
 again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
@@ -412,7 +401,7 @@ recorded with the rule or condition that prevents it — never summarized as hol
 item it cannot decide with confidence it puts to the advisor (*Authority* below). It
 updates the record to match, adds the stage 2 findings as it settled them and how it took each stage
 2 finding and in-depth verdict, writes the record to
-`<out>/criterion-review.md`, and returns its path and a one-line summary.
+`<out>/criterion-review.md`, and returns its path and a summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
 verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
@@ -421,9 +410,7 @@ in-depth context receives the target file and nothing of the review's verdicts o
 context's agent definition carries its part of this document ([`core.md`](<autoflow-root>/docs/core.md) >
 Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
 principle 2 — [`core.md`](<autoflow-root>/docs/core.md)). Each agent is spawned as its `subagent_type` on the model its
-policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at most five are in flight at once
-([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Concurrent spawns*), and its prompt states the delivery as
-"return … as your report".
+policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model).
 
 ## Review record
 
@@ -452,10 +439,6 @@ to have none.
   names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What
   the review leaves to the later work*).
 - What the review could not confirm and the tool or access it needed.
-
-The record is situation-first where a person reads it — to follow what was decided and why
-([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*): what each finding means
-for the issue's behavior comes before its anchors.
 
 ## Authority
 
@@ -799,8 +782,7 @@ meets the decision spawns it and follows its decision. This section is the proce
     [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Security-checklist decisions*);
   - any other point the module doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 - **A harness-level block** is what AI cannot perform: a call the harness denies (a permission
-  denial). The run records it in its output situation-first ([`core.md`](<autoflow-root>/docs/core.md) > Execution
-  Principles > Human-decision presentation) and goes on with the work that does not depend on it. A
+  denial). The run records it in its output and goes on with the work that does not depend on it. A
   tool, credential, installation or material the environment does not provide — for a tool it has,
   what using it lacks (access, a purpose and permitted scope, a permission setting) — is a tool
   request: the run does what it can without it and ends ([`core.md`](<autoflow-root>/docs/core.md) > Development
@@ -809,7 +791,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 ### Procedure
 
 1. **Request.** The module writes `<out>/advisor-request-<k>.md` for a fresh `autoflow-advisor`
-   (anonymous; model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
+   (model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model advisor`):
    the situation, the decisions it asks for, its own reading and the point where that reading stops.
    Decisions that depend on each other's answers go in one request; a decision that stands apart
    goes in its own. The prompt names the request file, the ledger — `issue-{N}-ledger.md` in the
@@ -858,20 +840,7 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 
 ### Result delivery path by spawn mode
 
-Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
-
-- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
-- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
-
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Context discipline*, row 2).
-
-| Spawn mode | Where the report arrives | Required delivery action |
-|---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to the run's output directory and report an anchor + one-line summary |
-
-A spawn carries no `name`: its role is its `subagent_type` ([`core.md`](<autoflow-root>/docs/core.md) > Communication).
-
-The single mode applies to every role; the per-role table is [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Spawn mode by role lifetime.
+A spawn's report to its caller is its return value; what carries it is the harness's.
 
 ---
 
@@ -882,14 +851,14 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 When a role spawn reports to the session that spawned it, the report is the spawn's return value:
 
 1. **The body goes to the run's output directory.** The report points at it — record files, source files and commits by path and hash — and does not carry it.
-2. **Evidence anchor**: a claim that something is done, passes or is fixed carries an anchor its reader can confirm — whichever fits:
-   - code change → full 40-char commit SHA
-   - test pass  → the run's **log** — the file its output was written to, cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
-   - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger)
+2. **Evidence anchor**: a claim that something is done, passes or is fixed carries what its reader needs to confirm it by reading. Forms that serve, for reference:
+   - code change → commit SHA
+   - test pass → the run's log, cited by path under the run's `<out>/local/`, with the command that produced it and the summary line read from that log (Verification and Tools > *A run's evidence is the log it left*)
+   - file state → `path:line` at the commit SHA the report is keyed to, with the content of that line
    - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → each chain the committing role identified, followed by the grounds of the identification — where it looked and each CI lint step it did not count as a chain, with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. For a chain that ran: the command, its source and what it reported. For one that did not: which chain and why, and where a pull-request CI job runs it instead, that job and the evidence that it runs for this pull request.
 
-   Anchors must be deterministically confirmable by their reader — the session that spawned the role, an evaluator — against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
+   A line number is read at the commit it names; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
 3. **Short**: the report holds what its reader needs to act and to confirm, and no more.
 
 ---

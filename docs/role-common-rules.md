@@ -59,39 +59,23 @@ below describe the contract every role spawn honours.
   done
   ```
 - **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-- **The main session's side of the wait:** the main session waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the main session that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the main session's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
 
 ## Communication
 
 The session that runs a module spawns each role with `Agent`
-(`subagent_type`, explicit `model`), and the spawn's return value is its report. There
-is no team, no mailbox, and no peer-to-peer messaging between roles.
+(`subagent_type`, explicit `model`), and the spawn's return value is its report.
 
 | Action | Method | Note |
 |--------|--------|------|
 | Receive instruction from the spawning session | the spawn prompt | delivered once, at spawn |
-| Report to the spawning session | the spawn's return value | completion, escalation — body to the run's output directory, return an anchor + one-line summary |
+| Report to the spawning session | the spawn's return value | completion, escalation — body to the run's output directory, return where it is and what its reader needs to act on |
 | Cross-cutting impact notice | in the returned report | the module states it in its output |
-| Discuss with another role | not available | never held between ordinary spawns; a functional-unit agent's dialogue with its own helpers is its method |
 
 ### Result delivery path by spawn mode
 
-Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
-
-- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
-- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
-
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](core.md) > Cost Control > *Context discipline*, row 2).
-
-| Spawn mode | Where the report arrives | Required delivery action |
-|---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to the run's output directory and report an anchor + one-line summary |
-
-A spawn carries no `name`: its role is its `subagent_type` ([`core.md`](core.md) > Communication).
-
-The single mode applies to every role; the per-role table is [`role-contracts.md`](role-contracts.md) > Spawn mode by role lifetime.
+A spawn's report to its caller is its return value; what carries it is the harness's.
 
 ---
 

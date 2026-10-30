@@ -25,12 +25,12 @@ principle 2).
 - **Evaluation**: the plan module — a fresh Evaluation AI scores the two documents on the rubric of
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the module never
   scores its own documents (*Evaluation — GATE:PLAN* below).
-- **Result owed**: the two artifact paths and a one-line summary
+- **Result owed**: the two artifact paths and a summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
 ## Unit spawn
 
-- **The spawn.** One `autoflow-unit-design` (`Agent`, anonymous, no `name`, the model
+- **The spawn.** One `autoflow-unit-design` (`Agent`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-design` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the analysis report, its hypothesis evaluation, the

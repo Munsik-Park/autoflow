@@ -82,7 +82,7 @@ wrapper's completion marker:
 
 | Exit | Meaning | What follows |
 |---|---|---|
-| `0` | started, or already completed with exit 0 | the session ends its turn and waits for the run's completion notification ([`core.md`](../core.md) > Execution Principles > *Wait discipline*) |
+| `0` | started, or already completed with exit 0 | the session ends its turn and waits for the run's completion notification |
 | `1` | no signal within the window (30 s) | the review is launched again, or the reviewer is named unavailable for the round with the reason — the module's judgment |
 | `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | the same |
 | `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the round goes on without those reviewers (*An unreadable operator file* above); no relaunch |
@@ -92,7 +92,7 @@ its run failing, or the operator's file unreadable — does not hold the round: 
 on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
 no review at all — no configured reviewer left a record, and the target's side left none — is a
 review-infrastructure failure: the run does not reach its goal, and its output is the failure
-output, situation-first ([`core.md`](../core.md) > Execution Principles > *Human-decision presentation*).
+output.
 
 Cautions:
 
@@ -110,7 +110,7 @@ Per reviewed PR, after its round's reviews complete.
 ### Review aggregation
 
 **1. The reviews are aggregated by a spawned analysis role.** The session does not read the
-review records or the comment body itself (Cost Control). An anonymous direct subagent —
+review records or the comment body itself. A subagent —
 `subagent_type: autoflow-analyzer`, on the model
 `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — is
 the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any

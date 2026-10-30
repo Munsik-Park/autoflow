@@ -24,12 +24,12 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
   every issue: whether the report's conclusion is supported by its grounds and whether the analysis
   met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.
-- **Result owed**: the report's path and a one-line summary that names any decision point it
+- **Result owed**: the report's path and a summary that names any decision point it
   recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
 ## Unit spawn
 
-- **The spawn.** One `autoflow-unit-analysis` (`Agent`, anonymous, no `name`, the model
+- **The spawn.** One `autoflow-unit-analysis` (`Agent`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-analysis` names) runs the
   module. Its prompt states the goal, names the inputs the invocation gives by path — the issue
   (`params.issue`), the criterion review record, the decision ledger's

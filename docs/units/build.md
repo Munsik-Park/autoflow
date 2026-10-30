@@ -28,12 +28,12 @@ Rule Scope, principle 2).
   report and git, then scores the change on the rubric of
   [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
   scores its own change (*Evaluation — AUDIT* below).
-- **Result owed**: the build report's path, the commit SHAs and a one-line summary
+- **Result owed**: the build report's path, the commit SHAs and a summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
 ## Unit spawn
 
-- **The spawn.** One `autoflow-unit-build` (`Agent`, anonymous, no `name`, the model
+- **The spawn.** One `autoflow-unit-build` (`Agent`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model unit-build` names) runs the
   module. Its prompt states the goal and names the inputs the invocation gives by path — the applied
   acceptance criteria (criteria-apply's output), the two design documents, the decision ledger's

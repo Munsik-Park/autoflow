@@ -51,7 +51,7 @@ The review makes that premise hold more often; it does not change it.
   reach the goal ([`core.md`](core.md) > Development Lifecycle).
 - **Default**: nothing beyond a module's outputs, for each of the four ([`core.md`](core.md) >
   Development Lifecycle > *Inputs, outputs and default*).
-- **Result owed**: the record's path and a one-line summary naming each decision the module put to
+- **Result owed**: the record's path and a summary naming each decision the module put to
   the advisor, by its ledger identifier.
 
 ## Inputs
@@ -170,7 +170,7 @@ it judges two questions:
 
 How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
+later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a
 summary.
 
 ## In-depth analysis and reconciliation
@@ -185,7 +185,7 @@ and the condition applied there, never on the point where it shows alone. Where 
 only under a condition, the analysis checks whether a situation that does not meet the condition
 actually arises — from which input, state or usage flow; where one does, the behavior does not hold
 in that situation. It writes `<out>/in-depth.md` — per case the verdict, the deciding code and
-condition, and the grounds — and returns that path and a one-line summary.
+condition, and the grounds — and returns that path and a summary.
 
 **Reconciliation.** The criterion-reconcile module, an `autoflow-criterion-reconciler` agent —
 again a fresh context — is given the review record, the trace and the in-depth files. Where a stage
@@ -195,7 +195,7 @@ recorded with the rule or condition that prevents it — never summarized as hol
 item it cannot decide with confidence it puts to the advisor (*Authority* below). It
 updates the record to match, adds the stage 2 findings as it settled them and how it took each stage
 2 finding and in-depth verdict, writes the record to
-`<out>/criterion-review.md`, and returns its path and a one-line summary.
+`<out>/criterion-review.md`, and returns its path and a summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
 verdicts and the reconciliation record — and the independence of the fresh contexts: stage 2
@@ -204,9 +204,7 @@ in-depth context receives the target file and nothing of the review's verdicts o
 context's agent definition carries its part of this document ([`core.md`](core.md) >
 Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
 principle 2 — [`core.md`](core.md)). Each agent is spawned as its `subagent_type` on the model its
-policy row names ([`core.md`](core.md) > Spawn Model), at most five are in flight at once
-([`core.md`](core.md) > Cost Control > *Concurrent spawns*), and its prompt states the delivery as
-"return … as your report".
+policy row names ([`core.md`](core.md) > Spawn Model).
 
 ## Review record
 
@@ -235,10 +233,6 @@ to have none.
   names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What
   the review leaves to the later work*).
 - What the review could not confirm and the tool or access it needed.
-
-The record is situation-first where a person reads it — to follow what was decided and why
-([`core.md`](core.md) > Execution Principles > *Human-decision presentation*): what each finding means
-for the issue's behavior comes before its anchors.
 
 ## Authority
 

@@ -42,7 +42,7 @@ effect that would follow only from a particular approach.
 
 **Output.** One file, in Korean, `<out>/trace.md`: each finding by question, whether
 the record already has it, with its grounds (a commit SHA
-with `path:line`). Return that path and a one-line summary as your report.
+with `path:line`). Return that path and a summary as your report.
 
 The file is your only output: you do not edit the review record, the issue or
 any criterion. What else you read, in what order and with which tool, is your own.
@@ -91,7 +91,7 @@ it judges two questions:
 
 How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
+later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a
 summary.
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->
@@ -134,7 +134,6 @@ summary.
   done
   ```
 - **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-- **The main session's side of the wait:** the main session waits by **ending its turn**, never by blocking on one task — a foreground `sleep` loop polling for a spawn's result is that fault (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*). A spawned agent is unaffected in what it may do: it runs foreground and returns; it is the main session that must not sit in a block while that return is pending. A backgrounded `sleep` timer shorter than the prompt-cache TTL, armed so the main session's own cached context survives a long wait, is not a block and not a poll: the turn it wakes makes only a cheap anchor-check, re-arms it and ends (`<autoflow-root>/docs/core.md` > Execution Principles > *Wait discipline*, the cache keep-alive wake).
 
 ---
 
@@ -142,20 +141,7 @@ summary.
 
 ### Result delivery path by spawn mode
 
-Every role is an anonymous direct spawn, so there is exactly one delivery path — the spawn's report to its caller, which these rules call its return value — whether the spawn is answering its prompt or a later wake. What carries the report is the harness's, and it depends on the session's permission mode (Claude Code CHANGELOG, 2.1.271: "Changed auto mode so a subagent reports back to its caller through a dedicated hand-back call …"):
-
-- **auto mode** — the spawn's `SubagentHandback` call, which the harness instructs every sub-agent to make; plain text the spawn writes at the end is not delivered. The caller receives two events, in either order: an `<agent-message from="<id>">` hand-back frame, which carries the report, and a task notification whose `result` only points to that frame. The pointer notification is not a spawn that produced no report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Role-spawn idle handling*) — the report is the frame, arriving before or after it.
-- **any other mode** — the spawn's final text: the return value (sync) or the task notification's `result` (background).
-
-The hand-back carries exactly what the final text carries in the other modes — the anchor + one-line summary — never the body, whatever the harness's own tool description says of a "full report" ([`core.md`](<autoflow-root>/docs/core.md) > Cost Control > *Context discipline*, row 2).
-
-| Spawn mode | Where the report arrives | Required delivery action |
-|---|---|---|
-| anonymous direct (`subagent_type`) — the only mode | auto: the hand-back frame, beside a pointer task notification; otherwise: the return value (sync) or the task notification's `result` (background) | auto: the hand-back call the harness instructs; otherwise none. Write the body to the run's output directory and report an anchor + one-line summary |
-
-A spawn carries no `name`: its role is its `subagent_type` ([`core.md`](<autoflow-root>/docs/core.md) > Communication).
-
-The single mode applies to every role; the per-role table is [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Spawn mode by role lifetime.
+A spawn's report to its caller is its return value; what carries it is the harness's.
 
 ---
 
@@ -166,14 +152,14 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 When a role spawn reports to the session that spawned it, the report is the spawn's return value:
 
 1. **The body goes to the run's output directory.** The report points at it — record files, source files and commits by path and hash — and does not carry it.
-2. **Evidence anchor**: a claim that something is done, passes or is fixed carries an anchor its reader can confirm — whichever fits:
-   - code change → full 40-char commit SHA
-   - test pass  → the run's **log** — the file its output was written to, cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
-   - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger)
+2. **Evidence anchor**: a claim that something is done, passes or is fixed carries what its reader needs to confirm it by reading. Forms that serve, for reference:
+   - code change → commit SHA
+   - test pass → the run's log, cited by path under the run's `<out>/local/`, with the command that produced it and the summary line read from that log (Verification and Tools > *A run's evidence is the log it left*)
+   - file state → `path:line` at the commit SHA the report is keyed to, with the content of that line
    - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → each chain the committing role identified, followed by the grounds of the identification — where it looked and each CI lint step it did not count as a chain, with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. For a chain that ran: the command, its source and what it reported. For one that did not: which chain and why, and where a pull-request CI job runs it instead, that job and the evidence that it runs for this pull request.
 
-   Anchors must be deterministically confirmable by their reader — the session that spawned the role, an evaluator — against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
+   A line number is read at the commit it names; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
 3. **Short**: the report holds what its reader needs to act and to confirm, and no more.
 
 ---

@@ -515,9 +515,8 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ## Execution Principles
 
 → Single source of truth: [`core.md`](core.md) > Execution Principles — among them Safety first,
-Verify role-spawn claims before acting on them (every report's Evidence anchor is verified before it
-is accepted — an anchor-less report is rejected, not interpreted), The route is the AI's judgment
-(the independent checks are not), Role-spawn idle handling, and Stop on error.
+Verify role-spawn claims before acting on them, The route is the AI's judgment
+(the independent checks are not), and Stop on error.
 
 ---
 
