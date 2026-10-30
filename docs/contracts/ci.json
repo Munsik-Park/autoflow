@@ -53,7 +53,7 @@
         "module": "build",
         "output": "report"
       },
-      "note": "given, the test files the change added and the ci-deferred lint chains, whose CI run the body's CI part states"
+      "note": "given, the test files the change added and the lint chains left to CI, whose CI run the body's CI part states"
     }
   },
   "outputs": {

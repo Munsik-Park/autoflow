@@ -86,7 +86,7 @@ undone.
 - **Inputs**: the pull requests (`pull_requests`), each with the head CI is read on — the delivery's
   output, or a file the invocation writes, `{pull_requests: [{pr, head}]}`; and, optionally, the
   build report (`build_report`): the test files the change added and the
-  `ci-deferred` lint chains.
+  lint chains left to CI.
 - **Params**: `timeout`, which bounds the whole run.
 - **What the AI judges**: how it reads CI, how long it waits within the `timeout`, and whether it
   reads a failing check's log.
@@ -103,7 +103,7 @@ undone.
   - **CI not run.** Where the target's CI does not run for the pull request — no workflow, or a
     trigger, path filter or condition that excludes it — the body carries the line `CI: not run`,
     alone on its line, with the ground below it (ADR-0034 D5), and what CI was to run for it (a
-    `ci-deferred` lint chain, an added test file) is listed as not run. A `green` body carries no such
+    lint chain left to it, an added test file) is listed as not run. A `green` body carries no such
     line;
   - **Added test files.** Beside each test file the change added to the target's tree, the PR body's
     `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,

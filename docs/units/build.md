@@ -108,7 +108,7 @@ These are the rules other documents cite; everything else about the work is the 
   shown later*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
-  pull-request CI job covers, is recorded `not-run (unexecuted)` and as a tool request.
+  pull-request CI job covers, is recorded as not run and as a tool request.
   A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
   `to`.
 
@@ -196,9 +196,8 @@ is said to have none.
 - Each item verified by observation: who observed it — the AI, with which tool, or a person — and its
   observation record, or that it was delegated to the operator.
 - The documents the change updated and what changed in each, or that it updated none and why.
-- The lint result, per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word,
-  a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds
-  its own.
+- The lint result, per commit the run makes on the branch (≥ 7 hex), per chain: whether it ran and what
+  it reported, or why it did not run; a commit another actor makes on the branch adds its own.
 - Each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) >
   Change Surface Rules > *Scope judgment*).
 - The comment check: how much comment the change adds against the lines it adds, and each hit with

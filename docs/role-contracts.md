@@ -68,9 +68,9 @@ invocation names — the target repository, or in a project with sub-repos one s
 - Works directly in the target repository and commits to the branch its invocation names
   (`params.branch`).
 - Has read access to other sub-repos; modifications stay within the assigned scope.
-- **[MUST]** Runs the target repository's lint chain over the staged files before each commit,
-  confirms zero errors attributable to them, and records one outcome word per chain it identified,
-  with the grounds of the identification, as the commit's lint-outcome evidence anchor
+- Runs the target repository's lint chain over the staged files before each commit,
+  confirms zero errors attributable to them, and records each chain's result, with the grounds of
+  the identification, as the commit's evidence anchor
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
   the staged surface*); the build report records it.
 - **[MUST]** Writes and changes comments under [`submodule-common-rules.md`](submodule-common-rules.md)

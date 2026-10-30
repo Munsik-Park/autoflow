@@ -482,12 +482,12 @@ On a target the item also weighs the comments the change adds, by content and by
 The build report's records are the subject of three items. `Test coverage` reads the run record and
 the manual checklist (*Test coverage — the run record is the subject* below). `Doc updates` reads
 the maintained documents against the diff: a listed document the diff does not touch is a finding
-of the item. `Commit conventions` reads the lint record for every commit of the change against the
-outcome vocabulary and its reason classes
+of the item. `Commit conventions` reads the lint record for every commit of the change
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
-the staged surface*): a chain `detected` is a finding of the
-item, a `not-run (ci-deferred)` chain is cleared as a deferral, and a commit with no lint record or a
-chain `not-run (unexecuted)` is an omission that takes the omission path under `Test coverage` below.
+the staged surface*): findings left on the staged files are a finding of the item; a chain that could
+not run at the commit and that a named pull-request CI job runs is cleared as a deferral; and a commit
+with no lint record, or any other chain not run — one whose covering job cannot be established
+included — is an omission that takes the omission path under `Test coverage` below.
 
 #### Known blind-spot checks (scored within existing items)
 
