@@ -127,7 +127,7 @@ module, or the module acting on an evaluation's recommendation — and sees that
 complaint (the same property asserted, a different witness case; the earlier rounds' findings files
 and comments, and the earlier evaluations in the record directory, are what it compares against)
 says so where it writes the finding: with the finding in the findings file, under the analysis
-report's `## Decision points`, or in its own report. What follows — restating the acceptance
+report, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property
 a known gap — the module acting on the finding decides; a change to the criterion, and a choice it
 doubts, it puts to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor), and a
@@ -157,7 +157,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 - **The module puts to the advisor**, and follows the advisor's decision:
   - a change to an acceptance criterion's content that the work after the criterion review shows
     (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
-  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a root cause, or a lever, that is not code — the analysis's conclusion that the lever is not code;
   - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
     meet what the hypothesis evaluation asks;
   - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas

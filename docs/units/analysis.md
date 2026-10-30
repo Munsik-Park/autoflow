@@ -39,8 +39,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
 - **What the run is for is read from its inputs.** Given the criterion review record, the run
   analyzes the issue the record reviewed (*Criterion review record* below). Given the previous
   report and its evaluation, it brings that report up to date on the evaluation's findings, and
-  what else it reuses from the earlier runs in the record directory is its own, recorded under
-  `## Method`.
+  what else it reuses from the earlier runs in the record directory is its own, recorded in its
+  report.
 - **Documents.** The unit's agent definition carries the documents the analysis needs (this file, and the
   rubric it is scored on, [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
   GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](../core.md) > Context Injection);
@@ -58,12 +58,12 @@ The analysis is asked for four things, each conclusion with its grounds:
 - the decision points — the judgments that settle what follows the analysis, each with its decision.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
-ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
-`## Method` and `## Cause`.
+ones, what it checks and with which tool — is the module's judgment, recorded with its grounds in its
+report.
 
 The request is the trigger target — the issue, a review comment or thread, or the finding a
 re-run is for — and the as-is is the state it is measured against, which the module judges from
-its inputs and records under `## Method`. The question is whether the as-is already
+its inputs and records in its report. The question is whether the as-is already
 satisfies the request.
 
 **Cautions.** Each names a bias the analysis is to avoid:
@@ -80,7 +80,7 @@ satisfies the request.
 
 How the module guards against these biases — whether it separates the structure reading from the
 issue reading, in what order it reads, what it gives or withholds from a helper — is its own,
-recorded with its grounds under `## Method`.
+recorded with its grounds in its report.
 
 The rules below are the ones other documents cite; everything else about the work is the module's.
 
@@ -98,7 +98,7 @@ The rules below are the ones other documents cite; everything else about the wor
   is an input, not a verdict. An issue body that differs from the one the record names is a
   criterion change made outside the review, which the analysis puts to the advisor. The analysis
   reads its findings as an
-  earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
+  earlier reading of the code and policy at the commits it names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
@@ -106,17 +106,16 @@ The rules below are the ones other documents cite; everything else about the wor
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](../decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's dispositions hold each
-  item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
-  with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
-  reaches beyond the reported points or a required behavior meets a rule in force, each read like
-  the findings as an earlier reading; `## Reconciliation` records, per stage 2 finding and per
-  in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked`
-  items, and each case left `unresolved`, are findings the analysis may close with its own checks
-  (*Checking a finding* below). How the record was used is recorded under `## Method`.
-- **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
+  item the review decided, with its grounds; it lists each case a criterion applies to with the code
+  that decides it, and where a confirmed cause reaches beyond the reported points or a required
+  behavior meets a rule in force, each read like the findings as an earlier reading; and, per stage 2
+  finding and per in-depth case, whether it was applied, rejected or left unresolved. What the record
+  could not confirm, and each case left unresolved, are findings the analysis may close with its own
+  checks (*Checking a finding* below). How the record was used is recorded in the report.
+- **Referenced materials.** Each material is recorded — what it is,
   where it is, how it was opened, and what it shows for the criterion that names it; the material,
   not an abbreviated example in the body, is what the criterion means. A material that cannot be
-  opened is recorded `not opened: <reason>` and as a tool request — what is missing, and what the
+  opened is recorded with the reason and as a tool request — what is missing, and what the
   analysis concluded without it — and the run goes on to its end ([`core.md`](../core.md) >
   Development Lifecycle > *Tools*; [`submodule-common-rules.md`](../submodule-common-rules.md) >
   Verification and Tools > *The tools the work needs*).
@@ -132,7 +131,7 @@ The rules below are the ones other documents cite; everything else about the wor
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design; the analysis does not decide it alone.
 - **Decision points.** The analysis decides each judgment that settles what follows it, and records
-  it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
+  it with its grounds: a planning, design or ADR prerequisite clearly
   required before the issue can be implemented (when in doubt, none); a request the as-is already
   satisfies; on a reviewer finding, one that repeats an earlier round's complaint with a different
   witness case ([U7 Review](review.md) > *A repeated complaint*). A gap or a cause whose lever is not
@@ -145,23 +144,30 @@ The rules below are the ones other documents cite; everything else about the wor
 ## Analysis report
 
 `<out>/issue-analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
-up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
-the table below lists, for the readers it names; the headings and the form are the module's, and a
-matter with nothing to record is said to have none — except the `## Acceptance criteria` table,
-whose heading and columns criteria-apply reads.
+up to date, its acceptance-criteria table unchanged. It records the results below; the headings and
+the form are the module's, and a matter with nothing to record is said to have none — except the
+`## Acceptance criteria` table, whose heading and columns criteria-apply reads.
 
-| Section | Holds | Read by |
-|---|---|---|
-| `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
-| `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | GATE:HYPOTHESIS |
-| `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
-| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | criteria-apply |
-| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | the design module |
-| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS |
-| `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
-| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Affected documents` | the documents the change is expected to update | the design and build modules |
-| `## Decision points` | each decision point with its decision and grounds — for one put to the advisor, the advisor's decision and its ledger entry — or `none` | the design module |
+- How the analysis was done — the reading order, any helper spawn and what it was given — and how each
+  caution was kept, with grounds.
+- The affected area as it stands — its structure, design intent and data flow — stated as fact.
+- The concrete cases the request names, the problem type they share, and the resolution approaches it
+  calls for.
+- `## Acceptance criteria`: a table with the fixed columns `AC id | criterion | source`: `AC id` a
+  short readable name unique within the issue, `criterion` the issue's criterion restated faithfully,
+  `source` its place in the issue body.
+- Each material the issue or a criterion references, as *What the analysis owes* says.
+- Whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is
+  the lever, with grounds; and the conclusion: that no change is needed (the as-is already satisfies
+  the request, or nothing is left to do), that the lever is not code (a real gap whose lever is data /
+  configuration / operations), or that the code changes.
+- Where the request reports a defect, the cause the analysis established and the evidence for it, how
+  far the cause was pursued and why — or, where it is not established, what is known and what was left
+  unchecked; otherwise that there is none, with the reason.
+- Each scope judgment, as *What the analysis owes* says.
+- The documents the change is expected to update.
+- Each decision point with its decision and grounds — for one put to the advisor, the advisor's decision
+  and its ledger entry.
 
 Anything else the module records is its own, written where it judges useful.
 

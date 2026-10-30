@@ -40,8 +40,8 @@ behavior each criterion requires:
 How the change will be made is not yet set: assume no fix, and leave out any
 effect that would follow only from a particular approach.
 
-**Output.** One file, in Korean, `<out>/trace.md`: each finding by question, marked
-`stage 1` (the record already has it) or `new`, with its grounds (a commit SHA
+**Output.** One file, in Korean, `<out>/trace.md`: each finding by question, whether
+the record already has it, with its grounds (a commit SHA
 with `path:line`). Return that path and a one-line summary as your report.
 
 The file is your only output: you do not edit the review record, the issue or
@@ -91,8 +91,7 @@ it judges two questions:
 
 How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it (`stage 1`) or stage 2 found it
-(`new`), and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
+later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
 summary.
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Bash Execution Mode -->

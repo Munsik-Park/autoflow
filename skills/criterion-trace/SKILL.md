@@ -244,8 +244,8 @@ The review makes that premise hold more often; it does not change it.
   below). It writes the review record, `<out>/criterion-review.md`, and one target file per
   criterion with an in-depth target, `<out>/targets/<criterion>.md`. It is run by a session of its
   own, which reads what it judges the review needs — which code, documents and materials, the
-  order, how far it follows a cause or an effect, which tool checks a fact — and records under the
-  record's `## Inputs` what it read and why, and what it left out and why (Rule Scope, principle 2
+  order, how far it follows a cause or an effect, which tool checks a fact — and records in the
+  record what it read and why, and what it left out and why (Rule Scope, principle 2
   — [`core.md`](<autoflow-root>/docs/core.md)).
 - **criterion-trace** — stage 2, an `autoflow-criterion-tracer` agent on the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model criterion-trace` names: each
@@ -264,8 +264,7 @@ The review makes that premise hold more often; it does not change it.
   (`claude-opus-5-5`) at effort `high`; another model or effort may be used. The setting for that
   session lives here because the screen is a session's own work, not an `Agent` spawn. The agents
   take theirs from `.claude/autoflow/spawn-policy.json` like every other spawn
-  ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), the effort the one each agent definition carries. The
-  record's `## Inputs` names the model and effort each module ran on.
+  ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), the effort the one each agent definition carries.
 - **What a review module writes.** Its record, and criterion-screen its target files; a decision a
   module puts to the advisor is the advisor's ledger entry (*Authority* below). The output of a run
   that does not reach its goal is `<out>/failure.md` in their place — what it did and why it did not
@@ -305,7 +304,7 @@ and, in stage 2, the reach of each confirmed cause beyond the points the issue r
 agreement of each required behavior with the rules and behaviors the code already has.
 
 Which code, documents and materials the review reads to judge them, and how far it reads, is the
-module's own (*The four modules* above); the record's `## Inputs` states that scope.
+module's own (*The four modules* above); the record states that scope.
 
 **What the review leaves to the later work.** The review judges the criteria against the code and policy
 as they stand; it does not set how the change will be made. What shows only once an approach
@@ -371,11 +370,11 @@ After the review items, stage 1 screens the cases each criterion applies to:
   behavior.
 - **Locations.** For each case, where the required behavior shows, and the code that decides
   whether and how it occurs — each as `path:line` at the commit read.
-- **Verdicts.** For each criterion and case: `finding`, `holds` or `unconfirmed`, with its grounds
-  and how far they reach — `shows` (the point where the behavior shows) or `decides` (the code that
-  decides it and the condition applied there).
-- **In-depth targets.** Every `finding`, and every `holds` or `unconfirmed` whose grounds do not
-  reach `decides`. A criterion with no target is recorded as such, and has no in-depth analysis.
+- **Verdicts.** For each criterion and case: whether the behavior holds, does not hold or could not
+  be confirmed, with its grounds and how far they reach — the point where the behavior shows, or the
+  code that decides it and the condition applied there.
+- **In-depth targets.** Every case that does not hold, and every other case whose grounds do not
+  reach the deciding code. A criterion with no target is recorded as such, and has no in-depth analysis.
 
 ## Cause reach and rule conflict (stage 2)
 
@@ -391,8 +390,7 @@ it judges two questions:
 
 How the change will be made is not yet set, and stage 2 assumes no fix: an effect that would follow
 only from a particular approach is outside it (*Purpose and scope* > *What the review leaves to the
-later work*). Each finding states whether stage 1 already recorded it (`stage 1`) or stage 2 found it
-(`new`), and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
+later work*). Each finding states whether stage 1 already recorded it or stage 2 found it, and carries its grounds as the review items' findings do. It writes `<out>/trace.md` and returns that path and a one-line
 summary.
 
 ## In-depth analysis and reconciliation
@@ -415,8 +413,8 @@ again a fresh context — is given the review record, the trace and the in-depth
 settles it. A criterion that does not hold in a case it applies to is a finding for that case,
 recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
 item it cannot decide with confidence it puts to the advisor (*Authority* below). It
-updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
-`## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
+updates the record to match, adds the stage 2 findings as it settled them and how it took each stage
+2 finding and in-depth verdict, writes the record to
 `<out>/criterion-review.md`, and returns its path and a one-line summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
@@ -434,19 +432,29 @@ policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at m
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
 in its own run directory. It names the issue body reviewed by its sha256, as
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records what the
-table below lists; the headings and the form are the module's, and a matter with nothing to record
-is said to have none.
+`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records the
+results below; the headings and the form are the module's, and a matter with nothing to record is said
+to have none.
 
-| Section | Holds |
-|---|---|
-| `## Inputs` | the scope the review set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort each module ran on |
-| `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
-| `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
-| `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
-| `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | every item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
-| `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
+- The scope the review set — what it read (each repository and the commit read, the policy documents,
+  the materials opened) and why, and what it left out and why, a material that could not be opened
+  included with the reason; and how the review was done.
+- Stage 1, per criterion: each review item, whether it holds or the finding, with its grounds; and
+  *Actual and expected behavior* and *Size and separation* for the issue as a whole.
+- Stage 1, per criterion: each case it applies to — where the required behavior shows and the code that
+  decides it (`path:line`), the verdict, the reach of its grounds, and whether it is an in-depth target.
+- Stage 2: each finding, by question (cause reach / rule conflict), whether stage 1 already had it, with
+  its grounds, as the reconciliation settled it.
+- Per stage 2 finding and per in-depth case: its verdict, whether the reconciliation applied it, rejected
+  it or left it unresolved, and the grounds, with the file it came from.
+- Every item the review found — each criterion, and each problem found beyond the criteria — with the
+  disposition the review decided, its grounds and where the item came from. A criterion is kept, revised
+  (with its text as revised), split (with the criteria it becomes), or excluded; one is established or
+  added where the issue states none or lacks it; a problem found is included in this issue or separated
+  from it. An item the module put to the advisor carries the advisor's decision as its disposition, and
+  names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What
+  the review leaves to the later work*).
+- What the review could not confirm and the tool or access it needed.
 
 The record is situation-first where a person reads it — to follow what was decided and why
 ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*): what each finding means

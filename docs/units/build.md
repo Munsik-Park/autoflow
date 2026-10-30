@@ -42,7 +42,7 @@ Rule Scope, principle 2).
   it answers (an audit's, a quality evaluation's or a review's) — the branch, the attempt's record
   directory, where earlier runs left their work and their `local/` stores, and the output directory.
 - **Documents.** The unit's agent definition carries this file with the rest of its guidance
-  ([`core.md`](../core.md) > Context Injection); the analysis report's `## Affected documents` and
+  ([`core.md`](../core.md) > Context Injection); the documents the analysis report expects the change to update and
   the target's documents are read by the module's own judgment.
 
 ## What the build owes
