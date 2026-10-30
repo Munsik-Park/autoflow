@@ -184,7 +184,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 ## Git Workflow — Rules
 
-> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+> **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ## Reference Documents
 
@@ -193,7 +193,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+- **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 

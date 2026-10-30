@@ -193,23 +193,18 @@ In a project whose information names sub-repos, which pull requests a change tak
 
 ## Git Workflow — Rules
 
-> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+> **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ### Commit Rules
 
 ```
 <type>(#<issue>): <description>
-
-Next: <next action>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
-- No direct commits to main — always branch + PR.
-- No `feat`/`fix` commit while tests fail → use `wip`.
-- `git status` before every commit.
 - Before committing, the committing role — every role that commits, the main session included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. The rule (execution trust boundary, scoping, evidence anchor): `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on the staged surface*.
 
 ### Commit Ownership
@@ -226,7 +221,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+- **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 
@@ -510,17 +505,6 @@ AutoFlow PR body에는 작업의 도구 요청 — invocation이 주는 각 실�
 | `#N` (이슈 번호) | 어떤 GitHub 이슈를 닫는가 | 생략 가능 | 권장 |
 
 epic 서브이슈가 아닌 경우(독립 이슈, epic 트래커)는 `epic-slice` 없이 `#N`만 사용한다.
-
-## 커밋 메시지와의 관계
-
-커밋 메시지 규칙(`<autoflow-root>/docs/core.md` > Commit Rules)은 별도로 유지된다.
-
-```
-feat(#231): 소진 내역 탭 프론트 — 기간 필터 + 검색   ← 커밋
-[feat · #73-S3f · #231] 소진 내역 탭 프론트            ← PR 제목
-```
-
-커밋은 `type(#N):` 형식, 이슈·PR 제목은 `[type · ref]` 형식으로 구별한다.
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 
