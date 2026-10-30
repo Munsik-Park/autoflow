@@ -214,7 +214,7 @@ In a project whose information names sub-repos, which pull requests a change tak
 <type>(#<issue>): <description>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 

@@ -1,6 +1,6 @@
 # Git Workflow
 
-> How a pull request closes an issue. A target's own practice and an invocation's `instructions` come first.
+> How a pull request closes an issue.
 
 ---
 

@@ -190,7 +190,7 @@ In a project whose information names sub-repos, which pull requests a change tak
 <type>(#<issue>): <description>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
@@ -537,7 +537,7 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
 ### Code comments
 The rule governs every comment in code a change writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the change leaves untouched stay as they are (**Surrounding code**).
 
-- **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
+- **The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
 - **What a comment carries** — only what a reader cannot recover from the code, and only in one of these cases, each about the code the comment sits on:
   - an external constraint: the behavior of a runtime, a tool, or a protocol the code depends on;
   - an invariant that the code does not make evident;
@@ -552,7 +552,7 @@ The rule governs every comment in code a change writes or modifies — implement
   - commented-out code.
 - **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the attempt's design documents in its record directory and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
 - **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
-- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
+- **Changing commented code**: a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
 The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
@@ -960,13 +960,6 @@ append to — not a determined evasion (the same model as `<autoflow-root>/docs/
 Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
 that only imitates an entry (a heading-less field line, a malformed heading).
 
-### Claude Code's advisor tool (`advisorModel`)
-
-Distinct from the advisor sub-agent above: Claude Code's advisor tool
-(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
-is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
-
 ---
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Communication > Result delivery path by spawn mode -->
@@ -1012,7 +1005,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default — a target's practice and an invocation's `instructions` come first: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 

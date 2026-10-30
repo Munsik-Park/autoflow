@@ -38,8 +38,7 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, the output directory (`out`), and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
 2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md) > Context Injection.
-3. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
-4. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](evaluation-system.md) > *Finding coverage*).
+3. The prompt states what rule 1 names and the invocation's `instructions`.
 
 ### Recording the result
 
@@ -67,7 +66,7 @@ invocation names — the target repository, or in a project with sub-repos one s
   the identification, as the commit's evidence anchor
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
   the staged surface*); the build report records it.
-- **[MUST]** Writes and changes comments under [`submodule-common-rules.md`](submodule-common-rules.md)
+- Writes and changes comments under [`submodule-common-rules.md`](submodule-common-rules.md)
   > Change Surface Rules > *Code comments* — a comment attached to code it modifies is updated or
   deleted in the same commit, and deleted when it is uncertain whether it is still true.
 - **[MUST]** Runs every Bash command in the **foreground**; never uses `run_in_background`
@@ -156,13 +155,6 @@ The threat the hook answers is an agent overstepping in routine work — rewriti
 append to — not a determined evasion (the same model as `<autoflow-root>/docs/issue-proposal.md`).
 Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
 that only imitates an entry (a heading-less field line, a malformed heading).
-
-### Claude Code's advisor tool (`advisorModel`)
-
-Distinct from the advisor sub-agent above: Claude Code's advisor tool
-(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
-is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
 
 ---
 

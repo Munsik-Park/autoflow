@@ -46,7 +46,7 @@ The review rules every AutoFlow reviewer applies. Each reviewer's own rule file,
 - Do not submit an approval or request-changes review state unless the user explicitly asks for that review state.
 - Keep style, naming, and preference feedback out of blocking findings unless it creates a real maintainability or correctness risk.
 - A code comment carries only a sentence that stays true for as long as the code it sits on is unchanged. **A comment that diverges from its code, or that carries what a comment does not carry, is a `Low` finding** — a restatement of the code, a design ground, an acceptance-criterion, issue or PR reference, another file's path or contract, a change history, or any content outside the cases a comment carries, each about the code it sits on (an external constraint, an invariant the code does not make evident, what breaks if the code is written otherwise, a function's contract — with at most one ADR identifier as its only reference), such as a value, count or list copied from another file. Such a finding is never raised above `Low`. Only that finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or personal data, for example — takes the severity its impact sets. A line a tool reads to change its behavior — a lint suppression, a type-checker directive — is code even in comment syntax: a defect in it is judged by the behavior it changes, not by this rule, while an explanation written beside it is a comment. The rule does not apply in the AutoFlow framework's own source repository, which publishes this file to its targets; there comments are reviewed like any other change.
-- Write the entire review output — the summary, every finding, and all prose — in Korean (한글). Keep code identifiers, file paths, command names, and the severity levels in English. This applies to the review record, terminal output, and any comment posted to a PR.
+- The review output's default language is English.
 
 ## Severity
 
@@ -104,8 +104,6 @@ Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`
 - Unbounded queries, payloads, or memory growth
 
 ## Output Format
-
-All section bodies below are written in Korean (한글); only the section headers, severity labels, code identifiers, and paths stay in English.
 
 # Review Summary
 
