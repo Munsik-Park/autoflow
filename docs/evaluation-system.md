@@ -205,7 +205,7 @@ spawn is fresh like any other; its input is narrowed, not its independence.
 
 Binds the GATE:QUALITY form only.
 
-- **[MUST]** Read the build report's `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
+A suggestion the build report records as rejected is judged on its own: one that is a defect is scored under `Quality` or `Impact scope`, and the author's rejection reason is context, not the judgment. The judgments go in the `refine_observations` output field.
 
 ### Scope judgments (GATE:PLAN / GATE:QUALITY)
 
@@ -235,8 +235,7 @@ scored under the ordinary items.
   code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
   by this rule. An explanation written beside it is a comment.
 - `Minimal implementation` weighs the comments the change adds by content and by volume — the build
-  report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
-  diff — and records a content or volume finding in its `reason` and in `recommendations` without
+  report's comment check with the comments in the diff — and records a content or volume finding in its `reason` and in `recommendations` without
   lowering its score ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface
   Rules > GATE:QUALITY linkage).
 
@@ -386,7 +385,7 @@ outputs and default*).
 
 Judged before scoring. The goal: a test that verifies a required behavior is seen failing before
 the implementation it verifies ([U4 Build and verify](units/build.md) > *What the build owes* >
-*Test-first*). For each such test the build report's `## Test-first` record names, the evaluator
+*Test-first*). For each such test the build report's test-first record names, the evaluator
 reads the evidence it cites and judges whether the failing run was made on the code without the
 implementation and the passing run on the code with it, each shown by its log — the failing log
 with its non-zero exit status and the code it ran on, the commit and any change set aside for that
@@ -424,7 +423,7 @@ audited commit.
 
 Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
 sets and does not re-derive the whole audit. It judges test-first for each test whose
-`## Test-first` record the build re-run added or replaced, whether or not the re-run made a commit;
+test-first record the build re-run added or replaced, whether or not the re-run made a commit;
 a test whose record is unchanged keeps its previous judgment. The change since that evaluation is
 the commits made after the ones it audited: it re-scores that change against the checklist,
 re-checks each prior finding only where that change touches its file, and inherits the rest.
@@ -454,9 +453,8 @@ range (`commits`) — and the work's outputs:
   checked against, and the scope it states — and the verification design
   (`verification_design`);
 - the build report (`build_report` — [U4 Build and verify](units/build.md) > Build report): its run
-  record, manual checklist, maintained documents and lint record, its `## Scope judgments`, section
-  `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
-  `## Comment check`;
+  record, manual checklist, maintained documents and lint record, its scope judgments and — on a
+  target — its comment check;
 - the AUDIT evaluation (`audit_evaluation`);
 - the recommendations deferred or separated after earlier evaluations, when there are any
   (`deferred`);
@@ -471,9 +469,6 @@ The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-The build report's out-of-scope-observations section is scoring input (*Evaluator conduct* >
-*Build observations* above).
-
 #### Scoring (10 items × 10 points)
 
 Completeness, Quality, Test coverage, Test quality, Security (references AUDIT),
@@ -483,12 +478,12 @@ The `Minimal implementation` item is scored against [`submodule-common-rules.md`
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
 A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 `Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Evaluator conduct* > *Code comments in a target* above).
+On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's comment check and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Evaluator conduct* > *Code comments in a target* above).
 
-The build report's records are the subject of three items. `Test coverage` reads `## Run record` and
-`## Manual checklist` (*Test coverage — the run record is the subject* below). `Doc updates` reads
-`## Maintained documents` against the diff: a listed document the diff does not touch is a finding
-of the item. `Commit conventions` reads `## Lint` for every commit of the change against the
+The build report's records are the subject of three items. `Test coverage` reads the run record and
+the manual checklist (*Test coverage — the run record is the subject* below). `Doc updates` reads
+the maintained documents against the diff: a listed document the diff does not touch is a finding
+of the item. `Commit conventions` reads the lint record for every commit of the change against the
 outcome vocabulary and its reason classes
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
 the staged surface*): a chain `detected` is a finding of the
@@ -545,14 +540,13 @@ reference value. Each violation caps the named item at 6, below the each-item re
   listing ([U6 Delivery](units/delivery.md) > *Push and pull request*;
   [`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *What a cycle
   leaves in the target's tree*); under this item the evaluator confirms that every such file
-  carries, in the build report's `## Test files kept` section, the reason it is kept and the CI job
-  expected to run it — the record the PR body carries — and an added file with no such record caps
+  carries, in the build report, the reason it is kept and the CI job expected to run it, and an added file with no such record caps
   `Test quality` at 6.
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
   each verification-design row verified by a run it is the row's recorded run — the command, the
   log and the summary line read from it, resolved as *Execution discipline* above sets. For a row
   the AI verified by observation it is the row's observation record
-  ([U4 Build and verify](units/build.md) > Build report > `## Manual checklist`), confirmed by
+  ([U4 Build and verify](units/build.md) > Build report), confirmed by
   reading the record and opening the artifacts it cites — a screenshot is read as an image — never by observing again;
   a row with no record, or a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](submodule-common-rules.md) > Verification and Tools > *A missing run
@@ -615,7 +609,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
     "rescored": ["<item>"], "inherited": ["<item>"],
     "prior_findings": [ { "finding": "<the previous evaluation's finding>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
   },
-  "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
+  "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "<whether it is a defect, and why>" } ],
   "summary": "overall assessment",
   "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | criterion id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — <autoflow-root>/docs/review/review.md > Severity>", "finding": "<the finding>" } ]
 }
@@ -637,9 +631,9 @@ when `test_first.confirmed` is true (*Gate rubrics* > AUDIT > *Test-first* above
 |-----|------|----------|---------|
 | `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding in the previous evaluation's `recommendations`, its `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
 
-`refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every entry in
-the build report's `## Out-of-scope observations — guard / boundary logic touched` section (`[]`
-when the section says `none`; *Evaluator conduct* > *Build observations* above).
+`refine_observations` (GATE:QUALITY only) records the evaluator's judgment of each suggestion the
+build report records as rejected (`[]` when it records none; *Evaluator conduct* > *Build
+observations* above).
 
 `recommendations` lists every finding as an object: `subject` — a `path:line` of the evaluated
 artifact at the evaluated commit, or a section of the evaluated artifact — the design documents at

@@ -85,7 +85,7 @@ undone.
 
 - **Inputs**: the pull requests (`pull_requests`), each with the head CI is read on — the delivery's
   output, or a file the invocation writes, `{pull_requests: [{pr, head}]}`; and, optionally, the
-  build report (`build_report`): the test files the change added (`## Test files kept`) and the
+  build report (`build_report`): the test files the change added and the
   `ci-deferred` lint chains.
 - **Params**: `timeout`, which bounds the whole run.
 - **What the AI judges**: how it reads CI, how long it waits within the `timeout`, and whether it

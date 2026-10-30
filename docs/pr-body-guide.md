@@ -64,9 +64,9 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
   옮겨 적고 새로 쓰지 않는다.
 - 모든 항목이 실행 가능한 test로 검증되면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
 - target 트리에 남지 않는 한 번 실행한 test는 같은 섹션에 그 항목의 **run record** — build
-  report의 `## Run record`에 기록된 command와 summary line — 를 한 줄로 싣는다
+  report에 기록된 command와 summary line — 를 한 줄로 싣는다
   ([U6 Delivery](units/delivery.md) > *Push and pull request*).
-- AI가 도구로 관찰해 검증한 항목은 같은 섹션에 실행 주체, observation record의 경로와 결과 줄을
+- AI가 도구로 관찰해 검증한 항목은 같은 섹션에 실행 주체, observation record의 경로와 결과를
   한 줄로 싣는다. 사람의 관찰이나 mock으로 검증한 항목은 reason에 그 이유를 싣고, 도구가 없어서라면
   그 도구 요청을 *7. 도구 요청*에 적는다 ([`submodule-common-rules.md`](submodule-common-rules.md) >
   Verification and Tools > *The tools the work needs*; [U3 Design](units/design.md) > *Tools*).
@@ -87,7 +87,7 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
   사라진다. 부재 비용 0.
 - AC1 — one-shot test: `bash <attempt-dir>/build-1/local/ac1-retry.sh` → `PASS 3/3`
 - AC3 — AI observation (browser): `<attempt-dir>/build-1/local/ac3-observation.md` →
-  `observation: match` — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
+  일치 — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
 - Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
   따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
 ```
