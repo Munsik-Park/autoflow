@@ -506,17 +506,6 @@ AutoFlow PR body에는 작업의 도구 요청 — invocation이 주는 각 실�
 
 epic 서브이슈가 아닌 경우(독립 이슈, epic 트래커)는 `epic-slice` 없이 `#N`만 사용한다.
 
-## 커밋 메시지와의 관계
-
-커밋 메시지 규칙(`<autoflow-root>/docs/core.md` > Commit Rules)은 별도로 유지된다.
-
-```
-feat(#231): 소진 내역 탭 프론트 — 기간 필터 + 검색   ← 커밋
-[feat · #73-S3f · #231] 소진 내역 탭 프론트            ← PR 제목
-```
-
-커밋은 `type(#N):` 형식, 이슈·PR 제목은 `[type · ref]` 형식으로 구별한다.
-
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 
 ## Change Surface Rules
