@@ -100,7 +100,7 @@ trap 'rm -f "$SCRATCH"' EXIT
 resolve_reviewer_settings claude-review claude
 review_readout
 if [[ "$REVIEW_USER_STATE" == unreadable ]]; then
-  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it; the review round goes on without this reviewer." >&2
+  echo "[claude-review] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies — claude was not started. Fix the file and run again to apply it." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 build_review_backend_args

@@ -103,10 +103,7 @@ run, so every consumer reaches the same verdict on the same file. When it
 cannot be read, nothing in it applies and no reviewer runs: the readout names
 it (`source: user <path>`), and every consumer prints the fixed marker line
 `user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
-from exit `2` and from every exit below; no wrapper starts its reviewer. The
-review module goes on without those reviewers, on the reviews of the target's
-side, and records the unreadable file as a tool request
-([`units/review.md`](units/review.md) > *Reviewer review*); a fixed file is read
+from exit `2` and from every exit below; no wrapper starts its reviewer. A fixed file is read
 anew by the next run.
 
 ### Operator file
