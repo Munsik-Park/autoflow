@@ -34,8 +34,8 @@ the issue body, the criterion's text, the cases, each case's code locations
   that does not meet the condition actually arises — from which input, state or
   usage flow. Where one does, the behavior does not hold in that situation.
 
-**Output.** One file, in Korean, `<out>/in-depth.md`: per case the verdict
-(`finding` / `holds` / `unconfirmed`), the deciding code and condition, and the
+**Output.** One file, in Korean, `<out>/in-depth.md`: per case the verdict,
+the deciding code and condition, and the
 grounds (a commit SHA with `path:line`). Return that path and a one-line summary
 as your report.
 
@@ -92,8 +92,8 @@ again a fresh context — is given the review record, the trace and the in-depth
 settles it. A criterion that does not hold in a case it applies to is a finding for that case,
 recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
 item it cannot decide with confidence it puts to the advisor (*Authority* below). It
-updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
-`## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
+updates the record to match, adds the stage 2 findings as it settled them and how it took each stage
+2 finding and in-depth verdict, writes the record to
 `<out>/criterion-review.md`, and returns its path and a one-line summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth

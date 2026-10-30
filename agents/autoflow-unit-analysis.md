@@ -28,11 +28,9 @@ principle 2).
   the cautions it heeds, and the rules other documents cite are
   `<autoflow-root>/docs/units/analysis.md` > *What the analysis owes*; how far and by what
   means you pursue a cause, and how you keep the cautions, are yours, recorded
-  under `## Method` and `## Cause`.
-- **Output**: the analysis report `<out>/issue-analysis.md`, with the sections
-  `<autoflow-root>/docs/units/analysis.md` > *Analysis report* lists — the acceptance-criterion
-  table, the referenced materials, the scope judgments, the affected documents and
-  the decision points — and the run's tool requests (`<out>/tool-requests.json`).
+  in the report.
+- **Output**: the analysis report `<out>/issue-analysis.md`, with the results
+  `<autoflow-root>/docs/units/analysis.md` > *Analysis report* lists, and the run's tool requests (`<out>/tool-requests.json`).
   Nothing beyond what the evaluation needs.
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores one form
   for every issue: whether your conclusion is supported by its grounds and
@@ -44,7 +42,7 @@ artifact, never push, merge or file an issue directly, and a run's evidence is i
 log. You decide what you can. A decision of the kinds the advisor makes — a lever
 or cause that is not code, a hypothesis PASS you judge unreachable, a criterion you
 find defective — and any point you doubt, you put to a fresh `autoflow-advisor` and
-follow, naming its ledger entry under `## Decision points`
+follow, naming its ledger entry
 (`<autoflow-root>/docs/role-contracts.md` > Advisor). A tool the work lacks is a tool
 request, and a call blocked at the harness level is recorded in your report. Return only your
 artifact paths and a one-line summary
@@ -118,8 +116,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
 - **What the run is for is read from its inputs.** Given the criterion review record, the run
   analyzes the issue the record reviewed (*Criterion review record* below). Given the previous
   report and its evaluation, it brings that report up to date on the evaluation's findings, and
-  what else it reuses from the earlier runs in the record directory is its own, recorded under
-  `## Method`.
+  what else it reuses from the earlier runs in the record directory is its own, recorded in its
+  report.
 - **Documents.** The unit's agent definition carries the documents the analysis needs (this file, and the
   rubric it is scored on, [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Gate rubrics* >
   GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection);
@@ -137,12 +135,12 @@ The analysis is asked for four things, each conclusion with its grounds:
 - the decision points — the judgments that settle what follows the analysis, each with its decision.
 
 How far the analysis pursues a cause, and by what means — how many explanations it weighs, which
-ones, what it checks and with which tool — is the module's judgment, recorded with its grounds under
-`## Method` and `## Cause`.
+ones, what it checks and with which tool — is the module's judgment, recorded with its grounds in its
+report.
 
 The request is the trigger target — the issue, a review comment or thread, or the finding a
 re-run is for — and the as-is is the state it is measured against, which the module judges from
-its inputs and records under `## Method`. The question is whether the as-is already
+its inputs and records in its report. The question is whether the as-is already
 satisfies the request.
 
 **Cautions.** Each names a bias the analysis is to avoid:
@@ -159,7 +157,7 @@ satisfies the request.
 
 How the module guards against these biases — whether it separates the structure reading from the
 issue reading, in what order it reads, what it gives or withholds from a helper — is its own,
-recorded with its grounds under `## Method`.
+recorded with its grounds in its report.
 
 The rules below are the ones other documents cite; everything else about the work is the module's.
 
@@ -177,7 +175,7 @@ The rules below are the ones other documents cite; everything else about the wor
   is an input, not a verdict. An issue body that differs from the one the record names is a
   criterion change made outside the review, which the analysis puts to the advisor. The analysis
   reads its findings as an
-  earlier reading of the code and policy at the commits its `## Inputs` names: a finding the
+  earlier reading of the code and policy at the commits it names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
   from, and a difference from the record is recorded with its grounds. The record changes nothing
   about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
@@ -185,17 +183,16 @@ The rules below are the ones other documents cite; everything else about the wor
   review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
   a fact it puts to the advisor ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
   Decision-point entries > *A criterion can be wrong*). The record's dispositions hold each
-  item the review decided, with its grounds; `## Screening` lists each case a criterion applies to
-  with the code that decides it, and `## Cause reach and rule conflict` where a confirmed cause
-  reaches beyond the reported points or a required behavior meets a rule in force, each read like
-  the findings as an earlier reading; `## Reconciliation` records, per stage 2 finding and per
-  in-depth case, whether it was applied, rejected or left unresolved. The record's `## Unchecked`
-  items, and each case left `unresolved`, are findings the analysis may close with its own checks
-  (*Checking a finding* below). How the record was used is recorded under `## Method`.
-- **Referenced materials.** Each material is recorded under `## Referenced materials` — what it is,
+  item the review decided, with its grounds; it lists each case a criterion applies to with the code
+  that decides it, and where a confirmed cause reaches beyond the reported points or a required
+  behavior meets a rule in force, each read like the findings as an earlier reading; and, per stage 2
+  finding and per in-depth case, whether it was applied, rejected or left unresolved. What the record
+  could not confirm, and each case left unresolved, are findings the analysis may close with its own
+  checks (*Checking a finding* below). How the record was used is recorded in the report.
+- **Referenced materials.** Each material is recorded — what it is,
   where it is, how it was opened, and what it shows for the criterion that names it; the material,
   not an abbreviated example in the body, is what the criterion means. A material that cannot be
-  opened is recorded `not opened: <reason>` and as a tool request — what is missing, and what the
+  opened is recorded with the reason and as a tool request — what is missing, and what the
   analysis concluded without it — and the run goes on to its end ([`core.md`](<autoflow-root>/docs/core.md) >
   Development Lifecycle > *Tools*; [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
   Verification and Tools > *The tools the work needs*).
@@ -211,7 +208,7 @@ The rules below are the ones other documents cite; everything else about the wor
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
   design; the analysis does not decide it alone.
 - **Decision points.** The analysis decides each judgment that settles what follows it, and records
-  it under `## Decision points` with its grounds: a planning, design or ADR prerequisite clearly
+  it with its grounds: a planning, design or ADR prerequisite clearly
   required before the issue can be implemented (when in doubt, none); a request the as-is already
   satisfies; on a reviewer finding, one that repeats an earlier round's complaint with a different
   witness case ([U7 Review](<autoflow-root>/docs/units/review.md) > *A repeated complaint*). A gap or a cause whose lever is not
@@ -224,23 +221,30 @@ The rules below are the ones other documents cite; everything else about the wor
 ## Analysis report
 
 `<out>/issue-analysis.md`. The first run writes it whole; a re-run, given the previous report, brings it
-up to date rather than rewriting it, its `## Acceptance criteria` table unchanged. It records what
-the table below lists, for the readers it names; the headings and the form are the module's, and a
-matter with nothing to record is said to have none — except the `## Acceptance criteria` table,
-whose heading and columns criteria-apply reads.
+up to date, its acceptance-criteria table unchanged. It records the results below; the headings and
+the form are the module's, and a matter with nothing to record is said to have none — except the
+`## Acceptance criteria` table, whose heading and columns criteria-apply reads.
 
-| Section | Holds | Read by |
-|---|---|---|
-| `## Method` | how the analysis was done — the reading order, any helper spawn and what it was given — and how each caution was kept, with grounds | GATE:HYPOTHESIS |
-| `## Current structure` | the affected area as it stands — its structure, design intent and data flow — stated as fact | GATE:HYPOTHESIS |
-| `## Request` | the concrete cases the request names, the problem type they share, and the resolution approaches it calls for | GATE:HYPOTHESIS |
-| `## Acceptance criteria` | a table with the fixed columns `AC id \| criterion \| source`: `AC id` a short readable name unique within the issue, `criterion` the issue's criterion restated faithfully, `source` its place in the issue body | criteria-apply |
-| `## Referenced materials` | each material the issue or a criterion references, as *What the analysis owes* says, or `none` | the design module |
-| `## Necessity` | whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is the lever, with grounds; and the conclusion, exactly one of `no change needed` (the as-is already satisfies the request, or nothing is left to do), `non-code lever` (a real gap whose lever is data / configuration / operations) or `code change` | GATE:HYPOTHESIS |
-| `## Cause` | where the request reports a defect, the cause the analysis established and the evidence for it, how far the cause was pursued and why — or, where it is not established, what is known and what was left unchecked; otherwise `none` with the reason | GATE:HYPOTHESIS |
-| `## Scope judgments` | each scope judgment, as *What the analysis owes* says | the design module; GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Affected documents` | the documents the change is expected to update | the design and build modules |
-| `## Decision points` | each decision point with its decision and grounds — for one put to the advisor, the advisor's decision and its ledger entry — or `none` | the design module |
+- How the analysis was done — the reading order, any helper spawn and what it was given — and how each
+  caution was kept, with grounds.
+- The affected area as it stands — its structure, design intent and data flow — stated as fact.
+- The concrete cases the request names, the problem type they share, and the resolution approaches it
+  calls for.
+- `## Acceptance criteria`: a table with the fixed columns `AC id | criterion | source`: `AC id` a
+  short readable name unique within the issue, `criterion` the issue's criterion restated faithfully,
+  `source` its place in the issue body.
+- Each material the issue or a criterion references, as *What the analysis owes* says.
+- Whether the issue is a bug / incident; per resolution approach, the behavior gap and whether code is
+  the lever, with grounds; and the conclusion: that no change is needed (the as-is already satisfies
+  the request, or nothing is left to do), that the lever is not code (a real gap whose lever is data /
+  configuration / operations), or that the code changes.
+- Where the request reports a defect, the cause the analysis established and the evidence for it, how
+  far the cause was pursued and why — or, where it is not established, what is known and what was left
+  unchecked; otherwise that there is none, with the reason.
+- Each scope judgment, as *What the analysis owes* says.
+- The documents the change is expected to update.
+- Each decision point with its decision and grounds — for one put to the advisor, the advisor's decision
+  and its ledger entry.
 
 Anything else the module records is its own, written where it judges useful.
 
@@ -298,8 +302,8 @@ The form answers one question: **is the report's conclusion supported by its gro
 analysis reach its goal?** The request and the as-is are the ones the report states
 ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) > *What the analysis owes*); they are grounds like any other, and
 the evaluator reads them against the trigger target and the branch it finds. The form scores whether the
-conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
-scores as high as a well-grounded `code change`. Nor does it score how
+conclusion holds, never which way it points: a well-grounded conclusion that no change is needed or that the lever
+is not code scores as high as a well-grounded code change. Nor does it score how
 the analysis was done — how many explanations it weighed or which checks it ran — only whether what
 the report concludes is shown. It is reuse-neutral: a resolution that reuses existing code is not
 marked down. Plan feasibility, structural fit and over-engineering are GATE:PLAN's (Decision
@@ -374,7 +378,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 - **The module puts to the advisor**, and follows the advisor's decision:
   - a change to an acceptance criterion's content that the work after the criterion review shows
     (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
-  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a root cause, or a lever, that is not code — the analysis's conclusion that the lever is not code;
   - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
     meet what the hypothesis evaluation asks;
   - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
@@ -497,7 +501,7 @@ source is a fork or the upstream, and its URL, are the project's information.
 Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
@@ -516,7 +520,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's scope judgments and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
 - **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
@@ -604,7 +608,7 @@ A `ci-deferred` deferral is discharged by the ci module's `green` verdict on the
 A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**.
 
 ### GATE:QUALITY linkage
-GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every scope judgment in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom

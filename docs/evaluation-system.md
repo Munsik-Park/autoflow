@@ -211,7 +211,7 @@ A suggestion the build report records as rejected is judged on its own: one that
 
 The cycle's scope is its acceptance criteria, its confirmed cause, and the problems its recorded scope judgments include ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the scope the feature design states. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read that scope, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
+- **[MUST]** Score scope against those records, not against acceptance-criterion IDs alone. At GATE:PLAN, `Scope` reads the scope the feature design states. At GATE:QUALITY, `Minimal implementation` and `Impact scope` read that scope, every scope judgment in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
 - A hunk that rests on a recorded judgment is in scope when the judgment meets one of question 1's three conditions; a judgment that meets none is scored under `Minimal implementation`. A directly related problem the records show, left out with no separation reason or with one that answers neither half of question 2, is scored under `Impact scope` (GATE:PLAN: `Scope`).
 - A separation reason is judged for whether it answers question 2, not for whether the evaluator would have separated the problem.
 
@@ -295,8 +295,8 @@ The form answers one question: **is the report's conclusion supported by its gro
 analysis reach its goal?** The request and the as-is are the ones the report states
 ([U2 Analysis](units/analysis.md) > *What the analysis owes*); they are grounds like any other, and
 the evaluator reads them against the trigger target and the branch it finds. The form scores whether the
-conclusion holds, never which way it points: a well-grounded `no change needed` or `non-code lever`
-scores as high as a well-grounded `code change`. Nor does it score how
+conclusion holds, never which way it points: a well-grounded conclusion that no change is needed or that the lever
+is not code scores as high as a well-grounded code change. Nor does it score how
 the analysis was done — how many explanations it weighed or which checks it ran — only whether what
 the report concludes is shown. It is reuse-neutral: a resolution that reuses existing code is not
 marked down. Plan feasibility, structural fit and over-engineering are GATE:PLAN's (Decision
@@ -359,9 +359,8 @@ This named check makes the ADR-conformance concern explicit inside the two items
 #### Re-entry re-score
 
 Given the previous evaluation, the gate re-scores as *Evaluator conduct* > *Re-score* above sets.
-The change since that evaluation is the design documents' **delta sections** — the
-`## Delta — round <n>` sections a later design run appended; the evaluator reads them and the
-anchors of every item it re-scores.
+The change since that evaluation is what a later design run changed in the design documents; the
+evaluator reads it and the anchors of every item it re-scores.
 
 A run with no previous evaluation scores both documents whole; the narrowing binds re-scores only.
 
@@ -448,7 +447,7 @@ item is judged by; with none declared, the criteria below are the whole of it.
 range (`commits`) — and the work's outputs:
 
 - the applied acceptance criteria (`applied_criteria`, the criteria-apply module's output);
-- the analysis report (`analysis`): its `## Scope judgments`;
+- the analysis report (`analysis`): its scope judgments;
 - the two design documents: the feature design (`feature_design`) — the decisions the change is
   checked against, and the scope it states — and the verification design
   (`verification_design`);
@@ -466,7 +465,7 @@ range (`commits`) — and the work's outputs:
 outputs and default*).
 
 The cycle's scope records are the scope the feature design states, every
-`## Scope judgments` section in the reports above, and the deferred or separated recommendations
+scope judgment in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
 #### Scoring (10 items × 10 points)

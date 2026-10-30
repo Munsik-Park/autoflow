@@ -36,18 +36,16 @@ code at the commits they name.
 
 **Output.** The review record, updated in Korean, at `<out>/criterion-review.md` — the
 screen's record copied there and updated, the screen's own file left as it is:
-`## Findings`, `## Screening` and `## Dispositions` to match what you settled,
-`## Cause reach and rule conflict` — the stage 2 findings as you settled them —
-and `## Reconciliation` — per stage 2 finding and per in-depth case, its
-verdict, how you took it (`applied` / `rejected` / `unresolved`) and the
-grounds, with the file it came from. An item you cannot decide with confidence
-you put to a fresh `autoflow-advisor` and decide as it decided, the row naming
+the record to match what you settled, the stage 2 findings as you settled them,
+and, per stage 2 finding and per in-depth case, its verdict, how you took it and
+the grounds, with the file it came from. An item you cannot decide with confidence
+you put to a fresh `autoflow-advisor` and decide as it decided, naming
 its ledger entry (`<autoflow-root>/docs/criterion-review.md` > *Authority*;
 `<autoflow-root>/docs/role-contracts.md` > Advisor). Return the record's path and a
 one-line summary, naming each decision you put to the advisor, as your report.
 
-You do not edit the issue, any criterion, or `## Inputs` beyond the model and
-effort you ran on. What else you read, in what order and with which tool, is your own.
+You do not edit the issue, any criterion, or the scope the record states.
+What else you read, in what order and with which tool, is your own.
 
 Run every Bash command in the **foreground** (`<autoflow-root>/docs/role-common-rules.md` > Bash
 Execution Mode).
@@ -99,8 +97,8 @@ again a fresh context — is given the review record, the trace and the in-depth
 settles it. A criterion that does not hold in a case it applies to is a finding for that case,
 recorded with the rule or condition that prevents it — never summarized as holding conditionally. An
 item it cannot decide with confidence it puts to the advisor (*Authority* below). It
-updates `## Findings`, `## Screening` and `## Dispositions` to match, writes
-`## Cause reach and rule conflict` and `## Reconciliation`, writes the record to
+updates the record to match, adds the stage 2 findings as it settled them and how it took each stage
+2 finding and in-depth verdict, writes the record to
 `<out>/criterion-review.md`, and returns its path and a one-line summary.
 
 **What the procedure fixes.** The artifacts — the screening, the stage 2 findings, the in-depth
@@ -120,19 +118,29 @@ policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model), at m
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
 in its own run directory. It names the issue body reviewed by its sha256, as
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records what the
-table below lists; the headings and the form are the module's, and a matter with nothing to record
-is said to have none.
+`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records the
+results below; the headings and the form are the module's, and a matter with nothing to record is said
+to have none.
 
-| Section | Holds |
-|---|---|
-| `## Inputs` | the scope the review set — what it read (each repository and the commit read, the policy documents, the materials opened) and why, and what it left out and why, a material that could not be opened included with the reason; how the review was done; and the model and effort each module ran on |
-| `## Findings` | stage 1 — per criterion, each review item: `holds` or the finding, with its grounds; and *Actual and expected behavior* and *Size and separation* for the issue as a whole |
-| `## Screening` | stage 1 — per criterion, each case it applies to: where the required behavior shows and the code that decides it (`path:line`), the verdict (`finding` / `holds` / `unconfirmed`), the reach of its grounds (`shows` / `decides`), and whether it is an in-depth target; a criterion with no target says so |
-| `## Cause reach and rule conflict` | stage 2 — each finding, by question (cause reach / rule conflict), marked `stage 1` or `new`, with its grounds, as the reconciliation settled it — or `none` |
-| `## Reconciliation` | per stage 2 finding and per in-depth case: its verdict, how the reconciliation took it — `applied`, `rejected` or `unresolved` — and the grounds, with the file it came from |
-| `## Dispositions` | every item the review found — each criterion, and each problem found beyond the criteria — with the disposition the review decided, its grounds and where the item came from (`stage 1`, `stage 2` or `in-depth`). A criterion is kept, revised (with its text as revised), split (with the criteria it becomes), or excluded; one is established or added where the issue states none or lacks it; a problem found is included in this issue or separated from it. An item the module put to the advisor carries the advisor's decision as its disposition, and names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What the review leaves to the later work*) |
-| `## Unchecked` | what the review could not confirm and the tool or access it needed — or `none` |
+- The scope the review set — what it read (each repository and the commit read, the policy documents,
+  the materials opened) and why, and what it left out and why, a material that could not be opened
+  included with the reason; and how the review was done.
+- Stage 1, per criterion: each review item, whether it holds or the finding, with its grounds; and
+  *Actual and expected behavior* and *Size and separation* for the issue as a whole.
+- Stage 1, per criterion: each case it applies to — where the required behavior shows and the code that
+  decides it (`path:line`), the verdict, the reach of its grounds, and whether it is an in-depth target.
+- Stage 2: each finding, by question (cause reach / rule conflict), whether stage 1 already had it, with
+  its grounds, as the reconciliation settled it.
+- Per stage 2 finding and per in-depth case: its verdict, whether the reconciliation applied it, rejected
+  it or left it unresolved, and the grounds, with the file it came from.
+- Every item the review found — each criterion, and each problem found beyond the criteria — with the
+  disposition the review decided, its grounds and where the item came from. A criterion is kept, revised
+  (with its text as revised), split (with the criteria it becomes), or excluded; one is established or
+  added where the issue states none or lacks it; a problem found is included in this issue or separated
+  from it. An item the module put to the advisor carries the advisor's decision as its disposition, and
+  names the ledger entry. How the change will be made is never an item here (*Purpose and scope* > *What
+  the review leaves to the later work*).
+- What the review could not confirm and the tool or access it needed.
 
 The record is situation-first where a person reads it — to follow what was decided and why
 ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Human-decision presentation*): what each finding means
@@ -154,7 +162,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 - **The module puts to the advisor**, and follows the advisor's decision:
   - a change to an acceptance criterion's content that the work after the criterion review shows
     (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
-  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a root cause, or a lever, that is not code — the analysis's conclusion that the lever is not code;
   - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
     meet what the hypothesis evaluation asks;
   - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas

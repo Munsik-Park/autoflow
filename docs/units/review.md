@@ -159,7 +159,7 @@ module, or the module acting on an evaluation's recommendation — and sees that
 complaint (the same property asserted, a different witness case; the earlier rounds' findings files
 and comments, and the earlier evaluations in the record directory, are what it compares against)
 says so where it writes the finding: with the finding in the findings file, under the analysis
-report's `## Decision points`, or in its own report. What follows — restating the acceptance
+report, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property
 a known gap — the module acting on the finding decides; a change to the criterion, and a choice it
 doubts, it puts to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor), and a

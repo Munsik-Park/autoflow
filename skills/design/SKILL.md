@@ -303,7 +303,7 @@ principle 2).
    *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
    at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 
-   **[DENY]** The document does not carry a change table of files, a per-suite disposition, or an
+   The document need not carry a change table of files, a per-suite disposition, or an
    oracle's condition clause. Those are **derived at BUILD** by the build unit — from
    the change delta, run the way the target runs its tests ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
    Verification and Tools > *How a test is run is the target's practice*; on an opted-in target the selector
@@ -341,13 +341,13 @@ and by what; where a test file lives is [U4 Build and verify](<autoflow-root>/do
 *Where a test lives*. This clause is the policy body; every other document references it rather than
 restating it.
 
-- **[MUST]** Each proposed verification answers two judgments:
+- Each proposed verification answers two judgments:
   1. **Required behavior** — is this a behavior or contract a consumer actually requires, as
      opposed to an imagined failure mode?
   2. **Cost of absence** — if no verification exists and this breaks after merge, who loses what,
      concretely?
-- **[MUST]** When the two judgments cannot both be answered, no verification is proposed, and the
-  item's row says why its absence costs nothing.
+- When the two judgments cannot both be answered, no verification is proposed, and the design says
+  why its absence costs nothing.
 - Necessity is a **judgment**, not a classification: no subject is exempt by category and none is
   obligated by category. The two guidance notes below are that judgment applied to two areas —
   they are not separate rules.
@@ -363,20 +363,19 @@ a test shape.
 
 ### Verification depth
 
-- **[MUST]** The verification design opens with a **risk line** — one line naming
-  who is harmed and how if this change is wrong. Depth is justified against that risk — never by a
+- Depth is justified against the risk — who is harmed and how if this change is wrong — never by a
   quantity cap: no layer count, file count, or line budget.
 - Each verification catches a failure no other verification in the design, and no existing
   mechanism — an existing test, a lint rule, a schema, a compiler or type check, a build or
   packaging check — already catches. A verification that would catch nothing such a mechanism does
   not is left out, and the mechanism is named in its place. A risk found later raises depth on a
-  re-run, its reason stated in the delta (*Re-entry* below).
+  re-run, its reason stated in the document (*Re-entry* below).
 
 ### Tools
 
 The rule is [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *The tools the work needs*;
 this clause is where the verification design applies it. The design opens the materials
-the analysis report's `## Referenced materials` section lists ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) >
+the analysis report records ([U2 Analysis](<autoflow-root>/docs/units/analysis.md) >
 *What the analysis owes*) — the material, not the issue body's abbreviated example, is the
 design's input — and finds, for each item, the tool that verifies it directly **before**
 settling it on an observation by a person, on an environment it cannot drive, or on a mock.
@@ -440,23 +439,12 @@ carries that document, and its output is the scores and their grounds with its r
 A re-run is a fresh `autoflow-unit-design` spawn by *Unit spawn* above, given the previous
 documents and the material it answers.
 
-- **[MUST] A re-run's output is a delta, never a rewrite.** The first run writes the two documents
-  whole. A re-run **appends** to each document it changes a section
-
-  ```
-  ## Delta — round <n>
-
-  - <what changed>: <the decision as it now stands> — supersedes <the section or decision it replaces>
-  - <what was added>: <the decision> — <ground>
-  ```
-
-  — `n` the number of delta sections in the previous document plus one, what the round is for
-  stated in the module's own words from its inputs — and leaves text the round did not change
-  exactly as it stands. A delta item that corrects a decision under the verified-error exception
-  ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entries) also carries the reproducing command and
-  its summary line; a decision the round put to the advisor is a delta item that names its ledger
-  entry. The delta section is GATE:PLAN's narrowed input on a re-score ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) >
-  GATE:PLAN > *Re-entry re-score*).
+- **A re-run keeps what it does not change.** The first run writes the two documents whole. A re-run
+  leaves the text it does not change as it stands and states what changed in each document it
+  changes: each decision as it now stands and what it supersedes, each addition with its ground. A
+  decision corrected under the verified-error exception ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) >
+  Entries) also carries the reproducing command and its summary line; a decision the run put to the
+  advisor names its ledger entry.
 - **Earlier runs are in the record directory.** The documents of every earlier run stay in their
   own run directories; how much of an earlier design the run carries over is its own, recorded in
   the design.
@@ -570,7 +558,7 @@ git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules > Scope judgment -->
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds, under a `## Scope judgments` heading in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
@@ -589,7 +577,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
-- **Where it is applied**: the analysis report's `## Scope judgments` and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's scope judgments and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 <!-- From <autoflow-root>/docs/decision-ledger.md -->
 
@@ -890,7 +878,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 - **The module puts to the advisor**, and follows the advisor's decision:
   - a change to an acceptance criterion's content that the work after the criterion review shows
     (`[ac-decision]`; [`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*);
-  - a root cause, or a lever, that is not code — the analysis's `non-code lever` conclusion;
+  - a root cause, or a lever, that is not code — the analysis's conclusion that the lever is not code;
   - a hypothesis PASS the module judges unreachable — an analysis re-run that judges no report will
     meet what the hypothesis evaluation asks;
   - a design point not agreed — one the design cannot settle on the grounds at hand, or one two areas
