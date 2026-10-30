@@ -21,60 +21,11 @@ below describe the contract every role spawn honours.
 
 ---
 
-## Git Workflow
-
-```bash
-# At session start (on the branch the invocation names)
-git status                  # confirm a clean working tree
-git log --oneline -5        # confirm the recent history
-
-# After completing the assigned work
-git add <files> && git commit
-# The delivery module pushes and opens the PR — report completion in the spawn's return value.
-```
-
-**Absolute rules**:
-
-- No direct commits to the default branch (`main`).
-- No new branch from a role — a run works on the branch its invocation names, and with the record directory it names ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4).
-- Always run `git status` before committing.
-- No `feat`/`fix` commit while tests are failing — use `wip` instead.
-
----
-
-## Commit Format
-
-```
-<type>(#<issue>): <description>
-
-Next: <what comes next>
-```
-
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
-
----
-
-## Session Protocol
-
-At the start of each session:
-
-```bash
-git log --oneline -5        # what was last committed
-git status                  # any uncommitted work?
-```
-
-1. Read the `Next:` line in the most recent commit and continue from there.
-2. Read the assignment in the spawn prompt — it carries the task and the
-   paths of its inputs and of its output directory. There is no mailbox to poll: the prompt is delivered
-   once, at spawn.
-
----
-
 ## Bash Execution Mode
 
-- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
+- A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **the main session's only**.
-- **[MUST] A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
+- **A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
   - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split, an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
   - **No bare `wait`.** `wait "$pid"` names its process and is for a process that ends by itself; a process that must be stopped — a load generator, a server — is waited out by a bounded poll: `kill -0 "$pid"` against a counter, then `kill -KILL`, then a report of any PID that is still alive. The bound does not depend on `timeout`.
   - **A cleanup command's stderr is kept.** Its exit status is read one PID at a time. Only a probe whose failure is the expected answer — `kill -0` asking whether a process is still alive — discards its stderr.
@@ -112,32 +63,6 @@ git status                  # any uncommitted work?
 
 ---
 
-## Tree Quiesce (spawn-boundary form)
-
-- **[MUST]** A spawned agent performs tracked-tree writes only inside its own spawn's lifetime, on
-  the assignment its spawn prompt carries.
-- A session that spawns agents into one tree issues no tree-writing spawn while another spawn's
-  run in that tree is in flight.
-
----
-
-## Work Completion Process
-
-```
-Implement → the comment check (<autoflow-root>/docs/units/build.md > What the build owes) → tests pass → commit → return the report
-```
-
-**Required content of the completion report** (the spawn's return value — write any
-body to the run's output directory and return an anchor plus a one-line summary):
-
-- Files changed.
-- Test results (pass/fail).
-- Cross-cutting impact (interfaces, data structures, config).
-- Caveats or known limitations.
-- Branch name and final commit hash.
-
----
-
 ## Communication
 
 The session that runs a module spawns each role with `Agent`
@@ -170,19 +95,9 @@ The single mode applies to every role; the per-role table is [`role-contracts.md
 
 ---
 
-## Quality Standards
-
-- Read and understand the existing code before changing it.
-- Run the relevant tests after each change and confirm they pass.
-- Do not add unnecessary refactors or type annotations. A comment carries only what `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Code comments* admits.
-- Do not introduce security vulnerabilities.
-- Do not make changes outside the assigned scope.
-
----
-
 ## Documentation Rules
 
 - Code/policy: English.
-- Markdown docs: English (source of truth).
-- HTML docs: Korean (translation), if maintained.
+- Documents an AI reads, and the base documents: English.
+- An HTML review artifact: the language of the person who reads it.
 - Interface changes require updating the related docs.

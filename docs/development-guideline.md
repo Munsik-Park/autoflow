@@ -132,9 +132,8 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   ```
 - Document language and placement:
   - Code/policy: English.
-  - Markdown docs: English (source of truth).
-  - HTML docs: Korean (translation), if maintained.
-  - MD↔HTML pairs are kept in sync.
+  - Documents an AI reads, and the base documents: English.
+  - An HTML review artifact: the language of the person who reads it.
   - Cross-project docs: a dedicated docs sub-repo, if used.
   - Per-sub-repo docs: each sub-repo's `docs/`.
   - Numbering convention: `00N-<name>` within the cross-project docs repo.

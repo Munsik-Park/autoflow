@@ -33,10 +33,10 @@ Hard rules:
 - Read-only with respect to source code: you analyze, you do not modify code.
 - Write your full analysis body to the files in the run's output directory your prompt
   names; return only their paths + a one-line summary.
-- **[MUST]** Run every Bash command in the **foreground**; never `run_in_background`
+- Run every Bash command in the **foreground**; never `run_in_background`
   (test/build runs included). Wait for the result, then report. See
   `<autoflow-root>/docs/role-common-rules.md` > Bash Execution Mode.
-- **[MUST]** Every foreground command must end on its own. The shell may be zsh,
+- Every foreground command must end on its own. The shell may be zsh,
   not bash: hold a PID or argument list in an array expanded quoted
   (`"${pids[@]}"`), quote a glob passed as an argument, or run a bash procedure
   under `bash -c` / `bash <path>`. Never a bare `wait` — stop a background
@@ -229,9 +229,9 @@ is not, and Claude decides when to call it, so the decisions above are the sub-a
 
 ## Bash Execution Mode
 
-- **[MUST]** A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
+- A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **the main session's only**.
-- **[MUST] A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
+- **A foreground command ends on its own.** This binds the same actors as the first bullet, in three forms:
   - **The session shell may not be bash.** The Bash tool's shell is initialized from the user's profile, and a stock macOS profile is zsh, whose expansion differs from bash's: an unquoted `$VAR` is not word-split, an unmatched glob is an error (`no matches found`) instead of the literal word, and a word beginning with `=` is replaced by a command's path. A list — PIDs, file names, arguments — is held in an array and expanded quoted, `"${pids[@]}"`; a glob meant as an argument is quoted (`--include='*.sh'`); a procedure written for bash runs under bash — `bash -c '…'`, or a file run with `bash <path>`.
   - **No bare `wait`.** `wait "$pid"` names its process and is for a process that ends by itself; a process that must be stopped — a load generator, a server — is waited out by a bounded poll: `kill -0 "$pid"` against a counter, then `kill -KILL`, then a report of any PID that is still alive. The bound does not depend on `timeout`.
   - **A cleanup command's stderr is kept.** Its exit status is read one PID at a time. Only a probe whose failure is the expected answer — `kill -0` asking whether a process is still alive — discards its stderr.

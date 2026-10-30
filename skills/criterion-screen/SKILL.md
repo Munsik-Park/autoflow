@@ -189,23 +189,18 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 ## Git Workflow — Rules
 
-> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+> **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ### Commit Rules
 
 ```
 <type>(#<issue>): <description>
-
-Next: <next action>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
-- No direct commits to main — always branch + PR.
-- No `feat`/`fix` commit while tests fail → use `wip`.
-- `git status` before every commit.
 - Before committing, the committing role — every role that commits, the main session included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. The rule (execution trust boundary, scoping, evidence anchor): `<autoflow-root>/docs/submodule-common-rules.md` > Change Surface Rules > *Lint chain on the staged surface*.
 
 ## Reference Documents
@@ -215,7 +210,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
+- **Issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 

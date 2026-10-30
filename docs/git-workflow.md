@@ -1,23 +1,6 @@
 # Git Workflow
 
-> The commit format and how a pull request closes an issue. A target's own practice and an invocation's `instructions` come first.
-
----
-
-## Commit Messages
-
-### Format
-
-```
-<type>(#<issue>): <description>
-
-Next: <next action>
-```
-
-`type`: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`.
-
-The `Next:` line names the action the next session continues from (see
-[`role-common-rules.md`](role-common-rules.md#session-protocol)).
+> How a pull request closes an issue. A target's own practice and an invocation's `instructions` come first.
 
 ---
 
