@@ -16,7 +16,7 @@
 # not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
 # and changes no label — the aggregation of every review of the PR writes the
-# one comment.
+# one report.
 #
 # The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's

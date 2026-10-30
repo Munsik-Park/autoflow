@@ -163,7 +163,8 @@ default*). Applied:
   push and the draft pull requests its default, and the ci module's goal the verdict, the body's CI
   part its default.
 - **ADR-0026** — D3's posting of the one comment on the pull request is amended: the one comment is
-  the review's output `<out>/comment.md` (D5).
+  the review's output `<out>/comment.md` (D5). Issue #537 removed that output: the findings file is
+  the review's one report.
 
 ## Related Issues / PRs
 

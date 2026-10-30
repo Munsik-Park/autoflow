@@ -58,8 +58,7 @@
 # REVIEW_USER_STATE=unreadable: nothing in it applies, no reviewer is
 # resolved, and the consumer prints the fixed marker line
 # `user-config: UNREADABLE <path> — <error>` and exits
-# REVIEW_USER_UNREADABLE_EXIT (6) without launching a reviewer; the
-# review round goes on without those reviewers (docs/units/review.md).
+# REVIEW_USER_UNREADABLE_EXIT (6) without launching a reviewer.
 #
 # Effort vocabularies (edit here — nowhere else — when a CLI's set evolves):
 #   claude : the values `claude --effort` accepts (Claude Code 2.1.304) —

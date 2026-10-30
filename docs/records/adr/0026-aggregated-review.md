@@ -6,7 +6,8 @@ Accepted (operator decisions 2026-10-02, issue #411). D1's source of the externa
 D5's stop on an unreadable configuration amended by ADR-0028 (operator decisions 2026-10-18, issue
 #463). D1's built-in review spawn replaced by script reviewers, and D4's label retired, by ADR-0033
 (issue #485). D3's posting of the one comment on the pull request amended by ADR-0040 (issue #523):
-the comment is the review's output, `<out>/comment.md`.
+the comment is the review's output, `<out>/comment.md`. That output removed by issue #537: the
+findings file is the review's one report.
 
 ## Context
 

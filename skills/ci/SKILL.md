@@ -251,8 +251,6 @@ These hold on every push, every pull request and every pull-request body either 
 
 - Pushing, opening a pull request and editing its body are the module's own commands, never run
   through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
-- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
-  them. Merging is owned entirely by the external review process.
 
 <!-- From <autoflow-root>/docs/units/delivery.md > CI -->
 

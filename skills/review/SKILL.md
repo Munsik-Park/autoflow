@@ -77,7 +77,7 @@ The rules that apply these principles to running and confirming tests and to sec
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
 ```
-review                — the reviewers the operator's configuration names, each run by its own script, and the reviews the target's side leaves on the PR, aggregated into one verdict — each finding once, with its severity and whether it holds
+review                — the reviewers the operator's configuration names, each run by its own script, and their reviews aggregated into one report
 ```
 
 Each module's procedure — what its work owes, its output, its cautions and its module-local `[MUST]`/`[DENY]` constraints — lives in its document, not in this core file. This file retains what crosses modules: the authority rules, how a module runs, the Execution Principles, and the records and the hook (below). Not every part binds every module: a module's command body carries the parts of this core its module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`, and the documents the module uses with them (*Module references* below, *Context Injection*).
@@ -224,40 +224,26 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 U7 Review is one module, the review module, whose contract is
 `<autoflow-root>/docs/contracts/review.json` and whose procedure is this file
 ([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1,
-[`ADR-0033`](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)): one round of a pull request's
-review. It has no unit agent: the session that runs it runs the reviewers, and the aggregation of the
-round's reviews into one verdict is made by a spawned role. A script only reads and reports.
+[`ADR-0033`](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)): one pull request's review.
 
-- **Goal**: the pull request reviewed by every configured reviewer, and one aggregated verdict over
-  their reviews: each finding once, with its severity and whether it holds.
-- **Inputs**: the pull request (`params.pr`) and the round (`params.round`); on a later round, the
-  previous round's findings file; the attempt's record directory, where the earlier rounds' records
-  and the work's records are.
-- **Output**: each reviewer's review record, `<out>/reviews/` (*Reviewer review*), the findings
-  file, `<out>/review-findings.md`, and the round's comment, `<out>/comment.md` (*Review
-  aggregation*).
+- **Goal**: the given pull request reviewed by its configured reviewers, and their reviews aggregated
+  into one report.
+- **Inputs**: the pull request (`params.pr`); on a later review, the previous report; the attempt's
+  record directory, where the earlier reviews' records and the work's records are.
+- **Output**: each reviewer's review record, `<out>/reviews/`, and the report,
+  `<out>/review-findings.md`.
 - **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
   *Inputs, outputs and default*).
-- **What a script reads and reports**: a reviewer run's start check (*Reviewer review*; the run
-  itself is the reviewer's wrapper), by exit code.
-- **Checks**: check-out confirms the outputs' form (`review.json`); what the findings file holds is
-  the aggregation's goal (*Review aggregation*), and the reviews and their aggregation stand outside
-  the work they review.
-- **Result owed**: the report of *End* below.
 
 ## Reviewer review
 
-A run reviews the one pull request its invocation names (`params.pr`, `<owner>/<name>#<N>`), on its
-own diff; each pull request of a change — the host PR and each sub-repo PR alike — is reviewed by a
-run of its own, and a sub-repo PR's review is required, not optional. A run is one round of that
-PR's review (`params.round`, from `1`): it runs every reviewer, and their records go to one
-aggregation (*Review aggregation* below), which writes the round's comment
-([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)).
+A run reviews the one pull request its invocation names (`params.pr`, `<owner>/<name>#<N>`). The
+review rules are `<autoflow-root>/docs/review/review.md`.
 
 The reviewers are the ones the `reviewers:` line of `bash <autoflow-root>/scripts/preflight/check-review-backend.sh`
 names, read rather than recalled — those the operator's `~/.autoflow/config.json` lists, and
 `claude` and `codex` when it lists none ([`reviewer-backend.md`](<autoflow-root>/docs/reviewer-backend.md) > *Config
-location*). Each runs as its own script, launched in the background:
+location*). Each runs as its own script:
 
 ```
 bash <autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>] [--records <attempt-dir>]
@@ -278,88 +264,30 @@ The run is made in a checkout of the repository — the same origin — whose ch
 pull request's head branch at its head: the `claude` reviewer reads that working tree beside the
 pull request's diff.
 
-**The reviews of the target's side.** A review a system on the target's side runs on the pull
-request by itself — a review bot's review or review comment — is a review of the round too. It is
-not launched and leaves no record: the aggregator reads it from the pull request (*Review
-aggregation*). Whether to wait for one that has not yet arrived is the module's judgment.
-
-**An unreadable operator file.** When the operator's `~/.autoflow/config.json` cannot be read as
-configured, `check-review-backend.sh` exits `6` and each wrapper starts no reviewer and exits `6`;
-each prints the marker line `user-config: UNREADABLE <path> — <error>`, which
-`review-start-check.sh` reports as exit `4`. The round goes on without those reviewers, on the
-reviews of the target's side: the aggregation names the missing reviewers with that reason, and the
-run records the unreadable file — its path and the error — as a tool request.
-
 Each review lands in a **review record**, `<out>/reviews/<reviewer>.md` — `<reviewer>` the
 reviewer's name (`claude`, `codex`).
 
 `review-start-check.sh` confirms a run began with a signal scoped to its own PR and reviewer — that
 reviewer's process or a codex session rollout whose prompt names that pull request, or the
-wrapper's completion marker:
-
-| Exit | Meaning | What follows |
-|---|---|---|
-| `0` | started, or already completed with exit 0 | the session ends its turn and waits for the run's completion notification |
-| `1` | no signal within the window (30 s) | the review is launched again, or the reviewer is named unavailable for the round with the reason — the module's judgment |
-| `3` | the wrapper completed with a non-zero exit — the review run failed or left no record | the same |
-| `4` | the wrapper's output carries `user-config: UNREADABLE …` — no reviewer started | the round goes on without those reviewers (*An unreadable operator file* above); no relaunch |
-
-A reviewer that is unavailable for a round — its CLI absent (`check-review-backend.sh` reports it),
-its run failing, or the operator's file unreadable — does not hold the round: the aggregation runs
-on the reviews that exist, and its comment names the reviewer that is missing and why. A round with
-no review at all — no configured reviewer left a record, and the target's side left none — is a
-review-infrastructure failure: the run does not reach its goal, and its output is the failure
-output.
-
-Cautions:
-
-- A review that started is left to finish on its own clock, however long that takes; it is not
-  relaunched because it is slow.
-- Every round runs every reviewer on the pull request's current head
-  (`gh pr view <N> --json headRefOid`).
-- The reviewers of a round may run at once, and runs on the host PR and each sub-repo PR alongside
-  each other; each review is confirmed with its own `--pr` and, for a sub-repo PR, `--repo`.
+wrapper's completion marker, and reports by exit code (the script's header).
 
 ## Review triage
 
-Per reviewed PR, after its round's reviews complete.
-
 ### Review aggregation
 
-**1. The reviews are aggregated by a spawned analysis role.** The session does not read the
-review records or the comment body itself. A subagent —
-`subagent_type: autoflow-analyzer`, on the model
-`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — is
-the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
-reviewer unavailable for the round with the reason, the decision ledger, the earlier rounds'
-findings files and comments in the record directory, and, for a PR whose repository has
-submodules, their paths (its `.gitmodules`) — the locations outside that review's target. It also
-reads the reviews of the target's side from the pull request itself and names each one's author as
-its source.
+How the reviews become one report is the run's own judgment. An `autoflow-analyzer` spawn, on the
+model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names, is available for it.
 
-Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
-severity the reviews disagree on, and weighs each finding (*Whether a finding holds*) is its own; what
-it leaves behind:
-
-- every reviewer's finding, each once, with the reviewers that raised it;
-- each finding's severity and whether it holds, a finding that does not hold with the grounds it
-  does not;
-- the highest severity among the findings that hold;
-- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
-  comment in Korean, `<out>/comment.md`.
-
-A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
-is made is not the aggregator's to state: it is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). It returns
-`{max_severity, findings}`.
-
-**[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
+For reference, a report a later run can act on names the reviewed pull request and its head, and each
+finding once — the reviewers that raised it, its severity
+(`<autoflow-root>/docs/review/review.md` > Severity) and whether it holds, with the grounds of one that
+does not — and the highest severity among the findings that hold.
 
 ### Whether a finding holds
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -373,8 +301,7 @@ A change can loop: each fix answers the case a reviewer — or an evaluation's r
 while the property it asserts stays unmet, and the next review or re-score names another case. No
 spawn checks for this on every round. Whoever reads the finding — the aggregator here, the analysis
 module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
-complaint (the same property asserted, a different witness case; the earlier rounds' findings files
-and comments, and the earlier evaluations in the record directory, are what it compares against)
+complaint (the same property asserted, a different witness case; the earlier rounds' findings files, and the earlier evaluations in the record directory, are what it compares against)
 says so where it writes the finding: with the finding in the findings file, under the analysis
 report, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property
@@ -386,13 +313,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle). Its report names the pull request's URL and head
-commit, the highest severity among the findings that hold (the findings file's `max_severity:`), the
-findings file and the comment, and the round `k` — with the rework count `k − 1` — and, for a host
-pull request whose pointer names a sub-repo pull request's commit, that dependency.
-
-**[MUST]** AutoFlow merges nothing and promotes no draft. The hook denies `gh pr merge` and a push
-to the default branch.
+The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle).
 
 What follows an external merge or close — the attempt's branches and records included — is outside
 AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
@@ -402,7 +323,7 @@ AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge
 # Reviewer Contract
 
 The review module reviews every pull request the delivery module opens with the reviewers the operator's
-configuration names and aggregates their reviews into one verdict
+configuration names and aggregates their reviews into one report
 ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md),
 [ADR-0033](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)). This document
 is the single home for the reviewers — who reviews, on what input, what each one
@@ -420,7 +341,6 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 |----------|-------|---------|
 | `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
 | `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
-| the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Review aggregation*) |
 
 A new reviewer is a name the resolver supports
 (`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper and its
@@ -456,17 +376,14 @@ one entry can name each target's own file.
 
 ```
 Contract: reviewer
-  Output : one review record per reviewer, PR and round —
+  Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
-  Input  : every review record of the PR and round, and the reviews the
-           target's side left on the PR.
-  Output : one PR comment; the PR's findings file (source and disposition per
-           finding). A finding the aggregator rejects is recorded with its
-           grounds and counts toward no verdict.
+  Input  : every review record of the PR.
+  Output : the report, the PR's findings file.
 ```
 
 Each wrapper takes the record path:
@@ -634,12 +551,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 
 It is a script for setting up the environment, and the review module reads its
 `reviewers:` line; its result is no ledger entry
-([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
-CLI does **not** stop a run: the review runs the other reviewers without it and
-the aggregated comment names the omission
-([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*). With an unreadable
-operator file (exit `6`) the review goes on without those reviewers and records
-the file as a tool request (*ibid.*). Auth is **not** probed here: a
+([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). How a review goes on without a reviewer is the run's judgment. Auth is **not** probed here: a
 present-but-unauthenticated reviewer passes and its auth failure surfaces at the
 review run, where it counts as a failed run.
 
@@ -716,7 +628,7 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
-- **Where it is applied**: the analysis report's scope judgments and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+- **Where it is applied**: the analysis report's scope judgments and the scope the feature design states set the change's scope; the build judges what it meets during the work.
 
 ### Trace rule
 - Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
@@ -753,7 +665,7 @@ The rule governs every comment in code a change writes or modifies — implement
 - **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
-The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator, and its fix is a commit no module owns; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
+The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
 
 ### Orphans from this change
 - **[MUST]** Imports, variables, and functions that **your** changes rendered unused are removed in the same commit.
@@ -780,7 +692,7 @@ The build checks the change's diff against this rule (`<autoflow-root>/docs/unit
 A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**.
 
 ### GATE:QUALITY linkage
-GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every scope judgment in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
+GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every scope judgment in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`).
 
 A high-scoring change:
 - resolves the confirmed cause, not only the reported symptom
@@ -805,9 +717,6 @@ The evaluator records each such finding in the item's `reason` and in `recommend
 
 ## Code comments in a target
 
-A comment in a target's code that diverges from its code, or that carries what a comment does not
-carry, never routes the cycle.
-
 - **Severity.** A comment that diverges from its code, or that carries what a comment does not carry
   ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Code comments*),
   is a `Low` finding. It never raises a review's verdict above `Low`
@@ -816,19 +725,11 @@ carry, never routes the cycle.
   therefore never the cause of a low score on any item. Only that
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity its impact sets, as any finding does.
-- **Fix — a commit no module owns.** A comment surfaced by this evaluation's `recommendations`,
-  the build report's comment check or a reviewer's finding is fixed by one commit that deletes
-  comment lines or corrects their sentences and changes nothing else, and it ends there: no re-run, no re-score, and no review round. The commit still runs the lint chain over its staged files
-  ([`core.md`](<autoflow-root>/docs/core.md) > Commit Rules); one made after the delivery module's push is pushed, and
-  CI is confirmed on the new head. A comment whose correct wording is uncertain is deleted, not
-  rewritten (*Code comments* > *Changing commented code*). A fix that changes any line other than a
-  comment, or that removes a defect of its own ground (above), is not this fix.
 - **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and
   which lines those are is the working AI's judgment in that target, with no list kept (*Code
   comments* > *Directives are code*). A defect in one takes the severity of the behavior it
   changes.
-- **This repository is excluded.** Here a comment takes the reviewer's severity as judged, and its
-  fix is made like any other change.
+- **This repository is excluded.** Here a comment takes the reviewer's severity as judged.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
   ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); its fix is the same single commit, on
   the same terms, in that scope.

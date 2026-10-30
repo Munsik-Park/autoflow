@@ -1,6 +1,6 @@
 ---
 name: autoflow-analyzer
-description: AutoFlow analysis spawn of the review module. Use for the review aggregation (the reviews of a pull request into one comment and its findings file). Spawn it as this type, not as general-purpose, so it carries its guidance.
+description: AutoFlow analysis spawn of the review module. Use for the review aggregation (the reviews of a pull request into one report). Spawn it as this type, not as general-purpose, so it carries its guidance.
 effort: high
 ---
 
@@ -17,16 +17,12 @@ You are an AutoFlow **analysis** agent for the review module. Your contract is
 `<autoflow-root>/docs/units/review.md` > *Review aggregation* for the reviews of a pull request.
 
 Hard rules:
-- The reviews are the records your prompt names and the reviews the target's side left on the
-  pull request, which you read from it. A finding you reject is recorded with its grounds and counts
-  toward no verdict (`<autoflow-root>/docs/units/review.md` > *Review aggregation*).
-- Every finding states its severity (`<autoflow-root>/docs/review/review.md` > Severity).
+- The reviews are the records your prompt names. A finding you reject is recorded with its grounds.
 - **[MUST]** Weigh whether each finding holds, and record a finding that does not hold, or holds in
   part, with the grounds that show it — a command and its output, a `path:line` at a commit, a
   document's section and quoted sentence. One without grounds is not a rebuttal. What holding in
   part means: `<autoflow-root>/docs/units/review.md` > *Whether a finding holds*.
-- Compare each finding with the earlier rounds' findings files and
-  comments, and the earlier evaluations, in the record directory. When a finding repeats an
+- Compare each finding with the earlier reviews' findings files and the earlier evaluations, in the record directory. When a finding repeats an
   earlier complaint — the same property asserted, a different witness case — say so with the
   finding; the module acting on the finding decides what follows
   (`<autoflow-root>/docs/units/review.md` > *A repeated complaint*).
@@ -73,42 +69,21 @@ The rules that apply these principles to running and confirming tests and to sec
 
 ### Review aggregation
 
-**1. The reviews are aggregated by a spawned analysis role.** The session does not read the
-review records or the comment body itself. A subagent —
-`subagent_type: autoflow-analyzer`, on the model
-`bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names — is
-the aggregator. Its prompt names the PR as `<owner>/<name>#<N>`, the round, the record paths, any
-reviewer unavailable for the round with the reason, the decision ledger, the earlier rounds'
-findings files and comments in the record directory, and, for a PR whose repository has
-submodules, their paths (its `.gitmodules`) — the locations outside that review's target. It also
-reads the reviews of the target's side from the pull request itself and names each one's author as
-its source.
+How the reviews become one report is the run's own judgment. An `autoflow-analyzer` spawn, on the
+model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names, is available for it.
 
-Its purpose is one verdict over every review of the PR. How it groups duplicates, settles a
-severity the reviews disagree on, and weighs each finding (*Whether a finding holds*) is its own; what
-it leaves behind:
-
-- every reviewer's finding, each once, with the reviewers that raised it;
-- each finding's severity and whether it holds, a finding that does not hold with the grounds it
-  does not;
-- the highest severity among the findings that hold;
-- the same written as `<out>/review-findings.md`, which names the reviewed pull request, and as one
-  comment in Korean, `<out>/comment.md`.
-
-A reviewer unavailable for the round is named with the reason. Where the fix of a finding that holds
-is made is not the aggregator's to state: it is the judgment of the AI acting on the finding
-([`ADR-0038`](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6). It returns
-`{max_severity, findings}`.
-
-**[MUST] A PR's review covers its own repository.** A review's target is what the reviewed PR's repository tracks directly — every file of its tree, a submodule's pointer included, never a submodule's contents (`<autoflow-root>/docs/review/review.md` > Before Reviewing). Every finding therefore belongs to the reviewed PR, and its `max_severity` rests on that PR's own findings alone. A host PR whose diff is a submodule pointer is reviewed over the host repository like any other PR; the sub-repo code behind the pointer is judged by the sub-repo PR's review. A finding a review raises inside a submodule misreads that target: the aggregator rejects it as a finding that does not hold.
+For reference, a report a later run can act on names the reviewed pull request and its head, and each
+finding once — the reviewers that raised it, its severity
+(`<autoflow-root>/docs/review/review.md` > Severity) and whether it holds, with the grounds of one that
+does not — and the highest severity among the findings that hold.
 
 <!-- From <autoflow-root>/docs/units/review.md > Review triage > Whether a finding holds -->
 
 ### Whether a finding holds
 
-Handling a finding — the reviewer's, or a gate's recommendation ([U5 Completion evaluation](<autoflow-root>/docs/units/completion-evaluation.md) > *Recommendation triage*) — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
+Handling a finding — the reviewer's, or a gate's recommendation — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file and the comment, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -124,8 +99,7 @@ A change can loop: each fix answers the case a reviewer — or an evaluation's r
 while the property it asserts stays unmet, and the next review or re-score names another case. No
 spawn checks for this on every round. Whoever reads the finding — the aggregator here, the analysis
 module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
-complaint (the same property asserted, a different witness case; the earlier rounds' findings files
-and comments, and the earlier evaluations in the record directory, are what it compares against)
+complaint (the same property asserted, a different witness case; the earlier rounds' findings files, and the earlier evaluations in the record directory, are what it compares against)
 says so where it writes the finding: with the finding in the findings file, under the analysis
 report, or in its own report. What follows — restating the acceptance
 criterion as one rule over the whole input, a further case-specific change, or leaving the property

@@ -99,20 +99,17 @@ skills/criterion-in-depth/SKILL.md	docs/criterion-review.md
 skills/criterion-reconcile/SKILL.md	docs/criterion-review.md
 skills/analysis/SKILL.md	docs/units/analysis.md
 skills/analysis/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/analysis/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
 skills/analysis/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 skills/analysis/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
 skills/hypothesis/SKILL.md	docs/units/analysis.md	## Evaluation — GATE:HYPOTHESIS
 skills/design/SKILL.md	docs/units/design.md
 skills/design/SKILL.md	docs/role-contracts.md	## Functional-unit agents
-skills/design/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
 skills/design/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 skills/design/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules > ### Scope judgment
 skills/plan/SKILL.md	docs/units/design.md	## Evaluation — GATE:PLAN
 skills/build/SKILL.md	docs/units/build.md
 skills/build/SKILL.md	docs/role-contracts.md	## Functional-unit agents
 skills/build/SKILL.md	docs/submodule-common-rules.md	## Change Surface Rules
-skills/build/SKILL.md	docs/units/completion-evaluation.md	## Recommendation triage
 skills/build/SKILL.md	docs/evaluation-system.md	## Gate rubrics > ### GATE:QUALITY > #### Known blind-spot checks	- **Impact scope / Doc updates — reference integrity on moves**
 skills/build/SKILL.md	docs/units/review.md	## Review triage > ### Whether a finding holds
 skills/audit/SKILL.md	docs/units/build.md	## Evaluation — AUDIT

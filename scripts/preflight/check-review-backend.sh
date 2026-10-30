@@ -23,9 +23,7 @@
 #   exit 0   → every configured reviewer's CLI is present.
 #   exit 1   → a configured reviewer's CLI is absent; a reason on stderr names
 #              it and the two remedies (install the CLI, or list the reviewers
-#              to run in the operator file). Advisory: REVIEW runs the other
-#              reviewers and the aggregated comment records the missing one
-#              (docs/units/review.md > Reviewer review).
+#              to run in the operator file). Advisory.
 #   exit 2   → usage error.
 #   exit 6   → the user file cannot be read as configured: nothing in it
 #              applies, no reviewer is checked, and the fixed marker line
