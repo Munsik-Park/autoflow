@@ -101,7 +101,7 @@ carry, never routes the cycle.
   finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity its impact sets, as any finding does.
 - **Fix — a commit no module owns.** A comment surfaced by this evaluation's `recommendations`,
-  the build report's `## Comment check` or a reviewer's finding is fixed by one commit that deletes
+  the build report's comment check or a reviewer's finding is fixed by one commit that deletes
   comment lines or corrects their sentences and changes nothing else, and it ends there: no re-run, no re-score, and no review round. The commit still runs the lint chain over its staged files
   ([`core.md`](../core.md) > Commit Rules); one made after the delivery module's push is pushed, and
   CI is confirmed on the new head. A comment whose correct wording is uncertain is deleted, not

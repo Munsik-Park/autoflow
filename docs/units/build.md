@@ -54,11 +54,11 @@ These are the rules other documents cite; everything else about the work is the 
   design verifies other than by an executable test ([U3 Design](design.md) > *Test necessity*) is
   still implemented; only its evidence differs. A problem met during the work that the scope does
   not name is judged under [`submodule-common-rules.md`](../submodule-common-rules.md) > Change
-  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
+  Surface Rules > *Scope judgment* and recorded as a scope judgment. Tests verify
   correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
   an assertion. Once the scope is implemented and verified, a further change the module judges
-  useful beyond the scope and the problems its scope judgments include is recorded under
-  `## Scope judgments`, not made.
+  useful beyond the scope and the problems its scope judgments include is recorded as a scope
+  judgment, not made.
 - **Test-first (TDD).** A test that verifies a required behavior — a behavior not yet implemented,
   or a defect reproduced before its fix — is seen failing on the code without the implementation it
   verifies and passing on the code with it, each run shown by its log. A test that records existing
@@ -68,8 +68,7 @@ These are the rules other documents cite; everything else about the work is the 
   gets the code without the implementation — a test commit first, a run at an earlier commit, or
   the implementation set aside for that run only — are the module's. The failing run's log shows
   the failure, the exit status included, and the code it ran on: the commit, and the change set
-  aside for that run if any. No recorded judgment stands in for a failing run. The failing run goes
-  in `## Test-first` only; `## Run record` holds each item's latest run.
+  aside for that run if any. No recorded judgment stands in for a failing run.
 
   The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
   failing run on the code without the implementation and the passing run on the code with it, each
@@ -79,27 +78,23 @@ These are the rules other documents cite; everything else about the work is the 
   their path ([`submodule-common-rules.md`](../submodule-common-rules.md) > Verification and Tools);
   a later run reads them there, in the record directory. A test file goes into the target's tree
   only as the exception: a file the module judges the target should keep — in this repository a
-  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
-  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
-  carries that list into the PR body, and the ci module the CI job that actually ran each file
-  ([U6 Delivery](delivery.md) > *CI*, *Added test files*). Such a file is wired into the target's
-  CI discovery in the same commit.
+  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, recorded
+  with its reason and the CI job expected to run it, and wired into the target's CI discovery.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
   (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
   verified by observation with a tool is looked at with that tool and its observation record written
-  under `<out>/local/`, ending in one result line — `observation: match` or
-  `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
+  under `<out>/local/`, saying whether what it observed matches and, where it does not, what differs
+  (*The tools the work needs*). A tool neither this
   environment nor the target's procedures provide, or what using a tool the environment has lacks,
   is recorded as a tool request — naming what is missing, not the output the tool would give, and
   what the run did instead — and never acquired.
-- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
-  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](../submodule-common-rules.md) >
+- **Comment check.** The comment lines the change's diff adds are read against [`submodule-common-rules.md`](../submodule-common-rules.md) >
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
   commented-out code, and content none of the cases under *What a comment carries* admits, such as a
-  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
-  kept with the reason the match is not the class) and records the result under `## Comment check`.
+  value, count or list copied from another file) —, every hit is disposed of (removed, rewritten, or
+  kept with the reason the match is not the class) and the result is recorded.
   The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the module implements the satisfiable
@@ -113,7 +108,7 @@ These are the rules other documents cite; everything else about the work is the 
   shown later*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
-  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
+  pull-request CI job covers, is recorded `not-run (unexecuted)` and as a tool request.
   A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
   `to`.
 
@@ -153,8 +148,7 @@ worth and where it loses.
   area shares (`## Scope` and the common constraints the design names), its verification rows, a
   note of the repository's conventions (how its tests and lint run, its commit rules) the unit
   writes once, and the diff of a shared file an earlier area changed. From an area: its commits,
-  its `## Test-first`, `## Run record` and `## Lint` rows, its scope judgments and out-of-scope
-  observations, and what a later area needs to know of its changes. To every helper: the AutoFlow
+  its test-first, run and lint records, its scope judgments, and what a later area needs to know of its changes. To every helper: the AutoFlow
   root (the unit's root declaration) and the text of the rules its work follows, from the unit's
   own definition — `<autoflow-root>/docs/core.md` > Instruction Conventions and Rule Scope, by
   which they are read, `<autoflow-root>/docs/core.md` > Commit Rules, `<autoflow-root>/docs/units/build.md` >
@@ -168,7 +162,7 @@ worth and where it loses.
   committing, take no judgment; what they cost is their output carried in the context that reads
   it. A run goes through a command that bounds its time, keeps the full output in a log under
   `<out>/local/`, and prints the exit status, the summary line, the names of failing tests, the
-  first error block and the log's path. That short result fills `## Run record` and `## Test-first`;
+  first error block and the log's path. That short result fills the run and test-first records;
   the log stays the evidence. A run with no bound holds the context that started it, and every
   helper report waiting on that context. A model spawned for each run costs more than it saves:
   each spawn writes its standing prompt anew.
@@ -188,23 +182,30 @@ worth and where it loses.
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
-for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none.
+it up to date rather than rewriting it (*Re-entry* below). It records
+the results below; the headings and the form are the module's, and a matter with nothing to record
+is said to have none.
 
-| Section | Holds | Read by |
-|---|---|---|
-| `## Run record` | each applied criterion and each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, its failing run — the code it ran on (the commit, and the change set aside for that run if any), its log, and the summary line and the non-zero exit status shown in it — and its passing run on the code with the implementation, with that commit and its log | AUDIT (*Test-first*) |
-| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
-| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
-| `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
-| `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
-| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
-| `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
+- Each applied criterion and each item of the verification design, with how it was verified — the
+  command, its log and the summary line read from it, or the observation record — and its latest
+  result, or why it was not verified.
+- Each test that verifies a required behavior: the test, the item it verifies, its failing run — the
+  code it ran on (the commit, and the change set aside for that run if any), its log, and the summary
+  line and the non-zero exit status shown in it — and its passing run on the code with the
+  implementation, with that commit and its log.
+- Each item verified by observation: who observed it — the AI, with which tool, or a person — and its
+  observation record, or that it was delegated to the operator.
+- The documents the change updated and what changed in each, or that it updated none and why.
+- The lint result, per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word,
+  a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds
+  its own.
+- Each scope judgment the work made ([`submodule-common-rules.md`](../submodule-common-rules.md) >
+  Change Surface Rules > *Scope judgment*).
+- The comment check: how much comment the change adds against the lines it adds, and each hit with
+  its `path:line`, class and disposition.
+- Each test file added to the target's tree, its reason and the CI job expected to run it.
+- Each decision the run put to the advisor ([`role-contracts.md`](../role-contracts.md) > Advisor) —
+  its ledger entry, the decision and how the run followed it.
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.
@@ -250,10 +251,7 @@ the committed version's blob and non-empty Decision and Grounds lines → the st
 
 A re-run is a fresh `autoflow-unit-build` spawn by *Unit spawn* above, given the previous report and
 the findings it answers. It fixes what the findings name, reads what earlier runs left in the record
-directory — their reports and their `local/` stores — and brings the build report up to date, not
-rewritten: a row the re-run supersedes is replaced, a test with a `## Test-first` record that the
-re-run changes has that record replaced with its new failing and passing runs, a new commit adds its
-lint rows, and the sections GATE:QUALITY reads carry the current state.
+directory — their reports and their `local/` stores — and brings the build report up to date.
 
 ## Header contract
 

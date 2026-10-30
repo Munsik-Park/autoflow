@@ -72,7 +72,7 @@ invocation names — the target repository, or in a project with sub-repos one s
   confirms zero errors attributable to them, and records one outcome word per chain it identified,
   with the grounds of the identification, as the commit's lint-outcome evidence anchor
   ([`submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on
-  the staged surface*); the build report's `## Lint` table carries it.
+  the staged surface*); the build report records it.
 - **[MUST]** Writes and changes comments under [`submodule-common-rules.md`](submodule-common-rules.md)
   > Change Surface Rules > *Code comments* — a comment attached to code it modifies is updated or
   deleted in the same commit, and deleted when it is uncertain whether it is still true.

@@ -306,7 +306,7 @@ spawn is fresh like any other; its input is narrowed, not its independence.
 
 Binds the GATE:QUALITY form only.
 
-- **[MUST]** Read the build report's `## Out-of-scope observations — guard / boundary logic touched` section, disposition every entry (`defect — scored under <item>` or `not a defect — <reason>`), and record the dispositions in the `refine_observations` output field. A `defect` entry is scored under `Quality` or `Impact scope`. The author's rejection reason is context, not the disposition.
+A suggestion the build report records as rejected is judged on its own: one that is a defect is scored under `Quality` or `Impact scope`, and the author's rejection reason is context, not the judgment. The judgments go in the `refine_observations` output field.
 
 ### Scope judgments (GATE:PLAN / GATE:QUALITY)
 
@@ -336,8 +336,7 @@ scored under the ordinary items.
   code even in comment syntax: a defect in it is scored under the item its behavior belongs to, not
   by this rule. An explanation written beside it is a comment.
 - `Minimal implementation` weighs the comments the change adds by content and by volume — the build
-  report's `## Comment check` section, its `comment-ratio` line included, with the comments in the
-  diff — and records a content or volume finding in its `reason` and in `recommendations` without
+  report's comment check with the comments in the diff — and records a content or volume finding in its `reason` and in `recommendations` without
   lowering its score ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface
   Rules > GATE:QUALITY linkage).
 
@@ -487,7 +486,7 @@ outputs and default*).
 
 Judged before scoring. The goal: a test that verifies a required behavior is seen failing before
 the implementation it verifies ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > *What the build owes* >
-*Test-first*). For each such test the build report's `## Test-first` record names, the evaluator
+*Test-first*). For each such test the build report's test-first record names, the evaluator
 reads the evidence it cites and judges whether the failing run was made on the code without the
 implementation and the passing run on the code with it, each shown by its log — the failing log
 with its non-zero exit status and the code it ran on, the commit and any change set aside for that
@@ -525,7 +524,7 @@ audited commit.
 
 Given the previous evaluation, the evaluator re-scores as *Evaluator conduct* > *Re-score* above
 sets and does not re-derive the whole audit. It judges test-first for each test whose
-`## Test-first` record the build re-run added or replaced, whether or not the re-run made a commit;
+test-first record the build re-run added or replaced, whether or not the re-run made a commit;
 a test whose record is unchanged keeps its previous judgment. The change since that evaluation is
 the commits made after the ones it audited: it re-scores that change against the checklist,
 re-checks each prior finding only where that change touches its file, and inherits the rest.
@@ -555,9 +554,8 @@ range (`commits`) — and the work's outputs:
   checked against, and the scope it states — and the verification design
   (`verification_design`);
 - the build report (`build_report` — [U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report): its run
-  record, manual checklist, maintained documents and lint record, its `## Scope judgments`, section
-  `## Out-of-scope observations — guard / boundary logic touched`, and — on a target — section
-  `## Comment check`;
+  record, manual checklist, maintained documents and lint record, its scope judgments and — on a
+  target — its comment check;
 - the AUDIT evaluation (`audit_evaluation`);
 - the recommendations deferred or separated after earlier evaluations, when there are any
   (`deferred`);
@@ -572,9 +570,6 @@ The cycle's scope records are the scope the feature design states, every
 `## Scope judgments` section in the reports above, and the deferred or separated recommendations
 ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*).
 
-The build report's out-of-scope-observations section is scoring input (*Evaluator conduct* >
-*Build observations* above).
-
 #### Scoring (10 items × 10 points)
 
 Completeness, Quality, Test coverage, Test quality, Security (references AUDIT),
@@ -584,12 +579,12 @@ The `Minimal implementation` item is scored against [`submodule-common-rules.md`
 Guiding rule: prefer the smallest sufficient change that resolves the confirmed problem within the cycle's scope — the acceptance criteria, the confirmed cause, and the problems the cycle's recorded scope judgments include.
 A hunk tracing to none of them fails this item regardless of code quality, and so does a change too narrow to resolve the confirmed cause.
 `Impact scope` is scored against the same section and the same scope from the other side: a directly related problem the cycle's records show, left out with no recorded separation reason, lowers it.
-On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's `comment-ratio` and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Evaluator conduct* > *Code comments in a target* above).
+On a target the item also weighs the comments the change adds, by content and by volume — the volume judged qualitatively from the build report's comment check and the diff, with no threshold — and records what it finds in its `reason` and `recommendations` without lowering its score (the same linkage section, *Comments in a target's code*; *Evaluator conduct* > *Code comments in a target* above).
 
-The build report's records are the subject of three items. `Test coverage` reads `## Run record` and
-`## Manual checklist` (*Test coverage — the run record is the subject* below). `Doc updates` reads
-`## Maintained documents` against the diff: a listed document the diff does not touch is a finding
-of the item. `Commit conventions` reads `## Lint` for every commit of the change against the
+The build report's records are the subject of three items. `Test coverage` reads the run record and
+the manual checklist (*Test coverage — the run record is the subject* below). `Doc updates` reads
+the maintained documents against the diff: a listed document the diff does not touch is a finding
+of the item. `Commit conventions` reads the lint record for every commit of the change against the
 outcome vocabulary and its reason classes
 ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Lint chain on
 the staged surface*): a chain `detected` is a finding of the
@@ -646,14 +641,13 @@ reference value. Each violation caps the named item at 6, below the each-item re
   listing ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*;
   [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *What a cycle
   leaves in the target's tree*); under this item the evaluator confirms that every such file
-  carries, in the build report's `## Test files kept` section, the reason it is kept and the CI job
-  expected to run it — the record the PR body carries — and an added file with no such record caps
+  carries, in the build report, the reason it is kept and the CI job expected to run it, and an added file with no such record caps
   `Test quality` at 6.
 - **Test coverage — the run record is the subject**: the item's subject is not a CI result. For
   each verification-design row verified by a run it is the row's recorded run — the command, the
   log and the summary line read from it, resolved as *Execution discipline* above sets. For a row
   the AI verified by observation it is the row's observation record
-  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report > `## Manual checklist`), confirmed by
+  ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report), confirmed by
   reading the record and opening the artifacts it cites — a screenshot is read as an image — never by observing again;
   a row with no record, or a record whose artifacts are absent, takes the omission path below.
   - **Execution omission is not a defect** ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *A missing run
@@ -716,7 +710,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
     "rescored": ["<item>"], "inherited": ["<item>"],
     "prior_findings": [ { "finding": "<the previous evaluation's finding>", "disposition": "cleared | remains", "ground": "<path:line at <commit SHA> / command + log path + summary line>" } ]
   },
-  "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "defect — scored under <item> | not a defect — <reason>" } ],
+  "refine_observations": [ { "entry": "<suggestion @ path:line at <commit SHA>>", "disposition": "<whether it is a defect, and why>" } ],
   "summary": "overall assessment",
   "recommendations": [ { "subject": "<evaluated artifact path:line at <commit SHA> | evaluated artifact section | criterion id, for a criterion defect>", "item": "<rubric item>", "severity": "<level — <autoflow-root>/docs/review/review.md > Severity>", "finding": "<the finding>" } ]
 }
@@ -738,9 +732,9 @@ when `test_first.confirmed` is true (*Gate rubrics* > AUDIT > *Test-first* above
 |-----|------|----------|---------|
 | `rescore` | object | **on a re-score** — a run given the previous evaluation (absent otherwise) | `rescored` — the items scored afresh; `inherited` — the items whose score is copied from the previous evaluation. Every rubric item appears in exactly one of the two lists. `prior_findings` — one entry per finding in the previous evaluation's `recommendations`, its `finding` the previous text verbatim, with its `disposition` `cleared` or `remains` and the ground re-derived from the change since — for a rebutted finding, from the rebuttal's grounds at the evaluated commit (*Evaluator conduct* > *Re-score* above). |
 
-`refine_observations` (GATE:QUALITY only) records the evaluator's disposition of every entry in
-the build report's `## Out-of-scope observations — guard / boundary logic touched` section (`[]`
-when the section says `none`; *Evaluator conduct* > *Build observations* above).
+`refine_observations` (GATE:QUALITY only) records the evaluator's judgment of each suggestion the
+build report records as rejected (`[]` when it records none; *Evaluator conduct* > *Build
+observations* above).
 
 `recommendations` lists every finding as an object: `subject` — a `path:line` of the evaluated
 artifact at the evaluated commit, or a section of the evaluated artifact — the design documents at
@@ -983,7 +977,7 @@ settling it on an observation by a person, on an environment it cannot drive, or
   ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). AutoFlow names no tool here: which
   tool, and how it is used, is the design's judgment in the target.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
-  observation record, written at BUILD ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report > `## Manual checklist`).
+  observation record, written at BUILD ([U4 Build and verify](<autoflow-root>/docs/units/build.md) > Build report).
 
 <!-- From <autoflow-root>/docs/units/build.md > What the build owes -->
 
@@ -996,11 +990,11 @@ These are the rules other documents cite; everything else about the work is the 
   design verifies other than by an executable test ([U3 Design](<autoflow-root>/docs/units/design.md) > *Test necessity*) is
   still implemented; only its evidence differs. A problem met during the work that the scope does
   not name is judged under [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change
-  Surface Rules > *Scope judgment* and recorded under `## Scope judgments`. Tests verify
+  Surface Rules > *Scope judgment* and recorded as a scope judgment. Tests verify
   correctness; they do not define the solution — no hard-coding to test inputs, no special-casing
   an assertion. Once the scope is implemented and verified, a further change the module judges
-  useful beyond the scope and the problems its scope judgments include is recorded under
-  `## Scope judgments`, not made.
+  useful beyond the scope and the problems its scope judgments include is recorded as a scope
+  judgment, not made.
 - **Test-first (TDD).** A test that verifies a required behavior — a behavior not yet implemented,
   or a defect reproduced before its fix — is seen failing on the code without the implementation it
   verifies and passing on the code with it, each run shown by its log. A test that records existing
@@ -1010,8 +1004,7 @@ These are the rules other documents cite; everything else about the work is the 
   gets the code without the implementation — a test commit first, a run at an earlier commit, or
   the implementation set aside for that run only — are the module's. The failing run's log shows
   the failure, the exit status included, and the code it ran on: the commit, and the change set
-  aside for that run if any. No recorded judgment stands in for a failing run. The failing run goes
-  in `## Test-first` only; `## Run record` holds each item's latest run.
+  aside for that run if any. No recorded judgment stands in for a failing run.
 
   The test-first rule (ADR-0038 D7) is judged by the audit module from this report and git: the
   failing run on the code without the implementation and the passing run on the code with it, each
@@ -1021,27 +1014,23 @@ These are the rules other documents cite; everything else about the work is the 
   their path ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools);
   a later run reads them there, in the record directory. A test file goes into the target's tree
   only as the exception: a file the module judges the target should keep — in this repository a
-  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, listed
-  under `## Test files kept` with its reason and the CI job expected to run it; the delivery module
-  carries that list into the PR body, and the ci module the CI job that actually ran each file
-  ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*). Such a file is wired into the target's
-  CI discovery in the same commit.
+  deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, recorded
+  with its reason and the CI job expected to run it, and wired into the target's CI discovery.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
   (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
   verified by observation with a tool is looked at with that tool and its observation record written
-  under `<out>/local/`, ending in one result line — `observation: match` or
-  `observation: mismatch — <what differs>` (*The tools the work needs*). A tool neither this
+  under `<out>/local/`, saying whether what it observed matches and, where it does not, what differs
+  (*The tools the work needs*). A tool neither this
   environment nor the target's procedures provide, or what using a tool the environment has lacks,
   is recorded as a tool request — naming what is missing, not the output the tool would give, and
   what the run did instead — and never acquired.
-- **Comment check.** Before the module's last commit it reads the comment lines the change's diff adds
-  (`git diff <start>...HEAD`, `<start>` the commit the work on the branch started from) against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+- **Comment check.** The comment lines the change's diff adds are read against [`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
   Change Surface Rules > *Code comments* — the classes a pattern finds (an issue / PR reference, a
   review round, an acceptance-criterion identifier, another file's path, a change-history marker) and
   those found by reading (a restatement of the code, design discussion, another file's contract,
   commented-out code, and content none of the cases under *What a comment carries* admits, such as a
-  value, count or list copied from another file) — disposes of every hit (removed, rewritten, or
-  kept with the reason the match is not the class) and records the result under `## Comment check`.
+  value, count or list copied from another file) —, every hit is disposed of (removed, rewritten, or
+  kept with the reason the match is not the class) and the result is recorded.
   The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the module implements the satisfiable
@@ -1055,7 +1044,7 @@ These are the rules other documents cite; everything else about the work is the 
   shown later*).
 - **Commits.** Every commit follows `<autoflow-root>/docs/core.md` > Commit Rules, the lint chain over its staged files
   included. A lint chain covering a staged file that cannot run in this checkout, and that no
-  pull-request CI job covers, is recorded `not-run (unexecuted)` in `## Lint` and as a tool request.
+  pull-request CI job covers, is recorded `not-run (unexecuted)` and as a tool request.
   A run that makes no commit says why in its report, and its `commits.json` has `from` equal to
   `to`.
 
@@ -1064,23 +1053,30 @@ These are the rules other documents cite; everything else about the work is the 
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). It records what the table below lists,
-for the readers it names; the headings and the form are the module's, and a matter with nothing to
-record is said to have none.
+it up to date rather than rewriting it (*Re-entry* below). It records
+the results below; the headings and the form are the module's, and a matter with nothing to record
+is said to have none.
 
-| Section | Holds | Read by |
-|---|---|---|
-| `## Run record` | each applied criterion and each item of the verification design, with how it was verified — the command, its log and the summary line read from it, or the observation record — and its latest result, or why it was not verified | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Test-first` | each test that verifies a required behavior: the test, the item it verifies, its failing run — the code it ran on (the commit, and the change set aside for that run if any), its log, and the summary line and the non-zero exit status shown in it — and its passing run on the code with the implementation, with that commit and its log | AUDIT (*Test-first*) |
-| `## Manual checklist` | each item verified by observation: who observed it — the AI, with which tool, or a person — and its observation record, or that it was delegated to the operator | GATE:QUALITY `Test coverage`; the delivery module (PR body) |
-| `## Maintained documents` | one line per document the change updated, ``- `<path>` — <what changed>``, or `- none — <reason>` | GATE:QUALITY `Doc updates` |
-| `## Lint` | per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word, a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds its own | GATE:QUALITY `Commit conventions` |
-| `## Scope judgments` | each scope judgment the work made ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Change Surface Rules > *Scope judgment*) | GATE:QUALITY `Minimal implementation`, `Impact scope` |
-| `## Out-of-scope observations — guard / boundary logic touched` | each behavior-changing suggestion the module rejected whose subject is validation, a guard, path / root resolution, an input or output boundary or error handling, and each one it judged directly related — its `path:line` and the behavior it would change | GATE:QUALITY (`refine_observations`) |
-| `## Comment check` | the line `comment-ratio: <added comment lines>/<added lines> (<percent>)`, then one line per hit — `path:line`, class, disposition | GATE:QUALITY (*Code comments in a target*) |
-| `## Test files kept` | each test file added to the target's tree, its reason and the CI job expected to run it | GATE:QUALITY `Test quality`; the delivery module (PR body); the ci module (*Added test files*) |
-| `## Tool requests` | each tool request of the run — what was missing, and what the run did instead — or `none` | the delivery module (PR body) |
-| `## Advisor decisions` | each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) — its ledger entry, the decision and how the run followed it — or `none` | GATE:QUALITY |
+- Each applied criterion and each item of the verification design, with how it was verified — the
+  command, its log and the summary line read from it, or the observation record — and its latest
+  result, or why it was not verified.
+- Each test that verifies a required behavior: the test, the item it verifies, its failing run — the
+  code it ran on (the commit, and the change set aside for that run if any), its log, and the summary
+  line and the non-zero exit status shown in it — and its passing run on the code with the
+  implementation, with that commit and its log.
+- Each item verified by observation: who observed it — the AI, with which tool, or a person — and its
+  observation record, or that it was delegated to the operator.
+- The documents the change updated and what changed in each, or that it updated none and why.
+- The lint result, per commit the run makes on the branch (≥ 7 hex), per chain: the lint outcome word,
+  a `not-run` with its reason class in parentheses; a commit another actor makes on the branch adds
+  its own.
+- Each scope judgment the work made ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+  Change Surface Rules > *Scope judgment*).
+- The comment check: how much comment the change adds against the lines it adds, and each hit with
+  its `path:line`, class and disposition.
+- Each test file added to the target's tree, its reason and the CI job expected to run it.
+- Each decision the run put to the advisor ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor) —
+  its ledger entry, the decision and how the run followed it.
 
 Anything else the module records — how it divided the work, the checks it chose to run and what
 they found — is its own, written where it judges useful.
@@ -1196,7 +1192,7 @@ A `ci-deferred` deferral is discharged by the ci module's `green` verdict on the
 **Evidence anchor** — the committing role's report carries the lint outcome as an anchor class of Reporting Format > *Evidence anchor*, whose single-anchor requirement it satisfies as a per-chain enumeration followed by the grounds of the identification (form and cardinality there).
 
 ### Refactor scope
-A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**, and one judged directly related goes to the build report's out-of-scope-observations section for the evaluator to dispose of (`<autoflow-root>/docs/units/build.md` > Build report).
+A refactor of the change's diff applies the same trace rule: refactor suggestions that touch code outside the change surface are rejected, recorded in the report, and (if worth pursuing) filed as a new issue. A refactor tool's findings are advisory, not licence to expand the change surface. A finding that describes a behavior defect rather than a refactor is not a refactor to apply: the build records its **Scope judgment**.
 
 ### GATE:QUALITY linkage
 GATE:QUALITY's `Minimal implementation` and `Impact scope` items are scored against this section, on one scope: prefer the smallest sufficient change that resolves the confirmed problem within the change's scope. The change's scope is the applied acceptance criteria, the confirmed cause the analysis report records, and the problems its recorded scope judgments include (**Scope judgment**) — a boundary, not a line count. A correctly scoped change is not scored down for being larger than a symptom patch. The evaluator reads the scope records for both items: the feature design's `## Scope` section, every `## Scope judgments` section in the reports the evaluation is given, and the recommendations deferred or separated after earlier evaluations (`deferred`; `<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
@@ -1212,7 +1208,7 @@ A high-scoring change:
 
 `Impact scope` asks the same question from the other side: whether the change reaches what its scope requires. A directly related problem that the attempt's own records show — a scope judgment, a build observation, an earlier evaluation's recommendation — and that the change leaves out with no separation reason recorded lowers it, as does a separation reason that answers neither half of question 2.
 
-**Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the build report's `## Comment check` section (`<autoflow-root>/docs/units/build.md` > Build report) — its `comment-ratio` line and its hits — with the comments in the diff:
+**Comments in a target's code.** The item also weighs the comments the change adds, by content and by volume, reading the build report's comment check (`<autoflow-root>/docs/units/build.md` > Build report) with the comments in the diff:
 - *Content*: a comment that **Code comments** does not admit — a restatement of the code, a design ground, a reference or a history — is depth the AC does not need, as an unneeded hunk is.
 - *Volume*: even where every comment is admitted, the evaluator judges whether their amount, absolute and relative to the code they sit on, exceeds what a reader of the changed code needs — a comment block larger than the logic it explains, for example. The judgment is qualitative, with no ratio threshold, and names the comment blocks it rests on.
 
@@ -1319,7 +1315,7 @@ When a role spawn reports to the session that spawned it, the report is the spaw
    - code change → full 40-char commit SHA
    - test pass  → the run's **log** — the file its output was written to (Testing Standards item 7), cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
    - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](<autoflow-root>/docs/core.md) > Decision Ledger)
-   - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result line (`observation: match` / `observation: mismatch — …`) read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
+   - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → one line per chain the committing role identified, followed by the grounds of the identification — where it looked (the documents, scripts and CI files read) and each CI lint step it did not count as a chain with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. Each line's form follows its outcome word: `clean` / `fixed-and-staged` / `detected` → the command as invoked, its source (document section, script definition or workflow `path:line` and step name) and the result line it produced; `not-run` → the literal `not-run` plus its reason class in parentheses (`ci-deferred` / `unexecuted`, Change Surface Rules > *`not-run` reason classes*), the reason, and the unexecuted chain's identity (its command and source, or the workflow `path:line` and step name), and a `ci-deferred` line additionally names the covering pull-request job (workflow `path:line` plus job/step name) and the trigger evidence that it runs for this pull request — the workflow's `on: pull_request` entry, either no `paths:` filter or one whose patterns match a staged file, and a job and step condition that admits this pull request; a line missing that evidence is `unexecuted`, not `ci-deferred`; `not-covered` → the chain and the file set it covers; `not-applicable` → that word alone, with the grounds naming where the committing role looked. A report citing one chain where the committing role identified several is malformed, not compliant.
 
    Anchors must be deterministically confirmable by their reader — the session that spawned the role, an evaluator — against what produced them (`git show <SHA>` / the summary line read in the cited log / `git show <SHA>:<file>`); a test-pass anchor is confirmed by reading, not by re-running — the command is re-run only when the log is absent or does not carry the line, and the run is then `not-run` and run in place. Reports without an anchor are rejected, not interpreted. This item's line-number forms are for the report; a long-lived document (an ADR, a design or rule document, an issue body) cites a provision by document, section heading and quoted sentence instead.
@@ -1339,7 +1335,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **How a test is run is the target's practice**. AutoFlow prescribes no test command to a target. The role that runs a test — the build unit, or a helper it spawns — finds, in the target checkout it works in, how that target runs its tests: its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree), runs the tests it judges the change requires that way, and records the command, the log and the summary line read from it. What the command executes internally is the target's practice; AutoFlow reads the outcome and adjudicates nothing beyond it. A **run's own check** — a test the target's tree does not keep, a check run before delivery, a manual checklist — lives in the run's store `<out>/local/`, under the record root outside the target's tree; it is authored as an executable file there and **invoked directly by its path**, never through a driver AutoFlow ships. The recorded command **names the asset's absolute path in the store** and is run from the target checkout's root: the asset finds the tree it checks from its working directory (`git rev-parse --show-toplevel`), never from its own location, which is outside every tree. The verification design's table declares the set, and each row's recorded run — its **run record**: command, log path and summary line — is the witness that its asset executed, the log being what the witness is read from. A run that wants one command for several assets writes that driver *as* an asset in the same store. Such an asset is never committed, and stays with the attempt's other records, where a later run reads it. An asset writes its reproducible output — a build result, a copy of a source tree or of another original: an output re-creatable from inputs its record already names, such as a commit and a command — only under the store's reserved path `<out>/local/disposable/`, the one path that can be deleted with nothing the records cite lost; its deletion is outside AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup). Nothing a run record, an observation record or a report cites ever goes there — not a log, a record file, the artifacts an observation left, or the asset itself, whose path the recorded command names — even when it is re-creatable. Whether an output is reproducible and uncited is the writer's judgment; where such an output goes is not. Only the store's top-level `disposable/` is reserved — a `disposable` deeper in the store is kept like any other path — and reproducible output left outside it is a deviation, kept with the rest of the store.
 
-**The tools the work needs are found and used; what is missing is requested, and the run still ends**. Analysis, design, implementation and verification each find the tools they need — a browser to see a screen, a database to see data, a running server to see behavior, any other tool the problem calls for — in this environment (the session's tools, MCP servers included) and in the target (its documents, scripts and workspace structure). AutoFlow names no tool and no method to a target: which tool, what is started and how the result is looked at are the working AI's judgment in that target, recorded with its grounds. A tool that is off, and whose starting procedure the target's documents or scripts carry (a dev server, a compose file, a seed), is started by that procedure, the procedure cited as the ground; one that must outlive a role spawn is started by the main session ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Background execution is the main session's only*), and stopped once the run no longer needs it. A tool that cannot be used has something missing: the tool itself when this environment does not have it — an installation, enabling an MCP server or a browser extension — or, for a tool it has, what using it lacks — access, the purpose and permitted scope of the host or service it reaches, a credential, a permission setting. Providing any of these is outside the assigned scope ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); using a tool the environment already provides is not. What is missing is recorded as a **tool request** — `{missing, instead}` in `<out>/tool-requests.json` and in the run's report: what is missing, named as what is missing and not as the output the tool would give, and what the run did instead, each verification it left unrun or ran on a mock or a person's observation for the lack included. The run does what it can without it — a mock, an observation, a verification left not run, by its own judgment — and ends; the delivery module states every request in the pull request, and the operator decides on it ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). A purpose or permitted scope is a project fact, and its request asks that the operator record it in the project's information ([`core.md`](<autoflow-root>/docs/core.md) > Project Information). A material an acceptance criterion or the issue body points to — a design mockup, an asset, an external document — is opened, and the record of opening it is an input to analysis and to the verification design; an abbreviated example in the issue body does not stand in for it, and a material that cannot be opened is a tool request the same way. A criterion verified with a tool is looked at with that tool once implemented: what was looked at, how, and the artifacts it left are its **observation record** under the run's `<out>/local/` — for a screen, the rendered result compared against the referenced material — and, like a run's log, the record is what is read to confirm it, never a second observation. Where each module does this: `<autoflow-root>/docs/units/analysis.md`, `<autoflow-root>/docs/units/design.md` > *Tools* and `<autoflow-root>/docs/units/build.md` > What the build owes.
+**The tools the work needs are found and used; what is missing is requested, and the run still ends**. Analysis, design, implementation and verification each find the tools they need — a browser to see a screen, a database to see data, a running server to see behavior, any other tool the problem calls for — in this environment (the session's tools, MCP servers included) and in the target (its documents, scripts and workspace structure). AutoFlow names no tool and no method to a target: which tool, what is started and how the result is looked at are the working AI's judgment in that target, recorded with its grounds. A tool that is off, and whose starting procedure the target's documents or scripts carry (a dev server, a compose file, a seed), is started by that procedure, the procedure cited as the ground; one that must outlive a role spawn is started by the main session ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Background execution is the main session's only*), and stopped once the run no longer needs it. A tool that cannot be used has something missing: the tool itself when this environment does not have it — an installation, enabling an MCP server or a browser extension — or, for a tool it has, what using it lacks — access, the purpose and permitted scope of the host or service it reaches, a credential, a permission setting. Providing any of these is outside the assigned scope ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); using a tool the environment already provides is not. What is missing is recorded as a **tool request** — `{missing, instead}` in `<out>/tool-requests.json`: what is missing, named as what is missing and not as the output the tool would give, and what the run did instead, each verification it left unrun or ran on a mock or a person's observation for the lack included. The run does what it can without it — a mock, an observation, a verification left not run, by its own judgment — and ends; the delivery module states every request in the pull request, and the operator decides on it ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Tools*). A purpose or permitted scope is a project fact, and its request asks that the operator record it in the project's information ([`core.md`](<autoflow-root>/docs/core.md) > Project Information). A material an acceptance criterion or the issue body points to — a design mockup, an asset, an external document — is opened, and the record of opening it is an input to analysis and to the verification design; an abbreviated example in the issue body does not stand in for it, and a material that cannot be opened is a tool request the same way. A criterion verified with a tool is looked at with that tool once implemented: what was looked at, how, and the artifacts it left are its **observation record** under the run's `<out>/local/` — for a screen, the rendered result compared against the referenced material — and, like a run's log, the record is what is read to confirm it, never a second observation. Where each module does this: `<autoflow-root>/docs/units/analysis.md`, `<autoflow-root>/docs/units/design.md` > *Tools* and `<autoflow-root>/docs/units/build.md` > What the build owes.
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 

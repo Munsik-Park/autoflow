@@ -136,7 +136,7 @@
                 "entry",
                 "disposition"
               ],
-              "note": "the evaluator's disposition of every entry of the build report's \"## Out-of-scope observations — guard / boundary logic touched\" section; [] when it says none (Q14)"
+              "note": "the evaluator's judgment of each suggestion the build report records as rejected; [] when it records none (Q14)"
             },
             "summary": {
               "type": "string",

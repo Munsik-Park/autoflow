@@ -149,7 +149,7 @@ settling it on an observation by a person, on an environment it cannot drive, or
   ([`core.md`](../core.md) > Development Lifecycle > *Tools*). AutoFlow names no tool here: which
   tool, and how it is used, is the design's judgment in the target.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
-  observation record, written at BUILD ([U4 Build and verify](build.md) > Build report > `## Manual checklist`).
+  observation record, written at BUILD ([U4 Build and verify](build.md) > Build report).
 
 ## Report routing
 
