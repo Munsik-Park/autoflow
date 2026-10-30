@@ -96,7 +96,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](../core.md) > Development Lifecycle).
+The run ends with its output — the report its goal asks for, or the failure output when it does not reach the goal ([`core.md`](../core.md) > Development Lifecycle).
 
 What follows an external merge or close — the attempt's branches and records included — is outside
 AutoFlow ([`git-workflow.md`](../git-workflow.md) > Post-Merge Cleanup).

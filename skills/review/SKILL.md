@@ -1,9 +1,9 @@
 ---
 name: review
 description: >-
-  Run the AutoFlow review module once on an invocation file — the pull
-  request reviewed by every configured reviewer, and one aggregated verdict
-  over their reviews. Use when the operator runs the review module
+  Run the AutoFlow review module once on an invocation file — the given pull
+  request reviewed by its configured reviewers, and their reviews aggregated
+  into one report. Use when the operator runs the review module
   (/autoflow:review <invocation.json>).
 argument-hint: "<invocation.json>"
 ---
@@ -11,7 +11,7 @@ argument-hint: "<invocation.json>"
 AutoFlow root (`<autoflow-root>`): ${CLAUDE_PLUGIN_ROOT}
 An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is never typed into a shell; a bare relative path (`.claude/autoflow.local.json`, the target's own files) is the target's, and `<attempt-dir>/…` is in the attempt's record directory the invocation names (`records`). Where this line is absent — a helper, a shell — `autoflow-root` prints the root.
 
-**Scope** (`$ARGUMENTS`: the invocation file) — one run of the review module (`<autoflow-root>/docs/contracts/review.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes its outputs — what the module's goal asks for, or, when the run does not reach the goal, `<out>/failure.md`: what it did and why — and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round's reviews are aggregated by an `autoflow-analyzer` spawn on the model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
+**Scope** (`$ARGUMENTS`: the invocation file) — one run of the review module (`<autoflow-root>/docs/contracts/review.json`) on that invocation: `bash <autoflow-root>/scripts/contracts/contract.sh check-in <invocation.json>` first — a refused input ends the run with its report —, then the work, which writes its outputs — what the module's goal asks for, or, when the run does not reach the goal, `<out>/failure.md`: what it did and why — and `<out>/tool-requests.json` (`[]` when the run lacked nothing, *Tools* below), then `bash <autoflow-root>/scripts/contracts/contract.sh check-out <invocation.json>`, which writes `<out>/result.json`; the run ends with the report its procedure owes. The session runs the reviewers and aggregates their reviews into one report, as `<autoflow-root>/docs/units/review.md` (below) states it. The invocation's `records` is the attempt's record directory, where earlier runs left their work. Every `Agent` spawn the run makes takes its model from `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` — the advisor's key is `advisor` (*Spawn Model*, below).
 
 **The core in this body** — the parts of `<autoflow-root>/docs/core.md` that the review module uses, by the classification `<autoflow-root>/scripts/skills/core-units.tsv`. Left out, and read in `<autoflow-root>/docs/core.md` when the work needs one: Development Lifecycle > Module procedures: The reference values, criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, ci, The rubric of every evaluation, The evaluation contract; Development Lifecycle > Module references: criterion-screen, criterion-trace, criterion-in-depth, criterion-reconcile, analysis, criteria-apply, hypothesis, design, plan, build, audit, quality, delivery, ci; Team Structure: Evaluation AI, Build module, Functional-unit agents; Evaluation System.
 
@@ -72,7 +72,7 @@ The rules that apply these principles to running and confirming tests and to sec
 | `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
 | `ci` | `/autoflow:ci` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
-| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
+| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers and aggregates their reviews into one report |
 
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
@@ -313,7 +313,7 @@ that did not take — is not this case.
 
 ## End
 
-The run ends with its output — the verdict its goal asks for, or the failure output when it does not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle).
+The run ends with its output — the report its goal asks for, or the failure output when it does not reach the goal ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle).
 
 What follows an external merge or close — the attempt's branches and records included — is outside
 AutoFlow ([`git-workflow.md`](<autoflow-root>/docs/git-workflow.md) > Post-Merge Cleanup).
@@ -327,7 +327,7 @@ configuration names and aggregates their reviews into one report
 ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md),
 [ADR-0033](<autoflow-root>/docs/records/adr/0033-review-unit-and-script-reviewers.md)). This document
 is the single home for the reviewers — who reviews, on what input, what each one
-leaves, their configuration, and their start-confirmation oracle. How a round
+leaves, their configuration, and their start-confirmation oracle. How a review
 runs and how its reviews are aggregated is
 [`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review* and *Review
 aggregation*.

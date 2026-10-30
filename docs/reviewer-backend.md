@@ -5,7 +5,7 @@ configuration names and aggregates their reviews into one report
 ([ADR-0026](records/adr/0026-aggregated-review.md),
 [ADR-0033](records/adr/0033-review-unit-and-script-reviewers.md)). This document
 is the single home for the reviewers — who reviews, on what input, what each one
-leaves, their configuration, and their start-confirmation oracle. How a round
+leaves, their configuration, and their start-confirmation oracle. How a review
 runs and how its reviews are aggregated is
 [`units/review.md`](units/review.md) > *Reviewer review* and *Review
 aggregation*.

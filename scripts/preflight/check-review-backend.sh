@@ -189,7 +189,6 @@ for name in $REVIEW_REVIEWERS; do
     echo "[check-review-backend] reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
     echo "[check-review-backend] remedy 1 — install the ${name} CLI (see docs/reviewer-backend.md)." >&2
     echo "[check-review-backend] remedy 2 — list the reviewers to run, without '${name}', in .review.reviewers of ${REVIEW_USER_CFG_PATH:-\$HOME/.autoflow/config.json}." >&2
-    echo "[check-review-backend] until then REVIEW runs the other reviewers without it, and the aggregated review comment records the omission." >&2
     missing=1
     continue
   fi
