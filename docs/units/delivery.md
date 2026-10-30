@@ -39,7 +39,6 @@ These hold on every push, every pull request and every pull-request body either 
   through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
-- Every pull request a module opens is a draft.
 
 ## Push and pull request
 
@@ -101,12 +100,11 @@ undone.
   The CI part:
   - the verdict and the head it was read on; a later verdict on a head replaces an earlier one;
   - **CI not run.** Where the target's CI does not run for the pull request — no workflow, or a
-    trigger, path filter or condition that excludes it — the body carries the line `CI: not run`,
-    alone on its line, with the ground below it (ADR-0034 D5), and what CI was to run for it (a
-    lint chain left to it, an added test file) is listed as not run. A `green` body carries no such
-    line;
-  - **Added test files.** Beside each test file the change added to the target's tree, the PR body's
-    `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
+    trigger, path filter or condition that excludes it — the body says so, with
+    the ground (ADR-0034 D5), and what CI was to run for it (a
+    lint chain left to it, an added test file) is listed as not run;
+  - **Added test files.** Beside each test file the change added to the target's tree, the PR body
+    records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
   neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.

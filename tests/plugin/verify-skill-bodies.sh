@@ -95,7 +95,6 @@ trap 'rm -rf "$WORK"' EXIT
 ALLOW_SPANS='docs/core.md|scripts/
 docs/core.md|docs/
 docs/units/build.md|scripts/
-docs/git-workflow.md|docs/<issue>-<desc>
 docs/development-guideline.md|docs/
 docs/development-guideline.md|docs/records/
 docs/development-guideline.md|docs/review/
@@ -106,10 +105,9 @@ docs/submodule-common-rules.md|docs/records/design-rationale.md
 docs/units/design.md|docs/records/adr/*
 docs/units/design.md|docs/records/design-rationale.md
 docs/security-checklist.md|scripts/gate/security-checklist.sh'
-# Fenced-block tokens likewise: "<file>|<token>" — a branch name, and the
+# Fenced-block tokens likewise: "<file>|<token>" — the
 # paths of a target's pull-request body in the guide's examples.
-ALLOW_FENCE='docs/git-workflow.md|docs/55-update-api-reference
-docs/pr-body-guide.md|scripts/test/check-suite-manifest.sh
+ALLOW_FENCE='docs/pr-body-guide.md|scripts/test/check-suite-manifest.sh
 docs/pr-body-guide.md|docs/retry.md'
 
 # scope_files <root> — the documents C1/C2 read, relative to <root>.

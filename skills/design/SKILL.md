@@ -198,7 +198,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 ## Git Workflow — Rules
 
-> **Procedural details (bash, branch structure)**: `<autoflow-root>/docs/git-workflow.md`
+> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ### Commit Rules
 
@@ -231,7 +231,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Git procedures**: `<autoflow-root>/docs/git-workflow.md`
+- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 
@@ -417,7 +417,7 @@ changes the criterion:
 
 1. **Design.** The design module chooses how each item is verified, **with its reason stated in
    that row**; GATE:PLAN scores the reason.
-2. **Reviewer (REVIEW).** Every reduced disposition and its reason is carried into the host
+2. **Reviewer (REVIEW).** Every reduced disposition and its reason is stated in the host
    PR body ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*), so the reviewer judges each one on its stated reason.
 3. **Criterion decision.** When the criterion's **content** must change — at the design or later
    (*An acceptance-criterion change shown later* above) — the decision is an

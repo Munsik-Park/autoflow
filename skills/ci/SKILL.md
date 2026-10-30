@@ -189,7 +189,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 ## Git Workflow — Rules
 
-> **Procedural details (bash, branch structure)**: `<autoflow-root>/docs/git-workflow.md`
+> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ### Commit Rules
 
@@ -222,7 +222,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Git procedures**: `<autoflow-root>/docs/git-workflow.md`
+- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 
@@ -269,7 +269,6 @@ These hold on every push, every pull request and every pull-request body either 
   through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
 - **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
   them. Merging is owned entirely by the external review process.
-- Every pull request a module opens is a draft.
 
 <!-- From <autoflow-root>/docs/units/delivery.md > CI -->
 
@@ -296,12 +295,11 @@ These hold on every push, every pull request and every pull-request body either 
   The CI part:
   - the verdict and the head it was read on; a later verdict on a head replaces an earlier one;
   - **CI not run.** Where the target's CI does not run for the pull request — no workflow, or a
-    trigger, path filter or condition that excludes it — the body carries the line `CI: not run`,
-    alone on its line, with the ground below it (ADR-0034 D5), and what CI was to run for it (a
-    lint chain left to it, an added test file) is listed as not run. A `green` body carries no such
-    line;
-  - **Added test files.** Beside each test file the change added to the target's tree, the PR body's
-    `## Verification dispositions` records the CI job whose log shows it run, or that no job ran it,
+    trigger, path filter or condition that excludes it — the body says so, with
+    the ground (ADR-0034 D5), and what CI was to run for it (a
+    lint chain left to it, an added test file) is listed as not run;
+  - **Added test files.** Beside each test file the change added to the target's tree, the PR body
+    records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
 - **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
   neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.
@@ -310,20 +308,18 @@ These hold on every push, every pull request and every pull-request body either 
 
 ### 5. Verification dispositions (검증 처분의 노출)
 
-AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는다 — verification design이
+AutoFlow가 연 host PR은 검증 처분이 읽히게 한다 — verification design이
 실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
-항목)을, 그 row에 적힌 검증 방법과 사유와 함께 나열한다. 처분을 부르는 말은 design의 것이다.
+항목)을, 검증 방법과 사유와 함께 적는다. 처분을 부르는 말은 design의 것이다.
 
-- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
+- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 내용을 요구하지 않는다.
   verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
-- 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
+- 이 내용은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
   방법의 축소를 결정하고, review module의 reviewer가 그 reason의 타당성을 판단하며,
   criterion의 **내용**이 바뀔 때는 그 변경을 보인 모듈이 advisor를 spawn해 정하고 그 결정을 따른다
   ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](<autoflow-root>/docs/units/design.md) >
   *Test necessity* 와 *Report routing*.
-- 형식은 항목 id + 검증 방법 + reason 한 줄. reason은 verification design의 셀을
-  옮겨 적고 새로 쓰지 않는다.
-- 모든 항목이 실행 가능한 test로 검증되면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
+- 예시 형식은 항목 id + 검증 방법 + reason 한 줄이다.
 - target 트리에 남지 않는 한 번 실행한 test는 같은 섹션에 그 항목의 **run record** — build
   report에 기록된 command와 summary line — 를 한 줄로 싣는다
   ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
