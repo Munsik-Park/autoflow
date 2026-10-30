@@ -7,6 +7,7 @@
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
 
 ## Rule Scope — Authority Rules and AI Judgment
 
@@ -214,7 +215,7 @@ In a project whose information names sub-repos, which pull requests a change tak
 <type>(#<issue>): <description>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 

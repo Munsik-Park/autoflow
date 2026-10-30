@@ -21,6 +21,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
 
 ## Rule Scope — Authority Rules and AI Judgment
 
@@ -195,7 +196,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 <type>(#<issue>): <description>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
@@ -861,13 +862,6 @@ append to — not a determined evasion (the same model as `<autoflow-root>/docs/
 Outside the hook's surface: a shell write to a ledger (redirect, `tee`, `sed -i`, a script), and text
 that only imitates an entry (a heading-less field line, a malformed heading).
 
-### Claude Code's advisor tool (`advisorModel`)
-
-Distinct from the advisor sub-agent above: Claude Code's advisor tool
-(<https://code.claude.com/docs/en/advisor>) lets the session's model consult a stronger model
-mid-task. AutoFlow's decisions go to the sub-agent: the tool's model is configurable and its effort
-is not, and Claude decides when to call it, so the decisions above are the sub-agent's (ADR-0025 D7).
-
 ---
 
 <!-- From <autoflow-root>/docs/role-common-rules.md > Communication > Result delivery path by spawn mode -->
@@ -913,7 +907,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default — a target's practice and an invocation's `instructions` come first: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 

@@ -56,7 +56,7 @@ one entry can name each target's own file.
 Contract: reviewer
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
-           in the <autoflow-root>/docs/review/review.md Output Format, in Korean.
+           in the <autoflow-root>/docs/review/review.md Output Format.
   A reviewer posts no PR comment and changes no label.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)

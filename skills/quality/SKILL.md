@@ -21,6 +21,7 @@ An `<autoflow-root>/…` path is under that directory, and `<autoflow-root>` is 
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
 
 ## Rule Scope — Authority Rules and AI Judgment
 
@@ -192,7 +193,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 <type>(#<issue>): <description>
 ```
 
-`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. The format is a reference: a target's own practice and an invocation's `instructions` come first.
+`type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 
 Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit format; whether a commit or PR carries one follows the execution environment (harness) and the operator's settings.
 
@@ -274,8 +275,7 @@ every previous finding dispositioned.
   changes.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
-  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules); its fix is the same single commit, on
-  the same terms, in that scope.
+  ([`core.md`](<autoflow-root>/docs/core.md) > Cross-Project Boundary Rules).
 
 <!-- From <autoflow-root>/docs/submodule-common-rules.md > Change Surface Rules -->
 
@@ -321,7 +321,7 @@ The trace rule rejects scope creep *across* the change surface; this guard rejec
 ### Code comments
 The rule governs every comment in code a change writes or modifies — implementation and test files, in a target and in this repository. Existing comments on code the change leaves untouched stay as they are (**Surrounding code**).
 
-- **[MUST] The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
+- **The test**: a comment carries only a sentence that stays true for as long as the code it sits on is unchanged — however much time passes, and whatever changes in other files.
 - **What a comment carries** — only what a reader cannot recover from the code, and only in one of these cases, each about the code the comment sits on:
   - an external constraint: the behavior of a runtime, a tool, or a protocol the code depends on;
   - an invariant that the code does not make evident;
@@ -336,7 +336,7 @@ The rule governs every comment in code a change writes or modifies — implement
   - commented-out code.
 - **Where that content goes**: a decision and its grounds → the repository's decision record (in this repository, `docs/records/adr/` and `docs/records/design-rationale.md`); change history → the commit message and the PR body; discussion → the attempt's design documents in its record directory and the issue. The only reference a comment carries is at most one ADR identifier (`ADR-0024`).
 - **Test files**: a test's intent is stated in its name and its assertion messages. A comment in a test file carries only the reason for a fixture that the fixture does not make evident.
-- **Changing commented code**: **[MUST]** a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
+- **Changing commented code**: a comment attached to code this change modifies is updated or deleted in the same commit. When it is uncertain whether the comment is still true, delete it.
 - **Directives are code**: a line a tool reads to change its behavior is code even when written in comment syntax — a lint suppression or a type-checker directive, for example — and this rule does not govern it; an explanation written beside it is a comment and does. Which lines are directives is the working AI's judgment in that target; no list is kept.
 
 The build checks the change's diff against this rule (`<autoflow-root>/docs/units/build.md` > What the build owes, *Comment check*). In a target's code, a comment that diverges from its code or carries what this rule sends out of a comment is a `Low` finding for the reviewer and the evaluator; a defect a comment carries on its own ground, such as an exposed credential, takes the severity its impact sets (`<autoflow-root>/docs/units/completion-evaluation.md` > *Code comments in a target*).
@@ -728,8 +728,7 @@ output — is [`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, the output directory (`out`), and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
 2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](<autoflow-root>/docs/core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](<autoflow-root>/docs/core.md) > Context Injection.
-3. **[DENY]** No opinions, interpretations, or leading phrases ("consider that ~", "note that ~", "this is ~ so").
-4. **[DENY]** Do not instruct the Evaluation AI to "only report important/high-severity issues" or to "be conservative" at the finding stage. Let it report all findings and let the score rank them ([`evaluation-system.md`](<autoflow-root>/docs/evaluation-system.md) > *Finding coverage*).
+3. The prompt states what rule 1 names and the invocation's `instructions`.
 
 ### Recording the result
 
@@ -785,7 +784,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default — a target's practice and an invocation's `instructions` come first: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 

@@ -54,5 +54,4 @@ every previous finding dispositioned.
   changes.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope
-  ([`core.md`](../core.md) > Cross-Project Boundary Rules); its fix is the same single commit, on
-  the same terms, in that scope.
+  ([`core.md`](../core.md) > Cross-Project Boundary Rules).
