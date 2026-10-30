@@ -110,7 +110,7 @@
             },
             "scores": {
               "type": "object",
-              "keys_exactly": [
+              "default_items": [
                 "Completeness",
                 "Quality",
                 "Test coverage",
@@ -122,7 +122,7 @@
                 "Commit conventions",
                 "Doc updates"
               ],
-              "note": "each value a number 0-10, or { score, reason }",
+              "note": "the items scored by default; an invocation's instructions may disable an item or add one. Each value a number 0-10, or { score, reason }",
               "required": true
             },
             "rescore": {

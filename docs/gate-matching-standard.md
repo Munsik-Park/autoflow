@@ -10,12 +10,8 @@ Hook gates MUST NOT anchor command detection with a bare line-start `^`.
 
 P1's named primitives are the shared `CMD_BOUNDARY` prefix and the `SCAN`
 buffer defined below, the `GIT_PUSH` token-interposition fragment, the two
-global-scope normalisation functions `_fold_continuations` (logical-line
-folding, shared with the segment fold) and `_strip_heredoc_bodies` (heredoc-body
-removal, applied in that order), and — for the backgrounded suite-run deny — the
-deny-local scan buffer `BG_SCAN` those two build, together with the two composed
-patterns `BG_PREFIX` and `BG_TAIL` matched over it. Each is specified in its own
-refinement subsection below.
+global-scope normalisation function `_fold_continuations` (logical-line
+folding, shared with the segment fold), specified in its own refinement subsection below.
 
 Use a shared command-boundary prefix plus a word boundary on the command
 token:
@@ -112,122 +108,11 @@ Single-pattern gates are unaffected — they match `CMD_BOUNDARY` over the
 whole `SCAN`. Reference: the default-branch push deny in
 `<autoflow-root>/hooks/check-autoflow-gate.sh`.
 
-### Backgrounded-invocation refinement — `BG_SCAN` / `BG_PREFIX` / `BG_TAIL`
-
-The backgrounded suite-run deny (`<autoflow-root>/hooks/check-autoflow-gate.sh`
-Section 1) adds three named primitives to P1's vocabulary.
-
-**`BG_SCAN` reads shell *logical* lines, not physical lines.** `BG_SCAN` is
-built by an ordered **three-stage** pipeline over `COMMAND`:
-
-```sh
-BG_SCAN=$(_fold_continuations <<< "$COMMAND" \
-  | _strip_heredoc_bodies \
-  | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
-[ -n "$COMMAND" ] && [ -z "$BG_SCAN" ] && BG_SCAN=$COMMAND
-```
-
-1. **`_fold_continuations` — logical-line folding.** Each bare trailing `\` and
-   the newline after it become one space (chaining permitted); every other
-   newline is preserved as a real command separator; a trailing CR is stripped
-   before the continuation test. It is the *same* function the segment fold
-   uses (global scope, one definition, as with `CMD_BOUNDARY` and `GIT_PUSH`),
-   a pure `read`/`case` shell loop, and **total** — content is never
-   discarded.
-2. **`_strip_heredoc_bodies` — remove bodies, keep the tail.** Each heredoc
-   introducer token (`<<WORD`, `<<-WORD`, `<<"WORD"`, `<<'WORD'`) is deleted
-   from its own line while the rest of that line — a trailing `&` included — is
-   kept, and the body lines through the matching terminator are removed;
-   processing then **continues**, so no line after a heredoc leaves the buffer.
-   `<<<` is not an introducer (a here-string has no body): the scan steps over
-   it and keeps looking on the same line. On an **unterminated** heredoc the
-   body lines are buffered, not discarded, and emitted at end of input.
-3. **the unquoting `sed`** — described next.
-
-The **fail-closed** guard on the last line is the same invariant the segment
-fold carries at `NOTE (C4)`: a non-empty `COMMAND` that yields an empty buffer
-falls back to the raw `COMMAND`, never to a partially-built buffer. `SCAN` and
-`_SEGMENTS` are untouched by all of this.
-
-**`BG_SCAN` — when a deny may *unquote* a span instead of deleting it.**
-`BG_SCAN` is a deny-local variant — `SCAN` and `_SEGMENTS` are untouched — in
-which a quoted span carrying **no**
-command separator is *unquoted* (quote characters dropped, content kept) while a
-span whose own text carries `;` `&` or `|` is **deleted whole**, as `SCAN`
-deletes it:
-
-(the third stage of the pipeline above):
-
-```sh
-sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g"
-```
-
-Unquoting is admissible only under **both** halves of the following condition:
-
-1. the deny's token test is **anchored at `CMD_BOUNDARY`**; **and**
-2. the unquoting is **bounded to separator-free spans**.
-
-The four alternatives are **ordered** — the safe form is tried first at a span's
-opening quote, the deleting form second — and each consumes a complete span. The
-`sed` replacement is a back-reference, never a newline, so the literal-newline
-constraint above does not apply to it.
-
-**`BG_PREFIX` and `BG_TAIL` are single composed patterns, not co-occurrences.**
-Both are built on `RUN_SUITES`, the command-position invocation matcher
-(`CMD_BOUNDARY` + a wrapper-word group + an optional interpreter + the path
-token), and both are matched **once** over `BG_SCAN`:
-
-```sh
-BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
-BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
-```
-
-They fall on the *single-pattern* side of the segment-scoped co-occurrence MUST
-above. Neither surface may use `_SEGMENTS`.
-
-**The `BG_TAIL` window rule.** The window closes on `;` and on end-of-line —
-the separators that start a *new* command — and stays **open** across `&&` and
-`|`. The `&` must not be preceded by `&` `;` `<` `>` nor followed by `&` or `>`,
-and the intervening run is optional. No `\n` appears in any bracket expression.
-
-**Accepted residuals** (all false *negatives*, per P1's preference for a
-false negative over a realistic false positive):
-
-- the `;` window — `bash …/run-suites.sh --all; echo done &` is admitted,
-  correctly; the brace-group form `{ bash …/run-suites.sh --all; } &` does
-  background the run and is admitted with it;
-- an invocation reached through a wrapper word the group does not name, or
-  through a shell variable holding the path;
-- a quoted argument whose own text ends in a backgrounding-shaped `&` is
-  deleted whole by the span bound, so it cannot be mis-read as backgrounding.
-
-**The terminated-misread swallow — an accepted *under*-inclusive residual.**
-Because `_strip_heredoc_bodies` runs while the buffer is still quoted, a literal
-`<<` inside a quoted argument is read as an introducer. The totality clause
-bounds that misreading in the common case: the body is never terminated, so the
-following real command line is emitted and the deny still fires. It is **not**
-bounded when a later line happens to equal the misread delimiter word exactly —
-
-```
-echo "<< EOF is a heredoc"
-bash <autoflow-root>/scripts/test/run-suites.sh --all &
-EOF
-```
-
-— where the third line terminates the misread body and the invocation is
-swallowed with it, so the form is **admitted** (exit 0). This is the one
-accepted residual in the under-inclusive direction on this surface. Every other
-residual listed above sits in the over-inclusive direction: multiple introducers on one line (`cat <<A <<B`)
-leave B's token and body as ordinary text, an unterminated heredoc keeps its
-body, and a body line ending in a bare `\` is folded into its terminator so the
-body stays in the buffer.
-
 ## Rule P2 — Every Deny Is Unconditional
 
 A hook's denies are absolute prohibitions — actions AutoFlow must never
 perform via the agent's tools (`gh pr merge`, a push to the remote default
-branch, `gh issue create`, a ledger rewrite, a spawn without `model`, a
-backgrounded suite run). None reads a state: each holds in every session, in
+branch, `gh issue create`, a ledger rewrite, a spawn without `model`). None reads a state: each holds in every session, in
 every repository the plugin is installed in
 ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D5).
 

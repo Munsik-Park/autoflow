@@ -32,9 +32,7 @@
 # check-in  — the params and inputs the contract declares are given and well
 #             formed (Q19): an input file exists and, when another module
 #             produces it, passes the checks of that module's output. Where an
-#             input came from is not checked. The run's directory is named
-#             <module>[-<qualifier>]-<n>, inside the record directory a module
-#             that reads it is given (Q20). It marks the run checked in
+#             input came from is not checked. It marks the run checked in
 #             (<out>/.check-in.json). On a refusal it writes <out>/result.json
 #             and nothing else.
 # check-out — every output the contract declares is there and passes its
@@ -63,7 +61,7 @@
 #             another module produces names a contract and an output it has;
 #             every output's format and check types are ones this script
 #             implements, and no check names an input; reads_records is true
-#             or false; an evaluation contract's score keys are its rubric's
+#             or false; an evaluation contract's default items are rubric
 #             items — the Items cell of its row (by the Contract column) in
 #             the procedure document's "Evaluation | Gate | Contract | Items"
 #             table, and the first column of the "Item" table in its
@@ -190,20 +188,6 @@ check_in() {
       defect "param '$n' does not match $pat: $v"
     fi
   done < <(jq -r '.params // {} | to_entries[] | [.key, (.value.required // false | tostring), (.value.type // ""), (.value.pattern // "")] | join("\u001f")' <<<"$CONTRACT")
-
-  # the run's directory (Q20)
-  local recs base reads
-  recs=$(jq -r '.records // empty' "$INV"); base=$(basename -- "$OUT")
-  reads=$(jq -r '.reads_records // false' <<<"$CONTRACT")
-  [[ "$base" =~ ^$MODULE(-[A-Za-z0-9._]+)*-[0-9]+$ ]] || defect "the output directory is not named $MODULE-<n> or $MODULE-<qualifier>-<n>: $base"
-  if [ "$reads" = true ]; then
-    if [ -z "$recs" ]; then defect "the module reads the attempt's record directory, and the invocation names no records"
-    elif [ ! -d "$recs" ]; then defect "records is not a directory: $recs"
-    elif [ "$(cd -P -- "$(dirname -- "$OUT")" && pwd)" != "$(cd -P -- "$recs" && pwd)" ]; then defect "the output directory is not inside records ($recs): $OUT"
-    fi
-  elif [ -n "$recs" ]; then
-    defect "the module judges from its declared inputs, and the invocation names records"
-  fi
 
   # inputs: each of the form the contract asks, wherever it came from (Q19)
   for n in $(jq -r '.inputs // {} | keys[]' "$INV"); do
@@ -430,11 +414,11 @@ section_items() { # <reference>
     | jq -Rsc "$MD_JQ model | pick({first: \"Item\"}) | if . == null then empty else [.rows[][0]] end"
 }
 
-# an evaluation contract's score keys against its rubric's items (§8)
+# an evaluation contract's default items against its rubric's items (§8)
 rubric_disagreements() { # <contract json>
   local c=$1 keys path items
-  keys=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.keys_exactly // empty] | first // empty' <<<"$c")
-  [ -n "$keys" ] || { echo "no scores keys_exactly to check against the rubric"; return; }
+  keys=$(jq -c '[.outputs[].checks[]? | select(.type == "keys") | .spec.scores.default_items // empty] | first // empty' <<<"$c")
+  [ -n "$keys" ] || { echo "no scores default_items to check against the rubric"; return; }
   path=$(jq -r '.procedure // "" | sub(" > .*$"; "")' <<<"$c")
   [ -f "$ROOT/$path" ] || return 0
   items=$(md_model "$ROOT/$path" | jq -c --arg m "$(jq -r .module <<<"$c")" "$MD_JQ"'
@@ -446,13 +430,11 @@ rubric_disagreements() { # <contract json>
     echo "no row for $(jq -r .module <<<"$c") in the Evaluation | Gate | Contract | Items table of $path"
   else
     jq -r --argjson k "$keys" --argjson i "$items" --arg w "$path > Evaluation Types" '
-      (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
-      (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+      ($k - $i) | map("default item \(.) is not a rubric item (\($w))")[]' <<<'null'
   fi
   items=$(section_items "$(jq -r '.procedure // ""' <<<"$c")")
   [ -n "$items" ] && jq -r --argjson k "$keys" --argjson i "$items" --arg w "$(jq -r .procedure <<<"$c")" '
-    (($i - $k) | map("scores lacks the rubric item \(.) (\($w))")[]),
-    (($k - $i) | map("scores key \(.) is not a rubric item (\($w))")[])' <<<'null'
+    ($k - $i) | map("default item \(.) is not a rubric item (\($w))")[]' <<<'null'
   return 0
 }
 

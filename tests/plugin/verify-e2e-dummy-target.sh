@@ -27,8 +27,6 @@
 #          default, and the target's issue-draft directory under it
 #     E2b  autoflow-records makes no attempt: `new`, `dir`, `base` and `claim`
 #          are usage errors that create no branch and no directory
-#     E2c  criterion-ready.sh, run from a subdirectory of the target, prints
-#          the sha256 of the issue body
 #
 #   E3  the gate hook, run as the harness runs it
 #     E3a  a benign command is allowed (exit 0)
@@ -184,14 +182,7 @@ SD="$RECORD_ROOT/$KEY/attempt-7"
 mkdir -p "$SD/criterion-reconcile-1"
 printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
 LEDGER="$SD/issue-7-ledger.md"
-in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
-body_sha="$(cat "$WORK/e2c.out")"
 printf '# ledger\n\n## A1 — e2e\n- Decision: e2e\n- Grounds: e2e\n' > "$LEDGER"
-if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ]; then
-  pass "E2c: criterion-ready.sh, run from a subdirectory, prints the sha256 of the issue body"
-else
-  failc "E2c" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2c.out")"
-fi
 
 # ── E3 ──────────────────────────────────────────────────────────────────────
 echo "== E3: the gate hook, run as the harness runs it =="

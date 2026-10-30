@@ -129,7 +129,7 @@ bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh check                #
 
 **[MUST]** Every `Agent` spawn declares the `model` parameter explicitly. Enforced by the hook (`<autoflow-root>/hooks/check-autoflow-gate.sh`, PreToolUse `Agent`): a spawn without `model` is denied in every session — research and evaluation spawns included. The main session's own model follows the user's session settings (outside this policy).
 
-**[MUST]** The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior run: `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
+The value a spawn declares is **resolved by running the readout**, never recalled from a table or from memory of a prior run: `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>`. Editing one config row is therefore the whole of a policy change — no other file is touched. The hook additionally emits a non-gating advisory when a declared `model` falls outside the set the config admits for that `subagent_type`; it warns and never denies.
 
 **Spawn role declaration**: an AutoFlow role is spawned as its dedicated `subagent_type` — `autoflow-analyzer` / `autoflow-evaluator` / `autoflow-advisor`, the criterion-review agents `autoflow-criterion-tracer` / `autoflow-criterion-analyzer` / `autoflow-criterion-reconciler`, and the functional-unit agents `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build`, defined in `<autoflow-root>/agents/` —, so that it carries its guidance from the start (*Context Injection*); the built-in research types (`Explore` / `Plan` / `claude-code-guide`) are used as they are. `subagent_type` is the one declaration channel. The spawn prompt is never used to infer the spawn's role.
 
@@ -263,8 +263,7 @@ The review makes that premise hold more often; it does not change it.
 
 ## Inputs
 
-- **The issue as filed** — its body as GitHub holds it now, identified by the sha256
-  `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
+- **The issue as filed** — its body as GitHub holds it now, and every material the body or a
   criterion references, opened by the reviewer; one that cannot be opened is recorded with the
   reason.
 - **The target's code** — each repository the issue reaches, read at a named commit (the commit the
@@ -416,8 +415,7 @@ policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model).
 ## Review record
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
-in its own run directory. It names the issue body reviewed by its sha256, as
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records the
+in its own run directory. It records the
 results below; the headings and the form are the module's, and a matter with nothing to record is said
 to have none.
 
@@ -452,8 +450,7 @@ the module puts to a fresh advisor and decides as the advisor decided ([`role-co
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion decisions*).
 
-The record criterion-reconcile writes holds the review's decisions and names, by
-its sha256, the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
+The record criterion-reconcile writes holds the review's decisions (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
 analysis report restates them, with the `[ac-decision]` entries applied
 ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
 were made on.

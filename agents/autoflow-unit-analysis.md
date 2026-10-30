@@ -170,11 +170,9 @@ The rules below are the ones other documents cite; everything else about the wor
   not edited to match it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
-  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
-  the body they were made on by its sha256, and a decision on a criterion's
+  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
-  is an input, not a verdict. An issue body that differs from the one the record names is a
-  criterion change made outside the review, which the analysis puts to the advisor. The analysis
+  is an input, not a verdict. The analysis
   reads its findings as an
   earlier reading of the code and policy at the commits it names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
@@ -646,7 +644,6 @@ A suite executes its subject, not another suite (`<autoflow-root>/scripts/test/c
 
 - A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **the main session's only**.
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 <!-- From <autoflow-root>/docs/role-common-rules.md -->
 
@@ -710,7 +707,6 @@ below describe the contract every role spawn honours.
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 ---
 

@@ -247,15 +247,16 @@ evaluation outputs them with its scores
 ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6):
 
 - average ≥ 7.5;
-- each item ≥ 7;
+- each item scored ≥ 7;
 - a `Security` item at 3 or below → rework (GATE:PLAN, GATE:QUALITY).
 
 ---
 
 ## Evaluation Types
 
-The items each evaluation scores, one `scores` key per item. `<autoflow-root>/scripts/contracts/contract.sh lint`
-checks that the `Contract` column's evaluation contract holds exactly these score keys.
+The items each evaluation scores by default, one `scores` key per item; an invocation's `instructions`
+may disable an item or add one. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that the
+`Contract` column's evaluation contract names these items as its default items.
 
 | Evaluation | Gate | Contract | Items |
 |------------|------|----------|-------|
@@ -263,7 +264,6 @@ checks that the `Contract` column's evaluation contract holds exactly these scor
 | Plan evaluation | GATE:PLAN | `plan` | Decision grounds, Verification fit, Scope, Security |
 | Security audit | AUDIT | `audit` | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies |
 | Quality evaluation | GATE:QUALITY | `quality` | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates |
-| Doc evaluation | — | — | Accuracy, Completeness, Clarity, Format compliance |
 
 What each item is scored by is the gate's rubric (*Gate rubrics* below). The category sets and
 weights should be customised per project. As patterns emerge, humans adjust the criteria.
@@ -280,7 +280,7 @@ These subsections bind every rubric-scored gate unless one names its gate.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)
 
-This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY — and the doc-evaluation form when one is run, as a shared Evaluation AI contract. No gate opts out.
+This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY — as a shared Evaluation AI contract. No gate opts out.
 
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations`. A surviving case may coexist with a score of 7 or higher: the obligation is to record it, not to lower the item.
@@ -696,7 +696,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 
 ```json
 {
-  "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation | doc_evaluation",
+  "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation",
   "issue": "#N",
   "test_first": { "confirmed": true, "read": ["<test — the record and the logs read (failing and passing), and what they show>"] },
   "scores": { "<item>": { "score": 8, "reason": "evidence" } },
@@ -715,7 +715,7 @@ The output carries the scores and their grounds; the reference values they are r
 is given — is `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
 the goal ([ADR-0040](<autoflow-root>/docs/records/adr/0040-a-module-ends-at-its-goal.md) D1).
 
-`scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
+`scores` holds one entry per item scored, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object
 (`{"score": 8, "reason": "..."}`), the score on the 10-point scale; an item whose subject was not
 run carries `{"not_run": [...]}` in its place (*Gate rubrics* > GATE:QUALITY > *Known blind-spot
@@ -789,11 +789,9 @@ The rules below are the ones other documents cite; everything else about the wor
   not edited to match it ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > *Acceptance-criterion
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
 - **Criterion review record.** The issue's criteria were reviewed against the code and policy by
-  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, with
-  the body they were made on by its sha256, and a decision on a criterion's
+  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, and a decision on a criterion's
   content is an `[ac-decision]` entry ([`criterion-review.md`](<autoflow-root>/docs/criterion-review.md)); the record
-  is an input, not a verdict. An issue body that differs from the one the record names is a
-  criterion change made outside the review, which the analysis puts to the advisor. The analysis
+  is an input, not a verdict. The analysis
   reads its findings as an
   earlier reading of the code and policy at the commits it names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
@@ -1251,7 +1249,6 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 ---
 

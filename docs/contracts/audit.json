@@ -83,14 +83,14 @@
             },
             "scores": {
               "type": "object",
-              "keys_exactly": [
+              "default_items": [
                 "Authn/Authz",
                 "Input validation",
                 "Data exposure",
                 "Infra isolation",
                 "Dependencies"
               ],
-              "note": "each value a number 0-10, or { score, reason }",
+              "note": "the items scored by default; an invocation's instructions may disable an item or add one. Each value a number 0-10, or { score, reason }",
               "required_when": {
                 "key": ".test_first.confirmed",
                 "equals": true
