@@ -61,8 +61,8 @@ into one BUILD (ADR-0025):
   (`criterion-in-depth-AC2-1`). Its `instructions`, when given, reach the AI that does the work.
 - A module's outputs are the files it writes in `out`, by the names and forms its contract gives.
   Its default is what it does with its result unless the invocation says otherwise, stated in its
-  contract (`default`) and its procedure. The invocation's `instructions` override the default and
-  never the outputs ([`core.md`](core.md) > Development Lifecycle > *Inputs, outputs and default*).
+  contract (`default`) and its procedure. The invocation's `instructions` override the default
+  ([`core.md`](core.md) > Development Lifecycle > *Inputs, outputs and default*).
 - A run's output is what the module's goal asks for or, when the run does not reach the goal, its
   contract's failure output, `<out>/failure.md`. The run writes its outputs and
   `<out>/tool-requests.json` (`[]` when it lacked nothing), and its

@@ -15,7 +15,7 @@
 # path, several files as an array of paths — the attempt's record directory
 # when the module reads it, the run's output directory inside it and, when
 # the invocation has any, its instructions, which override the module's
-# default and never its outputs (ADR-0040 D5):
+# default (ADR-0040 D5):
 #
 #   { "contract": 1, "module": "design", "params": { "issue": 507 },
 #     "inputs": { "applied_criteria": "<path>", ... },
@@ -168,7 +168,7 @@ check_in() {
   v=$(jq -r '.contract // empty' "$INV")
   [ "$v" = "$(jq -r .contract <<<"$CONTRACT")" ] || defect "the invocation's contract version is '$v', the contract's $(jq -r .contract <<<"$CONTRACT")"
 
-  # instructions: they override the module's default, never its outputs (ADR-0040 D5)
+  # instructions: they override the module's default (ADR-0040 D5)
   if jq -e 'has("instructions")' "$INV" >/dev/null; then
     jq -e '.instructions | type == "string" and test("\\S")' "$INV" >/dev/null || defect "instructions is not a non-empty string"
   fi

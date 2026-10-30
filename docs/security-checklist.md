@@ -16,7 +16,7 @@ The items below are grouped under AUDIT's five rubric items. A rubric item with 
 
 ### 1. Authentication & Authorization
 
-- [ ] `hooks/check-autoflow-gate.sh` denies, in every session and with no state: `gh pr merge`; a push to the remote default branch (`origin/HEAD`, else `main`); `gh issue create` and its REST form; an `Agent` spawn with no explicit `model`; a backgrounded `run-suites.sh`. With no `jq` the same denies, the ledger check aside, are read from the raw input. (Re-verify on any hook change.)
+- [ ] `hooks/check-autoflow-gate.sh` denies, in every session and with no state: `gh pr merge`; a push to the remote default branch (`origin/HEAD`, else `main`); `gh issue create` and its REST form; an `Agent` spawn with no explicit `model`. With no `jq` the same denies, the ledger check aside, are read from the raw input. (Re-verify on any hook change.)
 - [ ] The hook keeps a decision ledger (`issue-<N>-ledger.md`) append-only: a Write/Edit/MultiEdit that changes or removes prior text is denied. (Re-verify on any hook change.)
 
 ### 2. Input Validation

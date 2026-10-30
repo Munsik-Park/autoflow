@@ -83,7 +83,7 @@ Hard rules:
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
-- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
 
@@ -247,16 +247,17 @@ evaluation outputs them with its scores
 ([ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D6):
 
 - average ≥ 7.5;
-- each item scored ≥ 7;
+- each item ≥ 7;
 - a `Security` item at 3 or below → rework (GATE:PLAN, GATE:QUALITY).
 
 ---
 
 ## Evaluation Types
 
-The items each evaluation scores by default, one `scores` key per item; an invocation's `instructions`
-may disable an item or add one. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that the
-`Contract` column's evaluation contract names these items as its default items.
+The items each evaluation scores by default, one `scores` key per item. An invocation's `instructions`
+may disable an item or add one; the rules below that name every rubric item then apply to the items
+the run scores. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that a contract's default
+items are items of this table.
 
 | Evaluation | Gate | Contract | Items |
 |------------|------|----------|-------|

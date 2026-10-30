@@ -12,8 +12,8 @@
 # own, and no AutoFlow file at all — is the target and the working directory of
 # every run. The scripts are run by their installed path and the gate hook with
 # CLAUDE_PLUGIN_ROOT naming the installed copy and CLAUDE_PROJECT_DIR the
-# target, as the harness runs them. `gh` is a stub that answers an issue's
-# lookup with a fixed body and every other lookup with an empty list, so no run
+# target, as the harness runs them. `gh` is a stub that answers every
+# lookup with an empty list, so no run
 # reaches the network. Plain bash + jq/git/tar/grep (no bats, no node/npm).
 #
 # Legs (category: packaging):
@@ -76,12 +76,10 @@ VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
 HOOK="$ROOT/hooks/check-autoflow-gate.sh"
 find "$ROOT" -type f | LC_ALL=C sort > "$WORK/root-before.list"
 
-# The stub gh: an issue's lookup answers a fixed body, every other lookup an
-# empty list; nothing reaches the network.
+# The stub gh: every lookup answers an empty list; nothing reaches the network.
 STUB="$WORK/stub-bin"
 mkdir -p "$STUB"
-printf '#!/usr/bin/env bash\nif [ "$1 $2" = "issue view" ]; then printf %%s %s; else echo "[]"; fi\n' \
-  "'{\"body\":\"e2e body\"}'" > "$STUB/gh"
+printf '#!/usr/bin/env bash\necho "[]"\n' > "$STUB/gh"
 chmod +x "$STUB/gh"
 
 # HOME is a scratch directory: the user file and the record root (its default,
@@ -179,8 +177,7 @@ fi
 # The attempt's record directory: any name under the record root, its ledger
 # issue-<N>-ledger.md, each run in a subdirectory.
 SD="$RECORD_ROOT/$KEY/attempt-7"
-mkdir -p "$SD/criterion-reconcile-1"
-printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
+mkdir -p "$SD"
 LEDGER="$SD/issue-7-ledger.md"
 printf '# ledger\n\n## A1 — e2e\n- Decision: e2e\n- Grounds: e2e\n' > "$LEDGER"
 

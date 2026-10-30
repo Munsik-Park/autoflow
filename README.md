@@ -40,7 +40,7 @@ External review merges the pull request out of band.
 - **Multi-Agent Roles** — functional-unit agents (analysis, design, build), the criterion-review agents, Evaluation AI and advisor with separated responsibilities.
 - **Analysis unit** — one analysis spawn states the current structure as fact, the gap to the request and whether code is the lever, heeding stated bias cautions; a fresh evaluator scores it.
 - **Evaluations** — 10-point scoring, output with the reference pass values (average ≥ 7.5, each item ≥ 7, security ≤ 3 → rework).
-- **Hook Enforcement** — a shell hook denies, in every session, `gh pr merge`, a push to the default branch, `gh issue create`, a ledger rewrite, a spawn without `model` and a backgrounded suite run.
+- **Hook Enforcement** — a shell hook denies, in every session, `gh pr merge`, a push to the default branch, `gh issue create`, a ledger rewrite and a spawn without `model`.
 - **Sub-Repo Support** — a changed sub-repo is delivered on its own PR and the host follows it by its pointer; the project's structure is read from its own information, not classified.
 
 ---
@@ -185,8 +185,8 @@ customisable per project.
 `check-autoflow-gate.sh` keeps the policy denies, in every session and with no
 state: `gh pr merge`; a push to the remote default branch; `gh issue create`; a
 ledger write that changes text already in it, or an authority written by a
-writer that is not its own; an `Agent` spawn without an explicit `model`; and a
-backgrounded suite run ([`docs/core.md`](docs/core.md) > Records and the hook).
+writer that is not its own; and an `Agent` spawn without an explicit `model`
+([`docs/core.md`](docs/core.md) > Records and the hook).
 
 ---
 

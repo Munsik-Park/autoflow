@@ -145,16 +145,17 @@ evaluation outputs them with its scores
 ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D6):
 
 - average ≥ 7.5;
-- each item scored ≥ 7;
+- each item ≥ 7;
 - a `Security` item at 3 or below → rework (GATE:PLAN, GATE:QUALITY).
 
 ---
 
 ## Evaluation Types
 
-The items each evaluation scores by default, one `scores` key per item; an invocation's `instructions`
-may disable an item or add one. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that the
-`Contract` column's evaluation contract names these items as its default items.
+The items each evaluation scores by default, one `scores` key per item. An invocation's `instructions`
+may disable an item or add one; the rules below that name every rubric item then apply to the items
+the run scores. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that a contract's default
+items are items of this table.
 
 | Evaluation | Gate | Contract | Items |
 |------------|------|----------|-------|

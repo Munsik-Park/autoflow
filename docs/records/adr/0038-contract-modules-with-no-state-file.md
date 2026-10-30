@@ -17,7 +17,8 @@ D1's list of modules — delivery split into delivery and ci — and check-out's
 `failed`, are amended by ADR-0039 (issue #518). D1's contract checks — the form of the inputs and
 outputs only — and D4's commits as a range are amended by ADR-0040 (issue #523). The check-in's
 checks of the run's directory and `records` (Q20), the deny of a backgrounded suite run (D5) and the
-fixed score keys are removed by issue #539: the rubric's items are the default.
+fixed score keys are removed by issue #539: the rubric's items are the default. The same issue
+removes the record's `Issue body sha256:` line and `criterion-ready.sh`.
 
 ## Context
 
