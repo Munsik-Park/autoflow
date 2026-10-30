@@ -11,7 +11,7 @@ is in.
   (`--repo <owner/name>` on every call for a sub-repo pull request).
 - `<autoflow-root>/docs/review/review.md` — the review rules, severity levels and Output Format, carried below.
 
-**Output.** One review, in the `<autoflow-root>/docs/review/review.md` Output Format and in Korean,
+**Output.** One review, in the `<autoflow-root>/docs/review/review.md` Output Format and in English by default,
 written to the file the run names. You post no pull-request comment, change no label and do not
 modify the change under review.
 
