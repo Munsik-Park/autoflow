@@ -1,11 +1,11 @@
 # Reviewer Contract
 
 The review module reviews every pull request the delivery module opens with the reviewers the operator's
-configuration names and aggregates their reviews into one verdict
+configuration names and aggregates their reviews into one report
 ([ADR-0026](records/adr/0026-aggregated-review.md),
 [ADR-0033](records/adr/0033-review-unit-and-script-reviewers.md)). This document
 is the single home for the reviewers — who reviews, on what input, what each one
-leaves, their configuration, and their start-confirmation oracle. How a round
+leaves, their configuration, and their start-confirmation oracle. How a review
 runs and how its reviews are aggregated is
 [`units/review.md`](units/review.md) > *Reviewer review* and *Review
 aggregation*.
@@ -19,7 +19,6 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 |----------|-------|---------|
 | `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
 | `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
-| the target's side | what that system reads | a review a system on the target's side runs on the pull request by itself — a review bot — read by the aggregator from the pull request ([`units/review.md`](units/review.md) > *Review aggregation*) |
 
 A new reviewer is a name the resolver supports
 (`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper and its
@@ -55,17 +54,14 @@ one entry can name each target's own file.
 
 ```
 Contract: reviewer
-  Output : one review record per reviewer, PR and round —
+  Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format, in Korean.
   A reviewer posts no PR comment and changes no label.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
-  Input  : every review record of the PR and round, and the reviews the
-           target's side left on the PR.
-  Output : one PR comment; the PR's findings file (source and disposition per
-           finding). A finding the aggregator rejects is recorded with its
-           grounds and counts toward no verdict.
+  Input  : every review record of the PR.
+  Output : the report, the PR's findings file.
 ```
 
 Each wrapper takes the record path:
@@ -107,10 +103,7 @@ run, so every consumer reaches the same verdict on the same file. When it
 cannot be read, nothing in it applies and no reviewer runs: the readout names
 it (`source: user <path>`), and every consumer prints the fixed marker line
 `user-config: UNREADABLE <path> — <error>` and exits `6` — distinct from success,
-from exit `2` and from every exit below; no wrapper starts its reviewer. The
-review module goes on without those reviewers, on the reviews of the target's
-side, and records the unreadable file as a tool request
-([`units/review.md`](units/review.md) > *Reviewer review*); a fixed file is read
+from exit `2` and from every exit below; no wrapper starts its reviewer. A fixed file is read
 anew by the next run.
 
 ### Operator file
@@ -233,12 +226,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 
 It is a script for setting up the environment, and the review module reads its
 `reviewers:` line; its result is no ledger entry
-([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). An absent
-CLI does **not** stop a run: the review runs the other reviewers without it and
-the aggregated comment names the omission
-([`units/review.md`](units/review.md) > *Reviewer review*). With an unreadable
-operator file (exit `6`) the review goes on without those reviewers and records
-the file as a tool request (*ibid.*). Auth is **not** probed here: a
+([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). How a review goes on without a reviewer is the run's judgment. Auth is **not** probed here: a
 present-but-unauthenticated reviewer passes and its auth failure surfaces at the
 review run, where it counts as a failed run.
 

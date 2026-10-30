@@ -479,7 +479,7 @@ mod_desc() {
     quality)             echo "the scores of the built change (GATE:QUALITY)." ;;
     delivery)            echo "the change the build made delivered for the operator to decide on: each criterion's outcome and evidence, how it was shown working, what was not verified and what is left." ;;
     ci)                  echo "CI's verdict on each pull request's head, with its ground." ;;
-    review)              echo "the pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews." ;;
+    review)              echo "the given pull request reviewed by its configured reviewers, and their reviews aggregated into one report." ;;
   esac
 }
 
@@ -498,7 +498,7 @@ mod_work() {
       printf 'The work is one fresh `autoflow-evaluator` spawn on the model `%s %s` names, given the inputs the invocation names and the output directory; it writes `<out>/evaluation.json` and returns its path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI, below).' "$sp" "$key" ;;
     delivery)            printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it.' ;;
     ci)                  printf 'The session does the work itself, as `<autoflow-root>/docs/units/delivery.md` (below) states it.' ;;
-    review)              printf 'The session runs the reviewers, as `<autoflow-root>/docs/units/review.md` (below) states it; the round'"'"'s reviews are aggregated by an `autoflow-analyzer` spawn on the model `%s handoff-review-triage` names.' "$sp" ;;
+    review)              printf 'The session runs the reviewers and aggregates their reviews into one report, as `<autoflow-root>/docs/units/review.md` (below) states it.' ;;
   esac
 }
 

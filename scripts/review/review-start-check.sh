@@ -23,15 +23,12 @@
 #
 # Exit codes:
 #   0   started, or already completed with exit 0
-#   1   no signal within the window — launch the review again once; a second
-#       miss makes that reviewer unavailable for the round
+#   1   no signal within the window
 #   3   the wrapper completed with a non-zero exit — the review run itself
 #       failed, or left no review record
 #   4   the wrapper's output (--log) carries the marker line
 #       `user-config: UNREADABLE <path> — <error>`: the operator's
-#       ~/.autoflow/config.json could not be read, so no reviewer started —
-#       the review round goes on without those reviewers (issue #463;
-#       docs/units/review.md > Reviewer review)
+#       ~/.autoflow/config.json could not be read, so no reviewer started
 #   64  usage
 #
 # Usage: scripts/review/review-start-check.sh --pr <N> [--repo <owner/name>]

@@ -23,15 +23,12 @@
 #   exit 0   → every configured reviewer's CLI is present.
 #   exit 1   → a configured reviewer's CLI is absent; a reason on stderr names
 #              it and the two remedies (install the CLI, or list the reviewers
-#              to run in the operator file). Advisory: REVIEW runs the other
-#              reviewers and the aggregated comment records the missing one
-#              (docs/units/review.md > Reviewer review).
+#              to run in the operator file). Advisory.
 #   exit 2   → usage error.
 #   exit 6   → the user file cannot be read as configured: nothing in it
 #              applies, no reviewer is checked, and the fixed marker line
-#              `user-config: UNREADABLE <path> — <error>` is on stdout. The
-#              review module goes on without those reviewers and records the
-#              file as a tool request. Distinct from 0–4 in both modes.
+#              `user-config: UNREADABLE <path> — <error>` is on stdout.
+#              Distinct from 0–4 in both modes.
 #
 # The default invocation (no `--probe`) is presence-only: a side-effect-free
 # command whose exit encodes a reviewer's auth state does not exist, so auth is
@@ -85,7 +82,7 @@ resolve_review_config check-review-backend
 echo "reviewers: ${REVIEW_REVIEWERS:-none}"
 review_readout
 if [ "$REVIEW_USER_STATE" = unreadable ]; then
-  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it; a review round goes on without those reviewers." >&2
+  echo "[check-review-backend] ${REVIEW_USER_CFG_PATH} cannot be read as configured, so nothing in it applies and no reviewer runs. Fix the file and run again to apply it." >&2
   exit "$REVIEW_USER_UNREADABLE_EXIT"
 fi
 
@@ -191,7 +188,6 @@ for name in $REVIEW_REVIEWERS; do
     echo "[check-review-backend] reviewer '${name}' is unavailable: its CLI '${name}' is not on PATH." >&2
     echo "[check-review-backend] remedy 1 — install the ${name} CLI (see docs/reviewer-backend.md)." >&2
     echo "[check-review-backend] remedy 2 — list the reviewers to run, without '${name}', in .review.reviewers of ${REVIEW_USER_CFG_PATH:-\$HOME/.autoflow/config.json}." >&2
-    echo "[check-review-backend] until then REVIEW runs the other reviewers without it, and the aggregated review comment records the omission." >&2
     missing=1
     continue
   fi

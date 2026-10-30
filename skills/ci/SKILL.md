@@ -71,7 +71,7 @@ The rules that apply these principles to running and confirming tests and to sec
 | `quality` | `/autoflow:quality` | `<autoflow-root>/docs/units/completion-evaluation.md` and `<autoflow-root>/docs/evaluation-system.md` > *Gate rubrics* > GATE:QUALITY | an `autoflow-evaluator` spawn (`gate-quality`) |
 | `delivery` | `/autoflow:delivery` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
 | `ci` | `/autoflow:ci` | `<autoflow-root>/docs/units/delivery.md` | the session itself |
-| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers; the round's reviews are aggregated by an `autoflow-analyzer` spawn (`handoff-review-triage`) |
+| `review` | `/autoflow:review` | `<autoflow-root>/docs/units/review.md` | the session, which runs the reviewers and aggregates their reviews into one report |
 
 A module's command takes the module's invocation file (`/autoflow:<module> <invocation.json>`) and runs the module once on it. Each module runs in a session of its own, and one session can run modules one after another: every input is a file the invocation names. An evaluation's spawn writes its report to `<out>/evaluation.json` and returns the path (`<autoflow-root>/docs/role-contracts.md` > Evaluation AI). The phase and gate names stay as identifiers: the spawn-policy keys and the documents' headings carry them.
 
@@ -251,8 +251,6 @@ These hold on every push, every pull request and every pull-request body either 
 
 - Pushing, opening a pull request and editing its body are the module's own commands, never run
   through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
-- **[MUST]** AutoFlow runs neither `gh pr merge` nor a push to the default branch; the hook denies
-  them. Merging is owned entirely by the external review process.
 
 <!-- From <autoflow-root>/docs/units/delivery.md > CI -->
 

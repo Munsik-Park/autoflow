@@ -30,7 +30,7 @@ These documents are the operating source of truth.
 | [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through the carrier each role starts with (command bodies, agent definitions, reviewers' rule files), target-identity separation, the packaging check and the target check, and the target's own spawn policy. |
-| [Reviewer Contract](reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, and the reviews of the target's side, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
+| [Reviewer Contract](reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Criterion Review](criterion-review.md) | The criterion review's four modules: an attempt's review of the issue's acceptance criteria against the target's code and policy, each item disposed of with its grounds in the review record. |
 | [Issue Proposal Contract](issue-proposal.md) | Draft grammar and filing procedure for new issues: the `gh issue create` deny, the `<autoflow-root>/scripts/issue/create-issue.sh` wrapper that re-runs the duplicate search, and the operator prompt. |
 

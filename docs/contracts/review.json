@@ -4,7 +4,7 @@
   "module": "review",
   "kind": "functional",
   "reads_records": true,
-  "goal": "The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews: each finding once, with its severity and whether it holds.\n",
+  "goal": "The given pull request reviewed by its configured reviewers, and their reviews aggregated into one report.\n",
   "procedure": "docs/units/review.md",
   "params": {
     "issue": {
@@ -15,10 +15,6 @@
       "type": "string",
       "required": true,
       "pattern": "^[^/]+/[^#]+#[0-9]+$"
-    },
-    "round": {
-      "type": "integer",
-      "required": true
     }
   },
   "inputs": {
@@ -36,21 +32,12 @@
       "format": "markdown",
       "many": true,
       "required": false,
-      "note": "one per configured reviewer that ran; a reviewer unavailable for the round is named with the reason in the findings, and the round goes on without it (docs/units/review.md > An unreadable operator file)"
+      "note": "one per configured reviewer that ran"
     },
     "findings": {
       "file": "review-findings.md",
       "format": "markdown",
-      "checks": [],
-      "evaluation": [
-        "each finding of the reviews once, with the reviewers that raised it, its severity (docs/review/review.md > Severity) and whether it holds, a finding that does not hold with its grounds",
-        "every finding of every review is in the file"
-      ]
-    },
-    "comment": {
-      "file": "comment.md",
-      "format": "markdown",
-      "note": "the round's aggregated comment, in Korean",
+      "note": "the report of the review",
       "checks": []
     },
     "failure": {

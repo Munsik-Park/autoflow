@@ -44,7 +44,7 @@ Each finding takes one level, highest first: `Critical`, `High`, `Medium`, `Low`
 - Produce one high-signal overview instead of many scattered observations.
 - Add inline-comment candidates only when a finding maps to a specific changed line.
 - Deliver the review as a review record: when the run names a file, write the whole review to it in the Output Format below; otherwise print it. Post the review to the PR only when the operator asks for it.
-- Do not change a PR's labels. In an AutoFlow review run each review is one input to the aggregation of every review of the PR, which writes the one review comment (`<autoflow-root>/docs/units/review.md` > *Review aggregation*).
+- Do not change a PR's labels. In an AutoFlow review run each review is one input to the aggregation of every review of the PR, which writes the one report (`<autoflow-root>/docs/units/review.md` > *Review aggregation*).
 - Submitting an approval or request-changes review state requires explicit user instruction.
 - Merging, closing issues, and deploying are not allowed during review.
 

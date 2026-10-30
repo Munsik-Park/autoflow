@@ -87,8 +87,7 @@ goes are set here, and the evaluator applies them.
   and its FAIL hypothesis has been searched and dispositioned; the search on that item stops there.
   A defect on it that the evaluator sees afterwards is still reported and scored (*Finding
   coverage* below).
-- A repeated surface is sampled, and the whole evaluation runs under a time cap (*Execution
-  discipline* below).
+- A repeated surface is sampled (*Execution discipline* below).
 
 ### Proportional depth
 
@@ -120,7 +119,7 @@ A change passes two independent quality procedures, and neither stands in for th
   against the reference values (*PASS Criteria* below), are the evaluation's result.
 - **The reviewers** (`<autoflow-root>/docs/review/review.md`; [U7 Review](units/review.md) > *Reviewer review*)
   review each pull request the cycle opened — its diff against the linked acceptance criteria —
-  for defects in the result, and the aggregation of their reviews is one verdict per pull request.
+  for defects in the result, and their reviews are aggregated into one report per pull request.
 - An evaluation that meets the reference values does not clear a reviewer finding, and a clean
   review does not stand in for an evaluation.
 
@@ -259,11 +258,6 @@ finds.
   a FAIL case that survives refutation — escalate on a hit, rather than enumerate by default.
   Coverage of *finding types* is unaffected: the finding-coverage rule above still forbids dropping
   a found issue.
-- **[MUST] Time cap.** An evaluation declares a **wall-clock cap** and reports against it. The cap
-  is **30 minutes** unless the evaluator's instruction declares a different value, in which case
-  the declared value governs and is reported. On reaching the cap the evaluator stops searching,
-  scores what it searched, and states every unsearched item as not searched — **never as clean**:
-  an item whose search was not finished has thin evidence, not a clean one.
 
 ---
 

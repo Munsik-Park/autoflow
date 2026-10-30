@@ -484,14 +484,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `review`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: The pull request reviewed by every configured reviewer, and one aggregated verdict over their reviews: each finding once, with its severity and whether it holds.
+- Goal: The given pull request reviewed by its configured reviewers, and their reviews aggregated into one report.
 - Procedure: `<autoflow-root>/docs/units/review.md`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
 | `pr` | yes | `^[^/]+/[^#]+#[0-9]+$` |
-| `round` | yes | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -501,11 +500,10 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 |---|---|
 | `reviews` | `<out>/reviews/*.md` |
 | `findings` | `<out>/review-findings.md` |
-| `comment` | `<out>/comment.md` |
 | `failure` | `<out>/failure.md` |
 
 ```json
-{"contract":1,"module":"review","params":{"issue":"<issue-number>","pr":"<string>","round":"<integer>"},"inputs":{},"records":"<record directory>","out":"<record directory>/review-<n>"}
+{"contract":1,"module":"review","params":{"issue":"<issue-number>","pr":"<string>"},"inputs":{},"records":"<record directory>","out":"<record directory>/review-<n>"}
 ```
 
 <!-- END generated -->

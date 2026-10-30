@@ -167,8 +167,7 @@ The decisions the design puts to the advisor, and what it does with the advisor'
   defective — a fact it presumes that does not hold, or a scope too narrow or too wide for the problem
   ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion decisions*) — puts the change
   to the advisor and follows the decision ([U4 Build and verify](build.md) > *What the build owes*);
-  a module that takes an evaluation recommendation recording a criterion defect does the same
-  ([U5 Completion evaluation](completion-evaluation.md) > *Recommendation triage*). The decision is
+  a module that takes an evaluation recommendation recording a criterion defect does the same. The decision is
   recorded as above.
 
 **What the advisor is asked, and what it is not.** A reduction in *verification method* — an item
