@@ -56,8 +56,7 @@ The review makes that premise hold more often; it does not change it.
 
 ## Inputs
 
-- **The issue as filed** — its body as GitHub holds it now, identified by the sha256
-  `<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints, and every material the body or a
+- **The issue as filed** — its body as GitHub holds it now, and every material the body or a
   criterion references, opened by the reviewer; one that cannot be opened is recorded with the
   reason.
 - **The target's code** — each repository the issue reaches, read at a named commit (the commit the
@@ -209,8 +208,7 @@ policy row names ([`core.md`](core.md) > Spawn Model).
 ## Review record
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
-in its own run directory. It names the issue body reviewed by its sha256, as
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records the
+in its own run directory. It records the
 results below; the headings and the form are the module's, and a matter with nothing to record is said
 to have none.
 
@@ -245,8 +243,7 @@ the module puts to a fresh advisor and decides as the advisor decided ([`role-co
 advisor decision on a criterion's content is an `[ac-decision]` entry
 ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
-The record criterion-reconcile writes holds the review's decisions and names, by
-its sha256, the body they were made on (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
+The record criterion-reconcile writes holds the review's decisions (*Review record* above). The criteria the later work takes are criteria-apply's output — the issue's criteria, as the
 analysis report restates them, with the `[ac-decision]` entries applied
 ([`core.md`](core.md) > Development Lifecycle) —, and the review record is the evidence the decisions
 were made on.

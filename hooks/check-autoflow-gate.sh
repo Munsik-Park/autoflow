@@ -16,7 +16,6 @@
 #
 # Denies:
 #   - Bash(gh pr merge)             → DENIED (AutoFlow never merges)
-#   - Bash(backgrounded run-suites.sh) → DENIED (foreground only)
 #   - Bash(git push <default br>)   → DENIED: the remote default branch
 #                                     (`origin/HEAD`, else `main`) — a push there
 #                                     is a merge that skips the pull request and
@@ -109,7 +108,6 @@ if ! command -v jq >/dev/null 2>&1; then
   elif printf '%s' "$INPUT" | grep -qE 'gh[[:space:]]+issue[[:space:]]+create\b' \
        || { printf '%s' "$INPUT" | grep -qE 'repos/[^[:space:]"]+/issues([?#[:space:]"]|$)' && printf '%s' "$INPUT" | grep -qE 'POST\b'; }; then _raw_why="'gh issue create' — file through $(af_path scripts/issue/create-issue.sh)"
   elif printf '%s' "$INPUT" | grep -qE "${GIT_PUSH}.*(origin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then _raw_why="a push to ${DENY_BRANCH}"
-  elif printf '%s' "$INPUT" | grep -qE 'run-suites\.sh' && printf '%s' "$INPUT" | grep -qE '"run_in_background"[[:space:]]*:[[:space:]]*true|nohup|setsid|run-suites\.sh[^"]*&[^&]'; then _raw_why="a backgrounded run of run-suites.sh"
   elif printf '%s' "$INPUT" | grep -qE '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' && ! printf '%s' "$INPUT" | grep -qE '"model"[[:space:]]*:[[:space:]]*"[^"]+"'; then _raw_why="an Agent spawn without a 'model'"
   fi
   if [ -n "$_raw_why" ]; then
@@ -143,8 +141,7 @@ SCAN=$(printf '%s' "${COMMAND%%<<*}" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 # ── _fold_continuations (issue #134 c2) ────────────────────────────────────
 # Backslash-newline line-continuation fold, defined at GLOBAL SCOPE beside
 # CMD_BOUNDARY / GIT_PUSH (and for the same reason: every consumer references
-# ONE definition). Two consumers today — the _JOINED segment fold below and the
-# backgrounded-suite-run deny's BG_SCAN pipeline.
+# ONE definition). Its consumer is the _JOINED segment fold below.
 #
 # CONTRACT. Input: text on stdin. Output on stdout: the same text with each bare
 # trailing `\` and the newline after it replaced by a single space (chaining
@@ -224,160 +221,6 @@ $_fc_acc"; fi
   printf '%s' "$_fc_joined"
 }
 
-# ── _strip_heredoc_bodies (issue #134 c2) ──────────────────────────────────
-# Heredoc-body remover, defined at GLOBAL SCOPE. Used by the backgrounded
-# suite-run deny's BG_SCAN pipeline only; SCAN / _JOINED / _SEGMENTS do not
-# read it.
-#
-# WHY IT DELETES-AND-CONTINUES RATHER THAN STOPPING. The earlier `${COMMAND%%<<*}`
-# truncation stopped at the FIRST heredoc introducer, so every later logical line
-# left the deny's buffer: a heredoc that writes a file followed by
-# `bash …/run-suites.sh --all &` — or any earlier `grep -q x <<< "$V"` followed by
-# the same invocation — admitted a genuinely backgrounded whole-tree run. That is
-# the UNDER-inclusive direction, the harmful one for this gate. This function
-# removes bodies and keeps reading to the end of the input instead.
-#
-# CONTRACT. Input: the folded text on stdin. Output on stdout, no trailing
-# newline:
-#   - each heredoc introducer token (`<<WORD`, `<<-WORD`, `<<"WORD"`, `<<'WORD'`)
-#     is deleted FROM ITS OWN LINE and the remainder of that line — including a
-#     trailing `&` — is kept;
-#   - the body lines through the matching terminator are removed, and processing
-#     continues: no line after a heredoc is lost;
-#   - `<<<` is NOT an introducer (a here-string has no body), so the scan steps
-#     over it and keeps looking on the same line;
-#   - the terminator is a body line equal to the delimiter word exactly; under
-#     `<<-`, leading tabs and spaces are stripped before the comparison, and the
-#     delimiter's surrounding quotes are removed before matching.
-#
-# [MUST] TOTALITY ON AN UNTERMINATED HEREDOC. Body lines are BUFFERED, not
-# discarded, until the terminator is seen; if the input ends with the body still
-# open, the buffer is emitted. This is what makes a MISREAD introducer harmless:
-# the strip runs while the buffer is still quoted (stage order — see the BG_SCAN
-# call site), so a literal `<<` inside a quoted argument reads as an introducer.
-# Under the stopping shape that misreading dropped every later line; under this
-# clause it costs only the delimiter-shaped word on that one line, and the
-# following real command line is buffered, never terminated, and emitted.
-#
-# Pure POSIX shell (`read` / `case` / parameter expansion), NOT `sed`, for the
-# reason recorded on _fold_continuations above: matching a heredoc body needs a
-# delimiter carried across lines, which in `sed` means `N`/hold space — the exact
-# primitive class this file removed after the BSD/GNU divergence. Net effect on
-# BG_SCAN: one `sed` stage is REMOVED and none added.
-#
-# Accepted residuals, all OVER-inclusive (content retained, so the deny can only
-# fire more, never less): multiple introducers on one line (`cat <<A <<B`) — only
-# the first is stripped; an unterminated heredoc keeps its body; a body line
-# ending in a bare `\` is folded into the following line before the strip sees it,
-# so such a body merges with its terminator and stays in the buffer.
-#
-# _shb_ltrim: shared leading-space/tab stripper, used both on a candidate
-# terminator line (under `<<-`) and on a parsed delimiter token — the same
-# trim rule applied at two points in the scan below.
-_shb_ltrim() {
-  local _v="$1"
-  while :; do
-    case "$_v" in
-      ' '*|$'\t'*) _v="${_v#?}" ;;
-      *) break ;;
-    esac
-  done
-  printf '%s' "$_v"
-}
-_strip_heredoc_bodies() {
-  local _shb_all='' _shb_first=1 _shb_buf='' _shb_bufn=0
-  local _shb_in=0 _shb_delim='' _shb_dash=0
-  local _shb_line _shb_rest _shb_keep _shb_before _shb_after _shb_orig
-  local _shb_tok _shb_t _shb_c _shb_cmp
-  while IFS= read -r _shb_line || [ -n "$_shb_line" ]; do
-    if [ "$_shb_in" = 1 ]; then
-      _shb_cmp="$_shb_line"
-      if [ "$_shb_dash" = 1 ]; then
-        _shb_cmp=$(_shb_ltrim "$_shb_cmp")
-      fi
-      if [ "$_shb_cmp" = "$_shb_delim" ]; then
-        _shb_in=0; _shb_buf=''; _shb_bufn=0    # terminator: body dropped, keep reading
-      elif [ "$_shb_bufn" = 0 ]; then
-        _shb_buf="$_shb_line"; _shb_bufn=1     # buffered, not discarded (totality)
-      else
-        _shb_buf="$_shb_buf
-$_shb_line"
-      fi
-      continue
-    fi
-    _shb_rest="$_shb_line"
-    _shb_keep=''
-    while :; do
-      case "$_shb_rest" in
-        *'<<'*) : ;;
-        *) _shb_keep="$_shb_keep$_shb_rest"; break ;;
-      esac
-      _shb_before="${_shb_rest%%<<*}"
-      _shb_orig="${_shb_rest#*<<}"
-      case "$_shb_orig" in
-        '<'*)
-          # `<<<` — a here-string, not an introducer: step over it, keep looking.
-          _shb_keep="$_shb_keep$_shb_before<<<"
-          _shb_rest="${_shb_orig#?}"
-          continue
-          ;;
-      esac
-      _shb_tok="$_shb_orig"
-      _shb_dash=0
-      case "$_shb_tok" in -*) _shb_dash=1; _shb_tok="${_shb_tok#-}" ;; esac
-      _shb_tok=$(_shb_ltrim "$_shb_tok")
-      _shb_delim=''; _shb_after=''
-      case "$_shb_tok" in
-        '"'*)
-          _shb_t="${_shb_tok#\"}"
-          case "$_shb_t" in
-            *'"'*) _shb_delim="${_shb_t%%\"*}"; _shb_after="${_shb_t#*\"}" ;;
-          esac
-          ;;
-        "'"*)
-          _shb_t="${_shb_tok#\'}"
-          case "$_shb_t" in
-            *"'"*) _shb_delim="${_shb_t%%\'*}"; _shb_after="${_shb_t#*\'}" ;;
-          esac
-          ;;
-        *)
-          _shb_after="$_shb_tok"
-          while [ -n "$_shb_after" ]; do
-            _shb_c="${_shb_after:0:1}"
-            case "$_shb_c" in
-              ' '|$'\t'|';'|'&'|'|'|'<'|'>'|'('|')') break ;;
-            esac
-            _shb_delim="$_shb_delim$_shb_c"
-            _shb_after="${_shb_after#?}"
-          done
-          ;;
-      esac
-      if [ -z "$_shb_delim" ]; then
-        # No delimiter word (`<<` at end of line, before a metachar, or an
-        # unclosed quote): no body can be matched, so keep the text as ordinary
-        # content — the over-inclusive direction — and keep looking on this line.
-        _shb_keep="$_shb_keep$_shb_before<<"
-        _shb_rest="$_shb_orig"
-        continue
-      fi
-      # Real introducer: drop the token, keep the rest of the line, open the body.
-      _shb_keep="$_shb_keep$_shb_before$_shb_after"
-      _shb_in=1; _shb_buf=''; _shb_bufn=0
-      break
-    done
-    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_keep"; _shb_first=0
-    else _shb_all="$_shb_all
-$_shb_keep"; fi
-  done
-  # Unterminated heredoc at end of input: emit the buffer (totality clause).
-  if [ "$_shb_in" = 1 ] && [ "$_shb_bufn" = 1 ]; then
-    if [ "$_shb_first" = 1 ]; then _shb_all="$_shb_buf"
-    else _shb_all="$_shb_all
-$_shb_buf"; fi
-  fi
-  printf '%s' "$_shb_all"
-}
-
 # ── Section 1: Unconditional blocks (P2) ──
 # AutoFlow never merges and never pushes to the default branch through the
 # agent's tools, in every session. Merging is performed by external review.
@@ -419,79 +262,6 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
     echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied ($(af_path docs/core.md) > Push and PR creation)." >&2
     echo "Merging, issue close, and deployment are owned by an external review process." >&2
-    exit 2
-  fi
-
-  # ── Backgrounded suite-run deny (issue #134; state-independent — P2) ──
-  # A suite run's result is evidence only if the tree stood still under it, and a
-  # backgrounded run outlives the turn that started it. The foreground obligation was prose only
-  # (docs/role-common-rules.md > Bash Execution Mode); it moves to the tool
-  # boundary here. Three surfaces, all reading BG_SCAN (below):
-  #   (a) payload   — .tool_input.run_in_background is true AND the command carries
-  #                   a run-suites.sh invocation token;
-  #   (b) prefix    — BG_PREFIX: a mandatory nohup/setsid wrapper word at the
-  #                   command position of the invocation;
-  #   (c) trailing& — BG_TAIL: the command containing the invocation is terminated
-  #                   by a backgrounding `&` (one `&`, not `&&`, not `&>`, not `2>&1`).
-  # Residual over-block, accepted: a PreToolUse hook has no actor or phase
-  # knowledge, so the operator's own backgrounded sweep is refused too — the remedy
-  # is to run the same command in the foreground. Residual escapes, accepted: a
-  # wrapper word outside the group below, a shell variable holding the path, and
-  # the `{ …; } &` brace-group form (out of P1's threat model, as above).
-  #
-  # BG_SCAN / RUN_SUITES / BG_PREFIX / BG_TAIL — rationale (the unquote-vs-delete
-  # split, the ordered-alternative argument, the token-interposition shape shared
-  # with GIT_PUSH, and the BG_TAIL window rule) is documented once, in full, at
-  # docs/gate-matching-standard.md > "Backgrounded-invocation refinement —
-  # BG_SCAN / BG_PREFIX / BG_TAIL (applied)"; this deny's OWN scan buffer — SCAN
-  # and _SEGMENTS are untouched.
-  # BG_SCAN — an ordered THREE-STAGE pipeline over COMMAND (issue #134 c2), with a
-  # fail-closed guard. Stage order is load-bearing and each boundary is argued:
-  #   1. _fold_continuations — a `\`<newline> continuation is ONE logical shell
-  #      command, but `grep -qE` is line-oriented, so `… run-suites.sh --all \`⏎`&`
-  #      put the invocation token and its terminating `&` on two physical lines and
-  #      no surface matched. Folding FIRST also makes an introducer sitting on a
-  #      continued line (`… --all \`⏎`<<EOF &`) visible to stage 2, and restores
-  #      quote parity for stage 3 on a quoted span split across a continuation.
-  #   2. _strip_heredoc_bodies — remove heredoc BODIES, keep every later line
-  #      (see the function's own WHY block). Runs BEFORE unquoting because a body
-  #      is arbitrary text and routinely carries an unbalanced apostrophe (`it's`),
-  #      which would corrupt stage 3's quote pairing for every real command line
-  #      after it. The reverse order buys nothing symmetric: unquoting KEEPS the
-  #      contents of a separator-free quoted span, so `git commit -m "a << b"`
-  #      still presents a bare `<<` to the strip. That misread is not avoided by
-  #      reordering — it is made harmless by the strip's totality clause.
-  #   3. the unquoting sed — unchanged from cycle 1.
-  BG_SCAN=$(_fold_continuations <<< "$COMMAND" \
-    | _strip_heredoc_bodies \
-    | sed -E "s/\"([^\";&|]*)\"|\"[^\"]*\"|'([^';&|]*)'|'[^']*'/\1\2/g")
-  # NOTE (bg-fail-closed): the same invariant as C4 above, stated here rather than
-  # left to inference. In a security gate an empty buffer fails OPEN, and this
-  # cycle grows BG_SCAN from one parameter expansion plus one sed into a
-  # two-function, one-sed substitution read by ALL THREE deny surfaces — so the
-  # surface on which an empty result could arise widens rather than narrows. The
-  # fallback is the RAW COMMAND, not a partially-built buffer: it is the only text
-  # guaranteed to be real content.
-  [ -n "$COMMAND" ] && [ -z "$BG_SCAN" ] && BG_SCAN=$COMMAND
-  BG_WRAPPER='(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|nohup|setsid|env|time|command)[[:space:]]+)*'
-  BG_INTERP='((sh|bash|zsh|dash|ksh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?'
-  RUN_SUITES_TAIL="${BG_INTERP}([^[:space:];&|]*/)?run-suites\.sh"
-  RUN_SUITES="${CMD_BOUNDARY}${BG_WRAPPER}${RUN_SUITES_TAIL}"
-  # BG_PREFIX — RUN_SUITES_TAIL with the wrapper word made MANDATORY; BG_WRAPPER
-  # appears on both sides of it so `env FOO=1 nohup bash …` and `nohup setsid
-  # bash …` match too.
-  BG_PREFIX="${CMD_BOUNDARY}${BG_WRAPPER}(nohup|setsid)[[:space:]]+${BG_WRAPPER}${RUN_SUITES_TAIL}"
-  BG_TAIL="${RUN_SUITES}"'([^;]*[^&;<>])?&([^&>]|$)'
-  RUN_IN_BACKGROUND=$(echo "$INPUT" | jq -r '.tool_input.run_in_background // empty' 2>/dev/null)
-  _bg_deny=0
-  if [ "$RUN_IN_BACKGROUND" = "true" ] && printf '%s' "$BG_SCAN" | grep -qE "$RUN_SUITES"; then
-    _bg_deny=1
-  elif printf '%s' "$BG_SCAN" | grep -qE "$BG_PREFIX|$BG_TAIL"; then
-    _bg_deny=1
-  fi
-  if [ "$_bg_deny" = 1 ]; then
-    echo "BLOCKED: a backgrounded run of $(af_path scripts/test/run-suites.sh) is denied — run it in the foreground ($(af_path docs/role-common-rules.md) > Bash Execution Mode)." >&2
-    echo "A backgrounded suite run outlives the turn that started it, so its result cannot be keyed to the capture-point tree and starves the foreground verification it is meant to certify." >&2
     exit 2
   fi
 

@@ -17,7 +17,8 @@ role is its goal, and its default holds only what it does with its result by def
 commits are its goal, its default nothing beyond its outputs; the delivery's goal is the change
 delivered for the operator to decide on, its default the pointer commit, the push and the draft pull
 requests with their bodies. The operator's decision of 2026-10-30 on the pull request's fourth review
-round is applied to D5: the review's outputs are its result, its default nothing beyond them.
+round is applied to D5: the review's outputs are its result, its default nothing beyond them. D5's
+clause that the instructions never change the outputs is removed by issue #539.
 
 ## Context
 

@@ -73,7 +73,7 @@ recorded in your report. Return only your artifact paths, commit SHAs and a summ
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
-- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
 
@@ -829,7 +829,6 @@ A suite executes its subject, not another suite (`<autoflow-root>/scripts/test/c
 
 - A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **the main session's only**.
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 <!-- From <autoflow-root>/docs/role-common-rules.md -->
 
@@ -893,7 +892,6 @@ below describe the contract every role spawn honours.
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 ---
 

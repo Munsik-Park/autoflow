@@ -152,8 +152,10 @@ evaluation outputs them with its scores
 
 ## Evaluation Types
 
-The items each evaluation scores, one `scores` key per item. `<autoflow-root>/scripts/contracts/contract.sh lint`
-checks that the `Contract` column's evaluation contract holds exactly these score keys.
+The items each evaluation scores by default, one `scores` key per item. An invocation's `instructions`
+may disable an item or add one; the rules of this document that name every rubric item then apply to
+the items the run scores. `<autoflow-root>/scripts/contracts/contract.sh lint` checks that a contract's default
+items are items of this table.
 
 | Evaluation | Gate | Contract | Items |
 |------------|------|----------|-------|
@@ -161,7 +163,6 @@ checks that the `Contract` column's evaluation contract holds exactly these scor
 | Plan evaluation | GATE:PLAN | `plan` | Decision grounds, Verification fit, Scope, Security |
 | Security audit | AUDIT | `audit` | Authn/Authz, Input validation, Data exposure, Infra isolation, Dependencies |
 | Quality evaluation | GATE:QUALITY | `quality` | Completeness, Quality, Test coverage, Test quality, Security, Fit, Impact scope, Minimal implementation, Commit conventions, Doc updates |
-| Doc evaluation | — | — | Accuracy, Completeness, Clarity, Format compliance |
 
 What each item is scored by is the gate's rubric (*Gate rubrics* below). The category sets and
 weights should be customised per project. As patterns emerge, humans adjust the criteria.
@@ -178,7 +179,7 @@ These subsections bind every rubric-scored gate unless one names its gate.
 
 ### Pre-scoring FAIL hypothesis (consider-the-opposite)
 
-This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY — and the doc-evaluation form when one is run, as a shared Evaluation AI contract. No gate opts out.
+This subsection binds **every rubric-scored gate** — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY — as a shared Evaluation AI contract. No gate opts out.
 
 - **[MUST]** Form the FAIL hypothesis first: adopt the hypothesis **"this deliverable must FAIL"** and search for the strongest evidence supporting it, framed in the terms of this evaluation's own rubric items. The search re-derives the deliverable's cited anchors from the current source (`path:line`, command output, `git show HEAD:<file>`) rather than accepting the deliverable's own account of them.
 - **[MUST]** Attempt to refute each FAIL case found. A refuted case does not affect the score. A case that survives refutation is carried into the affected item's `reason` and listed in `recommendations`. A surviving case may coexist with a score of 7 or higher: the obligation is to record it, not to lower the item.
@@ -594,7 +595,7 @@ evaluation contract's (`<autoflow-root>/docs/contracts/<module>.json` > `outputs
 
 ```json
 {
-  "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation | doc_evaluation",
+  "type": "hypothesis_evaluation | plan_evaluation | security_audit | quality_evaluation",
   "issue": "#N",
   "test_first": { "confirmed": true, "read": ["<test — the record and the logs read (failing and passing), and what they show>"] },
   "scores": { "<item>": { "score": 8, "reason": "evidence" } },
@@ -613,7 +614,7 @@ The output carries the scores and their grounds; the reference values they are r
 is given — is `<out>/failure.md` in place of `evaluation.json`: what it did and why it did not reach
 the goal ([ADR-0040](records/adr/0040-a-module-ends-at-its-goal.md) D1).
 
-`scores` holds one entry per rubric item of the evaluated gate, keyed by the item's name
+`scores` holds one entry per item scored, keyed by the item's name
 (*Evaluation Types* above). Each value is either a number (`8`) or an object
 (`{"score": 8, "reason": "..."}`), the score on the 10-point scale; an item whose subject was not
 run carries `{"not_run": [...]}` in its place (*Gate rubrics* > GATE:QUALITY > *Known blind-spot

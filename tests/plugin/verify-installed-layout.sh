@@ -27,7 +27,7 @@
 #         item of that document; no hook message names a bare docs/ or
 #         scripts/ path
 #     R2  the denies the hook emits from the installed copy (issue filing,
-#         a model-less spawn, a backgrounded suite run, a merge, a push to
+#         a model-less spawn, a merge, a push to
 #         the default branch, a ledger rewrite), with no state anywhere, name
 #         only installed paths that exist, and their cited sections resolve
 #     R3  the read-dedup hook's citation of the core resolves in the installed
@@ -208,7 +208,6 @@ deny_case() {  # <name> <target> <payload> <expected stderr fragment>
 }
 deny_case issue    "$T"  "$(bash_payload 'gh issue create --title x')" "$ROOT/docs/issue-proposal.md"
 deny_case nomodel  "$T"  '{"tool_name":"Agent","tool_input":{"subagent_type":"autoflow-evaluator","prompt":"x"}}' "$ROOT/docs/core.md > Spawn Model"
-deny_case suites   "$T"  "$(bash_payload 'nohup bash scripts/test/run-suites.sh --all')" "$ROOT/docs/role-common-rules.md > Bash Execution Mode"
 deny_case merge    "$T"  "$(bash_payload 'gh pr merge 7')" "$ROOT/docs/core.md > Push and PR creation"
 deny_case push     "$T"  "$(bash_payload 'git push origin main')" "$ROOT/docs/core.md > Push and PR creation"
 deny_case ledger   "$T"  "$(jq -n --arg f "$LEDGER" '{tool_name:"Edit",tool_input:{file_path:$f,old_string:"## no identifier here",new_string:"## rewritten"}}')" "$ROOT/docs/decision-ledger.md"

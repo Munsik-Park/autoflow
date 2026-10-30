@@ -12,8 +12,8 @@
 # own, and no AutoFlow file at all — is the target and the working directory of
 # every run. The scripts are run by their installed path and the gate hook with
 # CLAUDE_PLUGIN_ROOT naming the installed copy and CLAUDE_PROJECT_DIR the
-# target, as the harness runs them. `gh` is a stub that answers an issue's
-# lookup with a fixed body and every other lookup with an empty list, so no run
+# target, as the harness runs them. `gh` is a stub that answers every
+# lookup with an empty list, so no run
 # reaches the network. Plain bash + jq/git/tar/grep (no bats, no node/npm).
 #
 # Legs (category: packaging):
@@ -27,8 +27,6 @@
 #          default, and the target's issue-draft directory under it
 #     E2b  autoflow-records makes no attempt: `new`, `dir`, `base` and `claim`
 #          are usage errors that create no branch and no directory
-#     E2c  criterion-ready.sh, run from a subdirectory of the target, prints
-#          the sha256 of the issue body
 #
 #   E3  the gate hook, run as the harness runs it
 #     E3a  a benign command is allowed (exit 0)
@@ -78,12 +76,10 @@ VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
 HOOK="$ROOT/hooks/check-autoflow-gate.sh"
 find "$ROOT" -type f | LC_ALL=C sort > "$WORK/root-before.list"
 
-# The stub gh: an issue's lookup answers a fixed body, every other lookup an
-# empty list; nothing reaches the network.
+# The stub gh: every lookup answers an empty list; nothing reaches the network.
 STUB="$WORK/stub-bin"
 mkdir -p "$STUB"
-printf '#!/usr/bin/env bash\nif [ "$1 $2" = "issue view" ]; then printf %%s %s; else echo "[]"; fi\n' \
-  "'{\"body\":\"e2e body\"}'" > "$STUB/gh"
+printf '#!/usr/bin/env bash\necho "[]"\n' > "$STUB/gh"
 chmod +x "$STUB/gh"
 
 # HOME is a scratch directory: the user file and the record root (its default,
@@ -181,17 +177,9 @@ fi
 # The attempt's record directory: any name under the record root, its ledger
 # issue-<N>-ledger.md, each run in a subdirectory.
 SD="$RECORD_ROOT/$KEY/attempt-7"
-mkdir -p "$SD/criterion-reconcile-1"
-printf '# Criterion review\n' > "$SD/criterion-reconcile-1/criterion-review.md"
+mkdir -p "$SD"
 LEDGER="$SD/issue-7-ledger.md"
-in_target "$T/src" bash "$ROOT/scripts/preflight/criterion-ready.sh" hash --issue 7 >"$WORK/e2c.out" 2>&1; rc=$?
-body_sha="$(cat "$WORK/e2c.out")"
 printf '# ledger\n\n## A1 — e2e\n- Decision: e2e\n- Grounds: e2e\n' > "$LEDGER"
-if [ "$rc" -eq 0 ] && [ "$body_sha" = "$(printf 'e2e body' | { shasum -a 256 2>/dev/null || sha256sum; } | cut -d' ' -f1)" ]; then
-  pass "E2c: criterion-ready.sh, run from a subdirectory, prints the sha256 of the issue body"
-else
-  failc "E2c" "rc=$rc out=$(tr '\n' '|' < "$WORK/e2c.out")"
-fi
 
 # ── E3 ──────────────────────────────────────────────────────────────────────
 echo "== E3: the gate hook, run as the harness runs it =="

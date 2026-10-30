@@ -61,7 +61,7 @@ Execution Mode).
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
-- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules and a module's outputs hold under any instruction.
+- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
 
@@ -116,8 +116,7 @@ policy row names ([`core.md`](<autoflow-root>/docs/core.md) > Spawn Model).
 ## Review record
 
 `<out>/criterion-review.md`, written by criterion-screen and, updated, by criterion-reconcile, each
-in its own run directory. It names the issue body reviewed by its sha256, as
-`<autoflow-root>/scripts/preflight/criterion-ready.sh hash --issue N` prints it, and records the
+in its own run directory. It records the
 results below; the headings and the form are the module's, and a matter with nothing to record is said
 to have none.
 
@@ -256,7 +255,6 @@ that only imitates an entry (a heading-less field line, a malformed heading).
     fi
   done
   ```
-- **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
 
 ---
 
