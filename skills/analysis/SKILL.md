@@ -198,7 +198,7 @@ AutoFlow does not classify a project's repository structure and keeps no file of
 
 ## Git Workflow — Rules
 
-> **Procedural details (bash, branch structure)**: `<autoflow-root>/docs/git-workflow.md`
+> **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 
 ### Commit Rules
 
@@ -231,7 +231,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - **Evaluation system**: `<autoflow-root>/docs/evaluation-system.md`
 - **Module contracts**: `<autoflow-root>/docs/contracts/<module>.json`, checked by `<autoflow-root>/scripts/contracts/contract.sh`
 - **Criterion review (the four criterion modules)**: `<autoflow-root>/docs/criterion-review.md`
-- **Git procedures**: `<autoflow-root>/docs/git-workflow.md`
+- **Commit format and issue closing**: `<autoflow-root>/docs/git-workflow.md`
 - **Repo boundary rules**: `<autoflow-root>/docs/repo-boundary-rules.md`
 - **Sub-repo common rules**: `<autoflow-root>/docs/submodule-common-rules.md`
 

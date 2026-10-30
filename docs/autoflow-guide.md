@@ -528,4 +528,4 @@ is accepted — an anchor-less report is rejected, not interpreted), The route i
 - [`evaluation-system.md`](evaluation-system.md) — the evaluator's standard, scoring, the reference pass values and the rubrics of all four evaluations.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.
 - [`repo-boundary-rules.md`](repo-boundary-rules.md) — cross-repo coordination.
-- [`git-workflow.md`](git-workflow.md) — bash procedures, branch structure.
+- [`git-workflow.md`](git-workflow.md) — the commit format and issue closing.

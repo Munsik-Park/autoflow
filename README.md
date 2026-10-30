@@ -137,7 +137,7 @@ autoflow/
 │   ├── autoflow-guide.md              # Index of the modules
 │   ├── contracts/                     # One contract per module (JSON), checked by scripts/contracts/contract.sh
 │   ├── evaluation-system.md           # Evaluation scoring details
-│   ├── git-workflow.md                # Git procedures
+│   ├── git-workflow.md                # Commit format, issue closing
 │   ├── repo-boundary-rules.md         # Cross-repo coordination rules
 │   ├── submodule-common-rules.md      # Sub-repo shared rules
 │   ├── role-common-rules.md       # Shared role-spawn behavior rules
@@ -218,7 +218,7 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 | [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`docs/core.md` > Context Injection — Role-Scoped Document Routing) |
 | [AutoFlow Guide](docs/autoflow-guide.md) | Index of the modules: each one's kind, procedure document, and what it takes and gives |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, the reference pass values, output format |
-| [Git Workflow](docs/git-workflow.md) | Branch naming, commits, PR process |
+| [Git Workflow](docs/git-workflow.md) | Commit format, issue closing |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |

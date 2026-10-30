@@ -49,20 +49,18 @@ reviewers to infer hidden design intent from unrelated repository documents.
 
 ### 5. Verification dispositions (검증 처분의 노출)
 
-AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는다 — verification design이
+AutoFlow가 연 host PR은 검증 처분이 읽히게 한다 — verification design이
 실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
-항목)을, 그 row에 적힌 검증 방법과 사유와 함께 나열한다. 처분을 부르는 말은 design의 것이다.
+항목)을, 검증 방법과 사유와 함께 적는다. 처분을 부르는 말은 design의 것이다.
 
-- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 섹션을 요구하지 않는다.
+- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 내용을 요구하지 않는다.
   verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
-- 이 섹션은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
+- 이 내용은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
   방법의 축소를 결정하고, review module의 reviewer가 그 reason의 타당성을 판단하며,
   criterion의 **내용**이 바뀔 때는 그 변경을 보인 모듈이 advisor를 spawn해 정하고 그 결정을 따른다
   ([`role-contracts.md`](role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](units/design.md) >
   *Test necessity* 와 *Report routing*.
-- 형식은 항목 id + 검증 방법 + reason 한 줄. reason은 verification design의 셀을
-  옮겨 적고 새로 쓰지 않는다.
-- 모든 항목이 실행 가능한 test로 검증되면 섹션을 생략하지 않고 그 사실을 한 줄로 적는다.
+- 예시 형식은 항목 id + 검증 방법 + reason 한 줄이다.
 - target 트리에 남지 않는 한 번 실행한 test는 같은 섹션에 그 항목의 **run record** — build
   report에 기록된 command와 summary line — 를 한 줄로 싣는다
   ([U6 Delivery](units/delivery.md) > *Push and pull request*).
@@ -94,8 +92,8 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
 
 ### 6. 수용 기준 대조
 
-운영자 주도 PR과 AutoFlow PR 모두, PR body에 linked issue의 수용 기준을 대조하는 절을
-싣는다.
+운영자 주도 PR과 AutoFlow PR 모두, PR body에 linked issue의 수용 기준을 대조해 두면
+리뷰어가 기준별 충족 여부를 바로 읽을 수 있다.
 
 - 절 머리에 결과가 어느 commit 기준인지 밝힌다: "`<sha>` 시점의 결과".
 - 기준마다 한 줄로 쓴다: 기준 번호(AutoFlow PR은 applied criteria의 id),
@@ -120,8 +118,8 @@ AutoFlow가 연 host PR body는 `## Verification dispositions` 섹션을 싣는�
 
 ### 7. 도구 요청
 
-AutoFlow PR body는 작업의 모든 도구 요청 — invocation이 주는 각 실행의 `tool-requests.json`
-(`tool_requests`) — 을 싣는다. 요청마다 없었던 것, 대신 한 것, 그 때문에 검증하지 못한 것을 한 줄로
+AutoFlow PR body에는 작업의 도구 요청 — invocation이 주는 각 실행의 `tool-requests.json`
+(`tool_requests`) — 을 적는다. 요청마다 없었던 것, 대신 한 것, 그 때문에 검증하지 못한 것을 한 줄로
 적어, 운영자가 도구를 갖추고 다시 실행할지, PR을 닫고 도구를 따로 갖출지, merge하고 도구를 더할지
 정할 수 있게 한다 ([U6 Delivery](units/delivery.md) > *Push and pull request*).
 
