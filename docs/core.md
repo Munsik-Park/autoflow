@@ -234,7 +234,7 @@ Attribution lines (such as `Co-Authored-By`) are not part of the AutoFlow commit
 - No direct commits to main — always branch + PR.
 - No `feat`/`fix` commit while tests fail → use `wip`.
 - `git status` before every commit.
-- **[MUST]** Before committing, the committing role — every role that commits, the main session included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. Elaboration (identifying the chains, execution trust boundary, scoping, outcome vocabulary, evidence anchor): [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
+- Before committing, the committing role — every role that commits, the main session included — runs the target repository's own lint chain over the staged files and confirms zero errors attributable to them. The rule (execution trust boundary, scoping, evidence anchor): [`<autoflow-root>/docs/submodule-common-rules.md`](submodule-common-rules.md) > Change Surface Rules > *Lint chain on the staged surface*.
 
 ### Commit Ownership
 
