@@ -32,20 +32,6 @@ source is a fork or the upstream, and its URL, are the project's information.
 
 ---
 
-## Agent Behavior Rules
-
-### DO
-- Run tests before marking the build complete
-- Reference the host repository's CLAUDE.md for process questions
-- Answer every finding a re-run is given (`<autoflow-root>/docs/units/review.md` > *Whether a finding holds*)
-
-### DO NOT
-- Modify files in other repositories
-- Push directly to `main`
-- Inline document body, full file text, or raw verbose test output in reports — see Reporting Format below
-
----
-
 ## Change Surface Rules
 
 Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment, not by whether an acceptance criterion names the line. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
@@ -66,20 +52,17 @@ A role that meets a problem the acceptance criteria do not name answers two ques
 | Not directly related | separated — reported in one line with its `path:line`; a separate issue is the follow-up path |
 
 - **The default follows the first question.** A directly related problem is included unless a separation reason is recorded. A problem noticed in passing — a style inconsistency, pre-existing dead code, a refactor opportunity — meets none of the three conditions and stays out (**Surrounding code**, **Refactor scope**).
-- **A record line** names the problem (its `path:line` at the report's commit, or the design section), the condition of question 1 it meets or that none does, the answer to question 2 with its ground, and the disposition.
 - **An inclusion is verified like the rest of the scope.** In the design it is named in the feature design's scope and disposed of in the verification design (`<autoflow-root>/docs/units/design.md` > Output artifacts); found later, the role that fixes it runs the tests it judges the fix requires and records the run (Verification and Tools > *Local verification*).
 - **Criterion defects.** From the design on, beside the two questions the role weighs whether what it met shows a criterion defective ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*). A same-cause problem reaching past what the criteria name may mean the issue drew the problem too narrowly — and then whether the approach itself must change is the question, not only whether to include the rest; an item a criterion names that turns out to be a problem separate from this issue may mean it drew too wide. Including a problem does not change a criterion, and a criterion is not carried out merely because it names an item: a defect so judged is recorded here, and the role puts the change — the criterion, the proposed change and the fact that shows it — to the advisor and follows the decision ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*; [`role-contracts.md`](role-contracts.md) > Advisor).
 - A role that doubts a scope judgment, or whose inclusion would change a design decision, puts it to the advisor and follows the decision ([`core.md`](core.md) > Development Lifecycle > *Decisions within a module*).
 - **Where it is applied**: the analysis report's scope judgments and the scope the feature design states set the change's scope; the build judges what it meets during the work; and the evaluations' recommendations are disposed of as a reviewer's findings are, where the same two questions decide which recommendation is not the issue's (`<autoflow-root>/docs/units/completion-evaluation.md` > *Recommendation triage*).
 
 ### Trace rule
-- **[MUST]** Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
-- **[MUST]** Before opening the PR, run `git diff <base>...HEAD` and self-audit: any hunk whose rationale names none of them is removed.
+- Each touched file/line answers the question: "which acceptance criterion, confirmed cause, plan item or recorded scope judgment requires this?" If the answer is "none — I noticed it while I was here", revert that line.
 
 ### Surrounding code
-- **[MUST]** Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
-- **[MUST]** Leave adjacent code, comments, formatting, and import order untouched unless an AC or a recorded scope judgment requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
-- **[MUST]** Pre-existing dead code, suspicious patterns, or stylistic inconsistencies you notice in passing — which **Scope judgment** does not make directly related — are reported in the run's report (one line each, with file:line). Filing a separate issue is the follow-up path; do not remove or "improve" them in this change.
+- Match the existing style and naming in the file you edit, even if you would write it differently in a greenfield.
+- Leave adjacent code, comments, formatting, and import order untouched unless an AC or a recorded scope judgment requires the change. A comment attached to code this change modifies is not adjacent — it is part of the change (**Code comments** > *Changing commented code*).
 
 ### Over-engineering guard
 The trace rule rejects scope creep *across* the change surface; this guard rejects depth creep *inside* it. Keep the solution to the minimum the change's scope needs:
@@ -164,7 +147,7 @@ When a role spawn reports to the session that spawned it, the report is the spaw
 1. **The body goes to the run's output directory.** The report points at it — record files, source files and commits by path and hash — and does not carry it.
 2. **Evidence anchor**: a claim that something is done, passes or is fixed carries an anchor its reader can confirm — whichever fits:
    - code change → full 40-char commit SHA
-   - test pass  → the run's **log** — the file its output was written to (Testing Standards item 7), cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
+   - test pass  → the run's **log** — the file its output was written to, cited by path under the run's `<out>/local/` — with the command that produced it and the exact `Tests: N passed, N total` (or equivalent) summary line read from that log. The log is the evidence and the summary line is the value read from it; a line no log carries is not evidence (Verification and Tools > *A run's evidence is the log it left*)
    - file state → `path:line` at the commit SHA the report is keyed to, plus the verbatim content of that line (a line number is read only at that commit — [`core.md`](core.md) > Decision Ledger)
    - observation (a criterion verified with a tool) → the row's observation record, cited by path under the run's `<out>/local/`, with its result read from it; the artifacts it cites are under the same prefix (Verification and Tools > *The tools the work needs*)
    - lint outcome (the pre-commit lint chain over the staged surface, Change Surface Rules > *Lint chain on the staged surface*) → each chain the committing role identified, followed by the grounds of the identification — where it looked and each CI lint step it did not count as a chain, with the condition that excludes it — the enumeration as a whole standing as this item's one anchor. For a chain that ran: the command, its source and what it reported. For one that did not: which chain and why, and where a pull-request CI job runs it instead, that job and the evidence that it runs for this pull request.
@@ -180,7 +163,7 @@ This section applies to every actor of a module's run — the session that runs 
 
 **Local verification** (the instance of [`core.md`](core.md) > Rule Scope, principle 2 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs. There is no local whole-tree run: none scheduled, none held in reserve.
 
-**A run's evidence is the log it left; a report is confirmed by reading it, not by running it again**. The evidence of a test run is the log file its output was written to (Testing Standards item 7's `$LOG`), cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Confirming is not re-executing. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below), not failed; at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](decision-ledger.md) > Entries > the verified-error exception).
+**A run's evidence is the log it left; a report is confirmed by reading it, not by running it again**. The evidence of a test run is the log file its output was written to, cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Confirming is not re-executing. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below), not failed; at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](decision-ledger.md) > Entries > the verified-error exception).
 
 **How a test is run is the target's practice**. AutoFlow prescribes no test command to a target. The role that runs a test — the build unit, or a helper it spawns — finds, in the target checkout it works in, how that target runs its tests: its documents (`CLAUDE.md`, a README, a contributing guide), its scripts (a package manifest's scripts, a Makefile, a wrapper script) and its workspace structure (a monorepo's per-package runner, a submodule's own tree), runs the tests it judges the change requires that way, and records the command, the log and the summary line read from it. What the command executes internally is the target's practice; AutoFlow reads the outcome and adjudicates nothing beyond it. A **run's own check** — a test the target's tree does not keep, a check run before delivery, a manual checklist — lives in the run's store `<out>/local/`, under the record root outside the target's tree; it is authored as an executable file there and **invoked directly by its path**, never through a driver AutoFlow ships. The recorded command **names the asset's absolute path in the store** and is run from the target checkout's root: the asset finds the tree it checks from its working directory (`git rev-parse --show-toplevel`), never from its own location, which is outside every tree. The verification design's table declares the set, and each row's recorded run — its **run record**: command, log path and summary line — is the witness that its asset executed, the log being what the witness is read from. A run that wants one command for several assets writes that driver *as* an asset in the same store. Such an asset is never committed, and stays with the attempt's other records, where a later run reads it. An asset writes its reproducible output — a build result, a copy of a source tree or of another original: an output re-creatable from inputs its record already names, such as a commit and a command — only under the store's reserved path `<out>/local/disposable/`, the one path that can be deleted with nothing the records cite lost; its deletion is outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). Nothing a run record, an observation record or a report cites ever goes there — not a log, a record file, the artifacts an observation left, or the asset itself, whose path the recorded command names — even when it is re-creatable. Whether an output is reproducible and uncited is the writer's judgment; where such an output goes is not. Only the store's top-level `disposable/` is reserved — a `disposable` deeper in the store is kept like any other path — and reproducible output left outside it is a deviation, kept with the rest of the store.
 
@@ -188,23 +171,13 @@ This section applies to every actor of a module's run — the session that runs 
 
 **A missing run is filled where it is found, not gated.** A row with no run record — or whose record has no log behind it, or a log that does not carry the recorded line — is `not-run`, never `passed`. Nothing blocks on the omission: it surfaces at the next point that reads the record — a later module given the record, GATE:QUALITY's `Test coverage` or `Commit conventions` — and is run there, by the role at that point, and its record filled in. An omission is not a FAIL; a run that fails is recorded as its module's procedure says.
 
-**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
+**What a change leaves in the target's tree is not classified by AutoFlow**. A change adds no test file to the target repository by default — a target's practice and an invocation's `instructions` come first: a verified criterion's evidence is its one-shot run's record. A test file the change does add is the exception, listed in the PR body with the reason it is kept and the CI job that executed it ([`units/delivery.md`](units/delivery.md) > *CI*, *Added test files*), so the reviewer and the operator judge it against the target's own convention — AutoFlow does not certify retention by a token of its own. Which deployment-level checks a target keeps is the target's convention.
 
 AutoFlow's own suite plane — the header contract, the selector and the runner — applies only where the target opted in (`.claude/autoflow.local.json` > `tests.suite_plane: true`).
 
 ---
 
 ## Testing Standards
-
-Every sub-repo must maintain:
-
-1. **Unit tests** for business logic
-2. **Integration tests** for API endpoints / component interactions
-3. **No broken tests on `main`** — all tests must pass before merge
-4. **Test execution follows the target's practice** — Verification and Tools > *Local verification* and *How a test is run is the target's practice* above.
-5. **Coverage output**: a coverage report is cited by its summary percentage; per-file reports (HTML and the like) stay on disk and are referenced by path, not pasted.
-6. **SIGPIPE-safe assertion pipes**: under `set -o pipefail`, do not pipe a *streaming/context* producer (`grep -A/-B/-C`, and awk/section-extractor functions whose buffered output is still flushing when the consumer exits, and other producers that keep writing past the match) directly into a *short-circuiting* consumer (`grep -q`, `grep -m`, `head`) when the pipeline's exit status is the assertion verdict. Capture the producer first, then feed the captured string to the consumer **without a pipe** — `ctx=$(<producer>); grep -q <pattern> <<<"$ctx"` — or drop `-q` so the consumer reads to EOF. Both the capture and the here-string are needed: a `printf` of the captured string piped into a short-circuiting consumer is not a repair. The governing condition is unwritten producer bytes at consumer exit, not any particular pipe-capacity threshold, so the pipe goes at every such site regardless of payload size. When the assertion chains `grep` checks with `&&`, capture once and reuse `$ctx` across every branch, keeping the `&&` chain — do not re-split the capture per branch.
-7. **Output hygiene for shell suites**: a suite runner's output never streams into an agent's context. Run it to a log file under the run's `<out>/local/` — that log is the run's evidence (Reporting Format > *Evidence anchor*), cited by path — and read the tail — `bash <autoflow-root>/scripts/test/run-suites.sh … > "$LOG" 2>&1; tail -n 20 "$LOG"` — and on a failure pull only the failing suite's block from the log (`grep -n`, then `sed -n 'A,Bp'`), never `cat` the log. Re-read a file you have already read by `sed -n 'A,Bp'` over the lines you need, never by a second whole-file read. Applies to every spawn mode.
 
 ### Running the bash suite tree (opted-in targets)
 
@@ -232,47 +205,3 @@ A suite executes its subject, not another suite (`<autoflow-root>/scripts/test/c
 - A role spawn runs **every** Bash command in the **foreground** and never uses `run_in_background` — for any command, test/build verification runs included, **and specifically including a command the agent itself chooses to background for its own verification run** (a self-selected `run_in_background:true` on the agent's own test/build, with no such instruction given, is a violation of this clause). This binds every direct `autoflow-*` subagent (analyzer, evaluator, advisor, the unit agents) **and** every helper a unit agent spawns. Run the command, wait for its result, then report.
 - The background + completion-notification pattern is **the main session's only**.
 - **Enforced at the tool boundary for suite runs:** a backgrounded invocation of `<autoflow-root>/scripts/test/run-suites.sh` — the `run_in_background` payload field, a `nohup`/`setsid` prefix, or a trailing `&` — is **refused** by the PreToolUse hook for every actor, the main session included; the main session's background pattern above never extends to a suite run (`<autoflow-root>/docs/gate-matching-standard.md` > Rule P1 > Backgrounded-invocation refinement).
-
----
-
-## Dependency Management
-
-### Internal Dependencies (Between Repos)
-- Use **versioned APIs** or **published packages** — never import directly from sibling repos
-- Document dependency versions in a central tracking document
-- Coordinate version bumps through the host repository's change
-
-### External Dependencies
-- Pin major versions
-- Run vulnerability scans as part of CI
-- Document any known CVE exceptions with rationale
-
----
-
-## Shared Conventions
-
-### Code Style
-- Follow the language-specific style guide chosen for the project
-- Use automated formatters (Prettier, Black, gofmt, etc.)
-- Enforce via CI
-
-### Documentation
-- Update docs when changing public interfaces
-- Keep README.md current
-- API changes require updating the API documentation
-
-### Error Handling
-- Use consistent error formats across repos
-- Log errors with enough context to diagnose
-- Don't swallow errors silently
-
----
-
-## CI/CD Integration
-
-Each sub-repo should have CI that:
-
-1. Runs on every PR
-2. Executes: lint → build → test
-3. Reports results back to the PR
-4. Blocks merge on failure
