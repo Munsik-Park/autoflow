@@ -16,7 +16,7 @@
 #          present with its frontmatter name
 #   AC1f   every packaged SKILL.md frontmatter parses (POSIX defect-class
 #          oracle, with its fixture specimens AC-R2d/e/g)
-#   AC3    hooks/hooks.json commands are ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
+#   AC3    hooks/hooks.json commands are quoted and ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
 #   AC3 8a the packaged gate hook, invoked once, returns a decision (allow)
 #   AC5    no duplicate copy of the components (.claude/agents, .claude/hooks,
 #          plugin/) remains; no component directory inside .claude-plugin/
@@ -306,11 +306,11 @@ if [ -f "$HOOKS_JSON" ] && jq -e . "$HOOKS_JSON" >/dev/null 2>&1; then
   POST_CMD=$(jq -r '.hooks.PostToolUse[0].hooks[0].command // empty' "$HOOKS_JSON")
 
   case "$PRE_CMD" in
-    '${CLAUDE_PLUGIN_ROOT}/hooks/'*)
-      pass "AC3c: PreToolUse command is \${CLAUDE_PLUGIN_ROOT}-anchored"
+    '"${CLAUDE_PLUGIN_ROOT}/hooks/'*'"')
+      pass "AC3c: PreToolUse command is quoted and \${CLAUDE_PLUGIN_ROOT}-anchored"
       ;;
     *)
-      failc "AC3c" "PreToolUse command='$PRE_CMD' is not \${CLAUDE_PLUGIN_ROOT}/hooks/-anchored"
+      failc "AC3c" "PreToolUse command='$PRE_CMD' is not quoted and \${CLAUDE_PLUGIN_ROOT}/hooks/-anchored"
       ;;
   esac
   case "$PRE_CMD" in
@@ -322,11 +322,11 @@ if [ -f "$HOOKS_JSON" ] && jq -e . "$HOOKS_JSON" >/dev/null 2>&1; then
       ;;
   esac
   case "$POST_CMD" in
-    '${CLAUDE_PLUGIN_ROOT}/hooks/'*)
-      pass "AC3c: PostToolUse command is \${CLAUDE_PLUGIN_ROOT}-anchored"
+    '"${CLAUDE_PLUGIN_ROOT}/hooks/'*'"')
+      pass "AC3c: PostToolUse command is quoted and \${CLAUDE_PLUGIN_ROOT}-anchored"
       ;;
     *)
-      failc "AC3c" "PostToolUse command='$POST_CMD' is not \${CLAUDE_PLUGIN_ROOT}/hooks/-anchored"
+      failc "AC3c" "PostToolUse command='$POST_CMD' is not quoted and \${CLAUDE_PLUGIN_ROOT}/hooks/-anchored"
       ;;
   esac
 else
