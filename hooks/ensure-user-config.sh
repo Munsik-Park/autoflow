@@ -18,9 +18,10 @@
 #   broken or not.
 #
 #   Tells the operator, at every session start, of what it finds missing of
-#   docs/requirements.md: `jq` or `gh` not on PATH, or a Claude Code older than
-#   the minimum (scripts/lib/prerequisites.sh; ADR-0041). The hook's stdout is
-#   one JSON object, so the two messages share one `systemMessage`.
+#   docs/requirements.md: `jq` or `gh` not on PATH, or a `claude` on PATH older
+#   than the minimum, which is not always the running Claude Code
+#   (scripts/lib/prerequisites.sh; ADR-0041). The hook's stdout is one JSON
+#   object, so the two messages share one `systemMessage`.
 #
 # Where it runs: every session start (any source) in every project the plugin
 #   is enabled in, and it writes outside the target's tree, under $HOME.

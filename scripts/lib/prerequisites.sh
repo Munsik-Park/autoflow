@@ -19,12 +19,15 @@
 #   autoflow_prerequisite_notice <requirements-doc-path>
 #       prints one line naming what is missing or too old, nothing when nothing
 #       is found. A version that cannot be read is not reported: it is no
-#       finding that the version is low.
+#       finding that the version is low. The version judged is that of the
+#       `claude` on PATH, named with its path; the running Claude Code's version
+#       is not available to a hook, and it can differ (ADR-0041 > Consequences).
 
 AUTOFLOW_REQUIRED_TOOLS='jq gh'
 AUTOFLOW_MIN_CLAUDE_VERSION='2.1.277'
 # Seconds `claude --version` may take before the check gives it up: a hook that
-# reaches its own timeout (600 by default) would hold the session start.
+# reaches its own timeout (600 by default) would hold the session start. The
+# command is asked to end one second before the limit and killed at it.
 AUTOFLOW_VERSION_READ_LIMIT=5
 
 autoflow_missing_tools() {
@@ -41,7 +44,12 @@ _autoflow_read_version() {
   _af_out="$(mktemp "${TMPDIR:-/tmp}/autoflow-version.XXXXXX" 2>/dev/null)" || return 0
   "$1" --version >"$_af_out" 2>/dev/null </dev/null &
   _af_pid=$!
-  ( sleep "$AUTOFLOW_VERSION_READ_LIMIT"; kill "$_af_pid" ) >/dev/null 2>&1 </dev/null &
+  (
+    sleep "$((AUTOFLOW_VERSION_READ_LIMIT - 1))"
+    kill "$_af_pid"
+    sleep 1
+    kill -KILL "$_af_pid"
+  ) >/dev/null 2>&1 </dev/null &
   _af_watchdog=$!
   wait "$_af_pid" 2>/dev/null
   kill "$_af_watchdog" 2>/dev/null
@@ -87,7 +95,7 @@ autoflow_prerequisite_notice() {
   fi
   _af_seen="$(autoflow_claude_version)"
   if [ -n "$_af_seen" ] && autoflow_version_lt "$_af_seen" "$AUTOFLOW_MIN_CLAUDE_VERSION"; then
-    _af_found="${_af_found:+$_af_found }Claude Code $_af_seen is older than the minimum, $AUTOFLOW_MIN_CLAUDE_VERSION."
+    _af_found="${_af_found:+$_af_found }The claude on PATH ($(command -v claude 2>/dev/null)) is $_af_seen, older than the Claude Code minimum, $AUTOFLOW_MIN_CLAUDE_VERSION; the running Claude Code may be another install, whose version this check cannot read."
   fi
   [ -n "$_af_found" ] || return 0
   printf 'AutoFlow requirements not met — %s See %s.\n' "$_af_found" "$1"

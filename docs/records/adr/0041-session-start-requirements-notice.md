@@ -29,8 +29,10 @@ parse the document: it is prose for people, and a rewording would turn the check
 
 **D3 — The version is read from `claude --version` on `PATH`.** The SessionStart input carries no
 version. `CLAUDE_CODE_EXECPATH` is not used: it is not documented, and a session started with it unset
-did not have it in its hook's environment. The read is limited to five seconds, since a command hook's
-default timeout is 600 and a hung read would hold the session start.
+did not have it in its hook's environment. So the check judges the `claude` on `PATH`, and the notice
+names it with its path rather than calling it the running Claude Code. The read is limited to five
+seconds, since a command hook's default timeout is 600 and a hung read would hold the session start:
+the command gets SIGTERM at four seconds and SIGKILL at five, so one that ignores SIGTERM ends too.
 
 **D4 — What cannot be read is not reported.** With no `claude` on `PATH`, or output that is not
 `N.N.N (Claude Code)`, the check says nothing: it found no low version, and a notice at every session
@@ -47,6 +49,12 @@ scripts and the gate hook's behaviour without `jq` are not changed.
 ## Consequences
 
 - An operator on a route where `claude` is not on the hook's `PATH` gets no notice of a low version.
+- When the `claude` on `PATH` and the running Claude Code are different installs, the judgment can be
+  wrong both ways: a current Claude Code gets the notice because the one on `PATH` is old, and a Claude
+  Code below the minimum gets none because the one on `PATH` is current. Issue #553's criterion that an
+  operator of a Claude Code below the minimum is told is met only where the two are the same install.
+- A process that SIGKILL does not end (uninterruptible sleep) still holds the read, since the check
+  waits on it.
 - `gh` and `jq` are found by presence only: `gh`'s authentication and the GitHub repository requirement
   are not checked, the second being each target's.
 - A new requirement in `requirements.md` written with backticks fails AC6 until the check holds it too.
