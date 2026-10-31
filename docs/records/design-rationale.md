@@ -614,7 +614,7 @@ The tempting shortcut is "have the participants report more cheaply" or "summari
 
 **Decision.** Operator decision (issue #352), executed as orchestrator work outside an AutoFlow cycle; the operator's runtime was already on 2.1.277 or later. The minimum runtime becomes v2.1.277 ([`thin-root-layer.md`](../thin-root-layer.md) > Runtime prerequisite, [`role-contracts.md`](../role-contracts.md) > Realization > Invocation / version / config, the two workflow scripts' headers, `CLAUDE.md` > Deliberation Isolation). In the same change (principle 4) the deny branch and its header entry leave `check-autoflow-gate.sh` (both copies), `TaskOutput` leaves the PreToolUse matcher in `plugin/autoflow/hooks/hooks.json`, and the rule text drops it from `CLAUDE.md` > *Wait discipline* and Hook gates, [`gate-matching-standard.md`](../gate-matching-standard.md) > Rule P2 and [`role-common-rules.md`](../role-common-rules.md) > Bash Execution Mode.
 
-**Why no device replaces it.** The runtime no longer offers the blocking primitive, so the minimum-version statement is the whole guarantee. No script reads the Claude Code version, so the statement is a documented prerequisite and not an enforced check.
+**Why no device replaces it.** The runtime no longer offers the blocking primitive, so the minimum-version statement is the whole guarantee. No script reads the Claude Code version, so the statement is a documented prerequisite and not an enforced check. (Since ADR-0041, issue #553, the SessionStart hook reads it and tells the operator; nothing stops on it.)
 
 **Not changed.** *Wait discipline* itself — a tracked task is awaited by ending the turn, a foreground `sleep` loop polling for a result is not used — and the cache keep-alive wake (Decision 33).
 

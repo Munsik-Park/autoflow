@@ -110,8 +110,9 @@ It is neither target-owned nor shipped. The plugin's SessionStart hook
 the plugin is enabled in and writes outside the target's tree: when the file is
 absent it creates it with `{ "review": { "reviewers": [] } }` and tells the
 operator where it is and what it holds; when it exists — valid or not — it
-leaves it unchanged and says nothing. Concurrent session starts create it once
-and never overwrite it. Its location is defined once, in
+leaves it unchanged and says nothing of it. Concurrent session starts create it
+once and never overwrite it. The same hook tells the operator of a missing
+requirement ([`requirements.md`](requirements.md)). Its location is defined once, in
 `<autoflow-root>/scripts/lib/user-config.sh` ([ADR-0028](records/adr/0028-user-level-reviewer-config.md)).
 
 ### Spawn policy

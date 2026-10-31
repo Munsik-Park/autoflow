@@ -7,7 +7,8 @@ operator overrides O1 and O2). Amends ADR-0026 D1 ("each external reviewer the t
 and D5 ("an unreadable review configuration still stops it"), and
 `docs/tool-delivery-contract.md` > *Target-owned files*. D2's target source, D4's "external review
 off" default and D5's `source: local` readout amended by ADR-0033 (issue #485): the operator file alone names the reviewers, and the
-default reviewers run when it names none.
+default reviewers run when it names none. D4 extended by ADR-0041 (issue #553): the hook also tells
+the operator of a requirement not met, at every session start.
 
 ## Context
 

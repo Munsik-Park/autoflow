@@ -18,6 +18,9 @@
 #          oracle, with its fixture specimens AC-R2d/e/g)
 #   AC3    hooks/hooks.json commands are quoted and ${CLAUDE_PLUGIN_ROOT}/hooks/-anchored
 #   AC3 8a the packaged gate hook, invoked once, returns a decision (allow)
+#   AC6    the tools and the minimum Claude Code version the SessionStart hook
+#          checks (scripts/lib/prerequisites.sh) are those docs/requirements.md
+#          states
 #   AC5    no duplicate copy of the components (.claude/agents, .claude/hooks,
 #          plugin/) remains; no component directory inside .claude-plugin/
 #   AC-R1a claude plugin validate on the repository root (gating when the CLI
@@ -378,6 +381,35 @@ for d in "$REPO_ROOT/.claude-plugin"; do
     failc "AC5 structure" "$d does not exist"
   fi
 done
+
+# ── AC6: the SessionStart check holds what docs/requirements.md states ─────
+echo "== AC6: scripts/lib/prerequisites.sh agrees with docs/requirements.md =="
+REQUIREMENTS_DOC="$PLUGIN_DIR/docs/requirements.md"
+PREREQUISITES_SH="$PLUGIN_DIR/scripts/lib/prerequisites.sh"
+if [ -f "$REQUIREMENTS_DOC" ] && [ -f "$PREREQUISITES_SH" ]; then
+  # The requirement bullets, so the prose under them cannot satisfy the check.
+  REQUIRED_BULLETS=$(grep '^- ' "$REQUIREMENTS_DOC")
+  # shellcheck source=../../scripts/lib/prerequisites.sh
+  . "$PREREQUISITES_SH"
+  case "$REQUIRED_BULLETS" in
+    *"Claude Code v${AUTOFLOW_MIN_CLAUDE_VERSION}+"*)
+      pass "AC6a: docs/requirements.md states the minimum the hook checks, v$AUTOFLOW_MIN_CLAUDE_VERSION"
+      ;;
+    *)
+      failc "AC6a" "docs/requirements.md does not state Claude Code v$AUTOFLOW_MIN_CLAUDE_VERSION+"
+      ;;
+  esac
+  # Both directions: a bullet's backticked tool the hook does not check fails too.
+  DOC_TOOLS=$(printf '%s\n' "$REQUIRED_BULLETS" | grep -o '`[^`]*`' | tr -d '`' | sort | tr '\n' ' ')
+  LIB_TOOLS=$(printf '%s\n' $AUTOFLOW_REQUIRED_TOOLS | sort | tr '\n' ' ')
+  if [ -n "$LIB_TOOLS" ] && [ "$DOC_TOOLS" = "$LIB_TOOLS" ]; then
+    pass "AC6b: docs/requirements.md and the hook name the same tools: $LIB_TOOLS"
+  else
+    failc "AC6b" "docs/requirements.md names '$DOC_TOOLS', the hook checks '$LIB_TOOLS'"
+  fi
+else
+  failc "AC6" "docs/requirements.md or scripts/lib/prerequisites.sh missing"
+fi
 
 # ── AC-R1a: claude plugin validate, GATING when the CLI is present ──────
 # When `claude` is present a non-zero exit feeds failc. When it is absent

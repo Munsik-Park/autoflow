@@ -121,7 +121,7 @@ autoflow/
 │
 ├── .claude-plugin/                    # plugin.json + marketplace.json — the repository root is the plugin root (ADR-0027 D1)
 ├── agents/                            # AutoFlow role subagent definitions
-├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent, in every project), hooks.json
+├── hooks/                             # Gate hook (check-autoflow-gate.sh), read-dedup hook, user-config SessionStart hook (ensure-user-config.sh: creates ~/.autoflow/config.json when absent and tells the operator of a missing requirement, in every project), hooks.json
 ├── skills/                            # /autoflow:<module> — one command per module (generated from docs/core.md and the documents scripts/skills/role-docs.tsv names)
 ├── bin/                               # autoflow-root — prints the plugin root; autoflow-records — the record root and the issue drafts directory
 │
