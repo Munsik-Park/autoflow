@@ -147,6 +147,3 @@ policy governs no row for (`policy_unmapped_agent_types`).
 | `CLAUDE_PLUGIN_ROOT` | the plugin loader | substituted in `<autoflow-root>/hooks/hooks.json`, the agent definitions and the command bodies, and set in the hook's environment; absent from a Bash command's environment, where `autoflow-root` (`<autoflow-root>/bin/autoflow-root`, on the Bash `PATH`) prints the root; it never resolves a record path |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | not provisioned | AutoFlow neither requires nor reads it |
 | `HOME` | the operator's shell | locates the operator-level file `$HOME/.autoflow/config.json` for the SessionStart hook, the review resolver and the record root, and the default record root `$HOME/.autoflow`; with `HOME` unset or empty there is no such file, and the record root is undetermined |
-
-**Runtime prerequisite**: Claude Code **v2.1.277+** — the release that removed the
-blocking `TaskOutput` tool (`<autoflow-root>/docs/records/design-rationale.md` > Decision 34).

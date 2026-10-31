@@ -29,6 +29,7 @@ These documents are the operating source of truth.
 | [U2 Analysis](units/analysis.md) | The analysis module: goal, cautions and analysis report; the other modules are listed in the AutoFlow Guide. |
 | [Decision Ledger](decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`). |
 | [Repo Boundary Rules](repo-boundary-rules.md) | Host/submodule/cross-repo responsibility boundaries. |
+| [Requirements](requirements.md) | What AutoFlow needs to run. |
 | [Tool Delivery Contract](tool-delivery-contract.md) | The installed plugin as the single version, rule delivery through the carrier each role starts with (command bodies, agent definitions, reviewers' rule files), target-identity separation, the packaging check and the target check, and the target's own spawn policy. |
 | [Reviewer Contract](reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle. |
 | [Criterion Review](criterion-review.md) | The criterion review's four modules: an attempt's review of the issue's acceptance criteria against the target's code and policy, each item disposed of with its grounds in the review record. |

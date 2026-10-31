@@ -109,9 +109,6 @@ up the environment ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contra
 **Developing AutoFlow**: `claude --plugin-dir <clone>` runs a clone's working
 tree in place of the installed plugin for that session.
 
-**Prerequisites**: Claude Code v2.1.277+, `jq` and the GitHub CLI `gh`; a GitHub
-repository (one per sub-repo, for a project with sub-repos).
-
 ---
 
 ## Repository Structure
@@ -222,6 +219,7 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |
+| [Requirements](docs/requirements.md) | What AutoFlow needs to run |
 | [Tool Delivery Contract](docs/tool-delivery-contract.md) | The plugin as the single version, the target-owned files, the spawn policy, the runtime environment |
 
 ---
