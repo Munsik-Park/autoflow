@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/ensure-user-config.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-user-config.sh\""
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-autoflow-gate.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-autoflow-gate.sh\""
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-read-dedup.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-read-dedup.sh\""
           }
         ]
       }
