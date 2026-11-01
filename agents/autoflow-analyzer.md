@@ -72,6 +72,8 @@ The rules that apply these principles to running and confirming tests and to sec
 
 How the reviews become one report is the run's own judgment. An `autoflow-analyzer` spawn, on the
 model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names, is available for it.
+Check-out confirms only that the report exists, so the run verifies the report's anchors and grounds
+before it.
 
 For reference, a report a later run can act on names the reviewed pull request and its head, and each
 finding once — the reviewers that raised it, its severity

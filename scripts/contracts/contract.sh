@@ -40,7 +40,8 @@
 #             (<out>/tool-requests.json: a JSON array of {missing, instead},
 #             [] when the run lacked nothing — 5.3, Q10). It writes
 #             <out>/result.json: the module, accepted, refused or failed,
-#             each output's path, each defect found, the tool requests, and
+#             each output's path, each recorded file's sha256 (`sha256`, by
+#             path), each defect found, the tool requests, and
 #             the AutoFlow that ran it — `autoflow`: its version, its root
 #             and, for a root that is a git work tree, its HEAD and whether
 #             the tree is dirty (ADR-0027 D4). A refusal's result carries the
@@ -49,6 +50,16 @@
 #             expected output and says what it did and why; check-out then
 #             checks that file is not empty and the tool requests, records
 #             every output present, and writes `failed` (ADR-0039 D3).
+#
+# verify    — reads the result of a run and reports, on the same invocation,
+#             each output that is not the file check-out recorded (ADR-0041):
+#
+#   bash <autoflow-root>/scripts/contracts/contract.sh verify <invocation.json>
+#
+#             `changed:` and `missing:` for a recorded file, `added:` for a file
+#             the contract declares that the result does not record, and
+#             `corrections:` for the run's <out>/corrections.md when it exists.
+#             It changes nothing.
 #
 # lint      — the contracts agree with each other and with the documents
 #             they name (no invocation; §8, the contract–document check):
@@ -75,7 +86,9 @@
 #       agrees) · 1 refused (result.json names each defect; lint: the
 #       disagreements are printed) · 2 the invocation or the contract cannot
 #       be read · 3 failed (check-out: the module's failure output stands).
-# Requires jq.
+#       verify: 0 every output is the file check-out recorded · 1 one is not
+#       (printed) · 2 no result, or a result with no `sha256`.
+# Requires jq, and sha256sum or shasum for check-out and verify.
 set -uo pipefail
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -127,14 +140,28 @@ autoflow_run() {
     '{version: $v, root: $r} + (if $h == "" then {} else {head: $h, dirty: ($d == "true")} end)'
 }
 
+# A file's sha256. The file comes on stdin, so a name with a backslash leaves
+# sha256sum's line in one form.
+file_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum <"$1"; else shasum -a 256 <"$1"; fi | cut -d' ' -f1
+}
+need_sha256() { command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die "sha256sum or shasum is required"; }
+
+# every file an outputs object records, one per line
+recorded_paths() { jq -r '[.[]] | flatten | .[]' <<<"$1"; }
+
 write_result() { # <status>
   mkdir -p "$OUT"
-  local tr='[]' outs=${OUTPUTS:-'{}'}
+  local tr='[]' outs=${OUTPUTS:-'{}'} sums='{}' p
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    sums=$(jq -c --arg p "$p" --arg s "$(file_sha256 "$p")" '. + {($p): $s}' <<<"$sums")
+  done < <(recorded_paths "$outs")
   [ -f "$OUT/tool-requests.json" ] && jq -e 'type == "array"' "$OUT/tool-requests.json" >/dev/null 2>&1 \
     && tr=$(jq -c . "$OUT/tool-requests.json")
   jq -n --arg m "$MODULE" --arg s "$1" --argjson d "$DEFECTS" --argjson o "$outs" --argjson t "$tr" \
-    --argjson a "$(autoflow_run)" \
-    '{contract: 1, module: $m, status: $s, outputs: $o, defects: $d, tool_requests: $t, autoflow: $a}' >"$OUT/result.json"
+    --argjson a "$(autoflow_run)" --argjson h "$sums" \
+    '{contract: 1, module: $m, status: $s, outputs: $o, sha256: $h, defects: $d, tool_requests: $t, autoflow: $a}' >"$OUT/result.json"
 }
 
 finish() { # <stage>
@@ -318,6 +345,7 @@ check_json() { # <output name> <file> <checks json>
 check_out() {
   [ -f "$OUT/.check-in.json" ] || die "no check-in for this run: $OUT/.check-in.json"
   [ -e "$OUT/result.json" ] && die "the run already has a result: $OUT/result.json"
+  need_sha256
 
   # every run records its tool requests (5.3, Q10)
   if [ ! -f "$OUT/tool-requests.json" ]; then
@@ -371,6 +399,30 @@ check_out() {
 
   finish check-out
   write_result accepted
+}
+
+# --- verify -------------------------------------------------------------------
+verify() {
+  local r="$OUT/result.json" p bad=0 of om
+  [ -f "$r" ] || die "the run has no result: $r"
+  jq -e '.sha256 | type == "object"' "$r" >/dev/null 2>&1 || die "the result records no sha256: $r"
+  need_sha256
+  while IFS=$'\x1f' read -r p of; do
+    [ -n "$p" ] || continue
+    if [ ! -f "$p" ]; then printf 'missing: %s\n' "$p"; bad=1
+    elif [ "$(file_sha256 "$p")" != "$of" ]; then printf 'changed: %s\n' "$p"; bad=1; fi
+  done < <(jq -r '.sha256 | to_entries[] | [.key, .value] | join("\u001f")' "$r")
+  # a declared output that appeared after the result
+  while IFS=$'\x1f' read -r of om; do
+    [ -n "$of" ] || continue
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      [ "$om" = true ] || [ -f "$OUT/$p" ] || continue
+      jq -e --arg p "$OUT/$p" '.sha256 | has($p)' "$r" >/dev/null || { printf 'added: %s\n' "$OUT/$p"; bad=1; }
+    done < <(if [ "$om" = true ]; then cd "$OUT" 2>/dev/null && compgen -G "$of" | sort; else printf '%s\n' "$of"; fi)
+  done < <(jq -r '.outputs | to_entries[] | [(.value.file // ""), (.value.many // false | tostring)] | join("\u001f")' <<<"$CONTRACT")
+  [ -f "$OUT/corrections.md" ] && printf 'corrections: %s\n' "$OUT/corrections.md"
+  return $bad
 }
 
 # --- lint ---------------------------------------------------------------------
@@ -506,6 +558,7 @@ lint() {
 case "${1:-}" in
   check-in)  [ $# -eq 2 ] || die "usage: contract.sh check-in <invocation.json>";  load "$2"; check_in ;;
   check-out) [ $# -eq 2 ] || die "usage: contract.sh check-out <invocation.json>"; load "$2"; check_out ;;
+  verify)    [ $# -eq 2 ] || die "usage: contract.sh verify <invocation.json>";    load "$2"; verify; exit $? ;;
   lint)      shift; lint "$@"; exit $? ;;
-  *) die "usage: contract.sh check-in|check-out <invocation.json> | lint [<contract.json>...]" ;;
+  *) die "usage: contract.sh check-in|check-out|verify <invocation.json> | lint [<contract.json>...]" ;;
 esac

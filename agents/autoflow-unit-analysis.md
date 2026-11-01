@@ -275,8 +275,8 @@ Code behavior produces a **false "absent / stub" reading**:
 - **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
   1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
   data — re-run the single command sequentially first.
-- **[MUST]** Spot-checks run **after the spawn has returned**, as single
-  sequential commands. Another
+- **[MUST]** Spot-checks run **after the spawn has returned** and before
+  check-out, as single sequential commands. Another
   directory is addressed with `git -C <path>` + absolute paths rather than a
   `cd`-prefixed compound, which can raise a permission prompt.
 

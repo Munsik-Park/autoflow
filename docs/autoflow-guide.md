@@ -68,10 +68,16 @@ into one BUILD (ADR-0025):
   `<out>/tool-requests.json` (`[]` when it lacked nothing), and its
   check-out writes `<out>/result.json`: `status` (`accepted`, `refused`, or `failed` when the run
   wrote its contract's failure output — what it did and why it did not reach its goal),
-  `outputs` (each output's path), `defects`,
+  `outputs` (each output's path), `sha256` (each recorded file's digest, by path), `defects`,
   `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has done no work; a run
   refused or failed at check-out leaves its outputs, and a later module's check-in reads an input by
   its form, not by the result of the run that made it.
+- An output is final at check-out: the run verifies and corrects its outputs first. `contract.sh
+  verify <invocation.json>` reports each output that is no longer the file check-out recorded
+  (`changed:`, `missing:`, `added:`; exit 1) and the run's `<out>/corrections.md` when it exists. A
+  later correction that changes a conclusion or the checked form is a new run; one that changes
+  neither may be made in place and noted in `<out>/corrections.md`
+  ([`core.md`](core.md) > Development Lifecycle > *An output is final at check-out*).
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
   each module's outputs meet — their form, each file read alone: its contract,
   `<autoflow-root>/docs/contracts/<module>.json`.

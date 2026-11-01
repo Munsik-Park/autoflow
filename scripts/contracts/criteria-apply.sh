@@ -92,7 +92,7 @@ autoflow_run() {
 
 refuse() { # <defects json>
   jq -n --argjson d "$1" --argjson a "$(autoflow_run)" \
-    '{contract: 1, module: "criteria-apply", status: "refused", outputs: {}, defects: $d, tool_requests: [], autoflow: $a}' \
+    '{contract: 1, module: "criteria-apply", status: "refused", outputs: {}, sha256: {}, defects: $d, tool_requests: [], autoflow: $a}' \
     >"$OUT/result.json"
   jq -r '.[] | "refused: " + .' <<<"$1" >&2
   exit 1
