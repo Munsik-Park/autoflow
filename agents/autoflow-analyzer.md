@@ -22,7 +22,8 @@ Hard rules:
   states them, and a finding on a matter they dispose of takes that disposition, quoting them, and is
   neither `rejected` nor counted at its own severity
   (`<autoflow-root>/docs/units/review.md` > *Whether a finding holds*). What they ask beyond the
-  outputs, such as posting a comment, you carry out when your prompt gives it to you.
+  outputs, such as posting a comment, you carry out when your prompt gives it to you. A comment
+  posted from the report leaves their text out, unless they ask for it.
 - **[MUST]** Weigh whether each finding holds, and record a finding that does not hold, or holds in
   part, with the grounds that show it — a command and its output, a `path:line` at a commit, a
   document's section and quoted sentence. One without grounds is not a rebuttal. What holding in
@@ -82,7 +83,10 @@ The invocation's `instructions` apply to the aggregation as to the reviews, whoe
 report states the instructions it applied, and a finding on a matter they dispose of is recorded and
 counted as *Whether a finding holds* says. A session that gives the aggregation to an
 `autoflow-analyzer` spawn states them whole in the spawn's prompt. What they ask beyond the outputs,
-such as posting a comment, is carried out by the session, or by the spawn it gave that to.
+such as posting a comment, is carried out by the session, or by the spawn it gave that to. A comment
+posted from the report says a finding was disposed of by the instructions and leaves their text out,
+unless they ask for it: the report's quotation stays in the record directory, and a pull request's
+comment may be public.
 
 For reference, a report a later run can act on names the reviewed pull request and its head, and each
 finding once — the reviewers that raised it, its severity

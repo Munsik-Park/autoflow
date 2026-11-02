@@ -73,6 +73,7 @@ Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation
   Input  : every review record of the PR, and the invocation's instructions.
   Output : the report, the PR's findings file, which states the instructions it
            applied and records a finding they dispose of with that disposition.
+           A comment posted from it leaves their text out, unless they ask for it.
 ```
 
 Each wrapper takes the record path:
@@ -290,6 +291,8 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
   receive, the `claude` review reads the attempt's design artifacts; the `codex`
   review reads only the pull request. The measurement
   behind issue #411 found their findings largely disjoint, so the aggregation
-  keeps a finding only one of them raised.
+  keeps a finding only one of them raised. The `instructions` reach each reviewer's
+  vendor, as the pull request's contents do, and an invocation's author writes them
+  with that in mind ([`units/review.md`](units/review.md) > *Reviewer review*).
 - **Account allowance.** The `claude` review runs on the same account allowance
   as the session that runs the review, once per pull request and round.

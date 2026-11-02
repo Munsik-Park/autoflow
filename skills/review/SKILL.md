@@ -268,7 +268,10 @@ stays in the target's tree.
 `instructions` itself, and its prompt carries them whole, after the rules and the lenses, saying they
 are this invocation's instructions and that the reviewer applies them to its judgment; the session
 chooses and edits nothing of them. With none, nothing is added to the prompt. A file that cannot be
-read, or a malformed `instructions`, stops the wrapper (exit `2`) before its reviewer starts.
+read as one JSON object, or a malformed `instructions`, stops the wrapper (exit `2`) before its
+reviewer starts. The text reaches each reviewer's vendor — Anthropic for `claude`, OpenAI for
+`codex` — and that reviewer's command line while it runs, as the rest of the prompt does, so an
+invocation's author writes nothing there that should stay off them.
 
 The instructions reach a reviewer's judgment, not its contract
 ([`reviewer-backend.md`](<autoflow-root>/docs/reviewer-backend.md) > *Contract*): whatever they ask, a reviewer posts
@@ -299,7 +302,10 @@ The invocation's `instructions` apply to the aggregation as to the reviews, whoe
 report states the instructions it applied, and a finding on a matter they dispose of is recorded and
 counted as *Whether a finding holds* says. A session that gives the aggregation to an
 `autoflow-analyzer` spawn states them whole in the spawn's prompt. What they ask beyond the outputs,
-such as posting a comment, is carried out by the session, or by the spawn it gave that to.
+such as posting a comment, is carried out by the session, or by the spawn it gave that to. A comment
+posted from the report says a finding was disposed of by the instructions and leaves their text out,
+unless they ask for it: the report's quotation stays in the record directory, and a pull request's
+comment may be public.
 
 For reference, a report a later run can act on names the reviewed pull request and its head, and each
 finding once — the reviewers that raised it, its severity
@@ -418,6 +424,7 @@ Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation
   Input  : every review record of the PR, and the invocation's instructions.
   Output : the report, the PR's findings file, which states the instructions it
            applied and records a finding they dispose of with that disposition.
+           A comment posted from it leaves their text out, unless they ask for it.
 ```
 
 Each wrapper takes the record path:
@@ -635,7 +642,9 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
   receive, the `claude` review reads the attempt's design artifacts; the `codex`
   review reads only the pull request. The measurement
   behind issue #411 found their findings largely disjoint, so the aggregation
-  keeps a finding only one of them raised.
+  keeps a finding only one of them raised. The `instructions` reach each reviewer's
+  vendor, as the pull request's contents do, and an invocation's author writes them
+  with that in mind ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*).
 - **Account allowance.** The `claude` review runs on the same account allowance
   as the session that runs the review, once per pull request and round.
 
