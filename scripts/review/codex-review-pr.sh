@@ -6,12 +6,23 @@
 # The review rules are codex's rule file — docs/review/review-codex.md of the
 # AutoFlow tree this wrapper ships in, or the file `.review.codex.rules` names —
 # whose text the prompt carries, with the text of the lenses file
-# `.review.codex.lenses` names when there is one. codex runs in the reviewed
-# repository's working directory, and loads that tree's own AGENTS.md itself.
+# `.review.codex.lenses` names when there is one and, when the invocation file
+# `--invocation` names holds them, that invocation's `instructions`, whole, with
+# the sentence that tells codex to apply them to its judgment; a run without them
+# adds nothing to the prompt. codex runs in the reviewed repository's working
+# directory, and loads that tree's own AGENTS.md itself.
 # This wrapper supplies the target PR number, the optional sub-repo selector,
-# the record file, and the fixed sandbox / approval flags. The review is written
-# to the record file only: it posts no PR comment and changes no label — the
-# aggregation of every review of the PR writes the one report.
+# the record file, the invocation's instructions, and the fixed sandbox /
+# approval flags. The review is written to the record file only: it posts no PR
+# comment and changes no label, whatever the instructions ask — what they ask
+# beyond the review is for the side that runs the review, and the aggregation of
+# every review of the PR writes the one report. Those flags leave GitHub and the
+# record directory reachable, so this holds by codex following the prompt.
+#
+# `--invocation <invocation.json>` names the file the review module was run on,
+# read before anything else, a relative path from the caller's directory. A file
+# that cannot be read, or that holds a malformed `instructions`, stops the wrapper
+# (exit 2) before codex starts.
 #
 # The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's
@@ -43,17 +54,19 @@
 #
 # Usage: scripts/review/codex-review-pr.sh --pr <number> --out <record file>
 #                                          [--repo <owner/name>] [--expected-head <branch>]
+#                                          [--invocation <invocation.json>]
 set -euo pipefail
 
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_CRP_DIR/lib/review-config.sh"
 AF_ROOT="$(cd "$_CRP_DIR/../.." && pwd)"
 
-USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>]"
+USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>] [--invocation <invocation.json>]"
 PR=""
 OUT=""
 REPO=""
 EXPECTED_HEAD=""
+unset INVOCATION
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pr)
@@ -72,6 +85,10 @@ while [[ $# -gt 0 ]]; do
       EXPECTED_HEAD="${2:-}"
       shift 2
       ;;
+    --invocation)
+      INVOCATION="${2:-}"
+      shift 2
+      ;;
     -h|--help)
       echo "$USAGE"
       exit 0
@@ -88,6 +105,9 @@ if [[ -z "$PR" || -z "$OUT" ]]; then
   echo "$USAGE" >&2
   exit 2
 fi
+
+# Before the cd below: a relative path names the file from the caller's directory.
+review_read_invocation codex-review ${INVOCATION+"$INVOCATION"} || exit 2
 
 cd "$(git rev-parse --show-toplevel)"
 TOP="$(pwd -P)"
@@ -167,18 +187,19 @@ if [[ -n "$EXPECTED_HEAD" && "$pr_head" != "$EXPECTED_HEAD" ]]; then
 fi
 
 # Build the review prompt as one value, ending with a fixed sentinel line. The
-# sentinel names the one permitted action — writing the record file — so no
-# instruction codex loads from the tree can add a comment or a label change.
+# sentinel names the one permitted action, writing the record file. It is a
+# sentence codex reads, not a limit its environment sets.
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
 SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-# The rules and the lenses are carried as text between the opening line and the
-# closing one, so the reviewer starts with them.
-PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}
+# The rules, the lenses and then the invocation's instructions are carried as
+# text between the opening line and the closing one, so the reviewer starts with
+# the rules and the closing line's limits come after the instructions.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}${REVIEW_INSTRUCTIONS_CLAUSE}
 
 Review rules (${REVIEW_GUIDE}):
 
-$(cat "$REVIEW_GUIDE")${lenses_text}
+$(cat "$REVIEW_GUIDE")${lenses_text}${REVIEW_INSTRUCTIONS_BLOCK}
 
 Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}. ${SENTINEL}"
 
