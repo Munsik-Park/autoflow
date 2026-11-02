@@ -10,14 +10,15 @@
 #
 #   completed  the wrapper's output (--log) already carries its completion
 #              marker `[review] <reviewer> completed for PR #<N> (exit=<K>)`
-#   process    a reviewer process whose prompt names `pull request #<N>` is
+#   process    a reviewer process whose prompt opens on `pull request #<N>` is
 #              running (the wrapper passes the prompt as an argument)
 #   rollout    codex only: a session rollout written within the window's reach
-#              whose prompt names `pull request #<N>`
+#              whose prompt opens on `pull request #<N>`
 #
 # With --repo, the process and rollout signals also require the prompt's
 # `--repo <owner/name>` clause, which tells a sub-repo PR from a host PR of the
-# same number. With --reviewer, the process signal also requires that
+# same number. Only the prompt's own opening counts: the text it carries after
+# `Review rules (` names no run. With --reviewer, the process signal also requires that
 # reviewer's CLI, which tells one reviewer's run from another's on the same PR,
 # and the rollout signal is read for codex only.
 #
@@ -57,8 +58,8 @@ done
 case "$PR" in ''|*[!0-9]*) echo "Usage: $0 --pr <N> [--repo <owner/name>] [--reviewer <name>] [--log <wrapper output>] [--window <secs>]" >&2; exit 64 ;; esac
 case "$WINDOW" in ''|*[!0-9]*) echo "[$TAG] --window takes seconds: $WINDOW" >&2; exit 64 ;; esac
 
-# The wrapper's prompt opens `Review pull request #<N>. `; the trailing period
-# keeps #5 from matching #57.
+# The prefilter for a candidate; its match may lie in the text a prompt carries.
+# The trailing period keeps #5 from matching #57.
 PROMPT_RE="Review pull request #${PR}\\. "
 [ -n "$REPO" ] && PROMPT_RE="${PROMPT_RE}.*--repo ${REPO}'"
 PROC_RE="$PROMPT_RE"
@@ -67,6 +68,18 @@ SESSIONS="${CODEX_HOME:-$HOME/.codex}/sessions"
 case "$REVIEWER" in ''|codex) ;; *) SESSIONS="" ;; esac
 # A rollout older than the window plus a minute belongs to an earlier round.
 REACH_MIN=$(( WINDOW / 60 + 2 ))
+
+# Whether the text opens on this PR's run. The wrapper's prompt opens with its
+# head and repo clause, and everything else comes after `Review rules (`, so the
+# first head in the text is the run's own.
+opens_on_this_run() {
+  local rest="${1#*Review pull request #}"
+  [ "$rest" != "$1" ] || return 1
+  case "$rest" in "$PR. "*) ;; *) return 1 ;; esac
+  [ -z "$REPO" ] && return 0
+  case "${rest%%"Review rules ("*}" in *"--repo ${REPO}'"*) return 0 ;; esac
+  return 1
+}
 
 elapsed=0
 while :; do
@@ -82,17 +95,19 @@ while :; do
       case "$done_line" in *"(exit=0)"*) exit 0 ;; *) exit 3 ;; esac
     fi
   fi
-  pid="$(pgrep -f -- "$PROC_RE" 2>/dev/null | head -1)"
-  if [ -n "$pid" ]; then
-    echo "started: process $pid (prompt names pull request #$PR${REPO:+ in $REPO})"
-    exit 0
-  fi
-  if [ -n "$SESSIONS" ] && [ -d "$SESSIONS" ]; then
-    rollout="$(find "$SESSIONS" -name 'rollout-*.jsonl' -mmin "-$REACH_MIN" -exec grep -l -E -- "$PROMPT_RE" {} + 2>/dev/null | head -1)"
-    if [ -n "$rollout" ]; then
-      echo "started: rollout $rollout (prompt names pull request #$PR${REPO:+ in $REPO})"
+  while IFS= read -r pid; do
+    if opens_on_this_run "$(ps -ww -o args= -p "$pid" 2>/dev/null)"; then
+      echo "started: process $pid (prompt names pull request #$PR${REPO:+ in $REPO})"
       exit 0
     fi
+  done < <(pgrep -f -- "$PROC_RE" 2>/dev/null)
+  if [ -n "$SESSIONS" ] && [ -d "$SESSIONS" ]; then
+    while IFS= read -r rollout; do
+      if opens_on_this_run "$(grep -m1 -F -- 'Review pull request #' "$rollout")"; then
+        echo "started: rollout $rollout (prompt names pull request #$PR${REPO:+ in $REPO})"
+        exit 0
+      fi
+    done < <(find "$SESSIONS" -name 'rollout-*.jsonl' -mmin "-$REACH_MIN" -exec grep -l -E -- "$PROMPT_RE" {} + 2>/dev/null)
   fi
   [ "$elapsed" -ge "$WINDOW" ] && break
   sleep 2
