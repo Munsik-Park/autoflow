@@ -43,7 +43,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge (ADR-0038 D1). The output a run makes of its inputs is one of two: what the goal asks for, when the AI that did the work judges it has reached the goal, or what it did and why it did not reach the goal, in the failure output its contract declares; either ends the run (ADR-0040 D1). Whether the output is right, and what is done with it, are for the side that runs the module (ADR-0038 D2). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
 
-**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states. The invocation's `instructions` override the default. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them; the authority rules hold under any instruction (ADR-0040 D5).
+**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states. The invocation's `instructions` override the default. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them; the authority rules hold under any instruction (ADR-0040 D5). In the review module the reviewers also receive the instructions, in the prompt their wrapper builds, and apply them to their judgment; their contract is not a default the instructions override, and what the instructions ask beyond the review is for the session, or the spawn it gave that to, to carry out.
 
 **Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 2). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
@@ -230,7 +230,9 @@ U7 Review is one module, the review module, whose contract is
 - **Goal**: the given pull request reviewed by its configured reviewers, and their reviews aggregated
   into one report.
 - **Inputs**: the pull request (`params.pr`); on a later review, the previous report; the attempt's
-  record directory, where the earlier reviews' records and the work's records are.
+  record directory, where the earlier reviews' records and the work's records are; and the
+  invocation's `instructions`, when given, which reach each reviewer and the aggregation (*Reviewer
+  review*, *Review aggregation*).
 - **Output**: each reviewer's review record, `<out>/reviews/`, and the report,
   `<out>/review-findings.md`.
 - **Default**: nothing beyond its outputs ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle >
@@ -247,8 +249,8 @@ names, read rather than recalled — those the operator's `~/.autoflow/config.js
 location*). Each runs as its own script:
 
 ```
-bash <autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>] [--records <attempt-dir>]
-bash <autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> [--repo <owner/name>]
+bash <autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> --expected-head <branch> --invocation <invocation.json> [--repo <owner/name>] [--records <attempt-dir>]
+bash <autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> --expected-head <branch> --invocation <invocation.json> [--repo <owner/name>]
 bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> --reviewer <name> [--repo <owner/name>] [--log <the run's captured output>]
 ```
 
@@ -260,6 +262,23 @@ directory the invocation gives (`records`), where the `claude` reviewer reads th
 work — the analysis report, the design documents, the decision ledger and the build report.
 `<record>` is the review record's absolute path below; nothing a wrapper or its reviewer writes
 stays in the target's tree.
+
+`--invocation` names the invocation file this run was given, on every run, whether or not it holds
+`instructions`; a relative path is read from the caller's directory. The wrapper reads the
+`instructions` itself, and its prompt carries them whole, after the rules and the lenses, saying they
+are this invocation's instructions and that the reviewer applies them to its judgment; the session
+chooses and edits nothing of them. With none, nothing is added to the prompt. A file that cannot be
+read as one JSON object, or a malformed `instructions` (not a non-empty string, or holding U+0000,
+which a command line cannot carry), stops the wrapper (exit `2`) before its reviewer starts. The text reaches each reviewer's vendor — Anthropic for `claude`, OpenAI for
+`codex` — and that reviewer's command line while it runs, as the rest of the prompt does, so an
+invocation's author writes nothing there that should stay off them.
+
+The instructions reach a reviewer's judgment, not its contract
+([`reviewer-backend.md`](<autoflow-root>/docs/reviewer-backend.md) > *Contract*): whatever they ask, a reviewer posts
+no comment, changes no label, leaves approve, request-changes, merge and close untouched, and writes
+only its own record and the scratch file its wrapper names for it. That contract is not a default
+the instructions override. What they ask beyond the review is for the session, or the spawn it gave
+that to, to carry out.
 
 The run is made in a checkout of the repository — the same origin — whose checked-out branch is the
 pull request's head branch at its head: the `claude` reviewer reads that working tree beside the
@@ -279,6 +298,15 @@ wrapper's completion marker, and reports by exit code (the script's header).
 How the reviews become one report is the run's own judgment. An `autoflow-analyzer` spawn, on the
 model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names, is available for it.
 
+The invocation's `instructions` apply to the aggregation as to the reviews, whoever aggregates. The
+report states the instructions it applied, and a finding on a matter they dispose of is recorded and
+counted as *Whether a finding holds* says. A session that gives the aggregation to an
+`autoflow-analyzer` spawn states them whole in the spawn's prompt. What they ask beyond the outputs,
+such as posting a comment, is carried out by the session, or by the spawn it gave that to. A comment
+posted from the report says a finding was disposed of by the instructions and leaves their text out,
+unless they ask for it: the report's quotation stays in the record directory, and a pull request's
+comment may be public.
+
 For reference, a report a later run can act on names the reviewed pull request and its head, and each
 finding once — the reviewers that raised it, its severity
 (`<autoflow-root>/docs/review/review.md` > Severity) and whether it holds, with the grounds of one that
@@ -288,7 +316,7 @@ does not — and the highest severity among the findings that hold.
 
 Handling a finding — the reviewer's, or a gate's recommendation — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A reviewer finding on a matter the invocation's `instructions` dispose of takes that disposition, read before the three outcomes above: it quotes the instruction as its ground, whichever of the three its claim would otherwise be and even when it reproduces, and it is neither `rejected` nor holding at its own severity. One that holds in part is placed by the real problem it points to: on the disposed matter it takes the disposition; on another matter it holds in part for that problem. The report's highest severity is taken after these dispositions, so the report has one value. This disposition is the aggregator's alone: a gate recommendation, and a module acting on a finding, keep the routes below. A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -340,12 +368,13 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
-| `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
+| `claude` | the PR (diff, body, linked issue), its rule file, the invocation's `instructions` when given, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write those settings do not allow denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text and the invocation's `instructions`, and the final message is the review |
+| `codex` | the PR (diff, body, linked issue), its rule file, the invocation's `instructions` when given | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text and the invocation's `instructions` |
 
 A new reviewer is a name the resolver supports
-(`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper and its
-rule file.
+(`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper — which takes
+`--invocation` and carries the invocation's `instructions` in its prompt with that
+library's `review_read_invocation` — and its rule file.
 
 ## Rule files
 
@@ -356,14 +385,16 @@ it, names what that reviewer reads and where its review goes:
 `<autoflow-root>/docs/review/review-claude.md`,
 `<autoflow-root>/docs/review/review-codex.md`, each of which carries the review
 rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
-carries the rule file's text, and states what `<autoflow-root>` is.
+carries the rule file's text, and states what `<autoflow-root>` is. When the
+invocation holds `instructions`, it carries them too, after the rule file and the
+lenses, whichever rule file runs, and says to apply them to the review's judgment.
 
 Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
 
 - `.review.<reviewer>.rules` — another rule file in place of
-  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, so it carries
-  or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
+  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, beside the
+  invocation's `instructions`, so it carries or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
   stops (exit `2`) before the reviewer starts.
 - `.review.<reviewer>.lenses` — a file of further review lenses (the defect
   axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt carries
@@ -377,25 +408,39 @@ one entry can name each target's own file.
 
 ```
 Contract: reviewer
+  Input  : the PR, its rule file and, when the invocation holds them, the
+           invocation's instructions, whole, in the prompt its wrapper builds; it
+           applies them to its judgment.
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.
-  A reviewer posts no PR comment and changes no label.
+  A reviewer posts no PR comment, changes no label, leaves approve,
+  request-changes, merge and close untouched, and writes only its record and the
+  scratch file its wrapper names for it. This contract holds under any instruction:
+  it is not a default the invocation's instructions override, and what they ask
+  beyond the review is for the session, or the spawn it gave that to, to carry out.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
-  Input  : every review record of the PR.
-  Output : the report, the PR's findings file.
+  Input  : every review record of the PR, and the invocation's instructions.
+  Output : the report, the PR's findings file, which states the instructions it
+           applied and records a finding they dispose of with that disposition.
+           A comment posted from it leaves their text out, unless they ask for it.
 ```
 
 Each wrapper takes the record path:
 
 ```
-<autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>]
-<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
+<autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>] [--invocation <invocation.json>]
+<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--invocation <invocation.json>]
 ```
 
-Each stops (exit `3`) when the PR is not that OPEN PR on that head branch, and
-treats a run that leaves no record as failed (exit `5`).
+`--invocation` names the invocation file the review module was run on, a relative
+path from the caller's directory; a run with no file, or a file with no
+`instructions`, adds no text from them. Each wrapper stops (exit `2`) on a file it
+cannot read as one JSON object or a malformed `instructions` (not a non-empty
+string, or holding U+0000, which a command line cannot carry), before its reviewer
+starts, stops (exit `3`) when the PR is not that OPEN PR on that head branch, and treats a run
+that leaves no record as failed (exit `5`).
 
 ## Config location
 
@@ -594,10 +639,13 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
 
 ## Trade-offs
 
-- **Two vendors, two inputs.** The `claude` review reads the attempt's design
-  artifacts; the `codex` review reads only the pull request. The measurement
+- **Two vendors, two inputs.** Beside the invocation's `instructions`, which both
+  receive, the `claude` review reads the attempt's design artifacts; the `codex`
+  review reads only the pull request. The measurement
   behind issue #411 found their findings largely disjoint, so the aggregation
-  keeps a finding only one of them raised.
+  keeps a finding only one of them raised. The `instructions` reach each reviewer's
+  vendor, as the pull request's contents do, and an invocation's author writes them
+  with that in mind ([`units/review.md`](<autoflow-root>/docs/units/review.md) > *Reviewer review*).
 - **Account allowance.** The `claude` review runs on the same account allowance
   as the session that runs the review, once per pull request and round.
 

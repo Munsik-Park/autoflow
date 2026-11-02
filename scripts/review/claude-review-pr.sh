@@ -6,7 +6,10 @@
 # The review rules are claude's rule file — docs/review/review-claude.md of the
 # AutoFlow tree this wrapper ships in, or the file `.review.claude.rules` names —
 # whose text the prompt carries, with the text of the lenses file
-# `.review.claude.lenses` names when there is one. claude runs non-interactively
+# `.review.claude.lenses` names when there is one and, when the invocation file
+# `--invocation` names holds them, that invocation's `instructions`, whole, with
+# the sentence that tells claude to apply them to its judgment; a run without
+# them adds nothing to the prompt. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with Read, Grep
 # and Glob on any path, the gh reads the review needs and the commands Claude
 # Code treats as read-only, beside what the operator's own settings allow;
@@ -15,8 +18,9 @@
 # CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
 # not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
-# and changes no label — the aggregation of every review of the PR writes the
-# one report.
+# and changes no label, whatever the instructions ask — what they ask beyond
+# the review is for the side that runs the review, and the aggregation of every
+# review of the PR writes the one report.
 #
 # The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's
@@ -32,6 +36,11 @@
 # runs' work; it and the AutoFlow tree are added to claude's working
 # directories (`--add-dir`).
 #
+# `--invocation <invocation.json>` names the file the review module was run on, a
+# relative path from the caller's directory. A file that cannot be read as one JSON
+# object, or that holds a malformed `instructions` (not a non-empty string, or
+# holding U+0000), stops the wrapper (exit 2) before claude starts.
+#
 # Per-PR review: `--repo owner/name` reviews a sub-repo PR (the prompt tells
 # claude to pass `--repo` to every gh command); without it the PR is the
 # current repository's.
@@ -42,18 +51,19 @@
 #
 # Usage: scripts/review/claude-review-pr.sh --pr <number> --out <record file>
 #                                           [--repo <owner/name>] [--expected-head <branch>]
-#                                           [--records <attempt-dir>]
+#                                           [--records <attempt-dir>] [--invocation <invocation.json>]
 set -euo pipefail
 
 _CRP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_CRP_DIR/lib/review-config.sh"
 AF_ROOT="$(cd "$_CRP_DIR/../.." && pwd)"
 
-USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>]"
+USAGE="Usage: $0 --pr <number> --out <record file> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>] [--invocation <invocation.json>]"
 PR=""
 OUT=""
 REPO=""
 EXPECTED_HEAD=""
+unset INVOCATION
 RECORDS=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -62,6 +72,7 @@ while [[ $# -gt 0 ]]; do
     --repo) REPO="${2:-}"; shift 2 ;;
     --expected-head) EXPECTED_HEAD="${2:-}"; shift 2 ;;
     --records) RECORDS="${2:-}"; shift 2 ;;
+    --invocation) INVOCATION="${2:-}"; shift 2 ;;
     -h|--help) echo "$USAGE"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; echo "$USAGE" >&2; exit 2 ;;
   esac
@@ -71,6 +82,9 @@ if [[ -z "$PR" || -z "$OUT" ]]; then
   echo "$USAGE" >&2
   exit 2
 fi
+
+# Before the cd below: a relative path names the file from the caller's directory.
+review_read_invocation claude-review ${INVOCATION+"$INVOCATION"} || exit 2
 
 cd "$(git rev-parse --show-toplevel)"
 TOP="$(pwd -P)"
@@ -159,13 +173,14 @@ fi
 # The prompt ends with a fixed sentinel; review-start-check.sh finds the run by
 # its opening `Review pull request #<N>. `.
 SENTINEL="Limit your actions to reading; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
-# The rules and the lenses are carried as text between the opening line and the
-# closing one, so the reviewer starts with them.
-PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause}
+# The rules, the lenses and then the invocation's instructions are carried as
+# text between the opening line and the closing one, so the reviewer starts with
+# the rules and the closing line's limits come after the instructions.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause}${REVIEW_INSTRUCTIONS_CLAUSE}
 
 Review rules (${REVIEW_GUIDE}):
 
-$(cat "$REVIEW_GUIDE")${lenses_text}
+$(cat "$REVIEW_GUIDE")${lenses_text}${REVIEW_INSTRUCTIONS_BLOCK}
 
 Use the local gh CLI to read the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Reply with the whole review, in the Output Format the rules name, as your final message. ${SENTINEL}"
 if [[ "$PROMPT" != *"$SENTINEL" ]]; then

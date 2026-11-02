@@ -18,7 +18,9 @@ commits are its goal, its default nothing beyond its outputs; the delivery's goa
 delivered for the operator to decide on, its default the pointer commit, the push and the draft pull
 requests with their bodies. The operator's decision of 2026-10-30 on the pull request's fourth review
 round is applied to D5: the review's outputs are its result, its default nothing beyond them. D5's
-clause that the instructions never change the outputs is removed by issue #539.
+clause that the instructions never change the outputs is removed by issue #539. Applied to D5 by issue
+#559: the review's reviewers also receive the instructions, and a reviewer's contract is not a
+default they override.
 
 ## Context
 
