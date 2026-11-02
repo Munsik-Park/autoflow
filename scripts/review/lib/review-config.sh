@@ -98,7 +98,7 @@
 #       sets REVIEW_INSTRUCTIONS_CLAUSE (the prompt's first-line clause) and
 #       REVIEW_INSTRUCTIONS_BLOCK (the framing and the whole `instructions`
 #       between marker lines), both empty with no file or no `instructions` key;
-#       returns 1, with a line on stderr, on a file it cannot read as a JSON
+#       returns 1, with a line on stderr, on a file it cannot read as one JSON
 #       object or an `instructions` that is not a non-empty string.
 # =============================================================================
 
@@ -377,8 +377,9 @@ review_read_invocation() {
     echo "[${tag}] --invocation needs jq, which is not on PATH: ${file}" >&2
     return 1
   fi
-  if ! jq -e 'type == "object"' "$file" >/dev/null 2>&1; then
-    echo "[${tag}] the invocation file cannot be read as a JSON object: ${file}" >&2
+  # jq -e reads only the last document of a stream, so the document count is checked first.
+  if ! jq -es 'length == 1 and (.[0] | type == "object")' "$file" >/dev/null 2>&1; then
+    echo "[${tag}] the invocation file cannot be read as one JSON object: ${file}" >&2
     return 1
   fi
   jq -e 'has("instructions")' "$file" >/dev/null || return 0
