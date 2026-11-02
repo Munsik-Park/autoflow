@@ -18,6 +18,11 @@ You are an AutoFlow **analysis** agent for the review module. Your contract is
 
 Hard rules:
 - The reviews are the records your prompt names. A finding you reject is recorded with its grounds.
+- The invocation's `instructions`, which your prompt states, apply to the aggregation: the report
+  states them, and a finding on a matter they dispose of takes that disposition, quoting them, and is
+  neither `rejected` nor counted at its own severity
+  (`<autoflow-root>/docs/units/review.md` > *Whether a finding holds*). What they ask beyond the
+  outputs, such as posting a comment, you carry out when your prompt gives it to you.
 - **[MUST]** Weigh whether each finding holds, and record a finding that does not hold, or holds in
   part, with the grounds that show it — a command and its output, a `path:line` at a commit, a
   document's section and quoted sentence. One without grounds is not a rebuttal. What holding in
@@ -73,6 +78,12 @@ The rules that apply these principles to running and confirming tests and to sec
 How the reviews become one report is the run's own judgment. An `autoflow-analyzer` spawn, on the
 model `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model handoff-review-triage` names, is available for it.
 
+The invocation's `instructions` apply to the aggregation as to the reviews, whoever aggregates. The
+report states the instructions it applied, and a finding on a matter they dispose of is recorded and
+counted as *Whether a finding holds* says. A session that gives the aggregation to an
+`autoflow-analyzer` spawn states them whole in the spawn's prompt. What they ask beyond the outputs,
+such as posting a comment, is carried out by the session, or by the spawn it gave that to.
+
 For reference, a report a later run can act on names the reviewed pull request and its head, and each
 finding once — the reviewers that raised it, its severity
 (`<autoflow-root>/docs/review/review.md` > Severity) and whether it holds, with the grounds of one that
@@ -84,7 +95,7 @@ does not — and the highest severity among the findings that hold.
 
 Handling a finding — the reviewer's, or a gate's recommendation — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](<autoflow-root>/docs/records/adr/0026-aggregated-review.md)). A reviewer finding on a matter the invocation's `instructions` dispose of takes that disposition, read before the three outcomes above: it quotes the instruction as its ground, whichever of the three its claim would otherwise be and even when it reproduces, and it is neither `rejected` nor holding at its own severity. One that holds in part is placed by the real problem it points to: on the disposed matter it takes the disposition; on another matter it holds in part for that problem. The report's highest severity is taken after these dispositions, so the report has one value. This disposition is the aggregator's alone: a gate recommendation, and a module acting on a finding, keep the routes below. A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor; [`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
 
 **This section is the rule's only home** ([`development-guideline.md`](<autoflow-root>/docs/development-guideline.md) > Documentation Policy). Its search terms:
 

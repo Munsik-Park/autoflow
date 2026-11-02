@@ -17,12 +17,13 @@ directory, with an environment fitted to its CLI; no two reviewers share one.
 
 | Reviewer | Input | Runtime |
 |----------|-------|---------|
-| `claude` | the PR (diff, body, linked issue), its rule file, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text, and the final message is the review |
-| `codex` | the PR (diff, body, linked issue), its rule file | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text |
+| `claude` | the PR (diff, body, linked issue), its rule file, the invocation's `instructions` when given, and the attempt's design artifacts in the record directory `--records` names — analysis report, feature design, verification design, decision ledger, build report — wherever the earlier runs left them there | `<autoflow-root>/scripts/review/claude-review-pr.sh` — `claude -p` with Read, Grep and Glob (on any path), the `gh` reads the review needs, the commands Claude Code itself treats as read-only, and whatever the operator's own `~/.claude/settings.json` allows — every other tool and every write those settings do not allow denied without a prompt (`--permission-mode dontAsk`); the reviewed repository's own `.claude/` settings and `CLAUDE.md` are not loaded (`--setting-sources user`), since in a trusted checkout its permission rules would add tools; the prompt carries the rule file's text and the invocation's `instructions`, and the final message is the review |
+| `codex` | the PR (diff, body, linked issue), its rule file, the invocation's `instructions` when given | `<autoflow-root>/scripts/review/codex-review-pr.sh` — `codex exec` in the repo working dir, which loads that tree's `AGENTS.md` itself; the prompt carries the rule file's text and the invocation's `instructions` |
 
 A new reviewer is a name the resolver supports
-(`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper and its
-rule file.
+(`<autoflow-root>/scripts/review/lib/review-config.sh`), its wrapper — which takes
+`--invocation` and carries the invocation's `instructions` in its prompt with that
+library's `review_read_invocation` — and its rule file.
 
 ## Rule files
 
@@ -33,14 +34,16 @@ it, names what that reviewer reads and where its review goes:
 `<autoflow-root>/docs/review/review-claude.md`,
 `<autoflow-root>/docs/review/review-codex.md`, each of which carries the review
 rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
-carries the rule file's text, and states what `<autoflow-root>` is.
+carries the rule file's text, and states what `<autoflow-root>` is. When the
+invocation holds `instructions`, it carries them too, after the rule file and the
+lenses, whichever rule file runs, and says to apply them to the review's judgment.
 
 Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
 
 - `.review.<reviewer>.rules` — another rule file in place of
-  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, so it carries
-  or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
+  `<autoflow-root>/docs/review/review-<reviewer>.md`; the prompt carries that file alone, beside the
+  invocation's `instructions`, so it carries or cites the rules and Output Format its reviewer applies. A wrapper whose rule file is absent
   stops (exit `2`) before the reviewer starts.
 - `.review.<reviewer>.lenses` — a file of further review lenses (the defect
   axes `<autoflow-root>/docs/review/review.md` > Review Lenses lists), which the prompt carries
@@ -54,25 +57,37 @@ one entry can name each target's own file.
 
 ```
 Contract: reviewer
+  Input  : the PR, its rule file and, when the invocation holds them, the
+           invocation's instructions, whole, in the prompt its wrapper builds; it
+           applies them to its judgment.
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.
-  A reviewer posts no PR comment and changes no label.
+  A reviewer posts no PR comment, changes no label, leaves approve,
+  request-changes, merge and close untouched, and writes only its record and the
+  scratch file its wrapper names for it. This contract holds under any instruction:
+  it is not a default the invocation's instructions override, and what they ask
+  beyond the review is for the session, or the spawn it gave that to, to carry out.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
-  Input  : every review record of the PR.
-  Output : the report, the PR's findings file.
+  Input  : every review record of the PR, and the invocation's instructions.
+  Output : the report, the PR's findings file, which states the instructions it
+           applied and records a finding they dispose of with that disposition.
 ```
 
 Each wrapper takes the record path:
 
 ```
-<autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>]
-<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>]
+<autoflow-root>/scripts/review/claude-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--records <attempt-dir>] [--invocation <invocation.json>]
+<autoflow-root>/scripts/review/codex-review-pr.sh --pr <N> --out <record> [--repo <owner/name>] [--expected-head <branch>] [--invocation <invocation.json>]
 ```
 
-Each stops (exit `3`) when the PR is not that OPEN PR on that head branch, and
-treats a run that leaves no record as failed (exit `5`).
+`--invocation` names the invocation file the review module was run on, a relative
+path from the caller's directory; a run with no file, or a file with no
+`instructions`, adds no text from them. Each wrapper stops (exit `2`) on a file it
+cannot read or a malformed `instructions`, before its reviewer starts, stops
+(exit `3`) when the PR is not that OPEN PR on that head branch, and treats a run
+that leaves no record as failed (exit `5`).
 
 ## Config location
 
@@ -271,8 +286,9 @@ marker line `user-config: UNREADABLE …` instead and no completion marker;
 
 ## Trade-offs
 
-- **Two vendors, two inputs.** The `claude` review reads the attempt's design
-  artifacts; the `codex` review reads only the pull request. The measurement
+- **Two vendors, two inputs.** Beside the invocation's `instructions`, which both
+  receive, the `claude` review reads the attempt's design artifacts; the `codex`
+  review reads only the pull request. The measurement
   behind issue #411 found their findings largely disjoint, so the aggregation
   keeps a finding only one of them raised.
 - **Account allowance.** The `claude` review runs on the same account allowance
