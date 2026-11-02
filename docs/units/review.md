@@ -50,8 +50,8 @@ stays in the target's tree.
 `instructions` itself, and its prompt carries them whole, after the rules and the lenses, saying they
 are this invocation's instructions and that the reviewer applies them to its judgment; the session
 chooses and edits nothing of them. With none, nothing is added to the prompt. A file that cannot be
-read as one JSON object, or a malformed `instructions`, stops the wrapper (exit `2`) before its
-reviewer starts. The text reaches each reviewer's vendor — Anthropic for `claude`, OpenAI for
+read as one JSON object, or a malformed `instructions` (not a non-empty string, or holding U+0000,
+which a command line cannot carry), stops the wrapper (exit `2`) before its reviewer starts. The text reaches each reviewer's vendor — Anthropic for `claude`, OpenAI for
 `codex` — and that reviewer's command line while it runs, as the rest of the prompt does, so an
 invocation's author writes nothing there that should stay off them.
 

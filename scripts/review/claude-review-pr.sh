@@ -36,10 +36,10 @@
 # runs' work; it and the AutoFlow tree are added to claude's working
 # directories (`--add-dir`).
 #
-# `--invocation <invocation.json>` names the file the review module was run on,
-# read before anything else, a relative path from the caller's directory. A file
-# that cannot be read, or that holds a malformed `instructions`, stops the wrapper
-# (exit 2) before claude starts.
+# `--invocation <invocation.json>` names the file the review module was run on, a
+# relative path from the caller's directory. A file that cannot be read as one JSON
+# object, or that holds a malformed `instructions` (not a non-empty string, or
+# holding U+0000), stops the wrapper (exit 2) before claude starts.
 #
 # Per-PR review: `--repo owner/name` reviews a sub-repo PR (the prompt tells
 # claude to pass `--repo` to every gh command); without it the PR is the

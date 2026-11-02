@@ -19,10 +19,10 @@
 # every review of the PR writes the one report. Those flags leave GitHub and the
 # record directory reachable, so this holds by codex following the prompt.
 #
-# `--invocation <invocation.json>` names the file the review module was run on,
-# read before anything else, a relative path from the caller's directory. A file
-# that cannot be read, or that holds a malformed `instructions`, stops the wrapper
-# (exit 2) before codex starts.
+# `--invocation <invocation.json>` names the file the review module was run on, a
+# relative path from the caller's directory. A file that cannot be read as one JSON
+# object, or that holds a malformed `instructions` (not a non-empty string, or
+# holding U+0000), stops the wrapper (exit 2) before codex starts.
 #
 # The review module launches this wrapper once per pull request and round when
 # the reviewer configuration (docs/reviewer-backend.md) — the operator's

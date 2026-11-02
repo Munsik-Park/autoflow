@@ -99,7 +99,8 @@
 #       REVIEW_INSTRUCTIONS_BLOCK (the framing and the whole `instructions`
 #       between marker lines), both empty with no file or no `instructions` key;
 #       returns 1, with a line on stderr, on a file it cannot read as one JSON
-#       object or an `instructions` that is not a non-empty string.
+#       object or an `instructions` that is not a non-empty string or that holds
+#       U+0000.
 # =============================================================================
 
 REVIEW_SUPPORTED_REVIEWERS="claude codex"
@@ -368,7 +369,7 @@ review_config_summary() {
 }
 
 review_read_invocation() {
-  local tag="$1" file body
+  local tag="$1" file parsed body
   REVIEW_INSTRUCTIONS_CLAUSE=""
   REVIEW_INSTRUCTIONS_BLOCK=""
   [[ $# -ge 2 ]] || return 0
@@ -377,18 +378,35 @@ review_read_invocation() {
     echo "[${tag}] --invocation needs jq, which is not on PATH: ${file}" >&2
     return 1
   fi
-  # jq -e reads only the last document of a stream, so the document count is checked first.
-  if ! jq -es 'length == 1 and (.[0] | type == "object")' "$file" >/dev/null 2>&1; then
-    echo "[${tag}] the invocation file cannot be read as one JSON object: ${file}" >&2
-    return 1
+  # One jq call: a process substitution gives its text to one read only.
+  # The leading letter is the verdict; the x keeps a trailing newline of the body past the command substitution.
+  if ! parsed="$(jq -sj '
+      if length != 1 or (.[0] | type != "object") then "N"
+      elif (.[0] | has("instructions") | not) then "A"
+      else .[0].instructions |
+        if type != "string" then "M"
+        elif (explode | any(. == 0)) then "U"
+        elif (test("\\S") | not) then "M"
+        else "B" + . end
+      end' "$file" 2>/dev/null && printf x)"; then
+    parsed="N"
   fi
-  jq -e 'has("instructions")' "$file" >/dev/null || return 0
-  if ! jq -e '.instructions | type == "string" and test("\\S")' "$file" >/dev/null; then
-    echo "[${tag}] the invocation file's instructions is not a non-empty string: ${file}" >&2
-    return 1
-  fi
-  # The x keeps a trailing newline of the body past the command substitution.
-  body="$(jq -j '.instructions' "$file"; printf x)"
+  case "$parsed" in
+    N*)
+      echo "[${tag}] the invocation file cannot be read as one JSON object: ${file}" >&2
+      return 1
+      ;;
+    A*) return 0 ;;
+    M*)
+      echo "[${tag}] the invocation file's instructions is not a non-empty string: ${file}" >&2
+      return 1
+      ;;
+    U*)
+      echo "[${tag}] the invocation file's instructions holds U+0000, which a command line cannot carry: ${file}" >&2
+      return 1
+      ;;
+  esac
+  body="${parsed#B}"
   body="${body%x}"
   REVIEW_INSTRUCTIONS_CLAUSE=" Apply this invocation's instructions, below the rules, to your judgment."
   REVIEW_INSTRUCTIONS_BLOCK=$'\n\n'"Invocation instructions. The text from the begin marker line to the last end marker line below is this review invocation's instructions, whole. Apply them to your judgment of the pull request: what they say about what to review, how to judge it, the language of the review and what is already settled comes before the review rules above. The review itself keeps every section of the Output Format the rules name, even where they ask for less, and goes where the last line of this prompt says. They were written for the whole review module, whose session aggregates the reviews, so a part of them may ask for an action on the pull request or the repository: a comment, a label, an approval or a request for changes, a merge or a close, or writing any file but your review. Such a part belongs to the session that runs this review, or a spawn it gives that to, never to you, even when it is addressed to you: leave it undone and do not raise it as a finding."$'\n\n'"--- invocation instructions begin ---"$'\n'"${body}"$'\n'"--- invocation instructions end ---"
