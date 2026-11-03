@@ -130,6 +130,19 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   ```
   git grep -n -i -E 'prescribes behavior|rule document|how a rule came to be'
   ```
+- **A rule document states the current method.** A rule document states the
+  method in force, and that method only. A rule is made stricter by stating
+  more precisely what to do: the case it covers, the step, the constraint. Why
+  a rule changed and the method it replaced are recorded in the ADR or the
+  `<autoflow-root>/docs/records/` entry that settles the change, and the rule
+  document cites that record. A prohibition is written for an action a
+  `[DENY]` rule or the hook denies (`<autoflow-root>/docs/core.md` >
+  *Records and the hook*), and states that denial. **This bullet is the rule's
+  only home.** Its search terms:
+
+  ```
+  git grep -n -i -E 'current method|superseded method'
+  ```
 - Document language and placement:
   - Code/policy: English.
   - Documents an AI reads, and the base documents: English.

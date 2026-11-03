@@ -58,6 +58,7 @@ Return only your artifact paths and a summary
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
+- These documents state the current method. A rule is made stricter by stating more precisely what to do; why it changed and the method it replaced are recorded in the ADR or the `<autoflow-root>/docs/records/` entry it cites; a prohibition is written for an action a `[DENY]` rule or the hook denies (`<autoflow-root>/docs/development-guideline.md` > Documentation Policy).
 - What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
