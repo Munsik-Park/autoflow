@@ -118,9 +118,10 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   `docs/review/`, the PR and issue templates, and the descriptive fields of
   `.claude/autoflow/spawn-policy.json` — states the current method only: what
   to do, when, and under which constraint. A rule is made stronger by stating
-  more precisely what to do: the case it covers, the step, the constraint. A
-  prohibition is written only for an action a `[DENY]` rule or the hook denies
-  (`<autoflow-root>/docs/core.md` > *Records and the hook*). It carries no
+  more precisely what to do: the case it covers, the step, the constraint. The
+  method a rule replaced stays as a prohibition only where a `[DENY]` rule or
+  the hook denies that action (`<autoflow-root>/docs/core.md` > *Records and the
+  hook*). It carries no
   account of how a rule came to be (a case; an issue, PR, ADR or Decision
   number; a change relative to an earlier version; a changelog), no reason why
   a rule is needed or right, and no structure, procedure or example of a
