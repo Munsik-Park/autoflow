@@ -112,36 +112,28 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   file — are regenerated from the home, not edited; such a copy is the home's
   text, not another site. A home without search terms gets them in the same
   change.
-- **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
-  documents under `docs/` other than `docs/records/`, the agent and skill
-  definitions, the review rules under `docs/review/`, the PR and issue templates,
-  and the descriptive fields of
-  `.claude/autoflow/spawn-policy.json` — states what to do, when, and under
-  which constraint. It carries no account of how a rule came to be (a case; an
-  issue, PR, ADR or Decision number; a change relative to an earlier version; a
-  changelog), no reason why a rule is needed or right, and no structure,
-  procedure or example of a specific target repository. Those go to the issue
-  and PR thread, `docs/records/`, and the target's own documents; git reaches
-  them (`git log -S`, the `(#N)` in a commit title). A sentence belongs in a
+- **A rule document prescribes behavior.** A rule document — `README.md`,
+  `CLAUDE.md`, `AGENTS.md`, the documents under `docs/` other than
+  `docs/records/`, the agent and skill definitions, the review rules under
+  `docs/review/`, the PR and issue templates, and the descriptive fields of
+  `.claude/autoflow/spawn-policy.json` — states the current method only: what
+  to do, when, and under which constraint. A rule is made stronger by stating
+  more precisely what to do: the case it covers, the step, the constraint. A
+  prohibition is written only for an action a `[DENY]` rule or the hook denies
+  (`<autoflow-root>/docs/core.md` > *Records and the hook*). It carries no
+  account of how a rule came to be (a case; an issue, PR, ADR or Decision
+  number; a change relative to an earlier version; a changelog), no reason why
+  a rule is needed or right, and no structure, procedure or example of a
+  specific target repository. Those go to the issue and PR thread, the ADR or
+  `docs/records/` — why a rule changed and the method it replaced among them —,
+  and the target's own documents; git reaches them (`git log -S`, the `(#N)` in
+  a commit title). A sentence belongs in a
   rule document only if removing it would change what a reader must do, what a
   judgment rests on, or what is constrained. **This bullet is the rule's only
   home.** Its search terms:
 
   ```
   git grep -n -i -E 'prescribes behavior|rule document|how a rule came to be'
-  ```
-- **A rule document states the current method.** A rule document states the
-  method in force, and that method only. A rule is made stricter by stating
-  more precisely what to do: the case it covers, the step, the constraint. Why
-  a rule changed and the method it replaced are recorded in the ADR or the
-  `<autoflow-root>/docs/records/` entry that settles the change, and the rule
-  document cites that record. A prohibition is written for an action a
-  `[DENY]` rule or the hook denies (`<autoflow-root>/docs/core.md` >
-  *Records and the hook*), and states that denial. **This bullet is the rule's
-  only home.** Its search terms:
-
-  ```
-  git grep -n -i -E 'current method|superseded method'
   ```
 - Document language and placement:
   - Code/policy: English.
