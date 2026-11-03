@@ -112,20 +112,24 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
   file — are regenerated from the home, not edited; such a copy is the home's
   text, not another site. A home without search terms gets them in the same
   change.
-- **A rule document prescribes behavior.** A rule document — `CLAUDE.md`, the
-  documents under `docs/` other than `docs/records/`, the agent and skill
-  definitions, the review rules under `docs/review/`, the PR and issue templates,
-  and the descriptive fields of
-  `.claude/autoflow/spawn-policy.json` — states what to do, when, and under
-  which constraint. It carries no account of how a rule came to be (a case; an
-  issue, PR, ADR or Decision number; a change relative to an earlier version; a
-  changelog), no reason why a rule is needed or right, and no structure,
-  procedure or example of a specific target repository. Those go to the issue
-  and PR thread, `docs/records/`, and the target's own documents; git reaches
-  them (`git log -S`, the `(#N)` in a commit title). A sentence belongs in a
-  rule document only if removing it would change what a reader must do, what a
-  judgment rests on, or what is constrained. **This bullet is the rule's only
-  home.** Its search terms:
+- **A rule document prescribes behavior.** A rule document — `CLAUDE.md`,
+  `AGENTS.md`, the documents under `docs/` other than `docs/records/`, the agent
+  and skill definitions, the review rules under `docs/review/`, the PR and issue
+  templates, and the descriptive fields of `.claude/autoflow/spawn-policy.json`
+  — states the current method only: what to do, when, and under which
+  constraint. A rule document makes a rule stronger by stating more precisely
+  what to do: the case it covers, the step, the constraint. A sentence that
+  prohibits the method a rule replaced stays only where a `[DENY]` rule or the
+  hook denies that action (`<autoflow-root>/docs/core.md` > *Records and the
+  hook*). A rule document carries no account of how a rule came to be (a case;
+  an issue, PR, ADR or Decision number; a change relative to an earlier version;
+  a changelog), no reason why a rule is needed or right, and no structure,
+  procedure or example of a specific target repository. Such an account, reason
+  or structure goes to the issue and PR thread, `docs/records/`, and the
+  target's own documents; git reaches it (`git log -S`, the `(#N)` in a commit
+  title). A sentence belongs in a rule document only if removing it would change
+  what a reader must do, what a judgment rests on, or what is constrained.
+  **This bullet is the rule's only home.** Its search terms:
 
   ```
   git grep -n -i -E 'prescribes behavior|rule document|how a rule came to be'
