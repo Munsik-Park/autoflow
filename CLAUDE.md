@@ -17,7 +17,7 @@ The repository root is the plugin root (ADR-0027 D1): `.claude-plugin/`, `agents
 
 - **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract, and **`[DENY]`** a prohibited action; the tags carry the weight, so no extra emphasis is stacked on them, and a `[MUST]` applies exactly to the scope it names (`docs/core.md` > Instruction Conventions).
 - A rule and the device that enforces it change in the same change (`docs/core.md` > Rule Scope, principle 4).
-- A rule document states the current method only. A rule is made stronger by stating more precisely what to do, and the method a rule replaced stays as a prohibition only where a `[DENY]` rule or the hook denies that action (`docs/development-guideline.md` > Documentation Policy > *A rule document prescribes behavior*).
+- A rule document states the current method only, makes a rule stronger by stating more precisely what to do, and keeps a sentence that prohibits the method a rule replaced only where a `[DENY]` rule or the hook denies that action (`docs/development-guideline.md` > Documentation Policy > *A rule document prescribes behavior*).
 - An AutoFlow path in a document, an agent definition or a command body is written `<autoflow-root>/docs/…` or `<autoflow-root>/scripts/…`; a target path stays a bare relative path (`.claude/autoflow.local.json`), and a record path is written `<attempt-dir>/…` — the attempt's record directory under the record root, which each invocation names (`records`). Links between AutoFlow documents stay file-relative (ADR-0027 D3).
 
 ## AutoFlow Core
