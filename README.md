@@ -2,9 +2,21 @@
 
 A reusable framework for structured, evaluation-gated AI-assisted software development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), delivered as a Claude Code plugin.
 
+AutoFlow is one of three repositories, the back end; the coordinator is where to start:
+
+- [autoflow](https://github.com/Munsik-Park/autoflow) (this repository) is the back end: the
+  contract modules, run one at a time with `/autoflow:<module> <invocation.json>`. It can run
+  alone, but practical use goes through the coordinator.
+- [autoflow-coordinator](https://github.com/Munsik-Park/autoflow-coordinator) is the front end
+  and where to start: the coordination session and its `tools/`, which assemble modules, open work
+  sessions in cmux or tmux and judge the results. It does not run without AutoFlow installed at
+  the version in its `VERSION`.
+- [autoflow-coordinator-run-status](https://github.com/Munsik-Park/autoflow-coordinator-run-status)
+  is an optional, recommended mod that shows a run's flow and verdicts from `tools/status.py`.
+
 AutoFlow is a set of modules — the criterion review, analysis, design, build, delivery, ci and review,
 and the evaluations that score their work — each with a contract, built on multi-agent role
-separation, independent analysis, and quantified evaluation. AutoFlow writes no file into the
+separation, independent analysis, and quantified evaluation. Its records live under a record root outside every
 project's tree (see [Quick Start](#quick-start)). Three properties set its scope:
 
 1. **Terminal scope** — AutoFlow's last output is the reviewed PR; an external review process performs the merge. **AutoFlow never merges.**
@@ -41,7 +53,7 @@ External review merges the pull request out of band.
 - **Analysis unit** — one analysis spawn states the current structure as fact, the gap to the request and whether code is the lever, heeding stated bias cautions; a fresh evaluator scores it.
 - **Evaluations** — 10-point scoring, output with the reference pass values (average ≥ 7.5, each item ≥ 7, security ≤ 3 → rework).
 - **Hook Enforcement** — a shell hook denies, in every session, `gh pr merge`, a push to the default branch, `gh issue create`, a ledger rewrite and a spawn without `model`.
-- **Sub-Repo Support** — a changed sub-repo is delivered on its own PR and the host follows it by its pointer; the project's structure is read from its own information, not classified.
+- **Sub-Repo Support** — a changed sub-repo is delivered on its own PR and the host follows it by its pointer.
 
 ---
 
@@ -49,8 +61,8 @@ External review merges the pull request out of band.
 
 AutoFlow is a **versioned tool your own dev project consumes**, delivered by a
 Claude Code plugin alone: your project is the repository Claude Code runs in, and
-AutoFlow writes no file into it: its records live under a record root outside
-every project's tree (`~/.autoflow` by default).
+AutoFlow's records live under a record root outside every project's tree
+(`~/.autoflow` by default).
 
 Install the plugin once per machine, at user scope:
 
@@ -66,11 +78,7 @@ repository's `.claude/settings.json`.
 
 Then, in your project:
 
-- **Run a module** on an invocation file — the module's parameters, its
-  inputs, the attempt's record directory and the run's output directory
-  ([`docs/core.md`](docs/core.md) > Development Lifecycle): `/autoflow:<module> <invocation.json>`,
-  one command per module, carries the module's procedure (ADR-0038 D9).
-- **Nothing to ignore**: every record — an attempt's ledger, each run's outputs and `local/`
+- **Records**: every record — an attempt's ledger, each run's outputs and `local/`
   store, issue drafts — is under the record root (`autoflow-records root` prints it), each
   attempt's record directory there. Set
   `"record_root": "<absolute path>"` in `~/.autoflow/config.json` to move it; the file stays where
@@ -108,6 +116,13 @@ up the environment ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contra
 
 **Developing AutoFlow**: `claude --plugin-dir <clone>` runs a clone's working
 tree in place of the installed plugin for that session.
+
+### Advanced: running a module directly
+
+- **Run a module** on an invocation file — the module's parameters, its
+  inputs, the attempt's record directory and the run's output directory
+  ([`docs/core.md`](docs/core.md) > Development Lifecycle): `/autoflow:<module> <invocation.json>`,
+  one command per module, carries the module's procedure (ADR-0038 D9).
 
 ---
 
@@ -162,20 +177,26 @@ carries the parts of the core its module uses, and a subagent through its agent 
 command body carries its module's document and the other documents the session follows after the
 core, and each agent definition the core parts and documents its role follows (ADR-0035).
 
-### 2. Multi-Agent Separation
+### 2. Agents
 
-| Agent | Role | Can Write To |
-|-------|------|--------------|
-| **Build unit (U4)** | Implements and verifies the design per target scope, test-first | Files within the assigned scope |
-| **Evaluation AI** | Scores quality | Nothing (read-only) |
+| Agent | Role |
+|-------|------|
+| `autoflow-advisor` | Decides the points a module puts to it — an acceptance-criterion change, a non-code root cause, a hypothesis PASS judged unreachable, an un-agreed design point, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, a security-checklist change, or any other point the module doubts — and records each as a ledger entry with its grounds; the module follows the decision |
+| `autoflow-analyzer` | The review module's analysis spawn: the reviews of a pull request aggregated into one report |
+| `autoflow-criterion-analyzer` | The criterion review's criterion-in-depth module: in-depth analysis of one criterion's screened cases, judged on the code that decides the behavior, in a context that never saw the review's earlier verdicts |
+| `autoflow-criterion-reconciler` | The criterion review's criterion-reconcile module: reconciles the screen's record with the trace and the in-depth analyses, settles in the code every case where they differ and writes the updated record |
+| `autoflow-criterion-tracer` | The criterion review's criterion-trace module: from the causes and required behaviors the screen's record confirmed, judges how far each cause reaches beyond the reported points and whether each required behavior conflicts with the rules the code already has |
+| `autoflow-evaluator` | The Evaluation AI of the evaluation modules `hypothesis`, `plan`, `audit` and `quality`: scores and their grounds |
+| `autoflow-unit-analysis` | The analysis module as one spawn, prescribed by its goal, its output and its evaluation; its report is scored by the hypothesis evaluation |
+| `autoflow-unit-build` | The build module as one spawn, prescribed by its goal, its output and its evaluation; the audit evaluation judges test-first and scores the change |
+| `autoflow-unit-design` | The design module as one spawn, prescribed by its goal, its output and its evaluation; its documents are scored by the plan evaluation |
 
-### 3. Evaluation Gates
+### 3. Evaluations
 
-At GATE:HYPOTHESIS, GATE:PLAN, AUDIT, and GATE:QUALITY, a freshly spawned
+In the evaluation modules `hypothesis`, `plan`, `audit` and `quality`, a freshly spawned
 Evaluation AI scores the work and states its grounds. The reference pass values
 — average ≥ 7.5, each item ≥ 7, a security score ≤ 3 → rework — are kept with
-the rubrics and output with the scores. Categories and weights are
-customisable per project.
+the rubrics and output with the scores.
 
 ### 4. Hook Enforcement
 
@@ -189,22 +210,9 @@ writer that is not its own; and an `Agent` spawn without an explicit `model`
 
 ## Customization
 
-### Repository Structure
-
-AutoFlow does not classify a project's repository structure. The AI reads the
-project's own information and rule files where they exist — a `README.md`, a
-`CLAUDE.local.md`, or whatever the project keeps — for the facts the work needs
-(see `docs/core.md` > Project Information), and records a fact no file states,
-and the repository does not show, as a tool request. In a project with sub-repos, which PRs a
-change takes, a sub-repo's included, is the delivery module's judgment
-(`docs/units/delivery.md` > *Push and pull request*); what follows a merge is
-outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
-
 ### Evaluation Tuning
 
-- Adjust category **weights** to match your priorities.
 - The **reference pass values** are kept with the rubrics (`docs/evaluation-system.md` > PASS Criteria) and in each evaluation contract's `reference`, which an evaluation outputs with its scores.
-- Add **custom categories** as needed.
 
 ---
 
@@ -213,7 +221,9 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 | Document | Description |
 |----------|-------------|
 | [**Design Rationale**](docs/records/design-rationale.md) | Why every design decision was made — a record read for a decision's grounds; which documents a role receives is routed per role (`docs/core.md` > Context Injection — Role-Scoped Document Routing) |
+| [Core](docs/core.md) | AutoFlow operating manual — how a module runs, the records and the hook — and the source of the module command bodies, `/autoflow:<module>`, each with the parts of the core its module uses (ADR-0027 D2, ADR-0038 D9) |
 | [AutoFlow Guide](docs/autoflow-guide.md) | Index of the modules: each one's kind, procedure document, and what it takes and gives |
+| [Decision Ledger](docs/decision-ledger.md) | The per-attempt decision ledger's entry grammar, identifiers, and decision-point entries (`[ac-decision]`, `[checklist-decision]`) |
 | [Evaluation System](docs/evaluation-system.md) | Scoring, the reference pass values, output format |
 | [Git Workflow](docs/git-workflow.md) | Issue closing |
 | [Repo Boundary Rules](docs/repo-boundary-rules.md) | Cross-repo coordination |
@@ -221,6 +231,8 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |
 | [Requirements](docs/requirements.md) | What AutoFlow needs to run |
 | [Tool Delivery Contract](docs/tool-delivery-contract.md) | The plugin as the single version, rule delivery, the packaging check and the target check, the target-owned files and the operator-level file, the spawn policy, the runtime environment |
+| [Reviewer Contract](docs/reviewer-backend.md) | The review module's reviewers: the reviewers the operator file names, each run by its own script, their inputs, rule files and review records, the aggregator's outputs, config location, model/effort, availability, start-confirmation oracle |
+| [Criterion Review](docs/criterion-review.md) | The criterion review's four modules: an attempt's review of the issue's acceptance criteria against the target's code and policy, each item disposed of with its grounds in the review record |
 
 ---
 
