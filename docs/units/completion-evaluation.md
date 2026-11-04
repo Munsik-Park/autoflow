@@ -44,13 +44,12 @@ every previous finding dispositioned.
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface Rules > *Code comments*),
   is a `Low` finding. It never raises a review's verdict above `Low`
   (`<autoflow-root>/docs/review/review.md`); the evaluator records it in `recommendations` and lowers no item's score for
-  it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). It is
-  therefore never the cause of a low score on any item. Only that
-  finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
+  it ([`evaluation-system.md`](../evaluation-system.md) > *Code comments in a target*). Only
+  that finding is `Low`: a defect a comment carries on its own ground — an exposed credential, token or
   personal data, for example — takes the severity its impact sets, as any finding does.
 - **Directives.** A line a tool reads to change its behavior is code even in comment syntax, and
-  which lines those are is the working AI's judgment in that target, with no list kept (*Code
-  comments* > *Directives are code*). A defect in one takes the severity of the behavior it
+  which lines those are is the working AI's judgment in that target (*Code comments* >
+  *Directives are code*). A defect in one takes the severity of the behavior it
   changes.
 - **This repository is excluded.** Here a comment takes the reviewer's severity as judged.
 - *Secondary (multi-repo):* a comment in a sub-repo is in that sub-repo's scope

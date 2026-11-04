@@ -39,11 +39,11 @@ bash <autoflow-root>/scripts/review/review-start-check.sh --pr <N> --reviewer <n
 Each wrapper stops when the PR it is given is not that OPEN PR on that head branch, then runs its
 reviewer over the PR with that reviewer's rule file and, where one is configured, its lenses file
 ([`reviewer-backend.md`](../reviewer-backend.md) > *Rule files*), on the model and effort the same
-file names; the reviewer writes its review and nothing else. `--records` names the attempt's record
+file names; the reviewer writes its review. `--records` names the attempt's record
 directory the invocation gives (`records`), where the `claude` reviewer reads the earlier runs'
 work — the analysis report, the design documents, the decision ledger and the build report.
-`<record>` is the review record's absolute path below; nothing a wrapper or its reviewer writes
-stays in the target's tree.
+`<record>` is the review record's absolute path below, in the attempt's record directory; a
+wrapper and its reviewer write there.
 
 `--invocation` names the invocation file this run was given, on every run, whether or not it holds
 `instructions`; a relative path is read from the caller's directory. The wrapper reads the
@@ -98,7 +98,7 @@ does not — and the highest severity among the findings that hold.
 
 Handling a finding — the reviewer's, or a gate's recommendation — weighs *does it hold?* beside *how is it cleared?* A finding does not hold when what it claims does not: it does not reproduce, the source it cites says otherwise, or it misreads a rule. It holds in part when its claim does not hold but the problem that prompted it is real; the real problem is then what gets fixed, not the claim's letter. The aggregator, the one that reads the review records, weighs each finding and records a finding that does not hold, or holds in part, with the grounds that show it — a command and its output, a `path:line` at a commit, a document's section and quoted sentence. A rebuttal without grounds is not a rebuttal, and the finding is handled as holding. A module acting on a finding that finds in its work that the finding does not hold reports it with the same grounds.
 
-The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A reviewer finding on a matter the invocation's `instructions` dispose of takes that disposition, read before the three outcomes above: it quotes the instruction as its ground, whichever of the three its claim would otherwise be and even when it reproduces, and it is neither `rejected` nor holding at its own severity. One that holds in part is placed by the real problem it points to: on the disposed matter it takes the disposition; on another matter it holds in part for that problem. The report's highest severity is taken after these dispositions, so the report has one value. This disposition is the aggregator's alone: a gate recommendation, and a module acting on a finding, keep the routes below. A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Development Lifecycle > *Decisions within a module*); no count decides when.
+The aggregator's judgment over a reviewer finding is its disposition: a finding that does not hold is `rejected` — recorded with its grounds in the findings file, and counted toward no verdict ([ADR-0026](../records/adr/0026-aggregated-review.md)). A reviewer finding on a matter the invocation's `instructions` dispose of takes that disposition, read before the three outcomes above: it quotes the instruction as its ground, whichever of the three its claim would otherwise be and even when it reproduces, and it is neither `rejected` nor holding at its own severity. One that holds in part is placed by the real problem it points to: on the disposed matter it takes the disposition; on another matter it holds in part for that problem. The report's highest severity is taken after these dispositions, so the report has one value. This disposition is the aggregator's alone: a gate recommendation, and a module acting on a finding, keep the routes below. A finding that the module acting on it finds does not hold is a rebuttal: it is posted with its grounds on the PR, and the next round's reviews and aggregation judge it — a round of its own also when it only rebuts and changes no code. A gate recommendation's rebuttal is judged by the recommending evaluation's re-score. One that holds in part is fixed for the real problem it points to. When a rebutted finding is kept and the two sides still disagree, the module acting on it puts it to the advisor and follows the decision ([`role-contracts.md`](../role-contracts.md) > Advisor; [`core.md`](../core.md) > Development Lifecycle > *Decisions within a module*).
 
 **This section is the rule's only home** ([`development-guideline.md`](../development-guideline.md) > Documentation Policy). Its search terms:
 
@@ -109,8 +109,8 @@ git grep -n -i -E 'rebut|holds in part|finding (that )?does not hold|whether (a|
 ### A repeated complaint
 
 A change can loop: each fix answers the case a reviewer — or an evaluation's recommendation — named
-while the property it asserts stays unmet, and the next review or re-score names another case. No
-spawn checks for this on every round. Whoever reads the finding — the aggregator here, the analysis
+while the property it asserts stays unmet, and the next review or re-score names another case.
+Whoever reads the finding — the aggregator here, the analysis
 module, or the module acting on an evaluation's recommendation — and sees that it repeats an earlier
 complaint (the same property asserted, a different witness case; the earlier rounds' findings files, and the earlier evaluations in the record directory, are what it compares against)
 says so where it writes the finding: with the finding in the findings file, under the analysis

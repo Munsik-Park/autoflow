@@ -81,7 +81,7 @@ These are the rules other documents cite; everything else about the work is the 
   deployment-level check of the kind it commits (`packaging`, `manifest`; ADR-0038 D7) —, recorded
   with its reason and the CI job expected to run it, and wired into the target's CI discovery.
 - **Running tests.** Locally and once, the tests the change requires, the way the target runs them
-  (*How a test is run is the target's practice*, *Local verification*); no whole-tree run. An item
+  (*How a test is run is the target's practice*, *Local verification*). An item
   verified by observation with a tool is looked at with that tool and its observation record written
   under `<out>/local/`, saying whether what it observed matches and, where it does not, what differs
   (*The tools the work needs*). A tool neither this
@@ -95,7 +95,6 @@ These are the rules other documents cite; everything else about the work is the 
   commented-out code, and content none of the cases under *What a comment carries* admits, such as a
   value, count or list copied from another file) —, every hit is disposed of (removed, rewritten, or
   kept with the reason the match is not the class) and the result is recorded.
-  The check is a signal, not a gate.
 - **Design contradiction.** When the acceptance criteria are themselves mutually unsatisfiable — the
   implementation and the tests each faithful to the design — the module implements the satisfiable
   subset and records the contradiction in `<out>/green-blocker.md`: the conflicting criteria, the
@@ -182,7 +181,7 @@ worth and where it loses.
 ## Build report
 
 `<out>/build-report.md`. The first run writes it whole; a re-run, given the previous report, brings
-it up to date rather than rewriting it (*Re-entry* below). It records
+it up to date (*Re-entry* below). It records
 the results below; the headings and the form are the module's, and a matter with nothing to record
 is said to have none.
 
@@ -220,7 +219,7 @@ recommendations.
 
 ### Security checklist
 
-The target's own: AutoFlow ships no checklist and names no item. A target declares its checklist
+The checklist is the target's own. A target declares its checklist
 in the target-owned scaffold `.claude/autoflow.local.json`
 (`{"audit":{"security_checklist":"<repository-relative path>"}}`). Which version the audit reads is
 the one the record line of
@@ -254,7 +253,7 @@ directory — their reports and their `local/` stores — and brings the build r
 
 ## Header contract
 
-Opted-in targets only; this repository does not opt in. Every executable spec under `tests/**`
+Opted-in targets only (`.claude/autoflow.local.json` > `tests.suite_plane: true`). Every executable spec under `tests/**`
 declares, in a column-1 comment header, what it is and what it costs — at creation, not
 retroactively. The grammar's single definition site is `<autoflow-root>/scripts/test/suite-manifest.sh`, and
 `<autoflow-root>/scripts/test/check-suite-manifest.sh` enforces it.
@@ -277,7 +276,7 @@ retroactively. The grammar's single definition site is `<autoflow-root>/scripts/
 
 The fields go in the file's leading comment block at column 1, before its first non-comment line. The migration is complete when `select-suites.sh --check-headers` exits `0`, `check-suite-manifest.sh` reports OK and the target check reports `PASS: D7`.
 
-**Naming**: a committed test is subject-named; an issue number does not belong in its file name. A one-shot check is not a committed file, so no naming rule reaches it.
+**Naming**: a committed test is subject-named.
 
 **Leaf rule**: a suite executes its subject, not another suite. Enforced by `<autoflow-root>/scripts/test/check-suite-leaf.sh`.
 

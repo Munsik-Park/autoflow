@@ -194,7 +194,7 @@ fi
 
 bash_payload 'git push -u origin work-issue-7' | run_hook "$T" >/dev/null 2>"$WORK/e3b0.err"; rc0=$?
 bash_payload 'git push origin main' | run_hook "$T" >/dev/null 2>"$WORK/e3b1.err"; rc1=$?
-if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -qF "$ROOT/docs/core.md > Push and PR creation" "$WORK/e3b1.err"; then
+if [ "$rc0" -eq 0 ] && [ "$rc1" -eq 2 ] && grep -qF "$ROOT/docs/core.md > Records and the hook" "$WORK/e3b1.err"; then
   pass "E3b: with no state anywhere, the work branch's push is admitted and the push to the default branch denied"
 else
   failc "E3b" "rc-work-branch=$rc0 rc-default=$rc1 stderr=$(tr '\n' '|' < "$WORK/e3b1.err")"

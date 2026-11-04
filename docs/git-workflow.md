@@ -26,6 +26,3 @@ Part of <host-owner>/<host-name>#N
 
 - Close keywords: `Closes`, `Fixes`, `Resolves` (case-insensitive).
 - Cross-repo references are recognised in PR bodies only (commit messages do not trigger cross-repo close).
-- A sub-repo PR does not use `Closes`.
-- The host PR carries `Closes #N`; composing the PR body is the delivery module's, and nothing checks the line ([`units/delivery.md`](units/delivery.md) > *Push and pull request*).
-- A pull-request template does not inline a plain-text close keyword: this repository's `.github/pull_request_template.md` uses the marker `<!-- HOST-CLOSE-LINE -->`, which the host PR's body replaces with the `Closes #N` line. A template, document or design note that describes the pattern wraps the example in backticks or a code fence.

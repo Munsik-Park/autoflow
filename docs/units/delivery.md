@@ -4,14 +4,14 @@
 > to this file; the other modules are listed in [`autoflow-guide.md`](../autoflow-guide.md) >
 > Modules.
 
-AutoFlow's mission ends by handing off an open pull request — opened, with CI read, by the modules below, and reviewed by [U7 Review](review.md). Merging, issue close, and deployment are outside AutoFlow's authority, performed entirely by an external review process that AutoFlow does not define or perform.
+AutoFlow's mission ends by handing off an open pull request — opened, with CI read, by the modules below, and reviewed by [U7 Review](review.md).
 
 ## The two modules
 
 U6 Delivery is two modules, each with its contract under `<autoflow-root>/docs/contracts/` and this
 file as its procedure ([`ADR-0039`](../records/adr/0039-delivery-and-ci-modules.md)). Each runs
-alone on its invocation. A module is given the kinds of its inputs, the kind and form of its output,
-its tools and the authority rules below; how many of a thing it makes, which steps it takes in which
+alone on its invocation. A module is given the kinds of its inputs, the kind and form of its output
+and its tools; how many of a thing it makes, which steps it takes in which
 order and what it checks are the AI's, judged from the inputs it is given.
 
 | Module | Output | Default | `timeout` not given |
@@ -30,13 +30,6 @@ order and what it checks are the AI's, judged from the inputs it is given.
   result as `failed` (`<autoflow-root>/scripts/contracts/contract.sh`, header).
 - **Check-out** checks the output's form: the file is there and reads in the form its contract
   gives.
-
-## Authority rules
-
-These hold on every push, every pull request and every pull-request body either module makes.
-
-- Pushing, opening a pull request and editing its body are the module's own commands, never run
-  through a script or a wrapper (`<autoflow-root>/docs/core.md` > Scripts).
 
 ## Push and pull request
 

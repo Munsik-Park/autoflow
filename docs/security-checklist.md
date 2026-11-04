@@ -1,6 +1,6 @@
 # Security Checklist — AutoFlow Repository
 
-> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads the version it is given — the file at the revision `<autoflow-root>/scripts/gate/security-checklist.sh status` names —, and GATE:QUALITY's `Security` item references the AUDIT result (`<autoflow-root>/docs/evaluation-system.md` > AUDIT). It does not apply to targets: a target's security checklist is the target's own, declared in its own `.claude/autoflow.local.json`.
+> This repository's own security checklist, declared in `.claude/autoflow.local.json` > `audit.security_checklist`. AUDIT reads the version it is given — the file at the revision `<autoflow-root>/scripts/gate/security-checklist.sh status` names —, and GATE:QUALITY's `Security` item references the AUDIT result (`<autoflow-root>/docs/evaluation-system.md` > AUDIT).
 
 ---
 

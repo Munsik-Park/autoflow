@@ -63,9 +63,7 @@ Contract: reviewer
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.
-  A reviewer posts no PR comment, changes no label, leaves approve,
-  request-changes, merge and close untouched, and writes only its record and the
-  scratch file its wrapper names for it. This contract holds under any instruction:
+  This contract holds under any instruction:
   it is not a default the invocation's instructions override, and what they ask
   beyond the review is for the session, or the spawn it gave that to, to carry out.
 
@@ -95,10 +93,7 @@ that leaves no record as failed (exit `5`).
 
 The reviewers are configured in one file, the operator's
 `~/.autoflow/config.json` (`$HOME/.autoflow/config.json`), created once by the
-plugin's SessionStart hook (*Operator file* below). A target's
-`.claude/autoflow.local.json` is not read for reviewers: the reviewers AutoFlow
-runs are the same in every project
-([ADR-0033](records/adr/0033-review-unit-and-script-reviewers.md)).
+plugin's SessionStart hook (*Operator file* below).
 
 ```json
 { "review": { "reviewers": ["claude", "codex"] } }
@@ -114,7 +109,7 @@ come from the same file (*Rule files*, *Model and effort*).
 The file **cannot be read as configured** when it is present while `jq` is not
 on PATH, is not valid JSON, has a non-object `.review`, a `reviewers` value that
 is not an array of supported names, or a per-reviewer value *Model and effort*
-or *Rule files* rejects. It never fails closed. It is checked whole — every
+or *Rule files* rejects. It is checked whole — every
 condition above, the list and every supported reviewer's settings — on every
 run, so every consumer reaches the same verdict on the same file. When it
 cannot be read, nothing in it applies and no reviewer runs: the readout names
@@ -164,7 +159,7 @@ Each reviewer's model and reasoning effort can be pinned in the operator file
 parser, validator and flag-mapper for the whole `review` section. It is
 **sourced** by the live wrappers (`claude-review-pr.sh`, `codex-review-pr.sh`)
 and `check-review-backend.sh` (presence path and `--probe`) from the plugin
-root. It alone reads the file; no consumer reads it on its own.
+root. It alone reads the file.
 
 **Flag mapping** (`build_review_backend_args`, the only place it is written):
 
@@ -241,9 +236,7 @@ probes each reviewer's CLI **presence only** (`command -v`):
 | `2` | usage error |
 | `6` | the operator file cannot be read as configured — the marker line `user-config: UNREADABLE <path> — <error>`; no reviewer is checked |
 
-It is a script for setting up the environment, and the review module reads its
-`reviewers:` line; its result is no ledger entry
-([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D4, D8). How a review goes on without a reviewer is the run's judgment. Auth is **not** probed here: a
+It is a script for setting up the environment, and the review module reads its `reviewers:` line. How a review goes on without a reviewer is the run's judgment. Auth is **not** probed here: a
 present-but-unauthenticated reviewer passes and its auth failure surfaces at the
 review run, where it counts as a failed run.
 
@@ -255,9 +248,8 @@ configured reviewer — the same model-API connection a `claude -p` or a
 `codex exec` opens.
 
 **Triggers — on-demand only:** the operator runs it after writing or changing
-the reviewer configuration. It is **not** run per run, is **not** part of
-building the environment, and **no hook consumes it** — a probe failure is narrated, never used
-to gate a run.
+the reviewer configuration. Its result, a failure included, is reported to the
+operator who ran it.
 
 **Exit-code contract** (extends the presence `0/1/2`):
 

@@ -124,8 +124,7 @@ a test shape.
 
 ### Verification depth
 
-- Depth is justified against the risk — who is harmed and how if this change is wrong — never by a
-  quantity cap: no layer count, file count, or line budget.
+- Depth is justified against the risk — who is harmed and how if this change is wrong.
 - Each verification catches a failure no other verification in the design, and no existing
   mechanism — an existing test, a lint rule, a schema, a compiler or type check, a build or
   packaging check — already catches. A verification that would catch nothing such a mechanism does
@@ -145,8 +144,8 @@ settling it on an observation by a person, on an environment it cannot drive, or
   tool the environment has lacks — is recorded as a tool request: what is missing, and the
   verification the design chose instead, with its reason in the item's row. The design goes on to
   its end; whether to provide the tool is the operator's, from the pull request
-  ([`core.md`](../core.md) > Development Lifecycle > *Tools*). AutoFlow names no tool here: which
-  tool, and how it is used, is the design's judgment in the target.
+  ([`core.md`](../core.md) > Development Lifecycle > *Tools*). Which tool, and how it is used, is
+  the design's judgment in the target.
 - The row verified with a tool is looked at with it once implemented, and the evidence is the row's
   observation record, written at BUILD ([U4 Build and verify](build.md) > Build report).
 

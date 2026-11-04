@@ -86,14 +86,14 @@
 ## Spawn Model	**[MUST]** Every `Agent` spawn declares the `model` parameter	all
 ## Spawn Model	The value a spawn declares	all
 ## Spawn Model	**Spawn role declaration**	all
-## Spawn Model	No role holds a lifetime spanning runs	all
+## Spawn Model	Each run spawns its role fresh	all
 ## Context Injection		split
 ## Context Injection	**[MUST]** Subagent document injection	all
 ## Context Injection	A spawn prompt names the run's inputs	all
 ## Communication		all
 ## Cross-Project Boundary Rules		all
 ## Project Information		split
-## Project Information	AutoFlow does not classify	all
+## Project Information	When work on a repository starts	all
 ## Project Information	In a project whose information names sub-repos	delivery review
 ## Team Structure		split
 ## Team Structure	각 역할의 상세 계약은	all

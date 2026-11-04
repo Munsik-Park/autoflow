@@ -65,7 +65,6 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 
 - Keep the existing host PR template contract, especially `HOST-CLOSE-LINE`
   and AutoFlow status fields.
-- Do not merge, close issues, or deploy as part of review work.
 - For GitHub PR/issue reviews, use local `gh` CLI rather than public web
   lookup for private or permission-restricted repository data.
 
@@ -80,12 +79,11 @@ conformance* item (`<autoflow-root>/docs/evaluation-system.md` > GATE:PLAN, > GA
 
 - Choose tests based on changed surface.
 - This repository commits only deployment-level checks (`packaging`, `manifest`).
-  Any other change is verified by a one-shot run under a run's `<out>/local/`, recorded in the
-  PR body: a change to AutoFlow's own rules (a rule document, a rule and its device) is
-  settled there, by the external reviewer and by the evaluations; a change to what the plugin delivers
-  (a hook, a shipped script, a workflow) is checked there too, and its behavior across targets
-  shows where the plugin runs — a failure on a real target comes back as an issue, not to CI.
-- This repository does not opt into AutoFlow's suite plane (`tests.suite_plane`).
+  Any other change is verified by a one-shot run under a run's `<out>/local/`, recorded in the PR
+  body: a change to AutoFlow's own rules (a rule document, a rule and its device) is settled there, by
+  the external reviewer and by the evaluations; a change to what the plugin delivers (a hook, a
+  shipped script, a workflow) is checked there too, and its behavior across targets shows where the
+  plugin runs — a failure on a real target comes back as an issue.
 - Host tool/mechanism changes run `scripts/test/check-host-purity-delta.sh` (host-purity DELTA
   guard).
 - Submodule changes should use the submodule's package scripts and should

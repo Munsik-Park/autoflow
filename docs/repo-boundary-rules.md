@@ -47,7 +47,7 @@ Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name,
 
 An AI agent assigned to `repo-backend` **must not** commit to `repo-frontend`, even if the change is trivial (e.g., updating an API URL constant).
 
-**Instead**: the run reports the change the other repository needs in its output, and a build run in that repository's scope makes it; the work item that tracks it lives where *Backlog* above says, and the target scope hosts no tracker of its own.
+**Instead**: the run reports the change the other repository needs in its output, and a build run in that repository's scope makes it; the work item that tracks it lives where *Backlog* above says.
 
 ### Rule 2: Read Access Is Allowed
 
@@ -76,6 +76,6 @@ When two repos need changes that conflict (e.g., incompatible interface changes)
 
 Before starting a cross-repo change:
 
-- [ ] A host-repo work item exists for each affected repo (labeled with that repo); no issue is filed in the target repo
+- [ ] A work item exists for each affected repo where *Backlog* above says (in the host, labeled with that repo, unless the project names another tracker)
 - [ ] Interface contracts are documented
 - [ ] Rollback plan exists (what if one repo's change fails?)

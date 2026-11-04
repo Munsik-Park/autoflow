@@ -3,19 +3,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # scripts/issue/create-issue.sh
 #
-# AutoFlow issue-creation wrapper — layer two of the three-layer gate on
-# AI-initiated issue filing (issue #96, feature design §5). Layer one is the
-# hook's unconditional `gh issue create` deny (.claude/hooks/check-autoflow-gate.sh
-# > Section 1); layer three is the operator's own permission allow-list, which
-# this script is deliberately never added to, so every invocation raises an
-# approval prompt.
+# AutoFlow issue-creation wrapper — files an AI-initiated issue from a draft
+# (issue #96, feature design §5). The hook denies `gh issue create` and its REST
+# form (hooks/check-autoflow-gate.sh > Section 1); this script is the filing path.
 #
 # WHY A WRAPPER: the obligation to check for duplicates before filing was prose
 # only. An agent could assert it had searched and file anyway — the assertion and
 # the act had no mechanical relation. This script re-runs the query itself, from
 # terms it derives from the draft's OWN title, and then compares what that query
 # returned against the candidates the draft dispositioned. It does not judge
-# whether a disposition is correct (that is the operator's job at layer three);
+# whether a disposition is correct (that is the operator's judgment);
 # it refuses when the draft disposes of nothing the wrapper found.
 #
 # The draft must sit directly inside this repository's draft directory under
@@ -380,7 +377,7 @@ EOF
 # dispositioned row in the draft. This is the step that does not trust "I
 # checked": it compares the agent's recorded check against a query the agent did
 # not author. It stays a mechanical set comparison — whether a disposition is
-# CORRECT is the operator's judgment at layer three, never the wrapper's.
+# CORRECT is the operator's judgment, never the wrapper's.
 DISPOSITIONED="$(printf '%s\n' "$DUPCHECK" | grep -v '^searched:' | grep -oE '#[0-9]+' | tr -d '#' | sort -u || true)"
 
 UNDISPOSITIONED=""

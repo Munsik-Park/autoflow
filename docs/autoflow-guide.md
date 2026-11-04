@@ -27,7 +27,7 @@ Key principles:
 - **Quantified quality** — 10-point evaluation, with the reference pass values kept with the
   rubrics ([`evaluation-system.md`](evaluation-system.md) > PASS Criteria) and output with the
   scores.
-- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` and never restated in prose; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
+- **Per-phase model selection** — every role spawn and subagent spawn declares the model the per-phase policy names for that phase. The values live in one machine-readable source, `.claude/autoflow/spawn-policy.json`, resolved by `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>`; the rule that governs it is [`core.md`](core.md) > Spawn Model — Phase-by-Phase.
 
 The phase names stay as identifiers — the spawn-policy keys and the documents' headings carry
 them. They generalize upstream's numeric `STEP 0~9` identifiers, with upstream's STEP 4–5.5 merged
@@ -71,7 +71,7 @@ into one BUILD (ADR-0025):
   `outputs` (each output's path), `defects`,
   `tool_requests`, and the AutoFlow that ran it. A run refused at check-in has done no work; a run
   refused or failed at check-out leaves its outputs, and a later module's check-in reads an input by
-  its form, not by the result of the run that made it.
+  its form alone.
 - The form of each invocation: `<autoflow-root>/scripts/contracts/contract.sh`, header. The checks
   each module's outputs meet — their form, each file read alone: its contract,
   `<autoflow-root>/docs/contracts/<module>.json`.

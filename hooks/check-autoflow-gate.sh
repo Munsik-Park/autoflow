@@ -260,7 +260,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
 /g')
 
   if printf '%s' "$SCAN" | grep -qE "${CMD_BOUNDARY}gh[[:space:]]+pr[[:space:]]+merge\b"; then
-    echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied ($(af_path docs/core.md) > Push and PR creation)." >&2
+    echo "BLOCKED: AutoFlow does not merge — 'gh pr merge' is denied ($(af_path docs/core.md) > Records and the hook)." >&2
     echo "Merging, issue close, and deployment are owned by an external review process." >&2
     exit 2
   fi
@@ -273,7 +273,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # repository's draft directory under the record root (`autoflow-records
   # drafts`) and RE-RUNS the duplicate search itself. That wrapper carries no
   # `gh issue create` token in its own invocation string, so this deny does not
-  # block it; the operator's permission prompt on the wrapper is layer three.
+  # block it.
   # Unconditional (P2), like every Section-1 deny.
   #
   # Two surfaces, both segment-scoped so an adjacent sub-command cannot be
@@ -300,7 +300,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     fi
   done <<< "$_SEGMENTS"
   if [ "$_issue_create_deny" = 1 ]; then
-    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/issue-proposal.md))." >&2
+    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/core.md) > Records and the hook)." >&2
     echo "Write a draft to \"\$(autoflow-records drafts)/<name>.md\" per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft \"\$(autoflow-records drafts)/<name>.md\"" >&2
     echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
     exit 2
@@ -320,7 +320,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   while IFS= read -r _bp_seg; do
     if printf '%s' "$_bp_seg" | grep -qE "^[[:space:]]*${GIT_PUSH}" \
        && printf '%s' "$_bp_seg" | grep -qE "(\borigin[[:space:]]+(HEAD:)?|:[[:space:]]*)${PUSH_DENY_RE}"; then
-      echo "BLOCKED: AutoFlow does not push to ${DENY_BRANCH}, the remote default branch — push the work branch and open a pull request ($(af_path docs/core.md) > Push and PR creation)." >&2
+      echo "BLOCKED: AutoFlow does not push to ${DENY_BRANCH}, the remote default branch — push the work branch and open a pull request ($(af_path docs/core.md) > Records and the hook)." >&2
       exit 2
     fi
   done <<< "$_SEGMENTS"

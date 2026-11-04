@@ -1,8 +1,6 @@
 # Issue Proposal — Draft Grammar and Filing Procedure
 
-An issue is filed from a **draft on disk**, never from arguments typed at the
-moment of filing. `gh issue create` is denied at the tool boundary
-(`<autoflow-root>/hooks/check-autoflow-gate.sh` > Section 1); the only filing path is:
+An issue is filed with:
 
 ```bash
 <autoflow-root>/scripts/issue/create-issue.sh --draft <path> [--repo <owner/name>] [--dry-run]
@@ -11,21 +9,8 @@ moment of filing. `gh issue create` is denied at the tool boundary
 The wrapper derives search terms from the draft's **own title**, runs the query
 itself, and then compares what that query returned against the candidates the
 draft dispositioned. It never judges whether a disposition is *correct* — that
-judgment is the operator's, at layer three. It refuses when the draft disposes of
+judgment is the operator's. It refuses when the draft disposes of
 nothing the wrapper found.
-
-Three layers guard the path:
-
-| Layer | Mechanism |
-|-------|-----------|
-| 1 | hook deny on `gh issue create` and its REST form |
-| 2 | `<autoflow-root>/scripts/issue/create-issue.sh` re-runs the query and compares dispositions |
-| 3 | the operator permission prompt on the wrapper |
-
-Layer three works by **omission**: keep the wrapper off every allow list —
-neither `"Bash(scripts/issue/create-issue.sh:*)"` nor a broad `Bash(scripts/*)` /
-`Bash(scripts/issue/*)` goes into `.claude/settings.json` or
-`.claude/settings.local.json`.
 
 ## Draft grammar
 
@@ -63,8 +48,7 @@ A heading inside the body is written at level 3 or deeper (`### Background`),
 never at level 2. A `## ` line ends the section above it wherever it sits — a
 fenced code block included — so the text under a level-2 heading that names none
 of the four sections belongs to no section. The wrapper refuses such a draft,
-naming each such heading with its line, instead of filing the body cut short at
-it.
+naming each such heading with its line.
 
 ## The two names of the artifact
 
@@ -73,9 +57,9 @@ it.
 | Before creation (draft) | `<record-root>/<repo-key>/drafts/issue-proposal-<slug>.md` |
 | After creation | `<record-root>/<repo-key>/proposals/issue-<N>-proposal.md` |
 
-Both are under the record root, outside every checkout's tree, and no cleanup touches either. An
+Both are under the record root, outside every checkout's tree. An
 unfiled draft stays until its author abandons it. Once the issue exists, the wrapper's rename binds
-the record to the issue's number; it belongs to the issue, not to any one attempt of it.
+the record to the issue's number; it belongs to the issue.
 
 ## What the wrapper does
 
@@ -108,8 +92,8 @@ the record to the issue's number; it belongs to the issue, not to any one attemp
 
 `--dry-run` runs every check and creates nothing, leaving the draft in place.
 
-Filing is not readiness: each attempt of the issue reviews its acceptance criteria in its own
-criterion review, and the analysis takes the criteria as that review's record settles them
+Each attempt of the issue reviews its acceptance criteria in its own criterion review, and
+the analysis takes the criteria as that review's record settles them
 ([`criterion-review.md`](criterion-review.md)).
 
 ## Exit codes
@@ -128,7 +112,7 @@ script, not flags**; an unrecognised argument is a usage error.
 
 ## Accepted limits
 
-Each limit below is an under-block, with layer three as the catch:
+Each limit below is an under-block:
 
 - The term cap drops terms on ordinary titles, so a duplicate reachable only
   through a dropped term is never surfaced, and the wrapper reports a clean
