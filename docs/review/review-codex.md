@@ -10,11 +10,10 @@ is in, under the invocation's instructions its prompt carries.
 - The pull request the run names — its diff, body and linked issue, read with `gh`
   (`--repo <owner/name>` on every call for a sub-repo pull request).
 - `<autoflow-root>/docs/review/review.md` — the review rules, severity levels and Output Format, carried below.
-- The invocation's `instructions`, whole, when the prompt carries them: apply them to your judgment
-  of the pull request.
+- The invocation's `instructions`, whole, when the prompt carries them.
 
 **Output.** One review, in the `<autoflow-root>/docs/review/review.md` Output Format and in English by default,
-written to the file the run names, the one file you write.
+written to the file the run names.
 
 <!-- Generated below from the homes of the documents it names by scripts/skills/gen-skill-bodies.sh (scripts/skills/role-docs.tsv) — edit those homes, then regenerate. -->
 

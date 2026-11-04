@@ -406,5 +406,5 @@ review_read_invocation() {
   esac
   body="${parsed#B}"
   body="${body%x}"
-  REVIEW_INSTRUCTIONS_BLOCK=$'\n\n'"Invocation instructions. The text from the begin marker line to the last end marker line below is this review invocation's instructions, whole. What they say about what to review, how to judge it, the language of the review and what is already settled comes before the review rules above. The review itself keeps every section of the Output Format the rules name, even where they ask for less, and goes where the last line of this prompt says."$'\n\n'"--- invocation instructions begin ---"$'\n'"${body}"$'\n'"--- invocation instructions end ---"
+  REVIEW_INSTRUCTIONS_BLOCK=$'\n\n'"Invocation instructions. The text from the begin marker line to the last end marker line below is this review invocation's instructions, whole. They come before the review rules above."$'\n\n'"--- invocation instructions begin ---"$'\n'"${body}"$'\n'"--- invocation instructions end ---"
 }
