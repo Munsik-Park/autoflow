@@ -13,7 +13,7 @@ D1). This file states the build's goal, what it owes, the cautions it is asked t
 report it writes. How the module reaches the goal — what else it reads, whether it spawns helpers,
 how it divides test and implementation work, how it runs its checks and when it stops iterating
 within its run — is its own, recorded with its grounds in its report ([`core.md`](../core.md) >
-Rule Scope, principle 2).
+Rule Scope, principle 1).
 
 - **Goal**: the design implemented within its scope on the branch the invocation names
   (`params.branch`), and every item of the verification design verified as it says — or, where it
@@ -26,8 +26,7 @@ Rule Scope, principle 2).
   *Inputs, outputs and default*).
 - **Evaluation**: the audit module — a fresh Evaluation AI that judges test-first from the build
   report and git, then scores the change on the rubric of
-  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT; the module never
-  scores its own change (*Evaluation — AUDIT* below).
+  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > AUDIT (*Evaluation — AUDIT* below).
 - **Result owed**: the build report's path, the commit SHAs and a summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 

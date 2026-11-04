@@ -33,7 +33,7 @@ git grep -n -i -E "evaluator's standard|\*What it reads\*|proportional depth|con
 ```
 
 A functional module is prescribed by its goal and its contract, and how it reaches the goal is its
-own ([`core.md`](core.md) > Rule Scope, principle 2;
+own ([`core.md`](core.md) > Rule Scope, principle 1;
 [ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D1). That latitude does
 not extend to the evaluator: what it confirms, the evidence a confirmation rests on and how far it
 goes are set here, and the evaluator applies them.
@@ -100,10 +100,10 @@ Depth scales with the size and the risk of the change under evaluation.
 - **Scaled**: how far beyond the anchors the items rest on the evaluator re-derives, how far it
   traces adjacent code and documents, and how large a sample it takes.
   - A small, local change — a few lines in a few files, touching no state another component reads,
-    no contract and no authority rule — gets a **lightweight pass**: the diff, the inputs the
+    no contract — gets a **lightweight pass**: the diff, the inputs the
     rubric items name, and one sampled instance per item.
   - A large change, one that crosses a repository or component boundary, or one that touches shared
-    state, a contract, a gate or an authority rule gets the full depth: adjacent code and failure
+    state, a contract or a gate gets the full depth: adjacent code and failure
     paths traced, the sample widened on a hit.
 - The evaluator states the size it judged, with its ground.
 

@@ -97,5 +97,4 @@ undone.
   - **Added test files.** Beside each test file the change added to the target's tree, the PR body
     records the CI job whose log shows it run, or that no job ran it,
     listed for the reviewer as not run by CI; `no CI; local run only` where the target has no CI.
-- **Failure output**: `<out>/failure.md` (*What both modules owe*) — the pull request that is
-  neither `green` nor `not-run`, and what CI showed; `<out>/ci.json` states the verdict all the same.
+- **Failure output**: `<out>/failure.md` (*What both modules owe*) when the run does not reach its goal.

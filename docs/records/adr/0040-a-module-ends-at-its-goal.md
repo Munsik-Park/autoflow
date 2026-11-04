@@ -20,7 +20,7 @@ requests with their bodies. The operator's decision of 2026-10-30 on the pull re
 round is applied to D5: the review's outputs are its result, its default nothing beyond them. D5's
 clause that the instructions never change the outputs is removed by issue #539. Applied to D5 by issue
 #559: the review's reviewers also receive the instructions, and a reviewer's contract is not a
-default they override.
+default they override. Applied to D5 by issue #570: a reviewer's contract is its input and its output, and the authority rules are removed — every rule the documents state is a default the instructions override.
 
 ## Context
 

@@ -46,13 +46,12 @@ advisor's — that names the entries it resolves. The same conclusion
 recorded twice is not a conflict. An identifier two entries already share is read as *Identifier
 collision* above says.
 
-**Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
-never a module's to apply. A change the work shows a criterion needs — in the analysis, the design or
+**Acceptance-criterion decisions** (`[ac-decision]`). A change the work shows a criterion needs — in the analysis, the design or
 the build, or in an evaluation's recommendation that a later module takes — is decided by the advisor
 the module spawns, and the module follows the decision ([`role-contracts.md`](role-contracts.md) >
 Advisor); the criterion review's dispositions that change a criterion are recorded as entries of the
-same grammar ([`criterion-review.md`](criterion-review.md) > *Authority*). The change stands only as
-the entries below ([`core.md`](core.md) > Rule Scope, principle 1); choosing how a criterion is
+same grammar ([`criterion-review.md`](criterion-review.md) > *Authority*). The change stands as
+the entries below; choosing how a criterion is
 *verified* is the design's, provided the row states its reason, which the reviewers then judge at
 REVIEW (the three-tier guard — [`units/design.md`](units/design.md) > *Report routing*). The change
 excludes, revises or splits a criterion, or adds one. An added criterion's text is changed by
@@ -102,10 +101,9 @@ any other.
 
 **Security-checklist decisions** (`[checklist-decision]`). The security checklist AUDIT scores
 against is the target's own, declared at `.claude/autoflow.local.json` > `audit.security_checklist`,
-and AUDIT reads it as of the attempt's base commit ([`core.md`](core.md) > Rule Scope, principle 1).
-Changing it within the attempt — the file, or the declaration that points at it — is never the
-attempt's own to accept: when `<autoflow-root>/scripts/gate/security-checklist.sh status` reports the
-change, the module whose work made it puts the change to the advisor, and the decision is recorded in
+and AUDIT reads it as of the attempt's base commit.
+When `<autoflow-root>/scripts/gate/security-checklist.sh status` reports a change to it within the
+attempt — the file, or the declaration that points at it —, the module whose work made it puts the change to the advisor, and the decision is recorded in
 the same trailing-marker grammar: the heading `## A<n> — <title> [checklist-decision]`, followed by a
 `- Checklist:` line (the declared path at HEAD, or `none` when the declaration is dropped), a `- Blob:`
 line (the `git rev-parse HEAD:<path>` of the approved version, or `none`), a `- Disposition:` line

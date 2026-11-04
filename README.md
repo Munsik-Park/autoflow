@@ -130,7 +130,7 @@ autoflow/
 │
 ├── docs/                              # Usage documents — carried by each role's carrier where its role follows them, otherwise read by path under the plugin root
 │   ├── INDEX.md                       # Router: usage documents vs records
-│   ├── core.md                        # The core: the authority rules, how a module runs, the records and the hook
+│   ├── core.md                        # The core: how a module runs, the records and the hook
 │   ├── autoflow-guide.md              # Index of the modules
 │   ├── contracts/                     # One contract per module (JSON), checked by scripts/contracts/contract.sh
 │   ├── evaluation-system.md           # Evaluation scoring details
@@ -155,8 +155,8 @@ autoflow/
 
 ### 1. The Core Drives AI Behavior
 
-[`docs/core.md`](docs/core.md) is the operating manual: how a module runs, the
-authority rules, agent roles and permissions, evaluation criteria, and the Git
+[`docs/core.md`](docs/core.md) is the operating manual: how a module runs,
+agent roles and permissions, evaluation criteria, and the Git
 workflow. It reaches a session through the body of a module's command, `/autoflow:<module>`, which
 carries the parts of the core its module uses, and a subagent through its agent definition; each
 command body carries its module's document and the other documents the session follows after the

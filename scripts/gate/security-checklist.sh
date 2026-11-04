@@ -18,7 +18,7 @@
 #
 # This script decides WHICH VERSION of the declared checklist an attempt's AUDIT
 # reads. A target-owned checklist could be loosened by the attempt it grades —
-# self-certification (docs/core.md > Rule Scope, principle 1). So AUDIT reads the
+# self-certification. So AUDIT reads the
 # checklist as of the attempt's base commit, and a change the attempt makes to it —
 # the file, or the declaration that points at it — is read only on a decision
 # recorded in the issue ledger (docs/decision-ledger.md > *Security-checklist

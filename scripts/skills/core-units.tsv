@@ -74,7 +74,6 @@
 ## Development Lifecycle > ### Module references	| delivery |	delivery
 ## Development Lifecycle > ### Module references	| ci |	ci
 ## Development Lifecycle > ### Module references	| review |	review
-## Cost Control		all
 ## Decision Ledger		all
 ## Execution Principles		all
 ## Spawn Model		split
@@ -93,7 +92,6 @@
 ## Communication		all
 ## Cross-Project Boundary Rules		all
 ## Project Information		split
-## Project Information	When work on a repository starts	all
 ## Project Information	In a project whose information names sub-repos	delivery review
 ## Team Structure		split
 ## Team Structure	각 역할의 상세 계약은	all

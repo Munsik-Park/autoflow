@@ -4,7 +4,7 @@
   "module": "hypothesis",
   "kind": "evaluation",
   "reads_records": false,
-  "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.\n",
+  "goal": "Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.\n",
   "procedure": "docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS",
   "evaluator": {
     "agent": "autoflow-evaluator",
@@ -14,6 +14,11 @@
     "issue": {
       "type": "issue-number",
       "required": true
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, the run has no bound. Reaching it ends the run with its failure output"
     }
   },
   "inputs": {
@@ -101,7 +106,7 @@
       "format": "markdown",
       "required": false,
       "failure": true,
-      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
+      "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
   "default": "Nothing beyond its outputs: they are its result.",

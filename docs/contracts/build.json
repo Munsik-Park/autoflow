@@ -19,6 +19,11 @@
       "type": "string",
       "required": false,
       "note": "the branch the pull request is to merge into, the baseline of the lint chain's execution trust boundary (docs/submodule-common-rules.md > Verification and Tools); not given, the remote's default branch"
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, the run has no bound. Reaching it ends the run with its failure output"
     }
   },
   "inputs": {
@@ -127,7 +132,7 @@
       "format": "markdown",
       "required": false,
       "failure": true,
-      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
+      "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
   "default": "Nothing beyond its outputs: they are its result."

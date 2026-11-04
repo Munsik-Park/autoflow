@@ -20,9 +20,9 @@ a target's code is treated.
   and `rescore` on a re-score —, which the evaluator writes to `<out>/evaluation.json`.
 - **Default**: nothing beyond its outputs ([`core.md`](../core.md) > Development Lifecycle >
   *Inputs, outputs and default*).
-- **Independence**: a fresh Evaluation AI (`autoflow-evaluator`, the model
+- **Evaluator**: a fresh Evaluation AI (`autoflow-evaluator`, the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model gate-quality` names) for every
-  run, never the author of what it scores, read-only
+  run
   ([`role-contracts.md`](../role-contracts.md) > Evaluation AI); check-out confirms the output's
   form. Beyond it, CI and the review verify the delivered change.
 - **Result owed**: the evaluation file and a summary.

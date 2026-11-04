@@ -7,8 +7,7 @@
 # AutoFlow tree this wrapper ships in, or the file `.review.claude.rules` names —
 # whose text the prompt carries, with the text of the lenses file
 # `.review.claude.lenses` names when there is one and, when the invocation file
-# `--invocation` names holds them, that invocation's `instructions`, whole, with
-# the sentence that tells claude to apply them to its judgment; a run without
+# `--invocation` names holds them, that invocation's `instructions`, whole; a run without
 # them adds nothing to the prompt. claude runs non-interactively
 # (`claude -p`) in the reviewed repository's working directory, with Read, Grep
 # and Glob on any path, the gh reads the review needs and the commands Claude
@@ -18,8 +17,7 @@
 # CLAUDE.md, whose permission rules would add tools in a trusted checkout, are
 # not loaded (`--setting-sources user`). Its final message is the
 # review, which this wrapper writes to the record file: it posts no PR comment
-# and changes no label, whatever the instructions ask — what they ask beyond
-# the review is for the side that runs the review, and the aggregation of every
+# and changes no label. The aggregation of every
 # review of the PR writes the one report.
 #
 # The review module launches this wrapper once per pull request and round when
@@ -170,23 +168,17 @@ if [[ -n "$EXPECTED_HEAD" && "$pr_head" != "$EXPECTED_HEAD" ]]; then
   exit 3
 fi
 
-# The prompt ends with a fixed sentinel; review-start-check.sh finds the run by
-# its opening `Review pull request #<N>. `.
-SENTINEL="Limit your actions to reading; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
+# review-start-check.sh finds the run by its opening `Review pull request #<N>. `.
 # The rules, the lenses and then the invocation's instructions are carried as
 # text between the opening line and the closing one, so the reviewer starts with
-# the rules and the closing line's limits come after the instructions.
-PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause}${REVIEW_INSTRUCTIONS_CLAUSE}
+# the rules.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${records_clause}${repo_clause}
 
 Review rules (${REVIEW_GUIDE}):
 
 $(cat "$REVIEW_GUIDE")${lenses_text}${REVIEW_INSTRUCTIONS_BLOCK}
 
-Use the local gh CLI to read the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Reply with the whole review, in the Output Format the rules name, as your final message. ${SENTINEL}"
-if [[ "$PROMPT" != *"$SENTINEL" ]]; then
-  echo "[claude-review] prompt is incomplete — the sentinel tail is missing." >&2
-  exit 4
-fi
+Use the local gh CLI to read the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Reply with the whole review, in the Output Format the rules name, as your final message."
 
 echo "[claude-review] starting claude for PR #${PR}${REPO:+ (${REPO})} ($(review_config_summary)) at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 

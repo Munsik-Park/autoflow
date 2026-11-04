@@ -4,8 +4,8 @@
 > contract ([`ADR-0038`](records/adr/0038-contract-modules-with-no-state-file.md)).
 > This guide is the **index of the modules**: each module's goal, what its work owes, its output,
 > its default and its cautions live in its procedure document (*Modules* below), and its inputs, its
-> outputs and its default in its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules — the
-> authority rules, how a module runs, the Execution Principles, the records and the hook — lives in
+> outputs and its default in its contract, `<autoflow-root>/docs/contracts/<module>.json`. What crosses modules —
+> how a module runs, the Execution Principles, the records and the hook — lives in
 > [`core.md`](core.md).
 
 ---
@@ -19,11 +19,8 @@ reviewed pull request; an external review process merges it.
 
 Key principles:
 
-- **The work's method is its own; the independent checks are not** — how far a module's work goes
-  is the working AI's judgment, recorded with its grounds in its output, and no module judges its
-  own output ([`core.md`](core.md) > Rule Scope, principles 1–3; > Execution Principles).
-- **Multi-agent separation** — the work and its evaluation are separate modules, and each
-  evaluation is a fresh Evaluation AI.
+- **The work's method is its own** — how far a module's work goes
+  is the working AI's judgment, recorded with its grounds in its output ([`core.md`](core.md) > Rule Scope, principles 1–2).
 - **Quantified quality** — 10-point evaluation, with the reference pass values kept with the
   rubrics ([`evaluation-system.md`](evaluation-system.md) > PASS Criteria) and output with the
   scores.
@@ -103,12 +100,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `criterion-screen`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on without any verdict.
+- Goal: Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on.
 - Procedure: `<autoflow-root>/docs/criterion-review.md`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -133,6 +131,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -157,6 +156,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 |---|---|---|
 | `issue` | yes | issue-number |
 | `criterion` | yes | string |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -180,6 +180,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -205,6 +206,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -250,12 +252,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `hypothesis`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal — never the method by which it was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
+- Goal: Scores of whether the analysis report's conclusion is supported by its grounds and whether the analysis reached its goal. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:HYPOTHESIS`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -281,6 +284,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -308,12 +312,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `plan`
 
 - Kind: evaluation; given its declared inputs only
-- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right — never the method by which the design was reached. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
+- Goal: Scores of the design's intent — whether each decision is grounded, whether each criterion's verification fits it and whether the scope is right. A re-score, given the previous evaluation, states which items it scored afresh and which it inherited.
 - Procedure: `<autoflow-root>/docs/evaluation-system.md > Gate rubrics — GATE:HYPOTHESIS, GATE:PLAN, AUDIT, GATE:QUALITY > GATE:PLAN`
 
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -343,6 +348,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | `issue` | yes | issue-number |
 | `branch` | yes | string |
 | `base` | no | string |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -374,6 +380,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -401,6 +408,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 | Param | Required | Form |
 |---|---|---|
 | `issue` | yes | issue-number |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -459,7 +467,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ### `ci`
 
 - Kind: functional; given the record directory (`records`)
-- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground, never read as green — with, given the build report, the CI job that ran each test file the change added.
+- Goal: For each pull request it is given, CI's verdict on its head with its ground — green, or, where the target's CI does not run for it, that fact and its ground — with, given the build report, the CI job that ran each test file the change added.
 - Procedure: `<autoflow-root>/docs/units/delivery.md`
 
 | Param | Required | Form |
@@ -491,6 +499,7 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 |---|---|---|
 | `issue` | yes | issue-number |
 | `pr` | yes | `^[^/]+/[^#]+#[0-9]+$` |
+| `timeout` | no | integer |
 
 | Input | Required | From |
 |---|---|---|
@@ -513,14 +522,13 @@ evaluator's and live in [`evaluation-system.md`](evaluation-system.md) > *Gate r
 ## Execution Principles
 
 → Single source of truth: [`core.md`](core.md) > Execution Principles — among them Safety first,
-Verify role-spawn claims before acting on them, The route is the AI's judgment
-(the independent checks are not), and Stop on error.
+Verify role-spawn claims before acting on them, and Stop on error.
 
 ---
 
 ## See Also
 
-- [`core.md`](core.md) — the authority rules, how a module runs, the Execution Principles, the records and the hook.
+- [`core.md`](core.md) — how a module runs, the Execution Principles, the records and the hook.
 - *Modules* above — the procedure documents and the contracts.
 - [`evaluation-system.md`](evaluation-system.md) — the evaluator's standard, scoring, the reference pass values and the rubrics of all four evaluations.
 - [`submodule-common-rules.md`](submodule-common-rules.md) — sub-repo rules, verification and reporting.

@@ -14,7 +14,7 @@ A change another repository needs is made by a module run in that repository's s
 
 ## General Boundary Principles
 
-Throughout these rules, **target** (equivalently **target scope**) means the scope that receives the work — the repository or directory whose source a change lands in — and the development project that consumes AutoFlow as a versioned tool (see [`tool-delivery-contract.md`](tool-delivery-contract.md)). Its opposite pole is the **host** repository. The three principles below hold whatever the project's repository structure — with the elaboration for a project with sub-repos kept as secondary detail.
+Throughout these rules, **target** (equivalently **target scope**) means the scope that receives the work — the repository or directory whose source a change lands in — and the development project that consumes AutoFlow as a versioned tool (see [`tool-delivery-contract.md`](tool-delivery-contract.md)). Its opposite pole is the **host** repository. The two principles below hold whatever the project's repository structure — with the elaboration for a project with sub-repos kept as secondary detail.
 
 ### Artifacts (산출물)
 
@@ -23,12 +23,6 @@ Every produced artifact belongs to the scope that owns the files it lives in: co
 ### Procedures (절차)
 
 The push, the PR opening and showing the change working are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push is the delivery module's ([`units/delivery.md`](units/delivery.md) > *Push and pull request*), and so is the host pointer's commit ([`core.md`](core.md) > Commit Ownership); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
-
-### Backlog (백로그)
-
-Tracking items — issues, sub-issues, and the tracking hub — live where the project's information says ([`core.md`](core.md) > Project Information); a project that names no other tracker keeps them in the host repository. Each item is routed to the scope that will execute it. *Secondary (multi-repo):* unless the project names another tracker, a sub-repo's work item is filed in the host and labeled with that sub-repo; the sub-repo's PR cross-references the host issue as `Part of <host-owner>/<host-name>#N`. *See:* Rule 1 (below) and the Checklist for Cross-Repo Changes (below).
-
-Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name, priority.
 
 ---
 
@@ -47,7 +41,7 @@ Issue labels: `ai:<agent>` (automation target, e.g. `ai:claude`), sub-repo name,
 
 An AI agent assigned to `repo-backend` **must not** commit to `repo-frontend`, even if the change is trivial (e.g., updating an API URL constant).
 
-**Instead**: the run reports the change the other repository needs in its output, and a build run in that repository's scope makes it; the work item that tracks it lives where *Backlog* above says.
+**Instead**: the run reports the change the other repository needs in its output, and a build run in that repository's scope makes it.
 
 ### Rule 2: Read Access Is Allowed
 
@@ -76,6 +70,6 @@ When two repos need changes that conflict (e.g., incompatible interface changes)
 
 Before starting a cross-repo change:
 
-- [ ] A work item exists for each affected repo where *Backlog* above says (in the host, labeled with that repo, unless the project names another tracker)
+- [ ] A work item exists for each affected repo
 - [ ] Interface contracts are documented
 - [ ] Rollback plan exists (what if one repo's change fails?)

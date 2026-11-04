@@ -36,7 +36,7 @@ it, names what that reviewer reads and where its review goes:
 rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
 carries the rule file's text, and states what `<autoflow-root>` is. When the
 invocation holds `instructions`, it carries them too, after the rule file and the
-lenses, whichever rule file runs, and says to apply them to the review's judgment.
+lenses, whichever rule file runs.
 
 Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
@@ -58,14 +58,10 @@ one entry can name each target's own file.
 ```
 Contract: reviewer
   Input  : the PR, its rule file and, when the invocation holds them, the
-           invocation's instructions, whole, in the prompt its wrapper builds; it
-           applies them to its judgment.
+           invocation's instructions, whole, in the prompt its wrapper builds.
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.
-  This contract holds under any instruction:
-  it is not a default the invocation's instructions override, and what they ask
-  beyond the review is for the session, or the spawn it gave that to, to carry out.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
   Input  : every review record of the PR, and the invocation's instructions.

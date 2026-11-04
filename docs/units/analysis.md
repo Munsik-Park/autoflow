@@ -12,7 +12,7 @@ evaluation module that scores its report (`<autoflow-root>/docs/contracts/hypoth
 the analysis's goal, what it owes, the cautions it is asked to heed and the report it writes. How the
 module reaches the goal — what else it reads and in what order, whether it spawns helpers and what it
 gives each, how it keeps the cautions — is its own, recorded with its grounds in its report
-([`core.md`](../core.md) > Rule Scope, principle 2).
+([`core.md`](../core.md) > Rule Scope, principle 1).
 
 - **Goal**: the request understood well enough to be evaluated — the affected structure as it
   stands, the gap between it and the requested behavior, whether a change is owed and whether code
@@ -23,7 +23,7 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   *Inputs, outputs and default*).
 - **Evaluation**: the hypothesis module — a fresh Evaluation AI scores the report on one form for
   every issue: whether the report's conclusion is supported by its grounds and whether the analysis
-  met its goal (*Evaluation — GATE:HYPOTHESIS* below). The module never scores its own report.
+  met its goal (*Evaluation — GATE:HYPOTHESIS* below).
 - **Result owed**: the report's path and a summary that names any decision point it
   recorded ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 

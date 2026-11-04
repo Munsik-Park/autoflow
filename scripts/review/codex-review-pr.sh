@@ -7,17 +7,14 @@
 # AutoFlow tree this wrapper ships in, or the file `.review.codex.rules` names —
 # whose text the prompt carries, with the text of the lenses file
 # `.review.codex.lenses` names when there is one and, when the invocation file
-# `--invocation` names holds them, that invocation's `instructions`, whole, with
-# the sentence that tells codex to apply them to its judgment; a run without them
+# `--invocation` names holds them, that invocation's `instructions`, whole; a run without them
 # adds nothing to the prompt. codex runs in the reviewed repository's working
 # directory, and loads that tree's own AGENTS.md itself.
 # This wrapper supplies the target PR number, the optional sub-repo selector,
 # the record file, the invocation's instructions, and the fixed sandbox /
-# approval flags. The review is written to the record file only: it posts no PR
-# comment and changes no label, whatever the instructions ask — what they ask
-# beyond the review is for the side that runs the review, and the aggregation of
+# approval flags. The review is written to the record file. The aggregation of
 # every review of the PR writes the one report. Those flags leave GitHub and the
-# record directory reachable, so this holds by codex following the prompt.
+# record directory reachable.
 #
 # `--invocation <invocation.json>` names the file the review module was run on, a
 # relative path from the caller's directory. A file that cannot be read as one JSON
@@ -186,29 +183,19 @@ if [[ -n "$EXPECTED_HEAD" && "$pr_head" != "$EXPECTED_HEAD" ]]; then
   exit 3
 fi
 
-# Build the review prompt as one value, ending with a fixed sentinel line. The
-# sentinel names the one permitted action, writing the record file. It is a
-# sentence codex reads, not a limit its environment sets.
+# Build the review prompt as one value.
 # (No backticks: in this double-quoted string they would be command
 # substitution.)
-SENTINEL="Limit your actions to writing that review file; post no PR comment, change no label, and leave approve, request-changes, merge, and close untouched."
 # The rules, the lenses and then the invocation's instructions are carried as
 # text between the opening line and the closing one, so the reviewer starts with
-# the rules and the closing line's limits come after the instructions.
-PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}${REVIEW_INSTRUCTIONS_CLAUSE}
+# the rules.
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}
 
 Review rules (${REVIEW_GUIDE}):
 
 $(cat "$REVIEW_GUIDE")${lenses_text}${REVIEW_INSTRUCTIONS_BLOCK}
 
-Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}. ${SENTINEL}"
-
-# Start check 2 — whole prompt: the prompt keeps its sentinel tail, so an
-# edited or clipped prompt stays here instead of reaching codex partial.
-if [[ "$PROMPT" != *"$SENTINEL" ]]; then
-  echo "[codex-review] prompt is incomplete — the sentinel tail is missing." >&2
-  exit 4
-fi
+Use the local gh CLI to fetch the PR diff and metadata for #${PR} ('gh pr diff ${PR}${gh_suffix}', 'gh pr view ${PR}${gh_suffix}'). Write the whole review, in the Output Format the rules name, to the file ${SCRATCH}."
 
 # Start marker — lands in the captured output at once, so a watcher confirms
 # this wrapper reached the reviewer call. It names the effective model/effort
