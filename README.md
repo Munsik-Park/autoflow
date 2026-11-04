@@ -100,11 +100,11 @@ Then, in your project:
 **Updating** is the plugin update alone: `/plugin marketplace update` →
 `/plugin update autoflow@autoflow`. Which AutoFlow ran a module — the plugin
 version, the loaded root and, for a checkout, its `HEAD` — is recorded in the
-run's `result.json` ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > R1).
+run's `result.json` ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > *Tool Version*).
 The **target check** — your own spawn policy against the loaded agent
 definitions, and, on an opted-in target, the suite headers
 (`<autoflow-root>/scripts/preflight/target-check.sh`) — is a script for setting
-up the environment ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > R4).
+up the environment ([`docs/tool-delivery-contract.md`](docs/tool-delivery-contract.md) > *Packaging and Runtime Checks*).
 
 **Developing AutoFlow**: `claude --plugin-dir <clone>` runs a clone's working
 tree in place of the installed plugin for that session.
@@ -220,7 +220,7 @@ outside AutoFlow (`docs/git-workflow.md` > Post-Merge Cleanup).
 | [Sub-Repo Common Rules](docs/submodule-common-rules.md) | Sub-repo rules, verification and reporting |
 | [Security Checklist](docs/security-checklist.md) | This repository's own security items — a target declares its own checklist (`docs/units/build.md` > *Security checklist*) |
 | [Requirements](docs/requirements.md) | What AutoFlow needs to run |
-| [Tool Delivery Contract](docs/tool-delivery-contract.md) | The plugin as the single version, the target-owned files, the spawn policy, the runtime environment |
+| [Tool Delivery Contract](docs/tool-delivery-contract.md) | The plugin as the single version, rule delivery, the packaging check and the target check, the target-owned files and the operator-level file, the spawn policy, the runtime environment |
 
 ---
 

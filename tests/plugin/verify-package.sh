@@ -25,7 +25,7 @@
 #          expected — that file is this repository's own)
 # manifest:
 #   AC1    plugin.json parses; `name` (the only spec-required field) is
-#          'autoflow'; `version` is explicit and non-'latest' (R1 pin)
+#          'autoflow'; `version` is explicit and non-'latest' (tool-delivery-contract > Tool Version)
 #   AC2    marketplace.json registers the plugin (name/source/version)
 # =============================================================================
 
@@ -74,13 +74,13 @@ if [ -f "$PLUGIN_MANIFEST" ] && jq -e . "$PLUGIN_MANIFEST" >/dev/null 2>&1; then
 
   case "$VERSION" in
     "")
-      failc "AC1c" "version missing (R1 tool-delivery-contract requires an explicit, pinnable version — policy-required, not spec-required)"
+      failc "AC1c" "version missing (tool-delivery-contract > Tool Version requires an explicit, pinnable version — policy-required, not spec-required)"
       ;;
     [Ll][Aa][Tt][Ee][Ss][Tt])
-      failc "AC1c" "version == 'latest' (R1 forbids the unpinned form)"
+      failc "AC1c" "version == 'latest' (tool-delivery-contract > Tool Version forbids the unpinned form)"
       ;;
     [0-9]*.[0-9]*.[0-9]*)
-      pass "AC1c: version '$VERSION' is explicit and non-'latest' (R1 policy)"
+      pass "AC1c: version '$VERSION' is explicit and non-'latest' (tool-delivery-contract > Tool Version)"
       ;;
     *)
       failc "AC1c" "version '$VERSION' does not look like a concrete semver value"
