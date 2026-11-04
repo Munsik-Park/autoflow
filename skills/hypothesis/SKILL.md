@@ -465,7 +465,7 @@ script, not flags**; an unrecognised argument is a usage error.
 
 ## Accepted limits
 
-Each limit below is an under-block, with the operator's permission prompt on the wrapper as the catch:
+Each limit below is an under-block:
 
 - The term cap drops terms on ordinary titles, so a duplicate reachable only
   through a dropped term is never surfaced, and the wrapper reports a clean

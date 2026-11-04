@@ -208,8 +208,8 @@ deny_case() {  # <name> <target> <payload> <expected stderr fragment>
 }
 deny_case issue    "$T"  "$(bash_payload 'gh issue create --title x')" "$ROOT/docs/issue-proposal.md"
 deny_case nomodel  "$T"  '{"tool_name":"Agent","tool_input":{"subagent_type":"autoflow-evaluator","prompt":"x"}}' "$ROOT/docs/core.md > Spawn Model"
-deny_case merge    "$T"  "$(bash_payload 'gh pr merge 7')" "$ROOT/docs/core.md > Push and PR creation"
-deny_case push     "$T"  "$(bash_payload 'git push origin main')" "$ROOT/docs/core.md > Push and PR creation"
+deny_case merge    "$T"  "$(bash_payload 'gh pr merge 7')" "$ROOT/docs/core.md > Records and the hook"
+deny_case push     "$T"  "$(bash_payload 'git push origin main')" "$ROOT/docs/core.md > Records and the hook"
 deny_case ledger   "$T"  "$(jq -n --arg f "$LEDGER" '{tool_name:"Edit",tool_input:{file_path:$f,old_string:"## no identifier here",new_string:"## rewritten"}}')" "$ROOT/docs/decision-ledger.md"
 bad=$(check_citations R2 "$msgs")
 leaked=$(printf '%s' "$msgs" | grep -oE '(^|[ (])(docs|scripts)/[a-z][^ )]*' || true)
