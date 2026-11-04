@@ -12,8 +12,7 @@
 # directory, and loads that tree's own AGENTS.md itself.
 # This wrapper supplies the target PR number, the optional sub-repo selector,
 # the record file, the invocation's instructions, and the fixed sandbox /
-# approval flags. The review is written to the record file — what the instructions ask
-# beyond the review is for the side that runs the review, and the aggregation of
+# approval flags. The review is written to the record file. The aggregation of
 # every review of the PR writes the one report. Those flags leave GitHub and the
 # record directory reachable.
 #
