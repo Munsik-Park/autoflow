@@ -13,10 +13,9 @@ a fact that does not hold, that conflicts with a policy already in force, or tha
 undefined is found while it is still cheap to change — before a re-run, a re-score and an advisor
 spawn each find it one at a time in the later work.
 
-The review does not replace the later path for a criterion defect: the analysis still takes the
-criteria as written, and from the design on a criterion is still a hypothesis the work tests
+A criterion defect found after the review takes the later path: the analysis takes the criteria as
+written, and from the design on a criterion is a hypothesis the work tests
 ([`decision-ledger.md`](decision-ledger.md) > Decision-point entries > *A criterion can be wrong*).
-The review makes that premise hold more often; it does not change it.
 
 ## The four modules
 
@@ -41,8 +40,7 @@ The review makes that premise hold more often; it does not change it.
   `<out>/criterion-review.md`.
 
 - **Reference model and effort.** The session that runs criterion-screen runs on Opus 5.5
-  (`claude-opus-5-5`) at effort `high`; another model or effort may be used. The setting for that
-  session lives here because the screen is a session's own work, not an `Agent` spawn. The agents
+  (`claude-opus-5-5`) at effort `high`; another model or effort may be used. The agents
   take theirs from `.claude/autoflow/spawn-policy.json` like every other spawn
   ([`core.md`](core.md) > Spawn Model), the effort the one each agent definition carries.
 - **What a review module writes.** Its record, and criterion-screen its target files; a decision a
@@ -109,13 +107,9 @@ each run in a fresh context.
 
 The screening is wide — every case a criterion applies to, criterion by criterion; stage 2 crosses
 the criteria — a cause one criterion's cases show may operate where another criterion, or none,
-applies; the in-depth analysis is deep — the code that decides each selected case. A judgment made
-early in a session is carried through the rest of it: a later sign against it in the same session —
-or in a session handed its record — does not reliably overturn it. A single pass also leaves out
-cases the issue does not report, and rests a verdict that a behavior already exists on the point
-where it shows rather than on the code that decides it (issue #442). Stage 2 therefore runs apart
-from the session that wrote stage 1, so the places that session looked do not bound where stage 2
-looks; it is handed the record as its starting point, and asks a question the record did not. The
+applies; the in-depth analysis is deep — the code that decides each selected case. Stage 2 runs
+apart from the session that wrote stage 1, so the places that session looked do not bound where stage 2 looks;
+it is handed the record as its starting point, and asks a question the record did not. The
 in-depth analysis receives the cases and their code locations but no earlier verdict or grounds.
 Each module's inputs are what keeps it independent: stage 2 takes the screen's record, a
 criterion's in-depth analysis its target file, and the reconciliation the record, the trace and
@@ -235,8 +229,8 @@ to have none.
 ## Authority
 
 The review decides the disposition of every item it finds: an item the code or a policy settles, or
-one the review can reasonably choose, it decides and records with its grounds, and the dispositions
-are the only list it writes. A change to a criterion's content, and an item a module of the review
+one the review can reasonably choose, it decides and records with its grounds. A change to a
+criterion's content, and an item a module of the review
 cannot decide with confidence — in the record it writes, criterion-screen's or criterion-reconcile's —,
 the module puts to a fresh advisor and decides as the advisor decided ([`role-contracts.md`](role-contracts.md) > Advisor;
 [`core.md`](core.md) > Development Lifecycle > *Decisions within a module*); the row names the advisor's ledger entry, and an
@@ -255,8 +249,8 @@ were made on.
 - **criteria-apply** — the `[ac-decision]` entries the dispositions that change a criterion are
   recorded as ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*).
 
-## Issues filed before this procedure
+## When an issue is reviewed
 
-No issue is exempt by its filing date, and no bulk back-fill is run: an issue is reviewed when an
-attempt of it is begun, and an issue taken up again after an earlier attempt is reviewed again by
-the new attempt, whatever the earlier one left: every attempt begins with its own review.
+An issue is reviewed when an attempt of it is begun, and an issue taken up again after an earlier
+attempt is reviewed again by the new attempt, whatever the earlier one left: every attempt begins
+with its own review.

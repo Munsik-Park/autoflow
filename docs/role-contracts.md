@@ -6,7 +6,7 @@
 
 ## Role Vocabulary and Spawn Mode
 
-**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the current roles with two terms and no others. A **role** is a work assignment filled by spawning — by a module, through the session or the unit agent that runs it — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Per-call scope by role* below).
+**Role vocabulary.** The usage documents (`CLAUDE.md`, `<autoflow-root>/docs/*.md`, `<autoflow-root>/docs/units/*.md`, `<autoflow-root>/agents/*.md`) name the roles with two terms. A **role** is a work assignment filled by spawning — by a module, through the session or the unit agent that runs it — Evaluation AI, the advisor, a functional-unit agent, the criterion-review agents, and the review and delivery analysis spawns. A **role spawn** is one `Agent` invocation filling a role (`subagent_type: autoflow-<role>`), whose return value is its report (*Per-call scope by role* below).
 
 ### Per-call scope by role
 
@@ -20,7 +20,7 @@ Each role's `subagent_type` and per-call scope ([`core.md`](core.md) > Spawn Mod
 | Advisor (a decision a module puts to it — *Advisor* below) | `autoflow-advisor`, spawned by the module | single-shot — decides the decisions its request file asks for, writes its answer record and a ledger entry for each, and returns their identifiers and the answer; a fresh advisor is spawned for every request |
 | Functional-unit agents (*Functional-unit agents* below) | `autoflow-unit-analysis` / `autoflow-unit-design` / `autoflow-unit-build` | one spawn per run of its module — analysis, design or build —, prescribed by the module's goal, its output and its evaluation; a re-run is a fresh spawn given the previous outputs and the findings it answers |
 
-The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and ci modules are the work of the session that runs them; the review module's session may spawn the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts, not role spawns ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
+The other modules have no role spawn of their own: criterion-screen is the work of the session that runs it ([`criterion-review.md`](criterion-review.md) > *The four modules*); the delivery and ci modules are the work of the session that runs them; the review module's session may spawn the review aggregator on the model per `.claude/autoflow/spawn-policy.json`, key `handoff-review-triage`; the review's reviewers are scripts ([`reviewer-backend.md`](reviewer-backend.md)); criteria-apply is a script. The tracer, in-depth analyzer and reconciler run on the model per keys `criterion-trace`, `criterion-in-depth` and `criterion-reconciliation`.
 
 ---
 
@@ -32,19 +32,17 @@ output — is [`evaluation-system.md`](evaluation-system.md), the one document i
 
 - Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
-- Spawn model: resolved from the spawn policy, never restated here — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`.
+- Spawn model: resolved from the spawn policy — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`.
 - Spawn: `Agent(subagent_type: "autoflow-evaluator", model: "…")`. The Evaluation AI writes its evaluation into the output directory the prompt names and returns the file's path (*Recording the result* below). Contract: *Per-call scope by role* above.
 
 ### Evaluation AI Prompt Rules
 1. **[MUST]** Include in the prompt: evaluation type, the output directory (`out`), and the path of each input the invocation names (`<autoflow-root>/docs/contracts/<module>.json` > `inputs`) — at GATE:PLAN and GATE:QUALITY the **applied acceptance criteria** (`applied_criteria`, criteria-apply's output) and the ledger's `[ac-decision]` entries (`decisions`) among them. The applied criteria are what the evaluation checks the work against ([`evaluation-system.md`](evaluation-system.md) > GATE:QUALITY > *Completeness — AC-authority check*): an **input the evaluator reads**, never one it may reinterpret, rewrite or judge the merit of. A criterion the evaluator observes defective as a matter of fact — a fact it presumes that does not hold, or a scope that does not fit the problem ([`decision-ledger.md`](decision-ledger.md) > *Acceptance-criterion decisions*) — is recorded as a recommendation ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format); whether it changes is decided as `[ac-decision]` entries.
-2. **[MUST]** Do NOT copy evaluation criteria or other reference document bodies into the prompt — the agent definition carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection), and the prompt names the input files by path. The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md) > Context Injection.
+2. **[MUST]** The prompt names the input files by path; the evaluation criteria and the other reference documents reach the evaluator through its agent definition, which carries `<autoflow-root>/docs/evaluation-system.md` and the sections it names ([`core.md`](core.md) > Context Injection). The same principle (file-path-only references to the inputs) applies to every role spawn; see [`core.md`](core.md) > Context Injection.
 3. The prompt states what rule 1 names and the invocation's `instructions`.
 
 ### Recording the result
 
-The Evaluation AI writes one JSON object to `<out>/evaluation.json` — its scores, their grounds and
-its recommendations, and no verdict —, keeps what it builds to check a finding under `<out>/local/`,
-and returns the file's path with a summary ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
+The Evaluation AI writes one JSON object to `<out>/evaluation.json` — its scores, their grounds and its recommendations —, keeps what it builds to check a finding under `<out>/local/`, and returns the file's path with a summary ([`evaluation-system.md`](evaluation-system.md) > Evaluation Output Format). The module's
 check-out checks it against the contract (`<autoflow-root>/docs/contracts/<module>.json` >
 `outputs.evaluation`); the contract's `reference` carries the reference values the scores are set
 against ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D6).
@@ -181,9 +179,8 @@ criteria-apply is a script.
   the output of a unit that does not reach it is `<out>/failure.md` in place of its expected output
   — what it did and why it did not reach the goal ([`core.md`](core.md) > Development Lifecycle;
   [ADR-0040](records/adr/0040-a-module-ends-at-its-goal.md) D1).
-- **The authority rules hold** (ADR-0025 D3): a unit agent never scores its own artifact, never
-  pushes, merges or files an issue, and a decision of the kinds the advisor makes, or one it doubts,
-  it puts to the advisor and follows (*Advisor* above).
+- A unit agent puts a decision of the kinds the advisor makes, or one it doubts, to the advisor and
+  follows it (*Advisor* above).
 - **Model and effort** come from the policy rows `unit-analysis`, `unit-design` and `unit-build`,
   held at the values of the phase rows each unit replaced (DIAGNOSE; ARCHITECT; RED /
   GREEN). The helpers a U4 unit spawns when it divides its work take theirs from the rows
@@ -199,6 +196,6 @@ criteria-apply is a script.
 ## Evaluation System
 
 The 10-point scale, the reference pass values (PASS Criteria), the evaluation types and the output format have one home —
-[`evaluation-system.md`](evaluation-system.md) — and are not copied here. A report whose form is not
+[`evaluation-system.md`](evaluation-system.md). A report whose form is not
 the one its contract states (`<autoflow-root>/docs/contracts/<module>.json` > `outputs.evaluation`)
 fails the evaluation module's check-out.

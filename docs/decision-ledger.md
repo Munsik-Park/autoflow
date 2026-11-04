@@ -9,7 +9,7 @@ allocation — are [`core.md`](core.md) > Decision Ledger.
 
 ## Entries
 
-- Each entry records the decision (one line) and its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence). An entry written before this grammar may carry an `- Authority:` line, which settles nothing, and may name the entry it replaces on an `- Overrides:` line, read as a `- Supersedes:` line.
+- Each entry records the decision (one line) and its **grounds** (evidence: a commit SHA with `path:line` for a fact of this tree, a summary line with its command, or — for a provision of a long-lived document — the document, section heading and quoted sentence). In an entry written before this grammar, a reader skips an `- Authority:` line and reads an `- Overrides:` line as a `- Supersedes:` line.
 - **The verified-error exception** to the rule that a recorded decision is not re-litigated without a new verified fact ([`core.md`](core.md) > Decision Ledger). An entry whose grounds carry an objective contradiction, an arithmetic error or a wrong source may be superseded without a new fact when all three hold: (1) the error is **reproduced by command output** — a command run over the material the entry cites, whose summary line shows the two grounds contradicting each other, the miscalculation, or the cited source absent or saying otherwise; (2) the correction is **decided as the decision was** — a decision recorded in the feature design, not the ledger, by a design run naming its heading there, and a ledger entry by a fresh advisor ([`role-contracts.md`](role-contracts.md) > Advisor); (3) the correction records the reproducing command and its summary line in the grounds form above and names what it supersedes — for a ledger entry, in the superseding entry's grounds, by the superseded entry's identifier; for a feature-design decision, in the design run's delta item, as `supersedes <heading>` ([`units/design.md`](units/design.md)). A change of preference or a re-interpretation of the same material is not an error and stays barred.
 
 **What the ledger holds.** The advisor's decisions, each with its answer file
@@ -17,20 +17,19 @@ allocation — are [`core.md`](core.md) > Decision Ledger.
 to an acceptance criterion, the criterion review's included (*Acceptance-criterion decisions* below).
 A module's own decisions and records are its own outputs
 ([`units/design.md`](units/design.md), [`units/build.md`](units/build.md) > Build report), which name
-the ledger entries the run followed. An evaluation's result, a count of re-runs and the checks of the
-environment are not ledger entries (*ibid.* D8).
+the ledger entries the run followed.
 
 ## Entry identifier
 
 A settled-decision entry is headed `## A<n> — <title>`, where `A<n>` is the letter `A` followed by a
 serial; an entry of a kind that has a marker ends its heading with it — `## A<n> — <title> [<marker>]`.
-The heading names no cycle or phase. A ledger written before this grammar may carry identifiers of
+A ledger written before this grammar may carry identifiers of
 other letters (`O`, `E`, `F`), each with a serial of its own; a reader reads an identifier of any of
 these letters as it is. Such a ledger may also carry `(cycle <C>, <PHASE>)` after a heading's title and
-level-3 record headings with no identifier; no reader reads either.
+level-3 record headings with no identifier; a reader skips both.
 
 - **Allocation**. `bash <autoflow-root>/scripts/ledger/ledger-entry-id.sh next <ledger>` issues every identifier, called immediately before that entry's own append ([`core.md`](core.md) > Decision Ledger). It takes the next serial above both the highest in the file and the highest already reserved, and reserves it before printing it — an empty directory `issue-{N}-ledger.ids/<ID>` beside the ledger, which one caller alone can create. Writers that call it concurrently — two advisors spawned together, each allocating before the other has appended — therefore receive distinct identifiers. A reserved identifier that is never appended (the append denied, the writer stopped) leaves a gap in the serial; a gap is not a defect, and `check` does not report one. A writer whose append must be retried keeps the identifier it was issued.
-- **Identifier collision**. Two entries can share an identifier — entries written before this protocol or before `next` reserved what it issued, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is not resolved — it is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds, instead of picking whichever colliding entry looks intended. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record, never by editing the colliding pair. A reader that resolves a supersession by identifier (`<autoflow-root>/scripts/gate/security-checklist.sh`) displaces every earlier entry it counts that the named identifier matches, so the re-deriving entry is the one that stands.
+- **Identifier collision**. Two entries can share an identifier — entries written before this protocol or before `next` reserved what it issued, or a heading appended in error; they stay as they are. A citation that resolves to more than one entry is ambiguous. An ambiguous citation is re-derived. The reader treats the cited decision as **unrecorded** and re-establishes it from its own grounds. The re-derivation is then appended as a new entry that names the ambiguous identifier it supersedes — the append-only rule is satisfied by adding the disambiguating record. A reader that resolves a supersession by identifier (`<autoflow-root>/scripts/gate/security-checklist.sh`) displaces every earlier entry it counts that the named identifier matches, so the re-deriving entry is the one that stands.
 
 ## Decision-point entries
 
@@ -39,14 +38,13 @@ level-3 record headings with no identifier; no reader reads either.
 `- Record:` line to where the advisor's answer is, and the
 marker and fields its kind requires below.
 
-**Replacement is explicit.** An entry is never edited to change a decision — the gate hook keeps the
-ledger append-only ([`core.md`](core.md) > Records and the hook). A later entry replaces an earlier
+**Replacement is explicit.** A later entry replaces an earlier
 one only by naming it on a `- Supersedes: <id>` line, on a new verified fact or the verified-error
 exception. Two standing entries on the same subject whose conclusions disagree, with neither naming
-the other, are a **conflict**: neither is applied, nothing is settled by recency, and the conflict is
-resolved by a new entry — the advisor's — that names the entries it resolves. The same conclusion
+the other, are a **conflict**: neither is applied, and the conflict is resolved by a new entry — the
+advisor's — that names the entries it resolves. The same conclusion
 recorded twice is not a conflict. An identifier two entries already share is read as *Identifier
-collision* above says, never repaired by editing either entry.
+collision* above says.
 
 **Acceptance-criterion decisions** (`[ac-decision]`). Changing an issue's acceptance **content** is
 never a module's to apply. A change the work shows a criterion needs — in the analysis, the design or
@@ -79,13 +77,11 @@ adds its `- Record:` line:
 
 `<autoflow-root>/scripts/contracts/criteria-apply.sh` applies the entries, in ledger order, to the
 analysis report's acceptance-criterion table, and its output — the applied criteria — is what every
-later module takes ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D8); the
-analysis report's table is not edited.
+later module takes ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D8).
 
-**A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written — it
-analyzes the problem as the issue states it and runs no test of the criteria of its own. That says how
-the analysis works, not when a defect may be raised: a defect observed as a fact is raised wherever it is
-observed, an evaluation before the design included. From the design on — the design, the build
+**A criterion can be wrong; from the design on, the work tests it**. The analysis takes the criteria as written and
+analyzes the problem as the issue states it; a defect observed as a fact is raised wherever it is observed, an
+evaluation before the design included. From the design on — the design, the build
 and every evaluation after them — a criterion is a hypothesis the work tests, not a truth the
 work is bent to fit: wherever the work and a criterion disagree, *is the criterion wrong?* is one of the
 answers the judgment weighs, beside *how is it satisfied?* A criterion is **defective** when (a) a fact

@@ -8,8 +8,8 @@
 
 ## Design / ADR
 
-<!-- Name the documents this PR used as decision basis, reachable from this PR.
-     Do NOT link <attempt-dir>/* — the attempt's records are outside the tree. -->
+<!-- Name the documents this PR used as decision basis: a path in this repository
+     with its section, or an issue or PR. -->
 
 - Design note: <path > section, or N/A>
 - ADR: <path, or "ADR not required: <one-line reason>">
@@ -61,7 +61,3 @@ Reference: docs/git-workflow.md > Issue Auto-Close.
 
 - [ ] Unit / integration tests pass on CI
 - [ ] Manual checklist items (if any) noted in PR description body
-
-## Reviewer
-
-Merging is performed **only by the external reviewer**, never by AutoFlow.

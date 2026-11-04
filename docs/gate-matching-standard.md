@@ -6,7 +6,7 @@
 
 ## Rule P1 — Boundary-Anchored Command Matching
 
-Hook gates MUST NOT anchor command detection with a bare line-start `^`.
+Hook gates anchor command detection on a command boundary.
 
 P1's named primitives are the shared `CMD_BOUNDARY` prefix and the `SCAN`
 buffer defined below, the `GIT_PUSH` token-interposition fragment, and the
@@ -40,7 +40,7 @@ hook share the single `CMD_BOUNDARY` definition.
 
 ### Body-stripping refinement
 
-The gate matches `SCAN`, not the raw command. `SCAN` removes the two
+The gate matches `SCAN`. `SCAN` removes the two
 places body text lives — the heredoc body (everything from the first `<<`)
 and quoted substrings (inline `--body "..."`) — *before* the boundary
 match. A real chained command outside quotes (`... --body "x" && gh pr
@@ -83,8 +83,7 @@ none.
 ### Segment-scoped co-occurrence refinement
 
 A gate whose deny condition is the **AND of two or more patterns** MUST
-require the patterns to co-occur in the **same command segment**, not
-merely anywhere in `SCAN`.
+require the patterns to co-occur in the **same command segment**.
 
 Split `SCAN` on the shell separators, then match per segment:
 
@@ -99,37 +98,29 @@ while IFS= read -r _seg; do
 done <<< "$_segs"
 ```
 
-Within a segment the command token is anchored with `^[[:space:]]*` —
-this is not the bare-`^` anti-pattern P1 prohibits. The sed replacement is a
+Within a segment the command token is anchored with `^[[:space:]]*`: the
+segment's start is a command boundary. The sed replacement is a
 POSIX **literal backslash-newline** (an escaped real newline), never the `\n`
 escape.
 
-Single-pattern gates are unaffected — they match `CMD_BOUNDARY` over the
-whole `SCAN`. Reference: the default-branch push deny in
+A single-pattern gate matches `CMD_BOUNDARY` over the whole `SCAN`.
+Reference: the default-branch push deny in
 `<autoflow-root>/hooks/check-autoflow-gate.sh`.
 
 ## Rule P2 — Every Deny Is Unconditional
 
 A hook's denies are absolute prohibitions — actions AutoFlow must never
 perform via the agent's tools (`gh pr merge`, a push to the remote default
-branch, `gh issue create`, a ledger rewrite, a spawn without `model`). None reads a state: each holds in every session, in
-every repository the plugin is installed in
-([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D5).
+branch, `gh issue create`, a ledger rewrite, a spawn without `model`). Each holds in every session, in every repository
+the plugin is installed in ([ADR-0038](records/adr/0038-contract-modules-with-no-state-file.md) D5).
 
-Behavioural consequence: the agent's Bash
-tool can never run `gh pr merge` or a default-branch push in a governed
-repo. Merging is performed by humans /
-external review through GitHub, not through the agent.
 
 ## Rule P3 — A Role Is Read From Structural Fields Only
 
-Hook gates MUST NOT classify an `Agent` spawn by prompt-keyword inference. A
-deny that reads a spawn reads a structural field of the `Agent` call: its own
+A deny that reads a spawn reads a structural field of the `Agent` call: its own
 `model`. The role an AutoFlow spawn fills is its `subagent_type`
 (`<autoflow-root>/agents/`; under a plugin install `autoflow:autoflow-<role>`),
-which the non-gating spawn-policy advisory reads. No deny maps a role to a
-gate, denies an undeclared spawn, or depends on which session or sub-agent
-makes a call.
+which the non-gating spawn-policy advisory reads.
 
 **Decision-ledger integrity**, on a write into an `issue-*-ledger.md`:
 
@@ -140,7 +131,7 @@ makes a call.
 A shell write to a ledger and text that only imitates an entry are outside the
 matched surface: the threat is routine overstepping, not a determined evasion.
 
-The hook does not enforce how a role is spawned. Read this document as the floor (what is not denied) and the contract as the ceiling (what is permitted): the contract binds the caller and the hook stays permissive.
+Read this document as the floor (what the hook denies) and the contract as the ceiling (what is permitted): the contract binds the caller beyond the hook's denies.
 
 ## Verification Requirement
 

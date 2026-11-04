@@ -219,7 +219,7 @@ g3() {
 scratch "$WORK/g3a"; printf '\n## New Section\n\nA rule.\n' >> "$WORK/g3a/docs/core.md"
 g3 g3a 'heading "## New Section": no entry'
 scratch "$WORK/g3b"
-awk '{ print } /^AutoFlow does not classify/ { print ""; print "A new paragraph." }' "$REPO_ROOT/docs/core.md" > "$WORK/g3b/docs/core.md"
+awk '{ print } /^When work on a repository starts/ { print ""; print "A new paragraph." }' "$REPO_ROOT/docs/core.md" > "$WORK/g3b/docs/core.md"
 g3 g3b 'line "A new paragraph.": no entry in the split section "## Project Information"'
 scratch "$WORK/g3c"; printf '## Cost Control\tA vanished bullet\tdelivery\n' >> "$WORK/g3c/scripts/skills/core-units.tsv"
 g3 g3c 'A vanished bullet": matches nothing'

@@ -43,8 +43,8 @@ gives each, how it keeps the cautions — is its own, recorded with its grounds 
   report.
 - **Documents.** The unit's agent definition carries the documents the analysis needs (this file, and the
   rubric it is scored on, [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* >
-  GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](../core.md) > Context Injection);
-  the prompt copies none of them, and the module reads anything further by its own judgment.
+  GATE:HYPOTHESIS) with the rest of its guidance ([`core.md`](../core.md) > Context Injection), and the
+  module reads anything further by its own judgment.
 
 ## What the analysis owes
 
@@ -91,19 +91,17 @@ The rules below are the ones other documents cite; everything else about the wor
   criterion stands only as an `[ac-decision]` entry, which criteria-apply applies, and the table is
   not edited to match it ([`decision-ledger.md`](../decision-ledger.md) > *Acceptance-criterion
   decisions*; `<autoflow-root>/docs/core.md` > Decision Ledger).
-- **Criterion review record.** The issue's criteria were reviewed against the code and policy by
-  the criterion review's modules: the record criterion-reconcile wrote holds the decisions, and a decision on a criterion's
-  content is an `[ac-decision]` entry ([`criterion-review.md`](../criterion-review.md)); the record
-  is an input, not a verdict. The analysis
+- **Criterion review record.** The issue's criteria were reviewed against the code and policy by the criterion review's
+  modules: the record criterion-reconcile wrote holds the decisions, and a decision on a criterion's content is an
+  `[ac-decision]` entry ([`criterion-review.md`](../criterion-review.md)). The analysis
   reads its findings as an
   earlier reading of the code and policy at the commits it names: a finding the
   analysis builds on — a confirmed cause, a policy it cites — is checked at the commit the run starts
-  from, and a difference from the record is recorded with its grounds. The record changes nothing
-  about how the criteria are taken: the `## Acceptance criteria` table restates the issue's criteria
-  as the body the record names states them, the analysis does not run the
-  review again (issue #291: the analysis takes the criteria as written), and a defect it observes as
-  a fact it puts to the advisor ([`decision-ledger.md`](../decision-ledger.md) >
-  Decision-point entries > *A criterion can be wrong*). The record's dispositions hold each
+  from, and a difference from the record is recorded with its grounds. The `## Acceptance criteria`
+  table restates the issue's criteria as the body the record names states them, and a defect the
+  analysis observes in a criterion it puts to the advisor as a fact
+  ([`decision-ledger.md`](../decision-ledger.md) > Decision-point entries > *A criterion can be
+  wrong*). The record's dispositions hold each
   item the review decided, with its grounds; it lists each case a criterion applies to with the code
   that decides it, and where a confirmed cause reaches beyond the reported points or a required
   behavior meets a rule in force, each read like the findings as an earlier reading; and, per stage 2
@@ -127,7 +125,7 @@ The rules below are the ones other documents cite; everything else about the wor
   cause carries — its other sites, and what fixing it will expose — with the scope judgment for each
   and its grounds ([`submodule-common-rules.md`](../submodule-common-rules.md) > Change Surface
   Rules > *Scope judgment*). The design module reads them and settles the scope in the feature
-  design; the analysis does not decide it alone.
+  design.
 - **Decision points.** The analysis decides each judgment that settles what follows it, and records
   it with its grounds: a planning, design or ADR prerequisite clearly
   required before the issue can be implemented (when in doubt, none); a request the as-is already
@@ -194,10 +192,5 @@ Code behavior produces a **false "absent / stub" reading**:
   harness-level block**. A single read is never sufficient grounds.
 - **[MUST]** A blocker-feeding spot-check reads via **shell**
   (`sed -n 'N,Mp' <file>`, `grep -n`, `wc -l`), not the Read tool.
-- **[DENY]** Concluding "absent / empty / stub / smaller-than-expected" from a
-  1-line result (`Wasted call` / `file unchanged`). It is a harness stub, not
-  data — re-run the single command sequentially first.
 - **[MUST]** Spot-checks run **after the spawn has returned**, as single
-  sequential commands. Another
-  directory is addressed with `git -C <path>` + absolute paths rather than a
-  `cd`-prefixed compound, which can raise a permission prompt.
+  sequential commands.
