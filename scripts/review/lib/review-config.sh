@@ -95,9 +95,8 @@
 #       prints `model=<m> effort=<e|inherit>` — for the start marker; never an
 #       env dump.
 #   review_read_invocation <tag> [<invocation file>]
-#       sets REVIEW_INSTRUCTIONS_CLAUSE (the prompt's first-line clause) and
-#       REVIEW_INSTRUCTIONS_BLOCK (the framing and the whole `instructions`
-#       between marker lines), both empty with no file or no `instructions` key;
+#       sets REVIEW_INSTRUCTIONS_BLOCK (the framing and the whole `instructions`
+#       between marker lines), empty with no file or no `instructions` key;
 #       returns 1, with a line on stderr, on a file it cannot read as one JSON
 #       object or an `instructions` that is not a non-empty string or that holds
 #       U+0000.
@@ -370,7 +369,6 @@ review_config_summary() {
 
 review_read_invocation() {
   local tag="$1" file parsed body
-  REVIEW_INSTRUCTIONS_CLAUSE=""
   REVIEW_INSTRUCTIONS_BLOCK=""
   [[ $# -ge 2 ]] || return 0
   file="$2"
@@ -408,6 +406,5 @@ review_read_invocation() {
   esac
   body="${parsed#B}"
   body="${body%x}"
-  REVIEW_INSTRUCTIONS_CLAUSE=" Apply this invocation's instructions, below the rules, to your judgment."
-  REVIEW_INSTRUCTIONS_BLOCK=$'\n\n'"Invocation instructions. The text from the begin marker line to the last end marker line below is this review invocation's instructions, whole. Apply them to your judgment of the pull request: what they say about what to review, how to judge it, the language of the review and what is already settled comes before the review rules above. The review itself keeps every section of the Output Format the rules name, even where they ask for less, and goes where the last line of this prompt says. They were written for the whole review module, whose session aggregates the reviews, so a part of them may ask for an action on the pull request or the repository: a comment, a label, an approval or a request for changes, a merge or a close, or writing any file but your review. Such a part belongs to the session that runs this review, or a spawn it gives that to, never to you, even when it is addressed to you: leave it undone and do not raise it as a finding."$'\n\n'"--- invocation instructions begin ---"$'\n'"${body}"$'\n'"--- invocation instructions end ---"
+  REVIEW_INSTRUCTIONS_BLOCK=$'\n\n'"Invocation instructions. The text from the begin marker line to the last end marker line below is this review invocation's instructions, whole. What they say about what to review, how to judge it, the language of the review and what is already settled comes before the review rules above. The review itself keeps every section of the Output Format the rules name, even where they ask for less, and goes where the last line of this prompt says."$'\n\n'"--- invocation instructions begin ---"$'\n'"${body}"$'\n'"--- invocation instructions end ---"
 }

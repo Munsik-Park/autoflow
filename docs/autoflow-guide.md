@@ -19,8 +19,8 @@ reviewed pull request; an external review process merges it.
 
 Key principles:
 
-- **The work's method is its own; the independent checks are not** — how far a module's work goes
-  is the working AI's judgment, recorded with its grounds in its output ([`core.md`](core.md) > Rule Scope, principles 1–2; > Execution Principles).
+- **The work's method is its own** — how far a module's work goes
+  is the working AI's judgment, recorded with its grounds in its output ([`core.md`](core.md) > Rule Scope, principles 1–2).
 - **Quantified quality** — 10-point evaluation, with the reference pass values kept with the
   rubrics ([`evaluation-system.md`](evaluation-system.md) > PASS Criteria) and output with the
   scores.

@@ -42,7 +42,7 @@ The rules that apply these principles to running and confirming tests and to sec
 
 **A module's procedure states the goal of its work.** It says what the work must achieve, and the AI judges how to meet it; the output disposes of every item the work owes — each applied acceptance criterion, each scope item the design includes —, which the evaluations judge (ADR-0038 D1). The output a run makes of its inputs is one of two: what the goal asks for, when the AI that did the work judges it has reached the goal, or what it did and why it did not reach the goal, in the failure output its contract declares; either ends the run (ADR-0040 D1). A run that reaches its `timeout` writes the failure output. Whether the output is right, and what is done with it, are for the side that runs the module (ADR-0038 D2). The applied criteria every module after the analysis takes are criteria-apply's output, computed from the analysis report's table and the `[ac-decision]` entries (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*); the issue's criteria are first reviewed against the target's code and policy by the criterion review's modules (`<autoflow-root>/docs/criterion-review.md`).
 
-**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states. The invocation's `instructions` override the default. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them. In the review module the reviewers also receive the instructions, in the prompt their wrapper builds, and apply them to their judgment; what the instructions ask beyond the review is for the session, or the spawn it gave that to, to carry out.
+**Inputs, outputs and default.** A module is defined by its inputs, its outputs and its default, each stated in its contract. Its outputs are the files it writes in its output directory, by the names and in the forms its contract gives; check-out checks that form. Its default is what it does with its result unless the invocation says otherwise — its contract's `default`, which its procedure states. The invocation's `instructions` override the default. The AI that does the module's work — the session, or the spawn the work is given to — receives the instructions with the inputs and follows them. In the review module the reviewers also receive the instructions, in the prompt their wrapper builds.
 
 **Decisions within a module.** The working AI decides what it can and records each decision with its grounds in its output (Rule Scope, principle 1). The decisions AutoFlow puts to the advisor — a change to an acceptance criterion's content, a root cause or lever that is not code, a hypothesis PASS judged unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item the criterion review could not decide, every change to the target's security checklist — and any other point the AI doubts, the module puts to a fresh `autoflow-advisor` it spawns, and it follows the advisor's decision. The advisor records the decision with its grounds as an entry in the ledger of the record directory the invocation names, and the module's output names each decision it followed by the entry's identifier (`<autoflow-root>/docs/role-contracts.md` > Advisor). The run goes on; a call blocked at the harness level — a permission denial — is recorded in the output, and a tool the environment does not provide is a tool request (*Tools* below).
 
@@ -254,7 +254,7 @@ wrapper and its reviewer write there.
 `--invocation` names the invocation file this run was given, on every run, whether or not it holds
 `instructions`; a relative path is read from the caller's directory. The wrapper reads the
 `instructions` itself, and its prompt carries them whole, after the rules and the lenses, saying they
-are this invocation's instructions and that the reviewer applies them to its judgment; the session
+are this invocation's instructions; the session
 chooses and edits nothing of them. With none, nothing is added to the prompt. A file that cannot be
 read as one JSON object, or a malformed `instructions` (not a non-empty string, or holding U+0000,
 which a command line cannot carry), stops the wrapper (exit `2`) before its reviewer starts. The text reaches each reviewer's vendor — Anthropic for `claude`, OpenAI for
@@ -368,7 +368,7 @@ it, names what that reviewer reads and where its review goes:
 rules (`<autoflow-root>/docs/core.md` > Context Injection). The wrapper's prompt
 carries the rule file's text, and states what `<autoflow-root>` is. When the
 invocation holds `instructions`, it carries them too, after the rule file and the
-lenses, whichever rule file runs, and says to apply them to the review's judgment.
+lenses, whichever rule file runs.
 
 Per reviewer, two keys of the configuration (*Config location*) replace or add
 to these:
@@ -390,8 +390,7 @@ one entry can name each target's own file.
 ```
 Contract: reviewer
   Input  : the PR, its rule file and, when the invocation holds them, the
-           invocation's instructions, whole, in the prompt its wrapper builds; it
-           applies them to its judgment.
+           invocation's instructions, whole, in the prompt its wrapper builds.
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.

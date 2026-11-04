@@ -7,8 +7,7 @@
 # AutoFlow tree this wrapper ships in, or the file `.review.codex.rules` names —
 # whose text the prompt carries, with the text of the lenses file
 # `.review.codex.lenses` names when there is one and, when the invocation file
-# `--invocation` names holds them, that invocation's `instructions`, whole, with
-# the sentence that tells codex to apply them to its judgment; a run without them
+# `--invocation` names holds them, that invocation's `instructions`, whole; a run without them
 # adds nothing to the prompt. codex runs in the reviewed repository's working
 # directory, and loads that tree's own AGENTS.md itself.
 # This wrapper supplies the target PR number, the optional sub-repo selector,
@@ -191,7 +190,7 @@ fi
 # The rules, the lenses and then the invocation's instructions are carried as
 # text between the opening line and the closing one, so the reviewer starts with
 # the rules.
-PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}${REVIEW_INSTRUCTIONS_CLAUSE}
+PROMPT="Review pull request #${PR}. Follow the review rules below; <autoflow-root> in them is ${AF_ROOT}.${lenses_clause}${repo_clause}
 
 Review rules (${REVIEW_GUIDE}):
 
