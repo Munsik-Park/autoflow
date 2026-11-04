@@ -300,7 +300,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     fi
   done <<< "$_SEGMENTS"
   if [ "$_issue_create_deny" = 1 ]; then
-    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/issue-proposal.md))." >&2
+    echo "BLOCKED: AutoFlow does not file issues directly — 'gh issue create' (and its REST form) is denied ($(af_path docs/core.md) > Records and the hook)." >&2
     echo "Write a draft to \"\$(autoflow-records drafts)/<name>.md\" per $(af_path docs/issue-proposal.md), then run: $(af_path scripts/issue/create-issue.sh) --draft \"\$(autoflow-records drafts)/<name>.md\"" >&2
     echo "The wrapper re-runs the duplicate search from the draft's own title, so the check cannot be satisfied by asserting it was done." >&2
     exit 2

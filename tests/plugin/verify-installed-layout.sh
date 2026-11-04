@@ -206,7 +206,7 @@ deny_case() {  # <name> <target> <payload> <expected stderr fragment>
   fi
   msgs="$msgs$(cat "$_err")"$'\n'
 }
-deny_case issue    "$T"  "$(bash_payload 'gh issue create --title x')" "$ROOT/docs/issue-proposal.md"
+deny_case issue    "$T"  "$(bash_payload 'gh issue create --title x')" "$ROOT/docs/core.md > Records and the hook"
 deny_case nomodel  "$T"  '{"tool_name":"Agent","tool_input":{"subagent_type":"autoflow-evaluator","prompt":"x"}}' "$ROOT/docs/core.md > Spawn Model"
 deny_case merge    "$T"  "$(bash_payload 'gh pr merge 7')" "$ROOT/docs/core.md > Records and the hook"
 deny_case push     "$T"  "$(bash_payload 'git push origin main')" "$ROOT/docs/core.md > Records and the hook"
