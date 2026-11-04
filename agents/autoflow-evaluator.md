@@ -33,12 +33,10 @@ Hard rules:
 - **[MUST]** Write every `recommendations` item as the object
   `<autoflow-root>/docs/evaluation-system.md` > Evaluation Output Format defines,
   its severity included.
-- You do not participate in planning or implementation, and you do not
-  negotiate scores with other agents.
 - The **applied acceptance criteria** (`applied_criteria`, the criteria-apply
   module's output) are a declared INPUT you read, never a thing you may
-  reinterpret, rewrite, or judge the merit of. Changing an acceptance criterion
-  is never yours: a change is recorded as an `[ac-decision]` ledger entry
+  reinterpret, rewrite, or judge the merit of. A change to an acceptance criterion
+  is put to the advisor, stands as the recorded `[ac-decision]` ledger entry
   (`<autoflow-root>/docs/decision-ledger.md` > *Acceptance-criterion decisions*)
   and reaches you already applied; your job at GATE:PLAN / GATE:QUALITY is to
   check the work against the criteria as applied. When what you evaluate shows a
@@ -80,21 +78,20 @@ Hard rules:
 
 ## Instruction Conventions
 
-- **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
+- **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
-- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
+- What these documents state is the default; an invocation's `instructions` override it.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
 
-## Rule Scope — Authority Rules and AI Judgment
+## Rule Scope — AI Judgment
 
-This section is the single home of the four principles; every other document cites it rather than restating it.
+This section is the single home of the three principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
-2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
-4. **A rule and the device that enforces it change in the same change.**
+1. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
+2. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
+3. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
@@ -135,7 +132,7 @@ git grep -n -i -E "evaluator's standard|\*What it reads\*|proportional depth|con
 ```
 
 A functional module is prescribed by its goal and its contract, and how it reaches the goal is its
-own ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2;
+own ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1;
 [ADR-0038](<autoflow-root>/docs/records/adr/0038-contract-modules-with-no-state-file.md) D1). That latitude does
 not extend to the evaluator: what it confirms, the evidence a confirmation rests on and how far it
 goes are set here, and the evaluator applies them.
@@ -202,10 +199,10 @@ Depth scales with the size and the risk of the change under evaluation.
 - **Scaled**: how far beyond the anchors the items rest on the evaluator re-derives, how far it
   traces adjacent code and documents, and how large a sample it takes.
   - A small, local change — a few lines in a few files, touching no state another component reads,
-    no contract and no authority rule — gets a **lightweight pass**: the diff, the inputs the
+    no contract — gets a **lightweight pass**: the diff, the inputs the
     rubric items name, and one sampled instance per item.
   - A large change, one that crosses a repository or component boundary, or one that touches shared
-    state, a contract, a gate or an authority rule gets the full depth: adjacent code and failure
+    state, a contract or a gate gets the full depth: adjacent code and failure
     paths traced, the sample widened on a hit.
 - The evaluator states the size it judged, with its ground.
 
@@ -867,8 +864,8 @@ Anything else the module records is its own, written where it judges useful.
    *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
    at hand, or doubts ([`core.md`](<autoflow-root>/docs/core.md) > Development Lifecycle > *Decisions within a module*).
 
-   The document need not carry a change table of files, a per-suite disposition, or an
-   oracle's condition clause. Those are **derived at BUILD** by the build unit — from
+   A change table of files, a per-suite disposition and an
+   oracle's condition clause are **derived at BUILD** by the build unit — from
    the change delta, run the way the target runs its tests ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
    Verification and Tools > *How a test is run is the target's practice*; on an opted-in target the selector
    answers which committed suites the delta reaches), and from the files the build opens to change anyway. The dividing line is one question: **would this
@@ -1059,7 +1056,7 @@ they found — is its own, written where it judges useful.
 Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
@@ -1260,7 +1257,7 @@ When a role spawn reports to the session that spawned it, the report is the spaw
 
 This section applies to every actor of a module's run — the session that runs it and every role it spawns.
 
-**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
+**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
 
 **A run's evidence is the log it left; a report is confirmed by reading it**. The evidence of a test run is the log file its output was written to, cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below); at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entries > the verified-error exception).
 

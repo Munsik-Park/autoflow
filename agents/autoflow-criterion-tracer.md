@@ -44,8 +44,7 @@ effect that would follow only from a particular approach.
 the record already has it, with its grounds (a commit SHA
 with `path:line`). Return that path and a summary as your report.
 
-The file is your only output: you do not edit the review record, the issue or
-any criterion. What else you read, in what order and with which tool, is your own.
+What else you read, in what order and with which tool, is your own.
 
 Run every Bash command in the **foreground** (`<autoflow-root>/docs/role-common-rules.md` > Bash
 Execution Mode).
@@ -58,21 +57,20 @@ Execution Mode).
 
 ## Instruction Conventions
 
-- **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal, non-negotiable rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
+- **`[MUST]`** marks a hard constraint enforced by a gate, hook, or role contract — treat it as a literal rule, not as emphasis to be generalized to nearby cases. **`[DENY]`** marks a prohibited action.
 - These tags carry the weight; do not stack extra emphasis on top of them (no "CRITICAL: you MUST…").
 - A `[MUST]` applies exactly to the scope it names. When a rule must hold across every phase, file, or section, the rule states that scope explicitly — an instruction written for one item is not silently generalized to others.
-- What these documents state is the default. A target's own practice and an invocation's `instructions` come first; the authority rules hold under any instruction.
+- What these documents state is the default; an invocation's `instructions` override it.
 
 <!-- From <autoflow-root>/docs/core.md > Rule Scope -->
 
-## Rule Scope — Authority Rules and AI Judgment
+## Rule Scope — AI Judgment
 
-This section is the single home of the four principles; every other document cites it rather than restating it.
+This section is the single home of the three principles; every other document cites it rather than restating it.
 
-1. **A rule exists only to bind authority and to prevent self-certification.** The merge prohibition, the separation of a module's work from its evaluation, the rule that a change to acceptance-criterion content stands only as a recorded `[ac-decision]` ledger entry, and the reference pass values AutoFlow keeps with the rubrics are rules of this kind.
-2. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
-3. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
-4. **A rule and the device that enforces it change in the same change.**
+1. **Which route to take, which tests to run, and how far the work reaches are the working AI's judgment**, and the AI records the grounds for each judgment in the output its run already produces.
+2. **A judgment can be wrong.** A wrong judgment is caught by the evaluation modules, by CI and by the external reviewer. The working AI decides what it can decide, and the run goes on unless a call is blocked at the harness level.
+3. **A rule and the device that enforces it change in the same change.**
 
 The rules that apply these principles to running and confirming tests and to securing tools — *Local verification*, a run's evidence, how a test is run, the tools the work needs, a missing run, what a run leaves in the target's tree — are `<autoflow-root>/docs/submodule-common-rules.md` > Verification and Tools.
 
@@ -170,7 +168,7 @@ When a role spawn reports to the session that spawned it, the report is the spaw
 
 This section applies to every actor of a module's run — the session that runs it and every role it spawns.
 
-**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 2 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
+**Local verification** (the instance of [`core.md`](<autoflow-root>/docs/core.md) > Rule Scope, principle 1 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
 
 **A run's evidence is the log it left; a report is confirmed by reading it**. The evidence of a test run is the log file its output was written to, cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](<autoflow-root>/docs/core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below); at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](<autoflow-root>/docs/decision-ledger.md) > Entries > the verified-error exception).
 

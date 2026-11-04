@@ -11,12 +11,6 @@ These rules apply to every target scope (e.g., backend, frontend, infra, docs) t
 
 ---
 
-## Project information
-
-A target's own documents — its `CLAUDE.md`, `README.md`, contributing guide or whatever it keeps — are read as the project's information ([`core.md`](core.md) > Project Information).
-
----
-
 ## AutoFlow Records
 
 AutoFlow's records of an attempt — the decision ledger, the criterion review, the reports and each run's `local/` store — live in the attempt's record directory, under the record root outside every checkout's tree ([`core.md`](core.md) > Records and the hook).
@@ -37,7 +31,7 @@ source is a fork or the upstream, and its URL, are the project's information.
 Every changed line traces to the change's scope: the applied acceptance criteria, the confirmed cause the analysis recorded, the design, and each problem a recorded scope judgment includes (**Scope judgment** below). What belongs to the change is decided by that judgment. How small the change stays inside that scope is governed by **Trace rule**, **Surrounding code** and the **Over-engineering guard** below.
 
 ### Scope judgment
-A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](core.md) > Rule Scope, principle 2).
+A role that meets a problem the acceptance criteria do not name answers two questions and records the answers with their grounds in the report or artifact its run already produces ([`core.md`](core.md) > Rule Scope, principle 1).
 
 1. **Is it directly related to this issue?** It is when any one of these holds:
    - it comes from the same confirmed cause;
@@ -161,7 +155,7 @@ When a role spawn reports to the session that spawned it, the report is the spaw
 
 This section applies to every actor of a module's run — the session that runs it and every role it spawns.
 
-**Local verification** (the instance of [`core.md`](core.md) > Rule Scope, principle 2 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
+**Local verification** (the instance of [`core.md`](core.md) > Rule Scope, principle 1 the modules cite). A change runs, locally and once, the tests the working AI judges it requires — at minimum every test it authored or changed and every check the verification design runs before delivery — and records each run's command, the log its output was written to, and the summary line read from that log (Reporting Format > *Evidence anchor*). Judging which tests a change requires includes finding how the target's CI selects tests for a change — a changed-since selection, a path filter, a suite that only mounts or imports the changed module — in the target's CI configuration; what CI would select is guidance for that judgment, which stays the working AI's. Regression verification is the pull request's CI — whatever the target's CI runs.
 
 **A run's evidence is the log it left; a report is confirmed by reading it**. The evidence of a test run is the log file its output was written to, cited by path under the run's `<out>/local/`; the summary line is the value read from that log, and the command is what produced it. What a run left is trusted, and a "done" / "PASS" claim is confirmed by reading the evidence the claim cites: the summary line at the cited log path, the commit at the SHA, the file at the commit. Every point that confirms a run record — the spawning session's acceptance of a role-spawn report ([`core.md`](core.md) > Execution Principles > *Verify role-spawn claims*), AUDIT's test-first judgment, GATE:QUALITY's `Test coverage` and `Test quality`, the Evaluation AI's anchor resolution — reads the log. A command is re-run only where the evidence is absent or contradicts the record: a record with no log behind it, or a log that does not carry the recorded line, leaves the row `not-run`, and the row is run there and its record filled in (the paragraph below); at GATE:QUALITY a recorded line the log does not carry is additionally evidence authored without a run and caps the citing item. One ground stays the reproduction itself: re-opening a settled ledger decision on a verified error ([`decision-ledger.md`](decision-ledger.md) > Entries > the verified-error exception).
 

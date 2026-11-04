@@ -30,7 +30,6 @@ This section is the side of the session that runs an evaluation module: how the 
 spawned, prompted and its result recorded. What the evaluator does — its standard, its conduct, every gate's rubric and its
 output — is [`evaluation-system.md`](evaluation-system.md), the one document its agent definition carries with the sections it names.
 
-- Independent evaluator that does not participate in planning or implementation.
 - A fresh agent is spawned every call.
 - Spawn model: resolved from the spawn policy — `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model <phase-key>` for the rubric-scored gates (`gate-hypothesis`, `gate-plan`, `audit`, `gate-quality`). Source: `.claude/autoflow/spawn-policy.json`.
 - Spawn: `Agent(subagent_type: "autoflow-evaluator", model: "…")`. The Evaluation AI writes its evaluation into the output directory the prompt names and returns the file's path (*Recording the result* below). Contract: *Per-call scope by role* above.
@@ -91,7 +90,7 @@ meets the decision spawns it and follows its decision. This section is the proce
 ### Decisions the advisor makes
 
 - **The working AI decides what it can**, and records each decision with its grounds in its output
-  ([`core.md`](core.md) > Rule Scope, principle 2): a planning, design or ADR prerequisite the
+  ([`core.md`](core.md) > Rule Scope, principle 1): a planning, design or ADR prerequisite the
   analysis records, a finding that repeats an earlier complaint, the scope a problem belongs to.
 - **The module puts to the advisor**, and follows the advisor's decision:
   - a change to an acceptance criterion's content that the work after the criterion review shows
@@ -171,7 +170,7 @@ criteria-apply is a script.
 
 - **Method is the unit's.** How the unit reaches its goal — what else it reads, whether it spawns helpers
   or holds a dialogue, how it designs the issue's own verification — is the unit agent's, recorded
-  with its grounds in the unit's artifact ([`core.md`](core.md) > Rule Scope, principle 2).
+  with its grounds in the unit's artifact ([`core.md`](core.md) > Rule Scope, principle 1).
   The definitions (`<autoflow-root>/agents/autoflow-unit-*.md`) name the goal, the output and the
   evaluation, and nothing else of their own; below that they carry the unit's guidance, generated
   ([`core.md`](core.md) > Context Injection).

@@ -10,6 +10,11 @@
     "issue": {
       "type": "issue-number",
       "required": true
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, the run has no bound. Reaching it ends the run with its failure output"
     }
   },
   "inputs": {
@@ -19,7 +24,7 @@
         "module": "criterion-screen",
         "output": "review_record"
       },
-      "note": "Only these: the module runs in a context that carries nothing else of the review."
+      "note": "Only these."
     }
   },
   "outputs": {
@@ -35,7 +40,7 @@
       "format": "markdown",
       "required": false,
       "failure": true,
-      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
+      "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
   "default": "Nothing beyond its outputs: they are its result."

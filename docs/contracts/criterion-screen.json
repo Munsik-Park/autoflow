@@ -4,12 +4,17 @@
   "module": "criterion-screen",
   "kind": "functional",
   "reads_records": true,
-  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on without any verdict.",
+  "goal": "Each acceptance criterion of the issue reviewed against the target's code and policy — whether it holds, the cases it applies to and where the behaviour it requires is decided — and every item the review finds disposed of, with its grounds; the cases that need an in-depth look handed on.",
   "procedure": "docs/criterion-review.md",
   "params": {
     "issue": {
       "type": "issue-number",
       "required": true
+    },
+    "timeout": {
+      "type": "integer",
+      "required": false,
+      "note": "the run's bound in seconds; not given, the run has no bound. Reaching it ends the run with its failure output"
     }
   },
   "inputs": {
@@ -37,7 +42,7 @@
       "required": false,
       "note": "one per criterion with an in-depth target",
       "evaluation": [
-        "a target holds only the issue body, the criterion's text, the target cases, each case's code locations (path:line) and the commit read — no verdict, ground or conclusion of this review, since the in-depth module judges the cases in a context that never saw them (docs/criterion-review.md > In-depth analysis and reconciliation)"
+        "a target holds only the issue body, the criterion's text, the target cases, each case's code locations (path:line) and the commit read"
       ]
     },
     "failure": {
@@ -45,7 +50,7 @@
       "format": "markdown",
       "required": false,
       "failure": true,
-      "note": "Written instead of the expected output when the run does not reach its goal: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
+      "note": "Written instead of the expected output when the run does not reach its goal, or reaches its timeout: what the run did and why it did not reach the goal — an input it needed and was not given named as such. check-out then writes `failed` (docs/core.md > Development Lifecycle; ADR-0040 D1)."
     }
   },
   "default": "Nothing beyond its outputs: they are its result."

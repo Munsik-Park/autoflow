@@ -63,9 +63,6 @@ Contract: reviewer
   Output : one review record per reviewer and PR —
            <out>/reviews/<reviewer>.md, in the review run's output directory —
            in the <autoflow-root>/docs/review/review.md Output Format.
-  This contract holds under any instruction:
-  it is not a default the invocation's instructions override, and what they ask
-  beyond the review is for the session, or the spawn it gave that to, to carry out.
 
 Contract: aggregator  (<autoflow-root>/docs/units/review.md > Review aggregation)
   Input  : every review record of the PR, and the invocation's instructions.

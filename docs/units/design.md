@@ -13,7 +13,7 @@ design's goal, what its documents owe, the cautions it is asked to heed and the 
 the module reaches the goal — what else it reads, whether it spawns helpers, whether it asks a critic
 to challenge a draft or holds a dialogue at all, how it designs this issue's own verification — is
 its own, recorded with its grounds in its documents ([`core.md`](../core.md) > Rule Scope,
-principle 2).
+principle 1).
 
 - **Goal**: a design the build module can implement and verify — the architecture decisions with
   the constraints they hold under and the alternatives rejected, and a verification design that
@@ -23,8 +23,7 @@ principle 2).
 - **Default**: nothing beyond its outputs ([`core.md`](../core.md) > Development Lifecycle >
   *Inputs, outputs and default*).
 - **Evaluation**: the plan module — a fresh Evaluation AI scores the two documents on the rubric of
-  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN; the module never
-  scores its own documents (*Evaluation — GATE:PLAN* below).
+  [`evaluation-system.md`](../evaluation-system.md) > *Gate rubrics* > GATE:PLAN (*Evaluation — GATE:PLAN* below).
 - **Result owed**: the two artifact paths and a summary
   ([`submodule-common-rules.md`](../submodule-common-rules.md) > Reporting Format).
 
@@ -64,8 +63,8 @@ principle 2).
    *Acceptance-criterion decisions*), or a **design point** the module cannot settle on the grounds
    at hand, or doubts ([`core.md`](../core.md) > Development Lifecycle > *Decisions within a module*).
 
-   The document need not carry a change table of files, a per-suite disposition, or an
-   oracle's condition clause. Those are **derived at BUILD** by the build unit — from
+   A change table of files, a per-suite disposition and an
+   oracle's condition clause are **derived at BUILD** by the build unit — from
    the change delta, run the way the target runs its tests ([`submodule-common-rules.md`](../submodule-common-rules.md) >
    Verification and Tools > *How a test is run is the target's practice*; on an opted-in target the selector
    answers which committed suites the delta reaches), and from the files the build opens to change anyway. The dividing line is one question: **would this
@@ -155,7 +154,7 @@ The decisions the design puts to the advisor, and what it does with the advisor'
 ([`role-contracts.md`](../role-contracts.md) > Advisor). The feature design states each (*Output artifacts* above).
 
 - **An acceptance-criterion content change.** Excluding, revising or splitting an issue
-  acceptance criterion, or adding one, is never the design's to apply: the design puts the change to
+  acceptance criterion, or adding one, is put by the design to
   the advisor, whose decision is recorded as `[ac-decision]` entries — one per decided criterion,
   carrying the criterion's text, in the grammar at [`decision-ledger.md`](../decision-ledger.md) >
   *Acceptance-criterion decisions* —, and the design's documents follow the decision. criteria-apply

@@ -24,7 +24,7 @@ written, and from the design on a criterion is a hypothesis the work tests
   criterion with an in-depth target, `<out>/targets/<criterion>.md`. It is run by a session of its
   own, which reads what it judges the review needs — which code, documents and materials, the
   order, how far it follows a cause or an effect, which tool checks a fact — and records in the
-  record what it read and why, and what it left out and why (Rule Scope, principle 2
+  record what it read and why, and what it left out and why (Rule Scope, principle 1
   — [`core.md`](core.md)).
 - **criterion-trace** — stage 2, an `autoflow-criterion-tracer` agent on the model
   `bash <autoflow-root>/scripts/spawn-policy/spawn-policy.sh model criterion-trace` names: each
@@ -61,8 +61,7 @@ written, and from the design on a criterion is a hypothesis the work tests
   attempt's branch starts from unless the issue names another). In a project with sub-repos, each sub-repo is read
   at the commit the host's pointer names.
 - **The target's policy** — the decision records and rule documents the criteria touch: the ADRs,
-  the project's own information and rule files (a `README.md`, a `CLAUDE.local.md`, whatever the
-  project keeps — [`core.md`](core.md) > Project Information), and the documents of the
+  the project's own information and rule files, and the documents of the
   sub-repos the issue reaches.
 
 ## Purpose and scope
@@ -196,7 +195,7 @@ receives the issue and the stage 1 record and none of the screen's conversation,
 in-depth context receives the target file and nothing of the review's verdicts or grounds. Each
 context's agent definition carries its part of this document ([`core.md`](core.md) >
 Context Injection); what else it reads, in what order and with which tool, is its own (Rule Scope,
-principle 2 — [`core.md`](core.md)). Each agent is spawned as its `subagent_type` on the model its
+principle 1 — [`core.md`](core.md)). Each agent is spawned as its `subagent_type` on the model its
 policy row names ([`core.md`](core.md) > Spawn Model).
 
 ## Review record
