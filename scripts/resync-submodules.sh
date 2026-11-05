@@ -4,7 +4,7 @@
 #
 # resync-submodules.sh
 # ---------------------------------------------------------------------------
-# Aligns, locally, a host repo's submodule "restructuring" (e.g. services/librechat → services=llmroute
+# Aligns, locally, a host repo's submodule "restructuring" (e.g. services/<service> → services=<parent>
 # nesting) safely and idempotently across several working environments.
 #
 # Corrects three things `git pull --recurse-submodules` alone does not handle.

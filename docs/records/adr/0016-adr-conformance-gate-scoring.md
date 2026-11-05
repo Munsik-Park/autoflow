@@ -213,7 +213,7 @@ thresholds — verified, not asserted:
 - **No hook edit.** `check_scores` (`check-autoflow-gate.sh:284-311`) computes
   `avg` via `add / length` over `(to_entries | map(.value.score))` — it is
   item-count-agnostic — and reads the security value by key name
-  (`.["security"] // .["보안"]`), not by position. Adding no key leaves that
+  (`.["security"] // .["\uBCF4\uC548"]`, the second key "security" in Korean), not by position. Adding no key leaves that
   computation untouched.
 - **No threshold recompute.** No item added ⇒ the `avg ≥ 7.5` / `each ≥ 7`
   denominators are unchanged. A capped-at-6 item produces a FAIL through the
