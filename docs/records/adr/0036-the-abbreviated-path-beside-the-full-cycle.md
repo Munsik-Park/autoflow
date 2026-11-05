@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator decision 2026-10-22, issue #493 > 운영자 결정 2026-10-22, 정리 1–5; the
+Accepted (operator decision 2026-10-22, issue #493 > Operator decision 2026-10-22, Summary 1–5; the
 criteria settled by the attempt's criterion review, entry O4, with the advisor decisions A2 — the
 path's end carries the pull request's CI result — and A3 — the review run alone returns it; the
 operator decisions O5 and O6 — no automatic rework cap on the path, continuing is the operator's
@@ -20,8 +20,8 @@ writes the attempt's state file at PREFLIGHT and reaches REVIEW through every un
 way had been run in practice — the criterion review alone, then work outside an AutoFlow cycle,
 then the reviewers, then rework and review again until the pull request was clean — with no
 document defining it. The operator decided that this second way is an official path beside the
-full cycle, which stays as it is: criterion review → work (AutoFlow 없이, the coordinating session
-directing the work session) → review → `Medium` 미만이면 종료 / `Medium` 이상이면 재작업 → 리뷰,
+full cycle, which stays as it is: criterion review → work (without AutoFlow, the coordinating session
+directing the work session) → review → end if below `Medium` / rework if `Medium` or above → review,
 with the environment-dependent operation — launching and watching sessions, runbooks, round
 materials — kept machine-local.
 

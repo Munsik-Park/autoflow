@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator decisions 2026-10-18, issue #463 > 운영자 결정, and the criterion review's
+Accepted (operator decisions 2026-10-18, issue #463 > Operator decision, and the criterion review's
 operator overrides O1 and O2). Amends ADR-0026 D1 ("each external reviewer the target configures")
 and D5 ("an unreadable review configuration still stops it"), and
 `docs/tool-delivery-contract.md` > *Target-owned files*. D2's target source, D4's "external review
@@ -22,7 +22,7 @@ llmroute clones each carry the same `"review": { "backend": "codex" }`; a reposi
 copied it loses the external review. A plugin-level value the operator sets once was the obvious
 candidate: Claude Code's plugin `userConfig`.
 
-**What `userConfig` delivers** (issue #463 > 측정 결과; Claude Code 2.1.302, a `--plugin-dir`
+**What `userConfig` delivers** (issue #463 > Measurement results; Claude Code 2.1.302, a `--plugin-dir`
 probe plugin, values set through `--settings` > `pluginConfigs`, read from the session transcripts
 and a hook log). The probe had one option set, one with a `default` only, and one `multiple: true`
 option set to two items:
@@ -42,7 +42,7 @@ option set to two items:
 - A SessionStart hook can export a set value into the Bash environment through `CLAUDE_ENV_FILE`
   (main session and subagents saw it); only SessionStart receives that file.
 
-**How Claude Code treats a broken settings file** (issue #463 > 운영자 결정; `claude -p --settings
+**How Claude Code treats a broken settings file** (issue #463 > Operator decision; `claude -p --settings
 <a malformed JSON file>`, rc 0): the session runs without that file and says so — "These settings
 files did not load, so nothing in them is in effect … Each loads again once the problem listed for
 it is fixed" — and the debug log records "Invalid setting skipped without dialog (automated

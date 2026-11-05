@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator decisions 2026-10-18, issue #466 > 운영자 결정, and the criterion review's
+Accepted (operator decisions 2026-10-18, issue #466 > Operator decision, and the criterion review's
 operator decisions O2, O3 and O5; advisor decisions A2, A5 and A6). Supersedes, for where records
 live and how an issue is entered and cleared: issue #423's in-tree issue directory
 (`docs/records/design-rationale.md` > Decision 41), ADR-0024 D2's in-tree prefix and its archival
@@ -32,7 +32,7 @@ remote branch is deleted, no push is made and no PR is changed" stands for AutoF
 ## Context
 
 AI work, unlike a person's, tries one issue in several sessions and puts the results together; each
-attempt runs in its own checkout — a clone or a worktree (issue #466 > 상황). Up to 0.3.1 the records
+attempt runs in its own checkout — a clone or a worktree (issue #466 > Situation). Up to 0.3.1 the records
 of a cycle lived in the checkout's own `.autoflow/<repo-key>-issue-<N>/`, one directory per issue,
 and the mode followed from that one state file's PR. Observed on `Munsik-Park/orca-autoflow` #15 and
 a worktree probe (2026-10-18):

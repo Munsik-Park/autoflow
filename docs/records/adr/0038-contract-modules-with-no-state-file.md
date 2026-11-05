@@ -38,11 +38,11 @@ so, not when the previous step's output existed:
 - no unit declares its inputs in a form a program reads; they are prose in each unit's *Unit
   spawn*, and three of the four gate reports have no path at all.
 
-The operator's instruction of 2026-10-23 (epic #507): "입력 출력을 yaml 파일 형태로 정의하는 방안이
-잇습니다 / 외부 조율자는 그것을 어떻게 사용할지 결정하지 모듈을 그냥 부품으로 동작합니다 / 따라서 state
-file 은 완전히 없애려고 합니다 / 모듈에서 active 나 lock 을 걱정하지 않습니다 / 기본적으로 한 단계씩
-수행하면 동작한다를 디폴트 값으로 상정합니다 / 그것을 수행 시키고 판정하는 것은 외부 모듈입니다 / 루프와
-카운터는 외부에서 결정하고 모듈은 입력에 대해 출력 형식이 정해져서 그것을 맞춥니다".
+The operator's instruction of 2026-10-23 (epic #507): "There is a way to define the input and output as yaml files
+/ the external coordinator decides how to use them; the modules simply work as parts / so I intend to remove the state
+file completely / the modules do not worry about active or lock / by default I assume that it works when run one step
+at a time / what runs it and judges it is an external module / the loop
+and the counter are decided outside, and a module has its output format fixed for its input and meets it".
 
 Sub-issues 1 and 2 (#508, #509) settled the concept, the module boundaries, the contract format and
 the invocation, wrote the fourteen contracts (`docs/contracts/*.json`), the validator
@@ -59,10 +59,10 @@ of its own for each run, from the base's latest commit, and keeps its own record
 The first draft of this decision named that party the Coordinator and gave it what the documents
 had given the orchestrator. On 2026-10-26 the operator took the description of the running side out
 of AutoFlow (Q25), the writer out of the ledger (Q26), and the questions out of the modules (Q27):
-"autoflow 는 조립 가능한 모듈이에요 Coordinator 가 어떤 형태로 구성되어 동작하는지 기술하는 것이
-가능한가요?"; "작업자는 혼자인데 그런 룰이 있죠 … 그런 제한은 AI 에게 작업의 가이드가 되요 그 안에서만
-결정을 하죠 그런데 정말 그 제한이 필요한가요?"; "작업 AI 가 결정할수 잇는 문제는 결정 모를때는 advisor
-결정 수용이 기본이에요 하네스가 막히는 수준이 아니면 진행입니다". Their words in full are the design
+"autoflow is a set of composable modules. Is it possible to describe in what form the Coordinator is built and how it
+works?"; "there is only one worker, yet there is such a rule … such a limit becomes the AI's guide for the work; it
+decides only within it. But is that limit really needed?"; "A problem the working AI can decide, it decides; when it does not know, accepting the advisor's
+decision is the default. Unless the harness is blocked, it proceeds". Their words in full are the design
 review's, §6.
 
 ## Decision
@@ -93,7 +93,7 @@ The work and its evaluation are separate modules. A unit that bundled them (U2 =
 GATE:HYPOTHESIS, U3 = ARCHITECT + GATE:PLAN, U4 = BUILD + AUDIT) is two modules.
 
 **D2 — AutoFlow defines the modules, and does not describe what runs them** (operator decision
-2026-10-26, Q25: "autoflow 는 조립 가능한 모듈이에요"). AutoFlow's documents, agent definitions and
+2026-10-26, Q25: "autoflow is a set of composable modules"). AutoFlow's documents, agent definitions and
 devices state each module's inputs, its work and its outputs. The party that gives a module its
 inputs, runs it and reads its result is not described: a module takes what it needs as inputs and
 names no one who gives them. What follows a module's output — the next module, a re-run and how many,
@@ -118,8 +118,8 @@ writes into the output directory its prompt names, with what it built to check a
 removed document carried that stay — the policy denies (D5), the record location, the hook's
 behavior with no `jq` — move to the documents that keep them.
 
-**D4 — A module is given the attempt it works in** (operator decision 2026-10-26: "워크트리로 작업이
-변경됩니다. 브랜치 커밋 베이스 작업이 가능하음로 많은 것들이 간소화됩니다"). The invocation names the
+**D4 — A module is given the attempt it works in** (operator decision 2026-10-26: "The work changes
+to worktrees. Since branch-and-commit-based work becomes possible, many things are simplified"). The invocation names the
 branch (`params.branch`), the attempt's record directory (`records`) and the run's output directory
 (`out`), and the commits as a range (Q19). So AutoFlow keeps none of what made, owned, entered or
 cleared an attempt:
@@ -141,9 +141,9 @@ cleared an attempt:
   `reviewers:` line for the reviewers it runs.
 
 **D5 — The hook keeps the policy denies, and the push deny only for the default branch** (operator
-decision 2026-10-26: "브랜치의 푸시는 막을 사유가 줄었어요. 머지는 여전히 운영자 권한이고 푸시는
-현재가지 운영상 보면 제한을 제거하도록 합니다", then, on the recommendation that the default branch
-stay denied, "수용"). The hook keeps, in every session and with no state: `gh pr merge`; a push to
+decision 2026-10-26: "There is less reason to block a branch push. Merging is still the operator's authority, and as for pushing,
+judging by operation so far, let us remove the limit", then, on the recommendation that the default branch
+stay denied, "Accepted"). The hook keeps, in every session and with no state: `gh pr merge`; a push to
 the remote default branch (`origin/HEAD`, else `main`); `gh issue create` and its REST form; the
 ledger's append-only check (its authorship check goes, D8); an explicit `model` on every spawn; a
 backgrounded `run-suites.sh`; and, with no `jq`, the denies but the ledger's read from the raw
@@ -180,7 +180,7 @@ item, the per-attempt local checks and the pause for a missing tool or a referen
 each is a tool request (Q10).
 
 **D8 — The ledger holds decisions, and names no writer** (operator decision 2026-10-26, Q26:
-"그 문서를 작성하는 사람을 제한하는데 실제 그 제한이 필요하거나 구분할 필요가 있지 않아요"). Its
+"it limits who writes that document; that limit is not actually needed, nor is there a need to distinguish them"). Its
 entries settle what a module cannot settle itself — `[ac-decision]`, `[checklist-decision]`, a
 design point, every decision of the advisor's (Q4). The criterion review's decisions are its record,
 the one criterion-reconcile writes, which names the body they were made on by its
@@ -210,12 +210,12 @@ as the place earlier runs left their work (the design review, §8). `docs/abbrev
 removed.
 
 **D10 — The run metrics read the records left before this change** (operator decision 2026-10-26,
-"수용"). `scripts/metrics/` finds an attempt by its state file; it stays for those records and is
+"Accepted"). `scripts/metrics/` finds an attempt by its state file; it stays for those records and is
 documented as such. A module run leaves its `result.json`, which records the AutoFlow that ran it.
 
 **D11 — A module decides what it can, and spawns the advisor for the rest** (operator decision
-2026-10-26, Q27: "작업 AI 가 결정할수 잇는 문제는 결정 모를때는 advisor 결정 수용이 기본이에요 하네스가
-막히는 수준이 아니면 진행입니다"). The working AI decides what it can decide and records each decision
+2026-10-26, Q27: "A problem the working AI can decide, it decides; when it does not know, accepting the advisor's decision is the default. Unless the harness
+is blocked, it proceeds"). The working AI decides what it can decide and records each decision
 with its grounds in its output. The decisions AutoFlow puts to the advisor — a change to an
 acceptance criterion's content, a cause or lever that is not code, a hypothesis PASS judged
 unreachable, a design point not agreed, a finding whose fix cannot be placed with confidence, an item

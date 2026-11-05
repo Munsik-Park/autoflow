@@ -23,7 +23,7 @@ default branch or wrote `main` outright: the conflict resolution and the push-re
 (`origin/HEAD`). The hook denied a push to the default branch only.
 
 The operator asked for a cycle that works from a branch of any name, `dev` among them, or from a
-commit, to the same end — a reviewed, open pull request (issue #490 > 상황).
+commit, to the same end — a reviewed, open pull request (issue #490 > Situation).
 
 The dev branch's name put every attempt under the ref directory `dev/`, and git keeps `dev` and
 `dev/…` apart in one repository. Observed in a local bare repository (git 2.50.1): with a remote

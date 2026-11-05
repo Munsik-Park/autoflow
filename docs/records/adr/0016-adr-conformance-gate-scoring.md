@@ -87,7 +87,7 @@ Each link of the reasoning is grounded in a repository anchor:
   a recalculation of the `avg ≥ 7.5` / `each ≥ 7` denominators) is eliminated
   because no item is added. The over-engineering objection is avoided because
   the issue's Recommended Direction #3 already frames ADR conformance as the
-  *명시화* of an existing approach-check axis, not a new axis
+  *making explicit* of an existing approach-check axis, not a new axis
   (`autoflow-guide.md:292` casts the ARCHITECT devil's-advocate as the "first
   approach check") — the blind-spot pattern is the GATE-side analogue of that
   same "extend, don't add" stance.
@@ -95,8 +95,8 @@ Each link of the reasoning is grounded in a repository anchor:
 ### Placement
 
 The check is placed at three surfaces in primary → regression order (mirroring
-the issue's Recommended Direction #1/#2: GATE:PLAN as the 1차 차단점,
-GATE:QUALITY as the 회귀-방지 재확인):
+the issue's Recommended Direction #1/#2: GATE:PLAN as the first blocking point,
+GATE:QUALITY as the regression-prevention re-check):
 
 | Surface | Form | Trigger / cap |
 |---|---|---|

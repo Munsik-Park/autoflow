@@ -12,7 +12,7 @@ with the carriers by issue #499, with each carriage's grounds (see Amendment not
 ## Context
 
 On main `2e72b1a` (0.3.7) the guidance a role follows reached it in three ways (issue #494 >
-확인된 사실):
+Confirmed facts):
 
 - **as text** in the carrier it starts with — a command body (the core parts its unit uses,
   ADR-0032), an agent definition (its own short rules);
@@ -300,7 +300,7 @@ the change ships. What follows are this change's dispositions and their grounds 
    | `docs/evaluation-system.md` > Evaluation Output Format; > GATE:PLAN > Re-entry re-score; > AUDIT > Review-response re-score | cite | cite | cite | cite | first | The evaluator's grammar and acts, which its definition carries; the fields the session checks before it accepts a report are listed in the carried triage. |
    | `docs/review/review.md` > Severity | cite | cite | cite | cite | first | The evaluator assigns the level, and the session routes on the threshold the carried triage states (`Medium` and above, `Low`); a level outside those names (`Low Confidence`) is the one item the session reads the home for. |
    | `docs/units/review.md` > Reviewer review | cite | cite | cite | cite | first | The review round that verifies a reviewer finding's fix is U7's act. |
-   | `docs/pr-body-guide.md` > 한계와 known gaps | cite | cite | cite | cite | first | U6 writes the pull request's body; the session records a deferral in its verdict entry (the carried triage). |
+   | `docs/pr-body-guide.md` > Limitations and known gaps | cite | cite | cite | cite | first | U6 writes the pull request's body; the session records a deferral in its verdict entry (the carried triage). |
    | `docs/units/preparation.md` > Resume | cite | cite | cite | cite | first | The resume is U1's act. |
    | `docs/development-guideline.md` > Documentation Policy | cite | cite | cite | cite | first | It governs a change to the rule's text (its search terms), not the triage. |
    | `docs/decision-ledger.md`; `docs/role-contracts.md` > Advisor; `docs/core.md` > Remedy class recording | carried before | carried before | carried before | carried before | — | — |

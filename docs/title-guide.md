@@ -1,60 +1,60 @@
 # Issue & PR Title Guide
 
-공통 접두어를 대괄호로 묶고, 나머지 설명은 자유롭게 기술한다.
+Enclose the common prefix in square brackets, and write the rest of the description freely.
 
-## 형식
+## Format
 
 ```
-[type · epic-slice · #N]  자유 설명    ← epic 서브이슈 PR
-[type · epic-slice]       자유 설명    ← epic 서브이슈 (이슈 생성 시 번호 미정)
-[type · #N]               자유 설명    ← 독립 이슈 / epic 트래커 / 독립 이슈 PR
+[type · epic-slice · #N]  free description    ← epic sub-issue PR
+[type · epic-slice]       free description    ← epic sub-issue (number not yet known when the issue is created)
+[type · #N]               free description    ← standalone issue / epic tracker / standalone issue PR
 ```
 
-| 항목 | 설명 |
+| Item | Description |
 |------|------|
-| `type` | `feat` / `fix` / `chore` / `docs` — 아래 표 참고 |
-| `epic-slice` | Epic 번호와 슬라이스 코드 (`#73-S3f`, `#72-S5a` 등). epic 서브이슈에만 사용 |
-| `#N` | GitHub 이슈 번호. 이슈 제목에는 생략 가능, PR 제목에는 권장 |
-| 자유 설명 | 길이·언어 제한 없음 |
+| `type` | `feat` / `fix` / `chore` / `docs` — see the table below |
+| `epic-slice` | Epic number and slice code (`#73-S3f`, `#72-S5a`, etc.). Used only for epic sub-issues |
+| `#N` | GitHub issue number. Optional in an issue title, recommended in a PR title |
+| Free description | No limit on length or language |
 
-## type 값
+## type values
 
-| type | 언제 |
+| type | When |
 |------|------|
-| `feat` | 새 기능 구현 |
-| `fix` | 버그 수정 |
-| `chore` | 설정·인프라·자동화 |
-| `docs` | 문서 단독 변경 |
+| `feat` | New feature implementation |
+| `fix` | Bug fix |
+| `chore` | Configuration, infrastructure, automation |
+| `docs` | Documentation-only change |
 
-## 예시
+## Examples
 
-### 이슈 제목
-
-```
-[feat · #73-S3f]  소진 내역 탭 프론트 — 기간 필터 + 검색
-[feat · #72-S5a]  멤버 관리 테이블 프론트엔드
-[feat · #224]     Enterprise 멤버 활동 감사 로그 구현
-[fix  · #200]     YouTube 자막 취득 실패
-[chore · #43]     PAT rotation 문서화
-```
-
-### PR 제목
+### Issue titles
 
 ```
-[feat · #73-S3f · #231]  소진 내역 탭 프론트 — 기간 필터 + 검색
-[feat · #72-S5a · #217]  멤버 관리 테이블 프론트엔드
-[feat · #224]             Enterprise 멤버 활동 감사 로그
-[fix  · #200]             YouTube 자막 취득 실패
-[chore · #43]             PAT rotation 문서화
+[feat · #73-S3f]  Usage history tab frontend — period filter + search
+[feat · #72-S5a]  Member management table frontend
+[feat · #224]     Enterprise member activity audit log implementation
+[fix  · #200]     YouTube subtitle fetch failure
+[chore · #43]     PAT rotation documentation
 ```
 
-## 접두어 구성 원리
+### PR titles
 
-`epic-slice`와 `#N`은 역할이 다르다.
+```
+[feat · #73-S3f · #231]  Usage history tab frontend — period filter + search
+[feat · #72-S5a · #217]  Member management table frontend
+[feat · #224]             Enterprise member activity audit log
+[fix  · #200]             YouTube subtitle fetch failure
+[chore · #43]             PAT rotation documentation
+```
 
-| 참조 | 의미 | 이슈 | PR |
+## Prefix composition principle
+
+`epic-slice` and `#N` have different roles.
+
+| Reference | Meaning | Issue | PR |
 |------|------|------|----|
-| `epic-slice` (`#73-S3f`) | 어느 Epic의 몇 번째 슬라이스인가 | ✅ | ✅ |
-| `#N` (이슈 번호) | 어떤 GitHub 이슈를 닫는가 | 생략 가능 | 권장 |
+| `epic-slice` (`#73-S3f`) | Which slice of which Epic it is | ✅ | ✅ |
+| `#N` (issue number) | Which GitHub issue it closes | Optional | Recommended |
 
-epic 서브이슈가 아닌 경우(독립 이슈, epic 트래커)는 `epic-slice` 없이 `#N`만 사용한다.
+When it is not an epic sub-issue (a standalone issue, an epic tracker), use only `#N`, without `epic-slice`.
