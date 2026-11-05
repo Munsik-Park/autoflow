@@ -16,11 +16,11 @@ A change another repository needs is made by a module run in that repository's s
 
 Throughout these rules, **target** (equivalently **target scope**) means the scope that receives the work — the repository or directory whose source a change lands in — and the development project that consumes AutoFlow as a versioned tool (see [`tool-delivery-contract.md`](tool-delivery-contract.md)). Its opposite pole is the **host** repository. The two principles below hold whatever the project's repository structure — with the elaboration for a project with sub-repos kept as secondary detail.
 
-### Artifacts (산출물)
+### Artifacts
 
 Every produced artifact belongs to the scope that owns the files it lives in: code and tests belong to the target scope that owns that source; the decision ledger lives in the attempt's record directory, outside every repository; a pull request is opened from the host regardless of which scope produced the commits. *Secondary (multi-repo):* the owning scope is a sub-repo directory, so the build unit commits on that sub-repo's branch and the delivery module opens the PR. *See:* the Commit Ownership committer column and Records and the hook (`<autoflow-root>/docs/core.md`), and the own-repo Read + Write cells of the Permission Matrix (below).
 
-### Procedures (절차)
+### Procedures
 
 The push, the PR opening and showing the change working are the delivery module's; execution steps — writing code and tests, and committing them — belong to the target scope. Each agent performs the steps of its own scope. *Secondary (multi-repo):* the sub-repo push is the delivery module's ([`units/delivery.md`](units/delivery.md) > *Push and pull request*), and so is the host pointer's commit ([`core.md`](core.md) > Commit Ownership); merging, and what follows it, are outside AutoFlow ([`git-workflow.md`](git-workflow.md) > Post-Merge Cleanup). *See:* Rule 1 and Rule 3 (below), and the PR-opener column of Commit Ownership (`<autoflow-root>/docs/core.md`).
 

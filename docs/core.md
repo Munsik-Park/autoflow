@@ -179,7 +179,7 @@ In a project whose information names sub-repos, which pull requests a change tak
 
 ## Team Structure
 
-각 역할의 상세 계약은 [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md)를 참조한다.
+For each role's detailed contract, see [`<autoflow-root>/docs/role-contracts.md`](role-contracts.md).
 
 ### Evaluation AI — contract: `<autoflow-root>/docs/evaluation-system.md`; spawn and prompt: `<autoflow-root>/docs/role-contracts.md` > Evaluation AI
 ### Build module — contract: `<autoflow-root>/docs/role-contracts.md` > Functional-unit agents; in a target scope: `<autoflow-root>/docs/role-contracts.md` > Build unit in a target scope

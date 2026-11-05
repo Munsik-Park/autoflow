@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (operator decisions 2026-10-18, issue #465 > 운영자 결정: the criterion review is a stage
+Accepted (operator decisions 2026-10-18, issue #465 > Operator decision: the criterion review is a stage
 of the AutoFlow cycle, not a separate operation, and its records belong to the attempt; operator
 decision 2026-10-19: `/autoflow:criterion-review` is kept for a review by itself; operator decision
 2026-10-19, PR #475: the script reports facts and the session judges the way on, and AutoFlow does
@@ -33,7 +33,7 @@ Up to 0.3.2 the criterion review (#430) was a procedure outside the cycle: the o
 already moved every record, the criterion review's included, into the attempt's record directory
 outside the checkout, so the record-location problems issue #465 first described are gone; what is
 left is the separate command and session itself, and the rule that the cycle never creates an
-attempt (issue #465 > 사전검토 반영).
+attempt (issue #465 > Criterion review incorporated).
 
 The review fixed constraints the design has to meet (issue #465 AC1–AC6; the review record's
 `## Cause reach and rule conflict`):
@@ -115,8 +115,8 @@ advisor, where the orchestrator is not confident, is a fresh spawn
 (`docs/role-contracts.md` > Advisor > *Independence*).
 
 **D9 — The script reports facts; the way on is the session's judgment** (operator decision
-2026-10-19, PR #475: "규칙이 규칙을 다시 만든 상황입니다 … 규칙으로 상태를 true, false라고 규정하면서
-그것을 지키기 위한 코드와 그것이 유지되기 위한 코드를 계속 생성하고 있어요"). Whether a `new` in the
+2026-10-19, PR #475: "This is a situation where rules have made rules again … while defining a state as true or false by a rule,
+we keep generating code to keep to it and code to keep it maintained"). Whether a `new` in the
 arguments is a request still to carry out or one the conversation already carried out, what to do with a fact that could not be read, with a `claim:`
 line or with a dirty tree, is judged by the session and recorded with its grounds in the attempt's
 ledger (Rule Scope, principle 2). Earlier revisions of this PR fixed them as script verdicts — a
@@ -170,4 +170,4 @@ decision 2026-10-19; ADR-0031).
 ## Notes
 
 - The criterion review's content and method (#434, #439, #442, #445) and the authority over
-  acceptance-criterion content are unchanged (issue #465 > 바뀌지 않는 것).
+  acceptance-criterion content are unchanged (issue #465 > What does not change).

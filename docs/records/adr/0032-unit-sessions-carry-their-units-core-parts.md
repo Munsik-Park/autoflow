@@ -22,7 +22,7 @@ ADR-0027 rejected per-unit commands on three grounds, each about one session run
 units: the compaction re-attach cap, the shared rules carried six times by a session invoking six
 commands, and the re-attach budget. ADR-0031 removed the first and the third (AutoFlow does not
 consider compaction). The second holds only for a session that invokes six commands; with a
-session per unit (issue #464 > 운영자 방침) each session invokes one. The premise that the core
+session per unit (issue #464 > Operator policy) each session invokes one. The premise that the core
 outside the transition rows is common to every unit had not been measured.
 
 ## Decision
@@ -30,7 +30,7 @@ outside the transition rows is common to every unit had not been measured.
 **D1 — One command per unit.** `/autoflow:cycle-u1 <N> [new]` … `/autoflow:cycle-u6 <N>` start a
 session that runs that unit alone, from its entry to its exit transition, after confirming from
 `cycle-status.sh` that the cycle stands at the unit's entry. `/autoflow:cycle <N> [new]` runs the
-whole cycle in one session and carries the whole core, as before (issue #464 > 운영자 결정
+whole cycle in one session and carries the whole core, as before (issue #464 > Operator decision
 2026-10-18); its `unit=` argument is retired, and a session given one reports and stops. A skill
 body is static text — one command has one body — so a body per unit needs a command per unit.
 

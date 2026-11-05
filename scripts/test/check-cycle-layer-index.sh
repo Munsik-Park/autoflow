@@ -23,8 +23,8 @@
 # THE READ FORM IS `-z`, NOT THE DEFAULT. `git ls-files`'s default output is not
 # the path: `core.quotePath` (default `true`) wraps any path carrying non-ASCII
 # or control bytes in double quotes and octal-escapes the bytes, so a tracked
-# `.autoflow/o__r-issue-9/issue-9-local/검증.sh` is printed as
-# `".autoflow/o__r-issue-9/issue-9-local/\352\262\200\354\246\235.sh"` — which no longer
+# `.autoflow/o__r-issue-9/issue-9-local/café.sh` is printed as
+# `".autoflow/o__r-issue-9/issue-9-local/caf\303\251.sh"` — which no longer
 # starts with `.autoflow/` textually, so the prefix match misses it and the
 # predicate answers OK. That is a false pass of exactly the disagreement this
 # check exists to catch. `-z` emits raw NUL-terminated paths with no quoting at

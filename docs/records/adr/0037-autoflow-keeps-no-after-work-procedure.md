@@ -56,7 +56,7 @@ AutoFlow keeps only what holds in every environment and what binds its own autho
   attempt's base; every pull request it opens is a draft. Ground: an authority rule
   (`docs/core.md` > Rule Scope, principle 1 — "the merge prohibition"), which the hook enforces
   (`docs/state-tracking.md` > Hook gates — "`gh pr merge`, and any push to the default branch …
-  **denied state-independently**"); the issue names "merge하지 않음" as what AutoFlow keeps.
+  **denied state-independently**"); the issue names "does not merge" as what AutoFlow keeps.
 - **K2** The hand-off: the state `active: false`, `phase: "awaiting-external-review"`, and an end
   report of facts — each pull request's URL and head commit, the review verdict, CI as recorded,
   and, for a host pull request whose pointer names a sub-repo pull request's commit, that
@@ -131,7 +131,7 @@ AutoFlow prescribes the steps of neither.
   resolved"; "Performed at PREFLIGHT of the next cycle … or by the live session"; `cleanup-issue.sh`'s
   "Run at PREFLIGHT prior-attempt resolution"; `docs/repo-boundary-rules.md`'s "Verify integration
   after individual repos merge", which becomes the integration verification before the hand-off.
-  Ground: AC1 names "무엇을 언제 어떻게 정리하는지"; the operator's role-separation view puts the
+  Ground: AC1 names "what is cleaned up, when and how"; the operator's role-separation view puts the
   cleanup policy with the Coordinator.
 
 **The Coordinator.** The owner of M2–M5 is the **Coordinator**, a role's name, defined once in
@@ -153,7 +153,7 @@ AutoFlow prescribes the steps of neither.
    defines no step, order or timing for it, and makes no link that reads its procedure. Source: the
    operator decision (a role's name; no particular session implementation or its repository; no
    link that reads that party's procedure) and the scope decision (c); "no step, order or timing"
-   is AC1's ("명령·순서·시점으로 규정하지 않고") and the boundary statement's (D5).
+   is AC1's ("without prescribing it by command, order or timing") and the boundary statement's (D5).
 4. *Not the orchestrator.* The orchestrator is AutoFlow's own role: it runs a cycle and ends at the
    hand-off, and the Coordinator's work lies outside AutoFlow. Source: this decision's own, on the
    fact that AutoFlow's documents describe the orchestrator with the same root word ("coordinates

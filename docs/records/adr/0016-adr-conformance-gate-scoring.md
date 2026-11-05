@@ -87,7 +87,7 @@ Each link of the reasoning is grounded in a repository anchor:
   a recalculation of the `avg ≥ 7.5` / `each ≥ 7` denominators) is eliminated
   because no item is added. The over-engineering objection is avoided because
   the issue's Recommended Direction #3 already frames ADR conformance as the
-  *명시화* of an existing approach-check axis, not a new axis
+  *making explicit* of an existing approach-check axis, not a new axis
   (`autoflow-guide.md:292` casts the ARCHITECT devil's-advocate as the "first
   approach check") — the blind-spot pattern is the GATE-side analogue of that
   same "extend, don't add" stance.
@@ -95,8 +95,8 @@ Each link of the reasoning is grounded in a repository anchor:
 ### Placement
 
 The check is placed at three surfaces in primary → regression order (mirroring
-the issue's Recommended Direction #1/#2: GATE:PLAN as the 1차 차단점,
-GATE:QUALITY as the 회귀-방지 재확인):
+the issue's Recommended Direction #1/#2: GATE:PLAN as the first blocking point,
+GATE:QUALITY as the regression-prevention re-check):
 
 | Surface | Form | Trigger / cap |
 |---|---|---|
@@ -213,7 +213,7 @@ thresholds — verified, not asserted:
 - **No hook edit.** `check_scores` (`check-autoflow-gate.sh:284-311`) computes
   `avg` via `add / length` over `(to_entries | map(.value.score))` — it is
   item-count-agnostic — and reads the security value by key name
-  (`.["security"] // .["보안"]`), not by position. Adding no key leaves that
+  (`.["security"] // .["\uBCF4\uC548"]`, the second key "security" in Korean), not by position. Adding no key leaves that
   computation untouched.
 - **No threshold recompute.** No item added ⇒ the `avg ≥ 7.5` / `each ≥ 7`
   denominators are unchanged. A capped-at-6 item produces a FAIL through the

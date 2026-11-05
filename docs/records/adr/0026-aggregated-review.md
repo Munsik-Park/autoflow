@@ -21,7 +21,7 @@ inside the Claude session, so that isolated subprocess was the label's sole clea
 
 An operator-run comparison put a second review beside it on the same pull requests and heads: a
 Claude review that also read the cycle's analysis, design, verification design, ledger and build
-report (issue #411, *배경*).
+report (issue #411, *Background*).
 
 - On 11 AutoFlow documentation PRs, the findings only one side raised and the operator adopted were
   29 for the design-referencing review and 1 for codex; rebutted findings were 0/30 against 3/5.

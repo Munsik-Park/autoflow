@@ -155,7 +155,7 @@ For details, see `<autoflow-root>/docs/repo-boundary-rules.md`.
 
 ## Team Structure
 
-각 역할의 상세 계약은 `<autoflow-root>/docs/role-contracts.md`를 참조한다.
+For each role's detailed contract, see `<autoflow-root>/docs/role-contracts.md`.
 
 ### Advisor — contract: `<autoflow-root>/docs/role-contracts.md` > Advisor
 
@@ -265,47 +265,47 @@ order and what it checks are the AI's, judged from the inputs it is given.
 
 <!-- From <autoflow-root>/docs/pr-body-guide.md > Principles > 5. Verification dispositions -->
 
-### 5. Verification dispositions (검증 처분의 노출)
+### 5. Verification dispositions (exposing the verification dispositions)
 
-AutoFlow가 연 host PR은 검증 처분이 읽히게 한다 — verification design이
-실행 가능한 test가 아닌 방법으로 검증하는 모든 항목(applied criterion과 feature design이 범위에 포함한
-항목)을, 검증 방법과 사유와 함께 적는다. 처분을 부르는 말은 design의 것이다.
+A host PR AutoFlow opened makes its verification dispositions readable — it states every item the verification design
+verifies by a method other than an executable test (the applied criteria and the items the feature design brought into
+scope), with the verification method and the reason. The words that name a disposition are the design's.
 
-- 운영자 주도 PR(AutoFlow 모듈 밖에서 운영자가 진행한 작업의 PR)에는 이 내용을 요구하지 않는다.
-  verification design이 없기 때문이다. 수용 기준의 충족은 *6. 수용 기준 대조*로 보인다.
-- 이 내용은 3단 acceptance-criterion guard의 두 번째 tier다: design module이 검증
-  방법의 축소를 결정하고, review module의 reviewer가 그 reason의 타당성을 판단하며,
-  criterion의 **내용**이 바뀔 때는 그 변경을 보인 모듈이 advisor를 spawn해 정하고 그 결정을 따른다
-  ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). 규칙 본문은 [U3 Design](<autoflow-root>/docs/units/design.md) >
-  *Test necessity* 와 *Report routing*.
-- 예시 형식은 항목 id + 검증 방법 + reason 한 줄이다.
-- target 트리에 남지 않는 한 번 실행한 test는 같은 섹션에 그 항목의 **run record** — build
-  report에 기록된 command와 summary line — 를 한 줄로 싣는다
+- An operator-led PR (the PR of work the operator carried out outside the AutoFlow modules) is not asked for this content,
+  because it has no verification design. Whether its acceptance criteria are met is shown by *6. Acceptance criteria check*.
+- This content is the second tier of the three-tier acceptance-criterion guard: the design module decides a reduction of
+  the verification method, the review module's reviewer judges whether that reason holds,
+  and when a criterion's **content** changes, the module that showed the change spawns the advisor to decide it and follows that decision
+  ([`role-contracts.md`](<autoflow-root>/docs/role-contracts.md) > Advisor). The rule text is in [U3 Design](<autoflow-root>/docs/units/design.md) >
+  *Test necessity* and *Report routing*.
+- The example form is one line of item id + verification method + reason.
+- A test run once that does not stay in the target's tree carries, in the same section, that item's **run record** — the command and
+  the summary line recorded in the build report — on one line
   ([U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *Push and pull request*).
-- AI가 도구로 관찰해 검증한 항목은 같은 섹션에 실행 주체, observation record의 경로와 결과를
-  한 줄로 싣는다. 사람의 관찰이나 mock으로 검증한 항목은 reason에 그 이유를 싣고, 도구가 없어서라면
-  그 도구 요청을 *7. 도구 요청*에 적는다 ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
+- An item the AI verified by observing it with a tool carries, in the same section, who ran it, the observation record's path and the result
+  on one line. An item verified by a person's observation or a mock carries why in its reason, and if it is because a tool was missing,
+  that tool request is written in *7. Tool requests* ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) >
   Verification and Tools > *The tools the work needs*; [U3 Design](<autoflow-root>/docs/units/design.md) > *Tools*).
-- 변경이 target 트리에 **추가한 테스트 파일**은 같은 섹션에 파일별로 나열한다 — 경로,
-  남겨 두는 이유, 그리고 ci module이 확인한, 그 파일을 실제로 실행한 CI job(실행한 job이 없으면 그
-  사실, target에 CI가 없으면 `no CI; local run only`). 추가한 파일이 없으면 그 사실을 한 줄로 적는다
+- The **test files the change added** to the target's tree are listed file by file in the same section — the path,
+  the reason it is kept, and the CI job that actually ran that file, as the ci module confirmed it (if no job ran it, that
+  fact; if the target has no CI, `no CI; local run only`). If no file was added, that fact is written on one line
   ([`submodule-common-rules.md`](<autoflow-root>/docs/submodule-common-rules.md) > Verification and Tools > *What a change leaves in the target's tree*;
   [U6 Delivery](<autoflow-root>/docs/units/delivery.md) > *CI*, *Added test files*).
 
-예:
+Example:
 
 ```
 ## Verification dispositions
 
-- AC2 — existing-coverage: `scripts/test/check-suite-manifest.sh` 가 동일 property를
-  build마다 검사한다.
-- AC4 — none: 값이 사용자가 편집하는 sample 파일에 있어, 첫 편집에서 검증 대상이
-  사라진다. 부재 비용 0.
+- AC2 — existing-coverage: `scripts/test/check-suite-manifest.sh` checks the same property
+  on every build.
+- AC4 — none: the value is in a sample file the user edits, so the object of verification
+  disappears at the first edit. Cost of absence: 0.
 - AC1 — one-shot test: `bash <attempt-dir>/build-1/local/ac1-retry.sh` → `PASS 3/3`
 - AC3 — AI observation (browser): `<attempt-dir>/build-1/local/ac3-observation.md` →
-  일치 — 렌더링된 목록 화면을 이슈가 링크한 시안과 대조.
-- Added test files: `tests/retry-backoff.test.ts` — 재시도 간격은 배포 후 설정값에
-  따라 달라지므로 target의 회귀 대상; CI job `unit (ubuntu-latest)`에서 실행 확인.
+  match — the rendered list screen checked against the mockup the issue links.
+- Added test files: `tests/retry-backoff.test.ts` — the retry interval varies with the setting
+  after deployment, so it is a regression subject of the target's; its run confirmed in CI job `unit (ubuntu-latest)`.
 ```
 
 <!-- From <autoflow-root>/docs/decision-ledger.md -->

@@ -160,7 +160,7 @@ In a project whose information names sub-repos, which pull requests a change tak
 
 ## Team Structure
 
-각 역할의 상세 계약은 `<autoflow-root>/docs/role-contracts.md`를 참조한다.
+For each role's detailed contract, see `<autoflow-root>/docs/role-contracts.md`.
 
 ### Advisor — contract: `<autoflow-root>/docs/role-contracts.md` > Advisor
 

@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (operator decisions 2026-10-19, PR #475: "AutoFlow의 요구사항은 idle compaction off입니다.
-auto compaction은 방어할 수 없습니다. 따라서 AutoFlow는 compaction을 고려하지 않습니다", and the
+Accepted (operator decisions 2026-10-19, PR #475: "AutoFlow's requirement is idle compaction off.
+auto compaction cannot be defended against. Therefore AutoFlow does not consider compaction", and the
 removal of the devices that exist only for compaction). Supersedes ADR-0027 D2's three compaction
 bullets — the rules that must hold after a compaction first in the body within 18,000 bytes, and
 the body's first line instructing a compacted session to invoke the command again — and ADR-0027's
@@ -20,8 +20,8 @@ leading part and a "(continued)" part, opened `/autoflow:cycle` with a re-invoca
 criterion-review body (18,000 bytes) and the first body line.
 
 The operator set the requirement that AutoFlow runs with idle compaction off; auto compaction
-cannot be defended against, so AutoFlow does not consider it (issue #464 > 운영자 방침 already reads
-"compaction은 AutoFlow에서 측정하거나 대비하지 않는다"). While #465 was in review, a rule added for a
+cannot be defended against, so AutoFlow does not consider it (issue #464 > Operator policy already reads
+"AutoFlow does not measure or prepare for compaction"). While #465 was in review, a rule added for a
 compaction re-invocation (the "spent" rule of a `new` request) led to a further rule for its own
 gap — the case ADR-0030 D9 records.
 

@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (operator decisions recorded in issue #485 > 운영자 결정, 범위, 설계 입력 추가
-(2026-10-21) and #479에서 옮긴 내용 (2026-10-21); criteria settled by the attempt's criterion
+Accepted (operator decisions recorded in issue #485 > Operator decision, Scope, Additional design input
+(2026-10-21) and Moved from #479 (2026-10-21); criteria settled by the attempt's criterion
 review). Amends ADR-0025 D1 (the unit table) and D4 (where the external verification layer runs),
 ADR-0026 D1 and D4 (the built-in review spawn and the `blocked-by-review` label), ADR-0028 D2, D4
 and D5 (the target source, the default, the readout), and ADR-0032 D1 for U7's command. D1's U6
@@ -28,8 +28,8 @@ to it. The resolver rejected `claude` as a reviewer name and knew no name but `c
 
 The reviewers came from the target's `.claude/autoflow.local.json` `.review` before the operator's
 `~/.autoflow/config.json` (ADR-0028), and the file the SessionStart hook creates holds
-`"reviewers": []` — "external review off". On the opensre comparison run (issue #485 > 설계 입력
-추가) that file was the operator's, the target had no `.review`, and the aggregated comment read
+`"reviewers": []` — "external review off". On the opensre comparison run (issue #485 > Additional design
+input) that file was the operator's, the target had no `.review`, and the aggregated comment read
 "reviewers: none". Review bots that a target runs on its own pull requests were never read.
 
 Two labels carried state for the merge actor: `blocked-by-review`, put on by the orchestrator and
@@ -90,7 +90,7 @@ reconciled to its merge commit in between. The merge prohibition is unchanged.
   operator's ground was that the review is separated from the hand-off, and U6 keeps HANDOFF's CI
   rows (retry, CI-failure re-entry) where they are.
 - **One wrapper for every reviewer** — not taken: the CLIs differ in how they take a prompt, sandbox
-  their tools and load instructions from the tree (issue #485 > #479에서 옮긴 내용).
+  their tools and load instructions from the tree (issue #485 > Moved from #479).
 - **Tell a hook-created `[]` from an operator's `[]`** — not taken: no operator choice of "no
   reviewer" is on record, and a review is an independent check that is never skipped.
 - **Keep the labels as advisory signals** — not taken: AutoFlow's routing reads the findings file,

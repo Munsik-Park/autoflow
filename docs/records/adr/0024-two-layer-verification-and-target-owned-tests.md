@@ -98,7 +98,7 @@ a one-shot test of the changed part" that excluded this cycle's own new tests wo
 sentence forbids that reading: what leaves the local run is the *unchanged* standing set, never the
 set this cycle wrote.
 
-The layer name is faithful to the issue's own gloss — the CI layer is "머지 후 유지되는 속성",
+The layer name is faithful to the issue's own gloss — the CI layer is "a property that persists after merge",
 persistence, not execution site. The separation the operator asked for is recorded; what changed is
 that each layer is named by what defines it.
 
@@ -171,8 +171,8 @@ Three consequences are recorded here so that no gate re-derives them:
 - **ADR-0022's tier-2 mechanism is not amended.** A `delivery-check` row is `≠ automated`, so the
   host PR body's `## Verification dispositions` inclusion predicate (`docs/autoflow-guide.md` >
   HANDOFF — "whose verification design row is typed anything other than `automated`";
-  `docs/pr-body-guide.md` > Principles > *5. Verification dispositions (검증 처분의 노출)* —
-  "automated test로 검증되지 않는 모든 항목을") admits it unchanged. A `cycle`-layer `automated` row is
+  `docs/pr-body-guide.md` > Principles > *5. Verification dispositions (exposing the verification dispositions)* —
+  "every item not verified by an automated test") admits it unchanged. A `cycle`-layer `automated` row is
   **not a
   reduction** — it is the default disposition of a verified criterion — so the predicate is not
   widened to admit it. What the external reviewer sees of such a row is its one-shot run's
@@ -295,11 +295,11 @@ and which of those tests a change requires is the running role's recorded judgme
 
 **Boundary.** AC2 and M bind what AutoFlow's phases require of **AutoFlow's own run set**. What a
 target's declared test command executes internally is **outside this model** — a target's test
-execution and format are the target's (설계 원칙 1, restated in this record's Context —
+execution and format are the target's (design principle 1, restated in this record's Context —
 "AutoFlow verifies **its own** tests") —
 and no acceptance criterion of this issue verifies it. The ground travels with the sentence instead
-of being asserted: AC2's second sentence names the verification's object — *"조정 범위 1의 규정이
-모두 새 모델로 대체되거나 삭제된다"* — and every row of that enumeration is an AutoFlow rule
+of being asserted: AC2's second sentence names the verification's object — *"the rules of adjustment scope 1
+are all replaced by the new model or deleted"* — and every row of that enumeration is an AutoFlow rule
 (`docs/autoflow-guide.md`, `docs/submodule-common-rules.md`, `.claude/agents/*`,
 `docs/teammate-contracts.md`, `docs/evaluation-system.md`, `CLAUDE.md`, the header contract); not one
 row is a target's test command.
@@ -500,7 +500,7 @@ disposes of each half explicitly.
 
 ### Sub-issue split, and the obligations carried into it
 
-Implementation is deferred by the issue's own `범위 밖` to four sub-issues, along the split the
+Implementation is deferred by the issue's own `Out of scope` to four sub-issues, along the split the
 operator declared:
 
 - **S1 + S2 — rule documents and evaluation criteria, one issue (#225).** `CLAUDE.md`,
@@ -551,7 +551,7 @@ this record is the only carrier across that gap:
   *Verification depth*, "a cycle already past ARCHITECT is not retroactively deficient". Without
   it, this cycle's own GATE:QUALITY would score `Test quality` against the test-asset rule the same
   cycle deletes.
-- **AC1 naming equivalence.** The issue's 로컬 layer is this ADR's **`cycle`** layer, and the
+- **AC1 naming equivalence.** The issue's local layer is this ADR's **`cycle`** layer, and the
   issue's CI layer is this ADR's **`standing`** layer. The renaming carries no content change, so
   neither gate's acceptance-criterion-authority check has to decide whether a renamed layer is a
   changed criterion.
@@ -577,7 +577,7 @@ this record is the only carrier across that gap:
 ## Adjustment scope
 
 Every row of the three areas carries **exactly one** disposition from a closed vocabulary, which is
-what makes the issue's "모두 / 일치" a set relation over its own enumeration rather than a reading of
+what makes the issue's "all / match" a set relation over its own enumeration rather than a reading of
 prose:
 
 | Word | Meaning |
@@ -763,7 +763,7 @@ registry row.
   "AutoFlow verifies **its own** tests").
 - **Repairing or replacing the file-name predicate with any other AutoFlow-side attribution rule** —
   a base-tree differential, a known-failure test-id fingerprint set carried across cycles, or a
-  repair of name matching itself. Rejected on 설계 원칙 1 (*Context* —
+  repair of name matching itself. Rejected on design principle 1 (*Context* —
   "AutoFlow verifies **its own** tests"): the defect is that AutoFlow
   adjudicates the target's test execution at all, not that this particular predicate reads the
   unreliable half of a test runner's output. The declared command's exit status is what the outcome
@@ -804,9 +804,9 @@ registry row.
   target's standing half of GATE:QUALITY `Test coverage` is `not-applicable` rather than verified.
 - With no AutoFlow-side attribution rule, a target whose declared command reports a failure this
   change did not cause surfaces as a non-clean outcome, and the resolution is the coding AI's and the
-  human's practice: AutoFlow neither excuses the failure nor blocks the target. AC5's *변경분*
+  human's practice: AutoFlow neither excuses the failure nor blocks the target. AC5's *changed part*
   qualifier is discharged by invoking the declared command — whether that command is keyed to the
-  change is the target's practice under 설계 원칙 1.
+  change is the target's practice under design principle 1.
 
 ### Neutral / Trade-Offs
 
@@ -885,7 +885,7 @@ registry row.
     states no residual `not-run` gate of its own.
   - **Also moved**: the two *Alternatives* entries whose subject was the precondition's candidate
     objects lose it and go; the file-name-predicate entry is rewritten to reject **any**
-    AutoFlow-side attribution rule on 설계 원칙 1, absorbing the known-failure-fingerprint entry as
+    AutoFlow-side attribution rule on design principle 1, absorbing the known-failure-fingerprint entry as
     one of its variants; and the reviewer's own suggested path — keep the requirement and obtain an
     operator `[ac-decision]` reopening AC2 — is recorded and rejected. *Consequences > Negative*
     gains the cost, stated plainly. **Acceptance-criterion content is unchanged**: round 2 removes

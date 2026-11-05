@@ -27,11 +27,11 @@ Check exactly one:
 <!-- The reviewer must be able to reach the AC from this PR. One line per
      criterion: met or not, the commit it was confirmed at, where the evidence
      is; the head names the commit the results stand at
-     (docs/pr-body-guide.md > 수용 기준 대조). -->
+     (docs/pr-body-guide.md > Acceptance criteria check). -->
 
 - AC: linked issue #N > Acceptance Criteria  (or stated inline in the PR body)
 
-`<sha>` 시점의 결과.
+Results as of `<sha>`.
 
 - <criterion> — <met / not met> · `<sha>` · <evidence location>
 
