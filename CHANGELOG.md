@@ -2,7 +2,7 @@
 
 Changes to AutoFlow as a whole: which versions of the three repositories go together, and what changed between versions. The newest is first.
 
-## 0.8 (in preparation)
+## 0.8
 
 - AutoFlow is three repositories used together: [autoflow-module](https://github.com/Munsik-Park/autoflow-module), [autoflow-coordinator](https://github.com/Munsik-Park/autoflow-coordinator) and [autoflow-ide](https://github.com/Munsik-Park/Autoflow-ide).
 - The steps of development are modules, each defined by one `SKILL.md` in autoflow-module. A module you make yourself is listed beside the default modules, and one with a default module's name is used in its place.
