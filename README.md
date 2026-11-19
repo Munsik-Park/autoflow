@@ -4,6 +4,8 @@ AutoFlow takes a development request, given as a GitHub issue, through the steps
 
 Because a step is a module, a step can be replaced. A module you make yourself is listed beside the default modules, and one with a default module's name is used in its place. The workflow then fits your repository and your way of working.
 
+![How AutoFlow runs an issue: the coordination session builds a workflow from modules, each module runs in a work session with the tools that fit its work, and pull requests wait for your decision](docs/how-it-works.svg)
+
 ## The three repositories
 
 AutoFlow is three repositories used together.
