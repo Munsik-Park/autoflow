@@ -21,6 +21,10 @@ AutoFlow is three repositories used together.
 The IDE, started with `--coordinator`, lists every workspace with its recent open issues on the left. The middle shows the chosen issue's repository, workspace and run, and the steps of the run; the right shows the run's sessions. The status line shows the browser control address and the counts of issues and active runs, and the keys are at the bottom.
 
 ![autoflow-ide over the coordinator: workspaces and their issues on the left, the chosen workspace's repository, base and clone in the middle, the browser control address and the keys at the bottom](docs/ide-workspaces.png)
+
+Browser control (`b`) serves the same screen to a web browser on `127.0.0.1`. From the page you can start a run or another session, view a session's screen read-only, read its records, and send the coordination session a message or answer a prompt with keys.
+
+![Browser control page: the workspaces and issues, the chosen issue's run, its sessions, and the input box for the coordination session with the keys that answer a prompt](docs/ide-browser.png)
 ## Quick start
 
 The steps below set AutoFlow up on one machine and run one issue from the IDE. Each repository's README has the full details; this section gives the commands in order.
